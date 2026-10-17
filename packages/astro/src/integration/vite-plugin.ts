@@ -25,6 +25,8 @@ export type StudioPluginOptions = {
   apiBase: string;
   siteName: string;
   siteUrl: string;
+  /** `dev` records which entries each page reads (spec §6.10); builds re-export astro:content as is. */
+  command: 'dev' | 'build' | 'preview' | 'sync';
   /** Resolved `@vesper/admin` and its stylesheet: dist/ when installed, src/ in this workspace. */
   adminEntry: string;
   adminCss: string;
@@ -51,7 +53,8 @@ const STUDIO = 'virtual:vesper/studio';
 const MANIFEST = 'virtual:vesper/manifest';
 const WIDGETS = 'virtual:vesper/widgets';
 const PAGE = 'virtual:vesper/page';
-const IDS = new Set([STUDIO, MANIFEST, WIDGETS, PAGE]);
+const CONTENT = 'vesper:content';
+const IDS = new Set([STUDIO, MANIFEST, WIDGETS, PAGE, CONTENT]);
 
 const toPosix = (path: string) => path.split('\\').join('/');
 
@@ -99,6 +102,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       return IDS.has(id) ? `\0${id}` : null;
     },
     async load(id) {
+      if (id === `\0${CONTENT}`) return contentModule(options.command === 'dev');
       if (!id.startsWith('\0virtual:vesper/')) return null;
       const name = id.slice(1);
       if (name === MANIFEST) {
@@ -115,7 +119,10 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         ].join('\n');
       }
       if (name === PAGE) {
-        return `export const siteName = ${JSON.stringify(options.siteName)};`;
+        return [
+          `export const siteName = ${JSON.stringify(options.siteName)};`,
+          `export const adminUrl = ${JSON.stringify(`${options.siteUrl}admin/`)};`,
+        ].join('\n');
       }
       if (name === STUDIO) {
         return [
@@ -176,4 +183,34 @@ function reloadStudio(server: ViteDevServer): void {
   if (module) client.moduleGraph.invalidateModule(module);
   // triggeredBy marks a real reload, which the studio page doesn't skip.
   client.hot.send({ type: 'full-reload', path: '*', triggeredBy: 'vesper:manifest' });
+}
+
+/**
+ * `vesper:content` (spec §6.11): Astro's own `astro:content`, re-exported.
+ * In dev, the loaders also note each entry a page reads, for the toolbar's
+ * "Edit this page": `shown` for `render()` and `getEntry()`, `listed` for
+ * `getCollection()` and `getEntries()` (which `getStaticPaths` calls for
+ * every page of a route). In builds it's a plain re-export: zero cost.
+ */
+function contentModule(dev: boolean): string {
+  if (!dev) return "export * from 'astro:content';";
+  return [
+    "import * as content from 'astro:content';",
+    "export * from 'astro:content';",
+    "const store = () => globalThis[Symbol.for('vesper.pageEntries')]?.getStore();",
+    'function note(entry, kind) {',
+    '  const entries = store();',
+    "  if (!entries || !entry || typeof entry.collection !== 'string' || typeof entry.id !== 'string') return entry;",
+    '  const data = entry.data ?? {};',
+    "  const title = [data.title, data.name, data.label].find((t) => typeof t === 'string' && t.trim() !== '');",
+    "  const key = entry.collection + '/' + entry.id;",
+    "  const shown = kind === 'shown' || entries.get(key)?.kind === 'shown';",
+    "  entries.set(key, { collection: entry.collection, id: entry.id, kind: shown ? 'shown' : 'listed', ...(title ? { title } : {}) });",
+    '  return entry;',
+    '}',
+    "export async function getEntry(...args) { return note(await content.getEntry(...args), 'shown'); }",
+    "export async function getEntries(...args) { const list = await content.getEntries(...args); list.forEach((e) => note(e, 'listed')); return list; }",
+    "export async function getCollection(...args) { const list = await content.getCollection(...args); list.forEach((e) => note(e, 'listed')); return list; }",
+    "export async function render(entry, ...rest) { note(entry, 'shown'); return content.render(entry, ...rest); }",
+  ].join('\n');
 }

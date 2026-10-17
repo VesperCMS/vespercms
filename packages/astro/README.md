@@ -25,6 +25,30 @@ Zero config. It:
 
 The studio comes precompiled from `@vesper/admin`. React and React DOM are peer dependencies, shared with any custom widgets.
 
+### `vesper:content`
+
+```ts
+import { getCollection, getEntry, render } from 'vesper:content';
+```
+
+A drop-in for `astro:content` (spec §6.11). In builds it's a plain re-export. In `astro dev` it also notes which entries each page shows (`render`, `getEntry`) or lists (`getCollection`, `getEntries`), and the dev toolbar's **Vesper** app links each one straight to its editor ("Edit this page"). Types are injected, so no setup is needed.
+
+### Custom widgets
+
+Register them in `vesper.config.ts` (spec §6.3.3):
+
+```ts
+widgets: {
+  'store-hours': {
+    component: () => import('./src/cms/StoreHours.tsx'),
+    accepts: (field) => field.kind === 'array',
+    match: (field) => field.path.at(-1) === 'hours',
+  },
+},
+```
+
+A widget is a React component that receives `WidgetProps` (`import type { WidgetProps } from '@vesper/astro/config'`). The integration compiles widget files, and the JSX files they import, with React's automatic runtime, so the site needs no `@astrojs/react`; nothing else in the site is affected. Start widget files with `/** @jsxImportSource react */` so TypeScript checks them as React. A widget that fails to load falls back to the built-in control, with a note.
+
 ## Field helpers (`@vesper/astro/fields`)
 
 Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/zod`, so Astro validates it like any other schema. Content files hold plain values. Drop the import and paste the raw Zod, and the behavior is identical:

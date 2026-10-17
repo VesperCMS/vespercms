@@ -1,5 +1,8 @@
 import type { CollectionConfig, FieldModel } from '@vesper/core';
 
+/** What a custom widget component receives (spec §6.3.3). */
+export type { WidgetProps } from '@vesper/core';
+
 /*
  * `vesper.config.ts` (spec §6.4): presentation, URLs, widgets and permissions.
  * It never holds field definitions; those come from content.config.ts (D2).

@@ -1,4 +1,4 @@
-import { getCollection, type CollectionEntry } from 'astro:content';
+import { getCollection, type CollectionEntry } from 'vesper:content';
 
 /*
  * The folder is the hierarchy (spec §6.15): a page's URL is its entry ID,

@@ -6,6 +6,9 @@
   geo: { lat: 36.6954, lng: -81.9772 }
   color: '#28335f'
   open: true
+  hours:
+    - { days: Mon–Fri, opens: '07:30', closes: '22:00' }
+    - { days: Sat–Sun, opens: '10:00', closes: '18:00' }
 - id: harbor-center
   name: 'Harbor Center'
   address: 2 Wharf Street

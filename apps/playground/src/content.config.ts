@@ -147,6 +147,17 @@ const locations = defineCollection({
       .meta({ widget: 'geo', label: 'Map location' }),
     color: hexColor.meta({ widget: 'color', label: 'Map pin color' }),
     open: z.boolean(),
+    // Edited with the playground's custom "store-hours" widget (src/cms/StoreHours.tsx),
+    // which vesper.config.ts registers and matches by the field's name (spec §6.3.3).
+    hours: z
+      .array(
+        z.object({
+          days: z.string().min(1),
+          opens: z.string().regex(/^\d\d:\d\d$/),
+          closes: z.string().regex(/^\d\d:\d\d$/),
+        }),
+      )
+      .optional(),
   }),
 });
 

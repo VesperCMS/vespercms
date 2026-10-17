@@ -1,8 +1,16 @@
 import { defineConfig } from '@vesper/astro/config';
 
-// Presentation, URLs and scheduling only: field definitions live in
+// Presentation, URLs, scheduling and custom widgets; field definitions live in
 // src/content.config.ts (spec D2).
 export default defineConfig({
+  // A custom widget (spec §6.3.3): it claims any list field called `hours`.
+  widgets: {
+    'store-hours': {
+      component: () => import('./src/cms/StoreHours.tsx'),
+      accepts: (field) => field.kind === 'array',
+      match: (field) => field.path.at(-1) === 'hours',
+    },
+  },
   // The fictional college is on the US East Coast; event times are entered in Eastern time.
   timeZone: 'America/New_York',
   collections: {

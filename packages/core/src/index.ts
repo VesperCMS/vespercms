@@ -186,3 +186,4 @@ export {
   mediaReference,
   type MediaServiceOptions,
 } from './studio/media.ts';
+export type { WidgetProps } from './studio/widget.ts';

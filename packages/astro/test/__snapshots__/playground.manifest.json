@@ -893,6 +893,77 @@
           "label": "Open",
           "inferredWidget": "switch",
           "widget": "switch"
+        },
+        {
+          "path": [
+            "hours"
+          ],
+          "kind": "array",
+          "required": false,
+          "label": "Hours",
+          "children": [
+            {
+              "path": [
+                "hours",
+                "[]"
+              ],
+              "kind": "object",
+              "required": true,
+              "label": "Item",
+              "children": [
+                {
+                  "path": [
+                    "hours",
+                    "[]",
+                    "days"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "Days",
+                  "constraints": {
+                    "min": 1
+                  },
+                  "inferredWidget": "text",
+                  "widget": "text"
+                },
+                {
+                  "path": [
+                    "hours",
+                    "[]",
+                    "opens"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "Opens",
+                  "constraints": {
+                    "pattern": "^\\d\\d:\\d\\d$"
+                  },
+                  "inferredWidget": "text",
+                  "widget": "text"
+                },
+                {
+                  "path": [
+                    "hours",
+                    "[]",
+                    "closes"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "Closes",
+                  "constraints": {
+                    "pattern": "^\\d\\d:\\d\\d$"
+                  },
+                  "inferredWidget": "text",
+                  "widget": "text"
+                }
+              ],
+              "extraKeys": "strip",
+              "inferredWidget": "group",
+              "widget": "group"
+            }
+          ],
+          "inferredWidget": "repeater",
+          "widget": "store-hours"
         }
       ],
       "extraKeys": "strip",
@@ -1193,5 +1264,5 @@
     }
   ],
   "diagnostics": [],
-  "hash": "abead61e0b44ea5a978786f5b9d4a840d80c13d2f884890ae05465a5c6b51521"
+  "hash": "173c1a21c8768b60dec274679dabaf672e26bbe1e604cf1eda9dc210531daf9a"
 }

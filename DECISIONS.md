@@ -201,6 +201,14 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 **A reference field stores an entry ID, and a value already stored as `{ collection, id }` keeps that shape. A list of references is an ordered list with Move up, Move down and Remove buttons and a search box to add more,** because order usually matters (related posts) and must not depend on drag-and-drop. An entry is never offered as a reference to itself.
 
+### 2026-10-17: The integration compiles custom widgets as React, and nothing else
+
+**Astro sites default to `"jsx": "preserve"`, and a site needn't have `@astrojs/react`. So a `pre` Vite plugin compiles the files `vesper.config.ts` imports lazily as widgets, and any JSX files those import in turn, with React's automatic runtime (Oxc on Vite 8, esbuild on Vite 7).** No other file in the site is touched, so sites using Preact, Solid or Astro's own JSX are unaffected. `WidgetProps` lives in `@vesper/core` (it has no React in it), re-exported from `@vesper/astro/config` for sites and from `@vesper/admin`. A widget that throws or fails to load falls back to the built-in control for its field, with a one-line note.
+
+### 2026-10-17: "Edit this page" separates entries a page shows from ones it lists
+
+**In `astro dev`, `vesper:content` notes each entry a page reads, into a per-request store opened by a dev-only middleware (`AsyncLocalStorage`), and the middleware appends the list to the page as JSON for the toolbar app.** `render()` and `getEntry()` mark an entry as shown; `getCollection()` and `getEntries()` mark it as listed, because `getStaticPaths` calls `getCollection()` for every page of a route. The toolbar app shows the shown entries first and the listed ones behind a disclosure. Builds don't include the middleware or the toolbar app, and `vesper:content` is a plain `export * from 'astro:content'` there.
+
 ### 2026-10-17: The writing view owns only blocks it can round-trip
 
 **A body block is editable in the writing view only if every node in it is one the editor writes back faithfully (paragraphs, headings, lists, quotes, code, rules, emphasis, strong, code spans, links, images, strikethrough), and parsing what the editor would save gives the same document again. Everything else is a protected source block, named in words ("Component, kept as written") and edited in the source view.** That covers tables, footnotes, reference-style links, task items, links or images with titles, HTML, JSX, expressions, imports and Markdoc tags. Each writable block's editor node remembers its block index (not copied when a block is split). On save, a node whose JSON is unchanged copies its original bytes, and `assembleBody` keeps the spacing around untouched neighbours, so typing in one paragraph changes only that paragraph's lines. Tiptap 3 with `@tiptap/markdown` (as in Taproot), StarterKit minus underline (no Markdown for it) and the trailing empty line.

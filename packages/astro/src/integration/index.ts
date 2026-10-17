@@ -8,6 +8,7 @@ import { siteConfigFiles } from '../node/load-site.ts';
 import { writeManifest } from '../node/manifest.ts';
 import { SiteModelCache } from './site-model.ts';
 import { studioPlugin } from './vite-plugin.ts';
+import { widgetJsxPlugin } from './widget-jsx.ts';
 
 export type VesperOptions = {
   studio?: {
@@ -22,6 +23,16 @@ export type VesperOptions = {
   /** The site's name in the studio. Defaults to the host of Astro's `site`, then the package name. */
   siteName?: string;
 };
+
+/** A file in ../runtime: TypeScript in this workspace, JavaScript once built. */
+function runtimeFile(name: string): URL {
+  const extension = import.meta.url.endsWith('.ts') ? '.ts' : '.js';
+  return new URL(`../runtime/${name}${extension}`, import.meta.url);
+}
+
+/** A crescent, for the evening star. The toolbar names the app in text. */
+const TOOLBAR_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M12.5 2.5a7.5 7.5 0 1 0 5 13.1A6 6 0 0 1 12.5 2.5Z"/></svg>';
 
 /** The studio page, shipped beside src/ and dist/ so both resolve it the same way. */
 const ADMIN_PAGE = new URL('../../pages/admin.astro', import.meta.url);
@@ -46,6 +57,8 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         injectRoute,
         updateConfig,
         addWatchFile,
+        addMiddleware,
+        addDevToolbarApp,
         logger,
       }) => {
         const root = fileURLToPath(config.root);
@@ -57,6 +70,16 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         if (command === 'dev' || options.studio?.deploy !== false) {
           injectRoute({ pattern: '/admin', entrypoint: ADMIN_PAGE, prerender: true });
         }
+        if (command === 'dev') {
+          // "Edit this page": which entries each page reads (spec §6.10). Dev only.
+          addMiddleware({ order: 'pre', entrypoint: runtimeFile('page-entries') });
+          addDevToolbarApp({
+            id: 'vesper',
+            name: 'Vesper',
+            icon: TOOLBAR_ICON,
+            entrypoint: runtimeFile('toolbar-app'),
+          });
+        }
         // Widgets come from vesper.config.ts, so a change to it restarts the dev server.
         if (files.vesperConfig) addWatchFile(files.vesperConfig);
 
@@ -64,6 +87,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         const adminCss = fileURLToPath(import.meta.resolve('@vesper/admin/studio.css'));
         const studioFromSource = adminCss.endsWith(`${sep}src${sep}studio.css`);
         const plugins: PluginOption[] = [
+          widgetJsxPlugin(files.vesperConfig),
           studioPlugin({
             root,
             cache,
@@ -72,6 +96,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             apiBase: `${base}_vesper/api/`,
             siteName: options.siteName ?? siteNameOf(config.site, root),
             siteUrl: base,
+            command,
             adminEntry,
             adminCss,
             studioFromSource,
@@ -85,6 +110,13 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
           plugins.push(tailwindcss());
         }
         updateConfig({ vite: { plugins } });
+      },
+
+      'astro:config:done': ({ injectTypes }) => {
+        injectTypes({
+          filename: 'vesper.d.ts',
+          content: "declare module 'vesper:content' {\n  export * from 'astro:content';\n}\n",
+        });
       },
 
       'astro:build:done': async ({ dir, logger }) => {
