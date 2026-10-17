@@ -4,6 +4,7 @@ import {
   encodeValue,
   lineEndings,
   type BodyFormat,
+  type BodyIssue,
   type CollectionManifest,
   type DataObject,
   type DataValue,
@@ -42,6 +43,7 @@ import {
   type ValuePath,
 } from '../editor/values.ts';
 import { builtinWidget } from '../widgets/registry.ts';
+import { bodyChecks } from '../body/ui.ts';
 
 // Tiptap and the Markdown tooling are most of the studio's weight, and only
 // entries with a body need them: they load the first time one is opened.
@@ -108,7 +110,7 @@ function EntryForm({
   doc: EntryDocument | null;
   onReload: () => void;
 }) {
-  const { api, siteUrl, manifest } = useStudio();
+  const { api, siteUrl, manifest, mdxProps } = useStudio();
   const isNew = doc === null;
   const status = doc?.status ?? 'editable';
   const editable = collection.editable && status !== 'read-only';
@@ -150,6 +152,47 @@ function EntryForm({
 
   const arranged = useMemo(() => arrangeFields(collection), [collection]);
   const entryPath = doc?.path ?? likelyPath(collection);
+  const format = bodyFormat(doc, collection);
+
+  // The body is checked as the site's build would check it (spec §6.5.1):
+  // live, a moment after typing stops, and again on save. Problems show on
+  // their blocks as they appear, and in the summary once a save is refused.
+  const [partials, setPartials] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!isContent || format !== 'mdoc') return;
+    let live = true;
+    api.listPartials().then(
+      (files) => {
+        if (live) setPartials(files);
+      },
+      () => {
+        // Without the list, partial files simply aren't checked here; the dev API still checks on save.
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [api, isContent, format]);
+  const checks = useMemo(
+    () => bodyChecks({ manifest, format, mdxProps, partials, entryPath }),
+    [manifest, format, mdxProps, partials, entryPath],
+  );
+  const [bodyIssues, setBodyIssues] = useState<BodyIssue[]>([]);
+  const [refusals, setRefusals] = useState(0);
+  useEffect(() => {
+    if (!isContent) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      void checks.validate(body).then((found) => {
+        if (live) setBodyIssues(found);
+      });
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [body, checks, isContent]);
+  const bodyErrors = bodyIssues.filter((issue) => issue.level === 'error');
   const titleText = titleOf(values, arranged.title) || entryId || 'New entry';
 
   // Issues are shown under the deepest field that's on screen for them.
@@ -189,6 +232,16 @@ function EntryForm({
     setSaving(true);
     setNotice(null);
     const bodyChanged = body !== saved.body;
+    // A body the site couldn't be built with isn't saved (spec §6.5.1).
+    if (isContent && (bodyChanged || isNew)) {
+      const found = await checks.validate(body);
+      setBodyIssues(found);
+      if (found.some((issue) => issue.level === 'error')) {
+        setRefusals((n) => n + 1);
+        setSaving(false);
+        return;
+      }
+    }
     const request: SaveRequest = {
       collection: collection.name,
       id: entryId ?? '',
@@ -209,6 +262,7 @@ function EntryForm({
         setVersion(result.version);
         setEntryId(result.id);
         setIssues([]);
+        setRefusals(0);
         setNotice({ kind: 'saved', at: new Date(), reformatted: result.reformatted });
         if (isNew || result.id !== entryId) {
           navigate(
@@ -218,6 +272,9 @@ function EntryForm({
         }
       } else if (result.reason === 'invalid') {
         setIssues(result.issues);
+        // The dev API checks the body again with the site's real config.
+        if (result.bodyIssues) setBodyIssues(result.bodyIssues);
+        setRefusals((n) => n + 1);
         const detailKeys = new Set(arranged.details.map(keyOf));
         if (result.issues.some((issue) => detailKeys.has(String(issue.path[0]))))
           setDetailsOpen(true);
@@ -246,6 +303,7 @@ function EntryForm({
     bodyEol,
     api,
     arranged.details,
+    checks,
   ]);
 
   // Ctrl+S / ⌘S saves; unsaved changes are protected from navigation and reloads.
@@ -331,10 +389,19 @@ function EntryForm({
     </div>
   );
 
-  const errors = targets.map(({ issue, target }) => ({
-    fieldId: target.focusId,
-    message: `${target.label}: ${issue.message}`,
-  }));
+  const errors = [
+    ...targets.map(({ issue, target }) => ({
+      fieldId: target.focusId,
+      message: `${target.label}: ${issue.message}`,
+    })),
+    // Body problems join the summary once a save is refused, and update as they're fixed.
+    ...(refusals > 0
+      ? bodyErrors.map((issue) => ({
+          fieldId: 'entry-body',
+          message: `Body, line ${String(issue.line)}: ${issue.message}`,
+        }))
+      : []),
+  ];
 
   return (
     <Screen title={titleText} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar}>
@@ -360,7 +427,7 @@ function EntryForm({
               rewritten in a standard layout.
             </p>
           )}
-          <ErrorSummary title="The entry wasn’t saved" errors={errors} />
+          <ErrorSummary title="The entry wasn’t saved" errors={errors} focusKey={refusals} />
 
           {sourceOnly ? (
             <TextArea
@@ -392,7 +459,9 @@ function EntryForm({
               <BodyEditor
                 value={body}
                 onChange={setBody}
-                format={bodyFormat(doc, collection)}
+                format={format}
+                partials={partials}
+                issues={bodyIssues}
                 disabled={!editable}
                 entryPath={entryPath}
                 imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}

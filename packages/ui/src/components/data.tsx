@@ -127,6 +127,12 @@ export type ErrorSummaryProps = {
   errors: ErrorSummaryItem[];
   /** Move focus to the summary when it appears (after a failed save or submit). */
   focusOnMount?: boolean;
+  /**
+   * Focus moves again whenever this changes (a new failed save). Defaults to
+   * the number of errors; set it when errors also update as people type, so
+   * fixing one never pulls focus away from what they're doing.
+   */
+  focusKey?: string | number;
 };
 
 /**
@@ -137,11 +143,16 @@ export function ErrorSummary({
   title = 'There is a problem',
   errors,
   focusOnMount = true,
+  focusKey,
 }: ErrorSummaryProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const trigger = focusKey ?? errors.length;
+  const hasErrors = errors.length > 0;
   useEffect(() => {
-    if (focusOnMount && errors.length > 0) ref.current?.focus();
-  }, [focusOnMount, errors.length]);
+    if (focusOnMount && hasErrors) ref.current?.focus();
+    // Only a new trigger moves focus, never an error being fixed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusOnMount, trigger]);
   if (errors.length === 0) return null;
   return (
     <div
@@ -155,8 +166,8 @@ export function ErrorSummary({
         {title}
       </h2>
       <ul className="mt-2 list-none space-y-1 p-0">
-        {errors.map((error) => (
-          <li key={error.fieldId}>
+        {errors.map((error, index) => (
+          <li key={`${error.fieldId}:${String(index)}`}>
             <a
               href={`#${error.fieldId}`}
               onClick={(event) => {
