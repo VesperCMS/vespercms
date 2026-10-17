@@ -37,7 +37,9 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 |---|---|
 | `npm install` | Install all workspaces. |
 | `npm test` | Vitest, from source (no build needed). |
-| `npm run typecheck` | `tsc -b` over package sources, then each package's test tsconfig. |
+| `npm run typecheck` | `tsc -b` over package build configs, then each package's `tsconfig.json` (which includes tests). |
+| `npm run lint` | ESLint, including the core package-boundary rules. |
+| `npm run format` / `format:check` | Prettier over code and config (never prose or content). |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout

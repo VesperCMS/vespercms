@@ -1,9 +1,4 @@
-export type {
-  FieldConstraints,
-  FieldKind,
-  FieldModel,
-  FieldOption,
-} from './field-model.ts';
+export type { FieldConstraints, FieldKind, FieldModel, FieldOption } from './field-model.ts';
 
 /**
  * Version of the manifest format (spec §6.2). Bump on any breaking change to

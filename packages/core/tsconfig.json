@@ -1,13 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
-  "//": "lib DOM gives the platform APIs shared by browsers, Workers and Node (TextDecoder, crypto.subtle, URL). No @types/node, so any Node-only global fails to typecheck.",
+  "//": "Editor, ESLint and test typecheck config: covers src/ including tests, which may use Node APIs to read fixtures. The shipped source is built by tsconfig.build.json, which has no Node types.",
   "compilerOptions": {
     "lib": ["ES2023", "DOM"],
-    "types": [],
-    "rootDir": "src",
-    "outDir": "dist",
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "types": ["node"],
+    "composite": false,
+    "declaration": false,
+    "noEmit": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["src/**/*.ts"]
 }

@@ -18,13 +18,24 @@
     "//check:dist": "Imports every published entry point from dist/ with the source condition off.",
     "check:dist": "npm run build && node scripts/check-dist.mjs",
     "//typecheck": "Package sources through project references, then each package's tests (which may use Node types).",
-    "typecheck": "tsc -b && tsc -p packages/core/tsconfig.test.json",
+    "typecheck": "tsc -b && tsc -p packages/core",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "//lint": "ESLint over the whole repo, including the package-boundary rules for @vesper/core.",
+    "lint": "eslint .",
+    "//format": "Prettier formats code and config only; prose and content files are ignored on purpose (.prettierignore).",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^24.13.0",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-astro": "^1.1.1",
     "typescript": "6.0.3",
+    "typescript-eslint": "^8.71.2",
     "vite": "^8.3.4",
     "vitest": "^5.0.5"
   }

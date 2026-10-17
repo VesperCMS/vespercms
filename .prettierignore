@@ -1,0 +1,20 @@
+**/dist/
+**/.astro/
+coverage/
+playwright-report/
+test-results/
+package-lock.json
+
+# Prose keeps its authored formatting; Prettier would re-pad every table.
+**/*.md
+
+# Content is test data and must stay byte-exact (see CLAUDE.md).
+**/*.mdx
+**/*.mdoc
+packages/core/test/corpus/
+packages/core/test/fixtures/
+**/__snapshots__/
+apps/playground/src/content/
+apps/playground/src/data/
+apps/playground/fixtures/
+apps/playground/vesper.redirects.yaml
