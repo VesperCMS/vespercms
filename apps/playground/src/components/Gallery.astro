@@ -1,0 +1,19 @@
+---
+// Imported directly inside an MDX file and never declared to Vesper, so the
+// studio must keep it as a protected source chip (spec §6.5.2).
+interface Props {
+  caption: string;
+  items: string[];
+}
+
+const { caption, items } = Astro.props;
+---
+
+<figure class="gallery">
+  <ul>
+    {items.map((item) => (
+      <li>{item}</li>
+    ))}
+  </ul>
+  <figcaption>{caption}</figcaption>
+</figure>

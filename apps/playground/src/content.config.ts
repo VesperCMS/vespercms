@@ -66,4 +66,30 @@ const authors = defineCollection({
   }),
 });
 
-export const collections = { blog, authors };
+const pages = defineCollection({
+  // The folder is the hierarchy (spec §6.15): `academics/nursing/index.md` is
+  // /academics/nursing/. `_order.yaml` and `_`-prefixed drafts sit beside the
+  // pages and are kept out by the pattern.
+  loader: glob({ pattern: '**/[^_]*.{md,mdx}', base: './src/content/pages' }),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string().optional(),
+    nav: z
+      .object({
+        label: z.string().optional().meta({ description: 'Shorter title for menus.' }),
+        hidden: z.boolean().default(false),
+      })
+      .meta({ label: 'Navigation' })
+      .optional(),
+    sections: z
+      .array(
+        z.object({
+          heading: z.string(),
+          body: z.string().meta({ widget: 'markdown', widgetOptions: { inline: true } }),
+        }),
+      )
+      .default([]),
+  }),
+});
+
+export const collections = { blog, authors, pages };

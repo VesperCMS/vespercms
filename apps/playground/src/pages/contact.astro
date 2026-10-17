@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+// A static route that is not content. Phase 2.6 uses it to prove a page can't
+// be moved onto a path a real route already owns (spec §6.15.4). Phase 6 adds
+// the <Form name="contact" /> defined in src/forms.config.ts.
+---
+
+<BaseLayout title="Contact us" description="How to reach the college.">
+  <h1>Contact us</h1>
+  <p>The welcome center is open weekdays from 8 to 5.</p>
+  <ul>
+    <li>
+      Phone: <a href="tel:+15555550100">555-555-0100</a>
+    </li>
+    <li>
+      Email: <a href="mailto:welcome@example.com">welcome@example.com</a>
+    </li>
+  </ul>
+</BaseLayout>

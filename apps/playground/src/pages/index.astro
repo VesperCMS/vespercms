@@ -1,23 +1,36 @@
 ---
-import { getCollection } from 'astro:content';
+import { getCollection, getEntry, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { pageUrl } from '../lib/pages';
 
+// The home page's words live in the pages collection (src/content/pages/index.md),
+// so editors can change them like any other page.
+const home = await getEntry('pages', 'index');
+if (!home) throw new Error('src/content/pages/index.md is missing');
+const { Content } = await render(home);
 const posts = await getCollection('blog');
 const authors = await getCollection('authors');
+const topLevel = (await getCollection('pages')).filter(
+  (page) => page.id !== 'index' && !page.id.includes('/'),
+);
 ---
 
-<BaseLayout
-  title="Vesper playground"
-  description="A test site that exercises every Vesper feature."
->
-  <h1>Vesper playground</h1>
-  <p>
-    This site exercises every feature of the Vesper studio. Each collection covers a different part
-    of the schema mapping, and the content files double as test fixtures.
-  </p>
+<BaseLayout title={home.data.title} description={home.data.summary}>
+  <h1>{home.data.title}</h1>
+  <Content />
 
   <h2>Collections</h2>
   <ul>
+    <li>
+      Pages:{' '}
+      {topLevel.map((page, i) => (
+        <>
+          {i > 0 && ', '}
+          <a href={pageUrl(page)}>{page.data.title}</a>
+        </>
+      ))}
+      , plus sections nested up to four folders deep.
+    </li>
     <li>
       <a href="/blog/">Blog</a>: {posts.length} posts with images, references, tags and dates.
     </li>

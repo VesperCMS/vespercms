@@ -1,0 +1,40 @@
+---
+import { getCollection, render } from 'astro:content';
+import Callout from '../components/Callout.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { breadcrumbs } from '../lib/pages';
+
+export async function getStaticPaths() {
+  const pages = await getCollection('pages');
+  // The root index.md is the home page's content, rendered by index.astro.
+  return pages
+    .filter((page) => page.id !== 'index')
+    .map((page) => ({ params: { path: page.id }, props: { page } }));
+}
+
+const { page } = Astro.props;
+const { Content } = await render(page);
+const crumbs = await breadcrumbs(page);
+---
+
+<BaseLayout title={page.data.title} description={page.data.summary}>
+  <nav aria-label="Breadcrumb" class="breadcrumbs">
+    <ol>
+      {crumbs.map((crumb) => (
+        <li>{crumb.url ? <a href={crumb.url}>{crumb.title}</a> : <span>{crumb.title}</span>}</li>
+      ))}
+      <li>
+        <span aria-current="page">{page.data.title}</span>
+      </li>
+    </ol>
+  </nav>
+  <h1>{page.data.title}</h1>
+  {page.data.summary && <p class="lead">{page.data.summary}</p>}
+  <Content components={{ Callout }} />
+  {page.data.sections.map((section) => (
+    <section>
+      <h2>{section.heading}</h2>
+      <p>{section.body}</p>
+    </section>
+  ))}
+</BaseLayout>

@@ -1,0 +1,18 @@
+---
+// Used by the MDX page (passed in through the route's components map) and by
+// the Markdoc `callout` tag.
+interface Props {
+  type?: 'note' | 'warning' | 'tip';
+  title?: string;
+}
+
+const { type = 'note', title } = Astro.props;
+const labels = { note: 'Note', warning: 'Warning', tip: 'Tip' };
+---
+
+<div class:list={['callout', `callout-${type}`]} role="note">
+  <p class="callout-title">
+    <strong>{title ?? labels[type]}</strong>
+  </p>
+  <slot />
+</div>

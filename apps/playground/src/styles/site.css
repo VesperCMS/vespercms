@@ -141,3 +141,48 @@ code {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   font-size: 0.9375em;
 }
+
+.lead {
+  font-size: 1.125rem;
+  color: var(--muted);
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.breadcrumbs li:not(:last-child)::after {
+  content: '/';
+  margin-left: 0.25rem;
+  color: var(--muted);
+}
+
+.callout {
+  margin: 1.5rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border-left: 4px solid var(--link);
+}
+
+.callout-title {
+  margin-top: 0;
+}
+
+.gallery ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery li {
+  padding: 2rem 1rem;
+  background: var(--panel);
+}

@@ -9,7 +9,11 @@ interface Props {
 const { title, description } = Astro.props;
 const nav = [
   { href: '/', label: 'Home' },
+  { href: '/about/', label: 'About' },
+  { href: '/academics/', label: 'Academics' },
+  { href: '/campus-life/', label: 'Campus life' },
   { href: '/blog/', label: 'Blog' },
+  { href: '/contact/', label: 'Contact' },
 ];
 const current = Astro.url.pathname;
 ---
