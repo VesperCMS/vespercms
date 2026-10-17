@@ -128,15 +128,30 @@ export type {
 } from './manifest/types.ts';
 
 // Bodies as blocks, for splice-on-save editing (DECISIONS.md, "Studio").
+export { parseBody, assembleBody, keepAll, dedentedText } from './body/blocks.ts';
+export type {
+  BodyFormat,
+  BodyBlock,
+  BodyItem,
+  BodyTag,
+  InlineChip,
+  MarkdocParseOptions,
+  ParseBodyOptions,
+  ParsedBody,
+} from './body/types.ts';
+export { markdocTokenizerOptions, parseMarkdoc } from './body/markdoc.ts';
 export {
-  parseBody,
-  assembleBody,
-  keepAll,
-  type BodyFormat,
-  type BodyBlock,
-  type BodyItem,
-  type ParsedBody,
-} from './files/body.ts';
+  markdocTags,
+  markdocTagLayout,
+  markdocValue,
+  markdocOpening,
+  markdocClosing,
+  editMarkdocTag,
+  type MarkdocTagToken,
+  type MarkdocTagKind,
+  type MarkdocTagLayout,
+  type MarkdocAttributeSpan,
+} from './body/markdoc-tag.ts';
 
 // The studio's API contract (spec §6.7).
 export {

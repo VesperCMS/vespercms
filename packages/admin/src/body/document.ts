@@ -74,7 +74,8 @@ export function buildDocument(
   const parsed = parseBody(body, format);
   const content = parsed.blocks.map((block, index): JSONContent => {
     const text = body.slice(block.start, block.end);
-    const node = block.kind === 'markdown' ? writableNode(markdown, text) : null;
+    // Blocks with inline chips stay protected until the writing view shows chips.
+    const node = block.kind === 'markdown' && !block.chips ? writableNode(markdown, text) : null;
     if (node) return { ...node, attrs: { ...node.attrs, vesperBlock: index } };
     return { type: 'sourceBlock', attrs: { index, text, blockType: block.type } };
   });
