@@ -80,6 +80,8 @@ Later phases add `packages/astro` (Phase 1), `packages/admin` (Phase 2), `templa
 
 **Never run a formatter over content, fixtures or the playground's content folders.** They are byte-exact test data, protected by `.prettierignore`, `.editorconfig` and `-text` in `.gitattributes`.
 
+**Read YAML with `files/yaml/read.ts` (Astro 7.4's exact options), and edit structurally only when it says the block is editable.** Astro 7.4 parses with `yaml` and older Astro with js-yaml; where they disagree, a structural save could silently change content for one of them.
+
 **Edit raw input values, never Zod's parsed output.** Defaults, coercions and transforms must not leak into files the editor didn't touch.
 
 ### Static output, any host

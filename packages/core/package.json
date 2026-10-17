@@ -22,8 +22,14 @@
     "build": "tsc -b tsconfig.build.json",
     "prepack": "tsc -b tsconfig.build.json"
   },
-  "devDependencies": {
-    "@astrojs/internal-helpers": "^0.13.0"
+  "//dependencies": "yaml: Astro 7.4's own YAML parser, and a lossless CST for editing. js-yaml: what Astro 6.x-7.3 parse with; used to refuse structural edits where the two disagree.",
+  "dependencies": {
+    "js-yaml": "^4.3.2",
+    "yaml": "^2.9.1"
   },
-  "//devDependencies": "Test-only: the corpus tests check the frontmatter split against Astro's own implementation."
+  "//devDependencies": "Test-only: the corpus tests check the frontmatter split against Astro's own implementation.",
+  "devDependencies": {
+    "@astrojs/internal-helpers": "^0.13.0",
+    "@types/js-yaml": "^4.0.9"
+  }
 }

@@ -113,9 +113,16 @@ Rejected:
 
 **A save changes only the bytes of the values that changed. Whole-block re-stringifying is a flagged fallback for constructs we can't splice (anchors, aliases, tags).** Measured on 988 real YAML frontmatter blocks from seven local sites: `yaml`'s `parseDocument(…).toString({ lineWidth: 0 })` changed 73 of them (unfolded `>-` strings, re-spaced flow sequences, re-quoting). The `yaml` CST round-tripped all 988 byte-for-byte. Spec §6.5 names the Document API, but its acceptance criterion is "no unrelated diffs," and only splicing meets it.
 
-### 2026-10-17: Values are read with js-yaml, Astro's own parser
+### 2026-10-17: Values are read the way Astro 7.4 reads them, and js-yaml must agree
 
-**The editor reads frontmatter values with js-yaml, exactly as Astro does. `yaml` is used only to locate and edit nodes, and only when its values deep-equal js-yaml's.** Two real files (multi-line single-quoted inline SVG at column 0) parse in js-yaml and fail in `yaml`. If the editor saw different values than the site does, a save could change content nobody touched. When the two parsers disagree, the block is source-only and edited as raw YAML.
+**The editor reads YAML with `yaml`'s `parseDocument` using Astro 7.4's exact options (`customTags: ['timestamp'], merge: true, schema: 'core'`). A block is editable structurally only when js-yaml reads the same values. Otherwise it is source-only, edited as raw text.**
+
+- Astro changed parsers in 7.4: `@astrojs/internal-helpers` 0.13 uses `yaml`, while Astro 6.x through 7.3 (0.10, 0.11) use js-yaml. The two disagree on real files:
+  - Two domsys files with multi-line single-quoted inline SVG at column 0 parse in js-yaml and fail in `yaml`.
+  - `!!float 1` reads as `1` in js-yaml and `"1"` in `yaml`.
+- If the editor read with one parser while the site built with the other, a save could change what visitors see in a field nobody touched. Requiring agreement makes every structural edit safe on both Astro majors.
+- The real cost is small: every block in the committed corpus is editable, and its values match Astro's own `parseFrontmatter` exactly (`test/yaml-read.corpus.test.ts`).
+- The design first assumed js-yaml was the reader, because the Astro 7.3 install it was checked against still used js-yaml. The parity test against the installed Astro caught the change.
 
 ### 2026-10-17: Line endings are pinned to LF, and fixtures are byte-exact
 
