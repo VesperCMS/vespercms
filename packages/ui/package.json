@@ -1,0 +1,15 @@
+{
+  "name": "@vesper/ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vesper's design tokens and (from Phase 2) its small kit of accessible components.",
+  "license": "MIT",
+  "type": "module",
+  "//private": "Private until the component kit lands in Phase 2; until then it only holds the token stylesheet.",
+  "exports": {
+    "./tokens.css": "./src/tokens.css"
+  },
+  "files": [
+    "src"
+  ]
+}

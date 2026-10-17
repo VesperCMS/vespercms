@@ -25,7 +25,9 @@
     "lint": "eslint .",
     "//format": "Prettier formats code and config only; prose and content files are ignored on purpose (.prettierignore).",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "//a11y:contrast": "Parses packages/ui/src/tokens.css and checks every colour pair against WCAG 2.1 in both themes, plus the spec §10.4 token budget.",
+    "a11y:contrast": "node scripts/a11y-contrast.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

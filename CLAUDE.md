@@ -40,13 +40,14 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run typecheck` | `tsc -b` over package build configs, then each package's `tsconfig.json` (which includes tests). |
 | `npm run lint` | ESLint, including the core package-boundary rules. |
 | `npm run format` / `format:check` | Prettier over code and config (never prose or content). |
+| `npm run a11y:contrast` | Token contrast (WCAG 2.1, both themes) and the §10.4 token budget, parsed from `packages/ui/src/tokens.css`. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout
 
 ```
 packages/core      Schema introspection, manifest, serializers, storage interface. No framework imports.
-packages/ui        Design tokens (Phase 0), accessible components (Phase 2).
+packages/ui        Design tokens (Phase 0), accessible components (Phase 2). Tokens enforce the §10.4 budget.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
 scripts/           Repo tooling (contrast check, static server, dist check).
 ```
