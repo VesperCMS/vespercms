@@ -237,7 +237,7 @@ export function UploadStatus({
     return (
       <div
         role="alert"
-        className="flex flex-col gap-3 rounded-md border-l-4 border-warning bg-surface-raised p-4"
+        className="flex flex-col gap-3 rounded-md border border-warning bg-surface-raised p-4"
       >
         <p>This file is already in the site as {step.existing}.</p>
         <div className="flex flex-wrap gap-3">
@@ -264,7 +264,7 @@ export function UploadStatus({
     return (
       <div
         role="alert"
-        className="flex flex-col gap-3 rounded-md border-l-4 border-warning bg-surface-raised p-4"
+        className="flex flex-col gap-3 rounded-md border border-warning bg-surface-raised p-4"
       >
         <p>
           {step.upload.name} is {megabytes(step.upload.bytes.length)}. Large files make the site’s

@@ -24,3 +24,13 @@ describe('parseRoute and hrefFor', () => {
     expect(parseRoute('#/c/blog/e')).toEqual({ screen: 'not-found', path: '/c/blog/e' });
   });
 });
+
+describe('fieldId', () => {
+  it('can’t collide with the ids widgets derive from another field’s id', async () => {
+    const { fieldId } = await import('../editor/values.ts');
+    // A group's legend is `${id}-label`; a child field may be called `label`.
+    expect(`${fieldId(['nav'])}-label`).not.toBe(fieldId(['nav', 'label']));
+    expect(fieldId(['cta-label'])).not.toBe(`${fieldId(['cta'])}-label`);
+    expect(fieldId(['sections', 0, 'body'])).toBe('field.sections.0.body');
+  });
+});

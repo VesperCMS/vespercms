@@ -18,7 +18,8 @@ import { GeoWidget } from './geo.tsx';
 import { GroupWidget, RepeaterWidget } from './group.tsx';
 import { FileWidget, ImageWidget } from './image.tsx';
 import { ReferencesWidget, ReferenceWidget } from './reference.tsx';
-import { ColorWidget, DateTimeWidget, MarkdownWidget, SlugWidget, UrlWidget } from './special.tsx';
+import { MarkdownWidget } from './markdown.tsx';
+import { ColorWidget, DateTimeWidget, SlugWidget, UrlWidget } from './special.tsx';
 
 // Built-ins receive values of every shape; the registry can't be narrower.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

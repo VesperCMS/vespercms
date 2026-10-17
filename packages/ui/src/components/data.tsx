@@ -149,7 +149,7 @@ export function ErrorSummary({
       tabIndex={-1}
       role="alert"
       aria-labelledby="vesper-error-summary-title"
-      className="rounded-md border-l-4 border-danger bg-surface-raised p-4 outline-none focus-visible:outline-2 focus-visible:outline-focus"
+      className="rounded-md border border-danger bg-surface-raised p-4 outline-none focus-visible:outline-2 focus-visible:outline-focus"
     >
       <h2 id="vesper-error-summary-title" className="text-base font-semibold text-content">
         {title}

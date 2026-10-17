@@ -257,38 +257,3 @@ export function DateTimeWidget({
     </>
   );
 }
-
-/**
- * Markdown in frontmatter (spec §6.3.2). A plain text area for now, said so
- * in words; the compact rich editor arrives with the body editor.
- */
-export function MarkdownWidget({
-  value,
-  onChange,
-  field,
-  id,
-  describedBy,
-  invalid,
-  disabled,
-}: WidgetProps<string>) {
-  const inline = field.widgetOptions?.inline === true;
-  return (
-    <>
-      <textarea
-        id={id}
-        rows={inline ? 2 : 6}
-        value={typeof value === 'string' ? value : ''}
-        onChange={(event) => {
-          onChange(event.target.value === '' && !field.required ? undefined : event.target.value);
-        }}
-        aria-describedby={describedByWith(describedBy, `${id}-md`)}
-        aria-invalid={invalid || undefined}
-        disabled={disabled}
-        className={cx(inputClass, 'resize-y')}
-      />
-      <p id={`${id}-md`} className="text-sm text-content-muted">
-        Markdown: **bold**, *italic*, [links](https://example.com).
-      </p>
-    </>
-  );
-}

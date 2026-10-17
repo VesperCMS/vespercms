@@ -8,7 +8,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 |---|---|
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
-| 2 Integration and local mode | In progress. Decisions confirmed 2026-10-17 (DECISIONS.md, "Studio") |
+| 2 Integration and local mode | Done locally (2026-10-17), not yet pushed. See "Phase 2: outcome" below. |
 | 2.5 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -48,6 +48,71 @@ All five "Done when" criteria are met and tested:
 **Deferred:**
 - The Astro 6 fixture site and its CI job move to Phase 2, with the integration. Astro 6's `reference()` shape is already covered by a unit test.
 - Loading `markdoc.config.mjs` moves to Phase 2.5, which uses it.
+
+## Phase 2: outcome
+
+The spec's three "Done when" criteria, with evidence:
+
+| Criterion | Evidence |
+|---|---|
+| A fresh Astro 7 site goes from `npx astro add` to editing content in under two minutes, with zero config | `vesper()` needs no options and no `vesper.config.ts`: `fixtures/astro6-site` uses exactly what `astro add` writes, and builds with `/admin` and the manifest (CI job `astro6`). From `astro dev` starting to a working `/admin` and a successful save on that site took 4.2 seconds. The package has the `astro-integration` keyword and a default export, which `astro add` requires. **Not yet measured:** the `npx astro add` install itself, which needs the packages on npm. Check it at the first publish. |
+| Every §10.4 rule holds on every screen | One primary action per screen (Home none, list "New entry", editor "Save", media "Upload"). Status is always words. The toolbar uses words. The only icon-only buttons are close, the "…" menu and the map pin (a drag handle), all named. `packages/admin/src/budget.test.ts` fails on thick borders, extra font weights, ad hoc shadows or raw colours in the studio's source, and `tokens.css` removes off-budget utilities. Contrast is checked by `npm run a11y:contrast`. |
+| Each built-in widget meets its §6.3.2 accessibility requirements; colour and geo can be set by keyboard alone and with a screen reader | The colour hex field is the primary control, and palettes are named radio swatches (`widgets.test.tsx`). Latitude and longitude are always-visible number fields. The map pin moves with the arrow keys and announces each move (checked in Chromium). axe runs in jsdom per widget, and in Chromium on every screen (`e2e/studio`). |
+
+**Standing criteria:**
+- `npm run dev` serves the playground with `/admin`.
+- Typecheck, lint and 2,600-odd unit, corpus and integration tests pass.
+- axe passes on every studio screen in Chromium.
+- READMEs, `DECISIONS.md` and `CLAUDE.md` are current.
+- Keyboard passes done by hand:
+  - list row → editor with Enter;
+  - Ctrl+S;
+  - Escape out of the body editor to its toolbar;
+  - the map pin's arrow keys;
+  - every dialog (focus in, Escape, focus back);
+  - the unsaved-changes guard.
+
+**Also delivered in Phase 2:**
+- Studio screens:
+  - Home;
+  - the entry list (search, status filter, sortable columns);
+  - the editor (title as heading, Details, validation summary, conflict handling, delete);
+  - the media browser.
+- Every built-in widget:
+  - colour, geo with an optional MapLibre map, slug, URL, email;
+  - date-time in the site's time zone, keeping DST offsets;
+  - select and radio, tags, the repeater, references;
+  - image (required alt or decorative), file;
+  - compact Markdown;
+  - the raw YAML fallback.
+- The body editor:
+  - Tiptap writing view, splicing only changed blocks;
+  - protected source blocks;
+  - source view;
+  - link and image dialogs.
+- Upload hygiene, run in the browser:
+  - lossless metadata stripping;
+  - upright re-encoding;
+  - SVG sanitizing;
+  - duplicate detection;
+  - size limits.
+- Custom widgets, compiled as React by the integration, with the playground's `store-hours` example.
+- `vesper:content`, and the dev toolbar's "Edit this page".
+- The local dev API:
+  - localhost only;
+  - same-origin only;
+  - the `X-Vesper` header required;
+  - validated with the site's own schemas.
+- Studio e2e tests on `astro dev` over a throwaway copy of the playground.
+- The Astro 6 fixture, its CI job, and the `astro:content` shim contract test for both majors.
+
+**Open, for Jeremy:**
+- **HEIC conversion.** Converting HEIC outside Safari needs an LGPL-3.0 library (libheif-js or heic-to). Until that's decided, the studio converts where the browser can and otherwise explains what to do (DECISIONS.md).
+- **React 18 sites.** The studio needs React 19 (a peer dependency). A site already on React 18, through `@astrojs/react`, would get a peer conflict. Not tested yet: decide whether to support it (load the studio's own React) or document React 19.
+
+**Follow-ups noted, not blocking:**
+- The `/admin` bundle is large, and Vite warns about it. Loading the body editor and MapLibre lazily would cut the first load. MapLibre already loads only on demand.
+- `fields.image()` with focal points and crops is Phase 2.7. The image field keeps those values untouched until then.
 
 ## Phase 1: Core (design)
 

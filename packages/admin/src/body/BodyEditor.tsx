@@ -364,7 +364,7 @@ function FormatToolbar({
   );
 }
 
-function LinkDialog({
+export function LinkDialog({
   editor,
   isOpen,
   onOpenChange,

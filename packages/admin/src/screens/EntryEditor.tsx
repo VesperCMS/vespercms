@@ -336,18 +336,16 @@ function EntryForm({
       <EditorContext.Provider value={editor}>
         <div className="mx-auto flex max-w-[720px] flex-col gap-6">
           {doc?.message && (
-            <p className="rounded-md border-l-4 border-warning bg-surface-raised p-4">
-              {doc.message}
-            </p>
+            <p className="rounded-md border border-warning bg-surface-raised p-4">{doc.message}</p>
           )}
           {notice?.kind === 'conflict' && (
-            <div role="alert" className="rounded-md border-l-4 border-danger bg-surface-raised p-4">
+            <div role="alert" className="rounded-md border border-danger bg-surface-raised p-4">
               <p className="mb-3">{notice.text}</p>
               <Button onPress={onReload}>Reload this entry</Button>
             </div>
           )}
           {notice?.kind === 'error' && (
-            <p role="alert" className="rounded-md border-l-4 border-danger bg-surface-raised p-4">
+            <p role="alert" className="rounded-md border border-danger bg-surface-raised p-4">
               Nothing was saved. {notice.text}
             </p>
           )}

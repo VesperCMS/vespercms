@@ -1,6 +1,6 @@
 # @vesper/ui
 
-Vesper's design tokens and, from Phase 2, its accessible component kit: Button, IconButton, Link, TextField, TextArea, Select, Combobox, Checkbox, Switch, RadioGroup, Dialog, Drawer, Menu, Disclosure, Table, InlineStatus and ErrorSummary (spec §10.5). Screens compose these and nothing else.
+Vesper's design tokens and, from Phase 2, its accessible component kit: Button, IconButton, Link, TextField, TextArea, Select, Combobox, Checkbox, Switch, RadioGroup, Dialog, Drawer, Menu, Disclosure, Table, InlineStatus, ErrorSummary, and a Toolbar with ToggleButton and ToolButton for the body editor (spec §10.5). Screens compose these and nothing else.
 
 **Status:** Phase 2, v1 of the kit. The kit is built on React Aria Components (DECISIONS.md). The package stays private: `@vesper/admin` compiles it into the studio bundle, and nothing else uses it yet.
 
@@ -10,9 +10,10 @@ Vesper's design tokens and, from Phase 2, its accessible component kit: Button, 
 | Text inputs | `TextField`, `TextArea`: visible label, "(required)" in words, help and error text linked with aria-describedby |
 | Choices | `Select`, `Combobox`, `MultiCombobox` (tags and multi-references, with named remove buttons), `Checkbox`, `Switch` (state also in words), `RadioGroup` |
 | Overlays | `Dialog` (focus trap, Escape, focus returns to the trigger), `Drawer`, `Menu` (the "…" menu), `Disclosure` |
-| Data and feedback | `Table`, `InlineStatus` (status in words), `ErrorSummary` (takes focus, links to fields) |
+| Data and feedback | `Table` (rows can be links), `InlineStatus` (status in words), `ErrorSummary` (takes focus, links to fields) |
+| Toolbars | `Toolbar` (one Tab stop, arrow keys inside), `ToggleButton` (pressed shown as a fill and semibold text, and announced as pressed), `ToolButton` |
 
-Each component has axe and keyboard tests in `src/components/ui.test.tsx`. Colour contrast is checked separately, on the tokens.
+Each component has axe and keyboard tests in `src/components/ui.test.tsx`. `@vesper/admin`'s `src/budget.test.ts` checks the kit's and the studio's source against the §10.4 design budget. Colour contrast is checked separately, on the tokens.
 
 ## Tokens
 
