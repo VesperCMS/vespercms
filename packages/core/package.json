@@ -21,5 +21,9 @@
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "prepack": "tsc -b tsconfig.build.json"
-  }
+  },
+  "devDependencies": {
+    "@astrojs/internal-helpers": "^0.13.0"
+  },
+  "//devDependencies": "Test-only: the corpus tests check the frontmatter split against Astro's own implementation."
 }

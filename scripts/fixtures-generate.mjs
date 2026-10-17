@@ -16,7 +16,7 @@ const files = {
   'frontmatter/mixed-eol.md':
     '---\r\ntitle: Mixed endings\nsummary: Some lines CRLF, some LF\r\ncount: 3\n---\n\nBody line one.\r\nBody line two.\n',
   'frontmatter/bom.md':
-    '﻿---\ntitle: Starts with a byte-order mark\n---\n\nThe BOM must survive a save.\n',
+    '\uFEFF---\ntitle: Starts with a byte-order mark\n---\n\nThe BOM must survive a save.\n',
   'frontmatter/no-trailing-newline.md':
     '---\ntitle: No final newline\n---\n\nThe file ends without a newline.',
   'frontmatter/leading-blank-lines.md':
