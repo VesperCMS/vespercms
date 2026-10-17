@@ -106,7 +106,11 @@ function blocksOf(nodes: readonly MarkdocNode[], lines: Lines): BodyBlock[] {
     const last = node.lines.at(-1);
     if (first === undefined || last === undefined) return [];
     const start = lines.contentStart(first);
-    const end = Math.max(start, lines.lineEnd(Math.max(first, last - 1)));
+    // Trailing whitespace (spaces on the last line, or a blank line Markdoc
+    // counts into a list) belongs to the gap after the block, so it survives
+    // when the block is rewritten.
+    let end = Math.max(start, lines.lineEnd(Math.max(first, last - 1)));
+    while (end > start && /\s/.test(lines.text[end - 1] ?? '')) end--;
     if (node.type === 'tag') return [tagBlock(node, start, end, lines)];
     const block = { start, end, type: node.type };
     if (!markdownShape(node)) return [{ ...block, kind: 'source' }];
