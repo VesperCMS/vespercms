@@ -1,4 +1,5 @@
 import { isoWithOffset, offsetOf, parseIsoWithOffset } from '../files/date-offset.ts';
+import type { BodyIssue } from '../body/validate.ts';
 import { isPlainObject, type DataObject, type DataValue } from '../files/equal.ts';
 
 /*
@@ -106,7 +107,13 @@ export type FieldIssue = { path: (string | number)[]; message: string };
 
 export type SaveResponse =
   | { ok: true; id: string; path: string; version: string; reformatted: boolean }
-  | { ok: false; reason: 'invalid'; issues: FieldIssue[] }
+  | {
+      ok: false;
+      reason: 'invalid';
+      issues: FieldIssue[];
+      /** Problems in the body that would stop the site from building (spec §6.5.1). */
+      bodyIssues?: BodyIssue[];
+    }
   | { ok: false; reason: 'conflict'; message: string }
   | { ok: false; reason: 'error'; message: string };
 

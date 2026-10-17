@@ -1,4 +1,5 @@
 import type { Diagnostic, FieldModel } from '../field-model.ts';
+import type { MarkdocManifest, MdxManifest } from '../markdoc/types.ts';
 
 /**
  * The manifest (spec §6.2): everything the studio and the cloud need to know
@@ -23,6 +24,10 @@ export type Manifest = {
   };
   collections: CollectionManifest[];
   forms: FormManifest[];
+  /** The site's Markdoc tags (spec §6.5.1), when it uses @astrojs/markdoc. */
+  markdoc?: MarkdocManifest;
+  /** Components declared for MDX bodies in vesper.config.ts (spec §6.5.2). */
+  mdx?: MdxManifest;
   diagnostics: Diagnostic[];
 };
 

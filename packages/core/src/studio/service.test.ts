@@ -225,6 +225,55 @@ describe('ContentService: saving', () => {
     expect(storage.commits).toHaveLength(0);
   });
 
+  it('refuses a body the site couldn’t be built with, and saves one with warnings only', async () => {
+    const storage = await MemoryStorage.create({ 'src/content/blog/harbor-at-dawn.md': HARBOR });
+    const seen: unknown[] = [];
+    const service = new ContentService(storage, manifest, {
+      validateBody: (input) => {
+        seen.push(input);
+        return Promise.resolve(
+          input.body.includes('broken')
+            ? [{ line: 2, level: 'error', code: 'x', message: 'Video: Title is required.' }]
+            : [{ line: 2, level: 'warning', code: 'y', message: 'Just so you know.' }],
+        );
+      },
+    });
+    const doc = await service.readEntry('blog', 'harbor-at-dawn');
+    const request = { collection: 'blog', id: 'harbor-at-dawn', version: doc?.version ?? '' };
+    expect(await service.saveEntry({ ...request, body: '\r\n\r\nbroken\r\n' })).toEqual({
+      ok: false,
+      reason: 'invalid',
+      issues: [],
+      bodyIssues: [{ line: 2, level: 'error', code: 'x', message: 'Video: Title is required.' }],
+    });
+    expect(storage.commits).toHaveLength(0);
+    expect(seen[0]).toEqual({
+      collection: 'blog',
+      format: 'md',
+      body: '\r\n\r\nbroken\r\n',
+      path: 'src/content/blog/harbor-at-dawn.md',
+    });
+    expect(await service.saveEntry({ ...request, body: '\r\n\r\nFine.\r\n' })).toMatchObject({
+      ok: true,
+    });
+  });
+
+  it('lists the files a Markdoc partial can point at', async () => {
+    const { service } = await setup({
+      'src/content/docs/_support.mdoc': 'Hours.\n',
+      'src/content/docs/guide.mdoc': 'Guide.\n',
+      'public/notes.md': 'Not in src.\n',
+    });
+    expect(await service.listPartials()).toEqual([
+      'src/content/blog/2026/winter-market/index.md',
+      'src/content/blog/_unpublished.md',
+      'src/content/blog/harbor-at-dawn.md',
+      'src/content/blog/odd.md',
+      'src/content/docs/_support.mdoc',
+      'src/content/docs/guide.mdoc',
+    ]);
+  });
+
   it('edits one file() entry without conflicting with edits to another', async () => {
     const { service, storage } = await setup();
     const ana = await service.readEntry('authors', 'ana');

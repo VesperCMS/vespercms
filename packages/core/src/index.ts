@@ -162,6 +162,32 @@ export {
   type JsxAttribute,
   type JsxTagLayout,
 } from './body/jsx-tag.ts';
+export {
+  validateMarkdocBody,
+  validateMdxBody,
+  resolvePartial,
+  partialChecker,
+  type BodyIssue,
+  type MarkdocValidateOptions,
+  type MdxComponentCheck,
+} from './body/validate.ts';
+
+// Markdoc tags and MDX components in the manifest (spec §6.5.1, §6.5.2).
+export { extractMarkdocSchema, type MarkdocConfigLike } from './markdoc/extract.ts';
+export { markdocFields } from './markdoc/fields.ts';
+export { markdocConfigFromManifest } from './markdoc/config.ts';
+export type {
+  MarkdocManifest,
+  MarkdocTagManifest,
+  MarkdocAttributeManifest,
+  MarkdocNodeManifest,
+  MarkdocMatches,
+  MarkdocVariables,
+  MarkdocTagHint,
+  MdxManifest,
+  MdxComponentManifest,
+  MdxComponentConfig,
+} from './markdoc/types.ts';
 
 // The studio's API contract (spec §6.7).
 export {
@@ -188,6 +214,7 @@ export {
   expandNewEntryPath,
   type ContentServiceOptions,
   type Validator,
+  type BodyValidator,
 } from './studio/service.ts';
 export { issuesFromZod } from './studio/issues.ts';
 export { formatYamlSnippet, parseYamlSnippet, type YamlSnippetParse } from './files/yaml/text.ts';

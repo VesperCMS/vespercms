@@ -1,6 +1,14 @@
 import { dataFormatOf } from '../files/data-file.ts';
 import { entryKindOf, patternExtensions } from '../collections/entries.ts';
 import type { Diagnostic, FieldModel } from '../field-model.ts';
+import { extractMarkdocSchema, type MarkdocConfigLike } from '../markdoc/extract.ts';
+import { markdocFields } from '../markdoc/fields.ts';
+import type {
+  MarkdocManifest,
+  MarkdocTagHint,
+  MdxComponentConfig,
+  MdxManifest,
+} from '../markdoc/types.ts';
 import { humanize } from '../schema/humanize.ts';
 import { walkSchema } from '../schema/walk.ts';
 import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
@@ -50,6 +58,18 @@ export type ManifestInput = {
     collections?: Record<string, CollectionConfig>;
     widgets?: Record<string, WidgetDefinition>;
     timeZone?: string;
+    /** UI hints for Markdoc tags (spec §6.5.1). */
+    markdoc?: { tags?: Record<string, MarkdocTagHint> };
+    /** Declared MDX components (spec §6.5.2). */
+    mdx?: { components?: Record<string, MdxComponentConfig> };
+  };
+  /**
+   * The site's Markdoc config, merged the way @astrojs/markdoc merges it, and
+   * the integration's parse options. Absent when the site doesn't use Markdoc.
+   */
+  markdoc?: {
+    config: MarkdocConfigLike;
+    options: { allowHTML?: boolean; ignoreIndentation?: boolean };
   };
   forms?: { name: string; schema: unknown; options?: Record<string, unknown> }[];
   /** Problems found while loading the site's configs. */
@@ -93,6 +113,9 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
     };
   });
 
+  const markdoc = input.markdoc ? markdocOf(input, widgets, diagnostics) : undefined;
+  const mdx = mdxOf(input.config?.mdx?.components, widgets, diagnostics);
+
   const content = {
     manifestVersion: 1 as const,
     site: {
@@ -102,12 +125,63 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
     },
     collections,
     forms,
+    ...(markdoc ? { markdoc } : {}),
+    ...(mdx ? { mdx } : {}),
     diagnostics,
   };
   return {
     ...content,
     generator: input.generator ?? { name: '@vesper/core', version: '0.0.0' },
     hash: await manifestHash(content),
+  };
+}
+
+function markdocOf(
+  input: ManifestInput,
+  widgets: Record<string, WidgetDefinition>,
+  diagnostics: Diagnostic[],
+): MarkdocManifest {
+  const { config, options } = input.markdoc ?? { config: {}, options: {} };
+  return extractMarkdocSchema(config, {
+    options,
+    ...(input.config?.markdoc?.tags ? { hints: input.config.markdoc.tags } : {}),
+    diagnostics,
+    fields: (tag, hint) =>
+      resolveWidgets(markdocFields(tag, hint), diagnostics, {
+        custom: widgets,
+        collection: `markdoc:${tag.name}`,
+      }),
+  });
+}
+
+/** Declared MDX components, with field models from their Zod props schemas. */
+function mdxOf(
+  components: Record<string, MdxComponentConfig> | undefined,
+  widgets: Record<string, WidgetDefinition>,
+  diagnostics: Diagnostic[],
+): MdxManifest | undefined {
+  if (!components) return undefined;
+  return {
+    components: Object.entries(components).map(([name, component]) => {
+      let fields: MdxManifest['components'][number]['fields'] = [];
+      if (component.props !== undefined) {
+        const walk = walkSchema(component.props, { collection: `mdx:${name}` });
+        diagnostics.push(...walk.diagnostics);
+        fields = walk.fields
+          ? resolveWidgets(walk.fields, diagnostics, { custom: widgets, collection: `mdx:${name}` })
+          : null;
+      }
+      return {
+        name,
+        // Component names are already written for people ("YouTube"); humanizing would mangle them.
+        label: component.label ?? name,
+        ...(component.description ? { description: component.description } : {}),
+        ...(component.summary ? { summary: component.summary } : {}),
+        children: component.children === true,
+        inline: component.inline === true,
+        fields,
+      };
+    }),
   };
 }
 

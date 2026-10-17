@@ -1,4 +1,5 @@
 import { slug as githubSlug } from 'github-slugger';
+import type { BodyIssue } from '../body/validate.ts';
 import { defaultEntryId, globMatcher } from '../collections/entries.ts';
 import {
   dataFormatOf,
@@ -45,8 +46,21 @@ import {
 /** Checks values against the collection's real schema. Returns no issues when they're valid. */
 export type Validator = (collection: string, data: DataObject) => Promise<FieldIssue[]>;
 
+/**
+ * Checks a body before it's written (Markdoc tags, MDX props). Issues at
+ * `error` level stop the save: the site couldn't be built with them.
+ */
+export type BodyValidator = (input: {
+  collection: string;
+  format: 'md' | 'mdx' | 'mdoc';
+  body: string;
+  /** The entry's file, site-relative, for resolving partials. */
+  path: string;
+}) => Promise<BodyIssue[]>;
+
 export type ContentServiceOptions = {
   validate?: Validator;
+  validateBody?: BodyValidator;
   now?: () => Date;
 };
 
@@ -74,12 +88,16 @@ export class ContentService {
   private readonly storage: StorageAdapter;
   private readonly collections: Map<string, CollectionManifest>;
   private readonly validate: Validator | undefined;
+  private readonly validateBody: BodyValidator | undefined;
+  private readonly srcDir: string;
   private readonly now: () => Date;
 
   constructor(storage: StorageAdapter, manifest: Manifest, options: ContentServiceOptions = {}) {
     this.storage = storage;
     this.collections = new Map(manifest.collections.map((c) => [c.name, c]));
     this.validate = options.validate;
+    this.validateBody = options.validateBody;
+    this.srcDir = manifest.site.srcDir;
     this.now = options.now ?? (() => new Date());
   }
 
@@ -139,6 +157,20 @@ export class ContentService {
       }
     }
     return found;
+  }
+
+  /**
+   * Markdoc and Markdown files under the source folder, site-relative: what a
+   * `{% partial file %}` can point at. The studio offers the ones named like
+   * partials (`_name.mdoc`, or in a `partials` folder) and checks the rest.
+   */
+  async listPartials(): Promise<string[]> {
+    const prefix = this.srcDir === '.' || this.srcDir === '' ? '' : `${this.srcDir}/`;
+    const files = await this.storage.list(prefix ? { prefix } : {});
+    return files
+      .map((file) => file.path)
+      .filter((path) => /\.(mdoc|md)$/.test(path))
+      .sort();
   }
 
   async readEntry(name: string, id: string): Promise<EntryDocument | null> {
@@ -227,6 +259,10 @@ export class ContentService {
     if (entry.version !== request.version) {
       return { ok: false, reason: 'conflict', message: CHANGED };
     }
+    if (request.body !== undefined) {
+      const refused = await this.checkBody(collection, entry.format, request.body, entry.path);
+      if (refused) return refused;
+    }
 
     let result: { bytes: Uint8Array; changed: boolean; reformatted: boolean };
     const { source } = collection;
@@ -313,6 +349,15 @@ export class ContentService {
     if (await this.locate(collection, id)) {
       return { ok: false, reason: 'conflict', message: `An entry called "${id}" already exists.` };
     }
+    if (request.body !== undefined) {
+      const refused = await this.checkBody(
+        collection,
+        newEntryExtension(source),
+        request.body,
+        path,
+      );
+      if (refused) return refused;
+    }
     const bytes = newFileBytes(relative, values, request.body);
     const response = await this.commit(
       [{ op: 'put', path, bytes, expectedVersion: null }],
@@ -320,6 +365,20 @@ export class ContentService {
       { id, path, version: await gitBlobSha(bytes), reformatted: false },
     );
     return response;
+  }
+
+  /** A save refused for a body the site couldn't be built with, or null to go ahead. */
+  private async checkBody(
+    collection: CollectionManifest,
+    format: string,
+    body: string,
+    path: string,
+  ): Promise<SaveResponse | null> {
+    if (!this.validateBody || (format !== 'md' && format !== 'mdx' && format !== 'mdoc'))
+      return null;
+    const bodyIssues = await this.validateBody({ collection: collection.name, format, body, path });
+    if (!bodyIssues.some((issue) => issue.level === 'error')) return null;
+    return { ok: false, reason: 'invalid', issues: [], bodyIssues };
   }
 
   private async commit(
