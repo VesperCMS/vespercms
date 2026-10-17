@@ -1,0 +1,16 @@
+---
+// Renders a plain link rather than an embedded player, so the site (and the
+// e2e suite, which blocks the network) never depends on a third party.
+interface Props {
+  id: string;
+  title: string;
+}
+
+const { id, title } = Astro.props;
+---
+
+<p class="video">
+  <a href={`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`}>
+    Watch on YouTube: {title}
+  </a>
+</p>

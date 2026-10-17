@@ -1,0 +1,17 @@
+---
+title: Conditional content
+summary: Show different text depending on the product tier.
+order: 3
+---
+
+Markdoc variables and functions decide what appears. The studio keeps these as protected source chips, so they survive every edit byte for byte.
+
+{% if equals($product.tier, "free") %}
+You're on the free tier. Everything on this page works without an account.
+{% else /%}
+Your plan includes cloud drafts and previews.
+{% /if %}
+
+{% if and($product.beta, equals($product.tier, "free")) %}
+Beta features are switched on for free sites, too.
+{% /if %}

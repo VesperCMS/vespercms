@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const docs = (await getCollection('docs')).sort(
+  (a, b) => (a.data.order ?? Infinity) - (b.data.order ?? Infinity),
+);
+---
+
+<BaseLayout title="Docs" description="Markdoc pages with custom tags.">
+  <h1>Docs</h1>
+  <p>
+    These pages are written in Markdoc and use every kind of construct the studio has to handle.
+  </p>
+  <ul class="entry-list">
+    {docs.map((doc) => (
+      <li>
+        <a href={`/docs/${doc.id}/`}>{doc.data.title}</a>
+        <p>{doc.data.summary}</p>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>

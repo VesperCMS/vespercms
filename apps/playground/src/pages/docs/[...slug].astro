@@ -1,0 +1,28 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  return docs.map((doc) => ({ params: { slug: doc.id }, props: { doc } }));
+}
+
+const { doc } = Astro.props;
+const { Content } = await render(doc);
+const updated = doc.data.updated;
+const format = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'UTC',
+});
+---
+
+<BaseLayout title={doc.data.title} description={doc.data.summary}>
+  <h1>{doc.data.title}</h1>
+  {updated && (
+    <p class="muted">
+      Updated <time datetime={updated.toISOString()}>{format.format(updated)} UTC</time>
+    </p>
+  )}
+  <Content />
+</BaseLayout>

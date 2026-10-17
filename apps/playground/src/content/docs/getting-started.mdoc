@@ -1,0 +1,29 @@
+---
+title: Getting started
+summary: Install the integration and open the studio.
+order: 1
+updated: 2026-10-15T14:30:00Z
+---
+
+{% $product.name %} builds its editor from your content collections. There's no second schema to write. {% .lead %}
+
+{% if $product.beta %}
+This is a beta. Expect rough edges, and tell us about them.
+{% else /%}
+This release is stable.
+{% /if %}
+
+## Install
+
+Run one command in your Astro project, then start the dev server and open `/admin`. The {% abbr title="content management system" %}CMS{% /abbr %} appears with every collection already listed.
+
+{% callout type="tip" title="Before you start" %}
+You'll need:
+
+- Astro 6 or 7
+- at least one collection that uses the `glob()` or `file()` loader
+{% /callout %}
+
+## Getting help
+
+{% partial file="_support-hours.mdoc" /%}

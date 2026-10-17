@@ -92,4 +92,16 @@ const pages = defineCollection({
   }),
 });
 
-export const collections = { blog, authors, pages };
+const docs = defineCollection({
+  // Markdoc entries. Tags, partials, variables and conditionals are covered by
+  // markdoc.config.mjs and the files themselves (spec §6.5.1).
+  loader: glob({ pattern: '**/[^_]*.mdoc', base: './src/content/docs' }),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string(),
+    order: z.number().int().optional(),
+    updated: z.coerce.date().meta({ widget: 'datetime' }).optional(),
+  }),
+});
+
+export const collections = { blog, authors, pages, docs };
