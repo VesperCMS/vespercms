@@ -5,12 +5,17 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/.",
+  "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/. ./testing is the storage contract suite other adapters run.",
   "exports": {
     ".": {
       "@vesper/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "@vesper/source": "./src/storage/contract.ts",
+      "types": "./dist/storage/contract.d.ts",
+      "default": "./dist/storage/contract.js"
     }
   },
   "files": [
