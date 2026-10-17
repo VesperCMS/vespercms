@@ -1,0 +1,7 @@
+{
+  "$schema": "./authors.schema.json",
+  "ada": { "name": "Ada" },
+  "sam": {
+    "name": "Sam"
+  }
+}

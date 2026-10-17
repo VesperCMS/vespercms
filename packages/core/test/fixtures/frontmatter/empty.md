@@ -1,0 +1,4 @@
+---
+---
+
+An empty frontmatter block.

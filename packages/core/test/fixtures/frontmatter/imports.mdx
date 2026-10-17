@@ -1,0 +1,11 @@
+---
+title: MDX with imports
+---
+import Chart from '../components/Chart.astro';
+export const meta = { wide: true };
+
+# {frontmatter.title}
+
+<Chart data={[1, 2, 3]} />
+
+Some text with an {meta.wide ? "expression" : "other"} inside.

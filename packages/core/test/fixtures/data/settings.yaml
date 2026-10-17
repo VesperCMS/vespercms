@@ -1,0 +1,5 @@
+# A glob() data entry
+siteName: Example
+social:
+  - network: mastodon
+    url: https://example.com/@a

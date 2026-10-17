@@ -1,0 +1,1466 @@
+[
+  {
+    "file": "jazzy-astro5/glossary/autoflowering.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/autoflowering.mdoc",
+    "variant": "committed",
+    "sha256": "34b256057f9db8c12bd6502e09202c5f1f74a3a8274614a2c86d740ee212ea62"
+  },
+  {
+    "file": "_worktree/crlf/jazzy-astro5/glossary/autoflowering.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/autoflowering.mdoc",
+    "variant": "worktree-crlf",
+    "sha256": "96300d5288de556bf64b34114581928a23a7742c01f5dafb79d2bed2aee977cd"
+  },
+  {
+    "file": "jazzy-astro5/glossary/avb.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/avb.mdoc",
+    "variant": "committed",
+    "sha256": "0ffe7b5ccb189d3ee4bab282167c44ec55b09eb5391ae57aa581991903882992"
+  },
+  {
+    "file": "_worktree/mixed/jazzy-astro5/glossary/avb.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/avb.mdoc",
+    "variant": "worktree-mixed",
+    "sha256": "78661ef49a07e65fe25487d2418c8b7c4edfb3fb3e0a672ab0928afff3de0f17"
+  },
+  {
+    "file": "jazzy-astro5/glossary/bioavailability.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/bioavailability.mdoc",
+    "variant": "committed",
+    "sha256": "e14706e9566b05cbed7a7594d5dacbc8b9d0c7f2f4d9d1de2ad8f524fd12b0e0"
+  },
+  {
+    "file": "_worktree/mixed/jazzy-astro5/glossary/bioavailability.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/bioavailability.mdoc",
+    "variant": "worktree-mixed",
+    "sha256": "97e9875c0023a6d858fe27fc02c78ab7fbed89899a13237e69febe99e7c82e0e"
+  },
+  {
+    "file": "jazzy-astro5/glossary/broad-spectrum.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/broad-spectrum.mdoc",
+    "variant": "committed",
+    "sha256": "7cea1a818b9f49666cb74684ed3b8e23b858a725fdf4fd85fc4877d9909bc20d"
+  },
+  {
+    "file": "_worktree/crlf/jazzy-astro5/glossary/broad-spectrum.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/broad-spectrum.mdoc",
+    "variant": "worktree-crlf",
+    "sha256": "a39718e3d03f6c329dbd696928cbe13041784b355bf6779b482a2ad57e0056b7"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cannabinoid.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cannabinoid.mdoc",
+    "variant": "committed",
+    "sha256": "a35ccca14c708d3fdfe485767fc054f7d46faa9732d502c2221bd67e9923a958"
+  },
+  {
+    "file": "_worktree/mixed/jazzy-astro5/glossary/cannabinoid.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cannabinoid.mdoc",
+    "variant": "worktree-mixed",
+    "sha256": "9e6a9f58ed11e1a958173107badebcdf62b53ebbf0a486193e48491d91b9be80"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cannabutter.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cannabutter.mdoc",
+    "variant": "committed",
+    "sha256": "18f4345e7c10ca20cf23f66029900b7fa567c54b19db55694745210bf8b816f8"
+  },
+  {
+    "file": "_worktree/mixed/jazzy-astro5/glossary/cannabutter.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cannabutter.mdoc",
+    "variant": "worktree-mixed",
+    "sha256": "408a38d307abe501d52a94e0219d535f410e77a6b5a7f2a110d5de88bdd8a3db"
+  },
+  {
+    "file": "jazzy-astro5/glossary/caryophyllene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/caryophyllene.mdoc",
+    "variant": "committed",
+    "sha256": "ec4b10ba559d38e11d07270d31b44e3b6154cb268e6e6b3e6fff3c4a0692d438"
+  },
+  {
+    "file": "_worktree/crlf/jazzy-astro5/glossary/caryophyllene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/caryophyllene.mdoc",
+    "variant": "worktree-crlf",
+    "sha256": "419c287badd2f7a74b03259fd854e4c4b6f06ec6149f11440630e2642d94aa35"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cb1-receptor.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cb1-receptor.mdoc",
+    "variant": "committed",
+    "sha256": "eb4881162cd48ef0b2f1cd8623722e6960afee782b1ed25936fcc5066fb67650"
+  },
+  {
+    "file": "_worktree/mixed/jazzy-astro5/glossary/cb1-receptor.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cb1-receptor.mdoc",
+    "variant": "worktree-mixed",
+    "sha256": "8119a01c94ebd185c92227c646291d71e768b9ff4d88e7b71ad44f0dada1b56d"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cb2-receptor.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cb2-receptor.mdoc",
+    "variant": "committed",
+    "sha256": "bee9081aefb36c3ef737d501f8d97ff37f2615fbb3a3c5f0d248304344da44b2"
+  },
+  {
+    "file": "_worktree/crlf/jazzy-astro5/glossary/cb2-receptor.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cb2-receptor.mdoc",
+    "variant": "worktree-crlf",
+    "sha256": "c503d8f4cabb97b82f2c55347d9d1c78b5c7dda3763a0260814ac470532c67ce"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cbd.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cbd.mdoc",
+    "variant": "committed",
+    "sha256": "64cc554957e054ec6e621374f41f866416b8e4a57d7807ccee1aae16eb57416b"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cbda.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cbda.mdoc",
+    "variant": "committed",
+    "sha256": "ae73ff9daaf93dbb1139bcf428d8f6395b661a5a3e29a757e3341b82cb494c66"
+  },
+  {
+    "file": "_worktree/mixed/jazzy-astro5/glossary/cbda.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cbda.mdoc",
+    "variant": "worktree-mixed",
+    "sha256": "d6477fee86f6cae10386f81ebda050d1db9e7d7e7310cb9fb21886df9032f293"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cbn.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cbn.mdoc",
+    "variant": "committed",
+    "sha256": "fc93ca16be49dd182ab85134294721c361feed6ca3fa15276a4352808969bf45"
+  },
+  {
+    "file": "jazzy-astro5/glossary/certificate-of-analysis.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/certificate-of-analysis.mdoc",
+    "variant": "committed",
+    "sha256": "8f0b14e0fa85a9e0086888be51e68ff5ffbd2211e600a7658fac41d5b0c26b8b"
+  },
+  {
+    "file": "jazzy-astro5/glossary/cola.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/cola.mdoc",
+    "variant": "committed",
+    "sha256": "8416fe67d5daeda583b90eebff728fca9233371a3771ee75c8c8fb1c7ba75389"
+  },
+  {
+    "file": "jazzy-astro5/glossary/curing.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/curing.mdoc",
+    "variant": "committed",
+    "sha256": "32f71f85c9eb720541dde66d2bbc41b63a75232a106b41a094a685b531611b6d"
+  },
+  {
+    "file": "jazzy-astro5/glossary/decarboxylation.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/decarboxylation.mdoc",
+    "variant": "committed",
+    "sha256": "4283d7d648bf7c6549ec41e464558a9eeb369929826ca6d9466c0ee97d412046"
+  },
+  {
+    "file": "jazzy-astro5/glossary/defoliation.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/defoliation.mdoc",
+    "variant": "committed",
+    "sha256": "280f812dad54272b851b39375625f07ae76fb9d738acae11d0727003ba253973"
+  },
+  {
+    "file": "jazzy-astro5/glossary/dispensary.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/dispensary.mdoc",
+    "variant": "committed",
+    "sha256": "2423e3dfbcbb16646196c9f36dee279fe631a0db61ad9659af6171255a5adcc2"
+  },
+  {
+    "file": "jazzy-astro5/glossary/edible.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/edible.mdoc",
+    "variant": "committed",
+    "sha256": "48719ce5d2613d4a6811b5f331c504d97cf5a735b11ae41ace0f891e3169d487"
+  },
+  {
+    "file": "jazzy-astro5/glossary/endocannabinoid-system.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/endocannabinoid-system.mdoc",
+    "variant": "committed",
+    "sha256": "c1ae72c36122ed7f8e9d96b1aeb9f5758c8fc6937cdea6182a376c735258e18e"
+  },
+  {
+    "file": "jazzy-astro5/glossary/entourage-effect.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/entourage-effect.mdoc",
+    "variant": "committed",
+    "sha256": "951d8142b8797dc78dd42c361da0a6ab3e87c20f7e64836539429cf06f714890"
+  },
+  {
+    "file": "jazzy-astro5/glossary/extraction.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/extraction.mdoc",
+    "variant": "committed",
+    "sha256": "196ad2a350b99f0fd9cb02a1e3fe9fdeff5b0dabc8e6e2b36344fbdab123e1da"
+  },
+  {
+    "file": "jazzy-astro5/glossary/fat-soluble.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/fat-soluble.mdoc",
+    "variant": "committed",
+    "sha256": "8828941550fc7f78829b038b6fe51a75a74c2aa4845d254030e680a00f99f170"
+  },
+  {
+    "file": "jazzy-astro5/glossary/feco.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/feco.mdoc",
+    "variant": "committed",
+    "sha256": "60d0c6e8421268391a101ceafe91dc04389b76bfd6686fda62082f76e3e20654"
+  },
+  {
+    "file": "jazzy-astro5/glossary/feminized-seeds.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/feminized-seeds.mdoc",
+    "variant": "committed",
+    "sha256": "824684cd1f9b1804c2faa377841cd9f8ed5fa51834234b178ea93061b03e75c9"
+  },
+  {
+    "file": "jazzy-astro5/glossary/first-pass-metabolism.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/first-pass-metabolism.mdoc",
+    "variant": "committed",
+    "sha256": "e19b9068fedb1fa1f6edea646cd5c2ccc987b48d15c0b1d1a00e3f67c96ff86a"
+  },
+  {
+    "file": "jazzy-astro5/glossary/flower.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/flower.mdoc",
+    "variant": "committed",
+    "sha256": "f7ae28cac6d30d59349d8dec728fc3497583a8b250fd1af36ccd28cf5bd479f7"
+  },
+  {
+    "file": "jazzy-astro5/glossary/flowering.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/flowering.mdoc",
+    "variant": "committed",
+    "sha256": "7d9646cae15dc3b439bacfdbaefeea6191ebd5d57856b259e3429bf31f9a39a6"
+  },
+  {
+    "file": "jazzy-astro5/glossary/full-spectrum.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/full-spectrum.mdoc",
+    "variant": "committed",
+    "sha256": "feeb05cf2f2c8994afc4c6bfd7cb05f2614c4b4ce3c303ad54bd097031522660"
+  },
+  {
+    "file": "jazzy-astro5/glossary/golden-dragon.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/golden-dragon.mdoc",
+    "variant": "committed",
+    "sha256": "967a24757e690adf44368030f326125c2d02b0a59b7e2fe0141e5b5c626066c3"
+  },
+  {
+    "file": "jazzy-astro5/glossary/green-dragon.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/green-dragon.mdoc",
+    "variant": "committed",
+    "sha256": "fc6474e00e3547be60a3ff50799b0f2172e379e92ef392f356c17b500a049d8c"
+  },
+  {
+    "file": "jazzy-astro5/glossary/harvest.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/harvest.mdoc",
+    "variant": "committed",
+    "sha256": "abe6247fba6a040bd54ae7d33eacd6746f08b63dbd124ae844317a70101756af"
+  },
+  {
+    "file": "jazzy-astro5/glossary/hemp.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/hemp.mdoc",
+    "variant": "committed",
+    "sha256": "28a0d1c0aea3fefce3fee2da15b69c3152e99b1a737f456d3cba14a9994e7c47"
+  },
+  {
+    "file": "jazzy-astro5/glossary/humulene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/humulene.mdoc",
+    "variant": "committed",
+    "sha256": "5aa18126f57dbbb683aeff3a505a8ee7a938d184ab03dfd439c2662c6b43749f"
+  },
+  {
+    "file": "jazzy-astro5/glossary/hybrid.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/hybrid.mdoc",
+    "variant": "committed",
+    "sha256": "f90eb457affa22782c09ee08902a27a86c8b14cb80c18a1c66ee0bd7eb881468"
+  },
+  {
+    "file": "jazzy-astro5/glossary/indica.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/indica.mdoc",
+    "variant": "committed",
+    "sha256": "8522e13ee77bddf4340e23ddab7680fcbb9c07d25625d3472ec53faa684d0c28"
+  },
+  {
+    "file": "jazzy-astro5/glossary/infusion.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/infusion.mdoc",
+    "variant": "committed",
+    "sha256": "598840f107be0539a1d1b50418dadf06f9db50bc3199f9506149ad6eb21c78fb"
+  },
+  {
+    "file": "jazzy-astro5/glossary/isolate.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/isolate.mdoc",
+    "variant": "committed",
+    "sha256": "4076424803dd3c10f7d50cb35906eca0bdbdfb227753ab8324232be053ba5436"
+  },
+  {
+    "file": "jazzy-astro5/glossary/kief.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/kief.mdoc",
+    "variant": "committed",
+    "sha256": "d55b0b80e0db0a911df4d3a88ced04068e46687b2502996dfdaa1e58cf1a9064"
+  },
+  {
+    "file": "jazzy-astro5/glossary/landrace.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/landrace.mdoc",
+    "variant": "committed",
+    "sha256": "5684a341bb607a655b8ed593b169d202787ad05dbf23851fd1dd92ae9535f161"
+  },
+  {
+    "file": "jazzy-astro5/glossary/limonene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/limonene.mdoc",
+    "variant": "committed",
+    "sha256": "5a41e87d0ba3c01b1ee9f1e8a1facb966020583c37cdb35f3b6f9451fe0ecb62"
+  },
+  {
+    "file": "jazzy-astro5/glossary/linalool.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/linalool.mdoc",
+    "variant": "committed",
+    "sha256": "1d123c0c36ce5a723214ea5aa332e5dc8bc1688ce83b0fc944c50c435951c3ee"
+  },
+  {
+    "file": "jazzy-astro5/glossary/lst.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/lst.mdoc",
+    "variant": "committed",
+    "sha256": "0fad5e11e8092f346a83a9c699dddb37a3d51bc45fe24d2f02b43d12a49af7cc"
+  },
+  {
+    "file": "jazzy-astro5/glossary/microdose.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/microdose.mdoc",
+    "variant": "committed",
+    "sha256": "8719798fdafa36bd40d7a57beccd484d6dccefc0657722351e4613e6bc66b9e7"
+  },
+  {
+    "file": "jazzy-astro5/glossary/myrcene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/myrcene.mdoc",
+    "variant": "committed",
+    "sha256": "e13049b322c3199a678ef3012e0f706b91a26d35e7411c218e6189de78a2f008"
+  },
+  {
+    "file": "jazzy-astro5/glossary/onset.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/onset.mdoc",
+    "variant": "committed",
+    "sha256": "ef5e3b0b55b456e1fd8391204d06d4059d28f4106b2572f2e00a58101cc0b8fe"
+  },
+  {
+    "file": "jazzy-astro5/glossary/phenotype.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/phenotype.mdoc",
+    "variant": "committed",
+    "sha256": "161a8e4872228e430d6839726785225d9b05e3149cee747ae4ab8ebdcdade082"
+  },
+  {
+    "file": "jazzy-astro5/glossary/photoperiod.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/photoperiod.mdoc",
+    "variant": "committed",
+    "sha256": "f87868fc449abfd7182cef5f7c2c641c50c7beb71c7031535ed6573f8fb15623"
+  },
+  {
+    "file": "jazzy-astro5/glossary/pinene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/pinene.mdoc",
+    "variant": "committed",
+    "sha256": "e212ef949a1a14518b07b2b282309af7d09855300b930753c51291a9986b88a6"
+  },
+  {
+    "file": "jazzy-astro5/glossary/potency.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/potency.mdoc",
+    "variant": "committed",
+    "sha256": "df4f112108d0bc1eeeab190134a13297cb6e741b42baa7788b347fbdd801db52"
+  },
+  {
+    "file": "jazzy-astro5/glossary/ruderalis.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/ruderalis.mdoc",
+    "variant": "committed",
+    "sha256": "172c1ad3a21add4e6cfbae13401f597f3063eca9c513f0cf042fe9602db23277"
+  },
+  {
+    "file": "jazzy-astro5/glossary/sativa.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/sativa.mdoc",
+    "variant": "committed",
+    "sha256": "bf6e27cfb3816266a667e047740a6f5379a8d545179e51afcd61e4702befcbbd"
+  },
+  {
+    "file": "jazzy-astro5/glossary/scrog.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/scrog.mdoc",
+    "variant": "committed",
+    "sha256": "c9396b77dec56fbe8155fdbcfcb032f50775a016bbf8d6a552efc024ba2144cf"
+  },
+  {
+    "file": "jazzy-astro5/glossary/shake.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/shake.mdoc",
+    "variant": "committed",
+    "sha256": "6f72ff5e8c5a42d114cccce5dc6463652763766155ddfc40e341837f636ab442"
+  },
+  {
+    "file": "jazzy-astro5/glossary/strain.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/strain.mdoc",
+    "variant": "committed",
+    "sha256": "c7c4998ce8ee13c850ee190c13404faf5cd88270c8164da78f40c0853d68f6d4"
+  },
+  {
+    "file": "jazzy-astro5/glossary/sublingual.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/sublingual.mdoc",
+    "variant": "committed",
+    "sha256": "e620638da3764f7f575e293919f90286d145875641f1649312457d06c6069ac3"
+  },
+  {
+    "file": "jazzy-astro5/glossary/terpene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/terpene.mdoc",
+    "variant": "committed",
+    "sha256": "15653e866f6d301ab78e2ddc8a6ddd37e16c64f42356d0e3e5a3748e5ad626c9"
+  },
+  {
+    "file": "jazzy-astro5/glossary/terpinolene.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/terpinolene.mdoc",
+    "variant": "committed",
+    "sha256": "272681de371edbaef706badb261cf41a1ad6b4b89deb3e012234391b7e0823d5"
+  },
+  {
+    "file": "jazzy-astro5/glossary/thc-cbd-ratio.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/thc-cbd-ratio.mdoc",
+    "variant": "committed",
+    "sha256": "74877cd301f8c937a9de3462dcb710f80db719e1aea438be08fb20590d1b81d7"
+  },
+  {
+    "file": "jazzy-astro5/glossary/thc.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/thc.mdoc",
+    "variant": "committed",
+    "sha256": "06d940d315b2e167033971110510d5b1bbb5c399a0687e5d15971ef5454c8633"
+  },
+  {
+    "file": "jazzy-astro5/glossary/thca.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/thca.mdoc",
+    "variant": "committed",
+    "sha256": "c7e61d4c06b531e43dc6a1e9cb2ce16d53b58a372949f77852575fbe67392f9a"
+  },
+  {
+    "file": "jazzy-astro5/glossary/tincture.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/tincture.mdoc",
+    "variant": "committed",
+    "sha256": "a403482a6b5412053ff2b5583d11a1ffaa36c94bc5ed554468a3bda2ac7433ab"
+  },
+  {
+    "file": "jazzy-astro5/glossary/tolerance.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/tolerance.mdoc",
+    "variant": "committed",
+    "sha256": "c36653578f95a65ef7c47002c9055a4829fbb10f45b66358c9eaf4e3d9e23474"
+  },
+  {
+    "file": "jazzy-astro5/glossary/trichomes.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/trichomes.mdoc",
+    "variant": "committed",
+    "sha256": "7705488bf5acc054aec73d81411326ad9ed166928df8a266a2202f1c8629c7b3"
+  },
+  {
+    "file": "jazzy-astro5/glossary/trim.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/trim.mdoc",
+    "variant": "committed",
+    "sha256": "60e8b27f9692f1c18ba8876e589255463fc549f706dcaa8cceb27a286086d4d9"
+  },
+  {
+    "file": "jazzy-astro5/glossary/vegetative-stage.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/glossary/vegetative-stage.mdoc",
+    "variant": "committed",
+    "sha256": "cd23e7c714fa2599cdeb38f61accaf919917c0e3c10080fc39a01299524af056"
+  },
+  {
+    "file": "jazzy-astro5/pages/about.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/pages/about.mdoc",
+    "variant": "committed",
+    "sha256": "70fbcd296e0d0cc29a647315d6fe0e260fb2174a950bee866e15dec734e436e0"
+  },
+  {
+    "file": "jazzy-astro5/pages/accessibility.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/pages/accessibility.mdoc",
+    "variant": "committed",
+    "sha256": "a1db1b1b46ef9b915aa52483564de225eb00deef802506a2b9f810f3e293933b"
+  },
+  {
+    "file": "jazzy-astro5/pages/edibles-calculator.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/pages/edibles-calculator.mdoc",
+    "variant": "committed",
+    "sha256": "1b56d9250c8034eeeb0ff6c51769a0176b5dd319ccc634bf49b3dfffaafa46d1"
+  },
+  {
+    "file": "jazzy-astro5/pages/privacy.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/pages/privacy.mdoc",
+    "variant": "committed",
+    "sha256": "54043eab973d479d0ebc0124df1629971599bf503aa45ce3f76546028dae643b"
+  },
+  {
+    "file": "jazzy-astro5/posts/cannabis-101/indica-sativa-hybrid.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/cannabis-101/indica-sativa-hybrid.mdoc",
+    "variant": "committed",
+    "sha256": "2e432b3ce48fa3fb4e1639c7b8882de4efb3ff265eedbcea07782023d692229f"
+  },
+  {
+    "file": "jazzy-astro5/posts/cannabis-101/what-are-cannabis-terpenes-effects-explained.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/cannabis-101/what-are-cannabis-terpenes-effects-explained.mdoc",
+    "variant": "committed",
+    "sha256": "ae8675522e7a986c935a8027740d702982d3f243ec2fbab46347dfc0c92f4584"
+  },
+  {
+    "file": "jazzy-astro5/posts/cannabis-101/what-is-thc.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/cannabis-101/what-is-thc.mdoc",
+    "variant": "committed",
+    "sha256": "77bb8c807f34ebbcbd71f96de43b8b8d3e4f23d7aea978a90f41a769ded51ac7"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-chocolate-chip-cookies.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-chocolate-chip-cookies.mdoc",
+    "variant": "committed",
+    "sha256": "04aa75a25532840b0f6dacbc34c96f39c6248a944fdbd17dbf5b420795db8da2"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-edible-cookie-dough-recipe.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-edible-cookie-dough-recipe.mdoc",
+    "variant": "committed",
+    "sha256": "c078fc18315c1d4b1b24efb2cdbaa4e0394741598022af33c1369eee5db6cd75"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-infused-butter-cannabutter.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-infused-butter-cannabutter.mdoc",
+    "variant": "committed",
+    "sha256": "a8e94698060f9c95a5209625c394a21adeb963d4736afadb66287d4a6b051614"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-infused-chewy-caramels.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-infused-chewy-caramels.mdoc",
+    "variant": "committed",
+    "sha256": "f31f291503bef1deadab3facc2bf9ad6887d037faf4665be560ff1e952d09569"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-infused-coconut-oil.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-infused-coconut-oil.mdoc",
+    "variant": "committed",
+    "sha256": "13362938f4f8052c15fb1a48fabd27fd51f04b6bf89b709b56911da5ea352386"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-infused-crispy-rice-treats.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-infused-crispy-rice-treats.mdoc",
+    "variant": "committed",
+    "sha256": "bfc6184edbcfffa286f23b36fe0bf2560cbdf9048051d3950716c9a8dbf2c98e"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-infused-olive-oil.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-infused-olive-oil.mdoc",
+    "variant": "committed",
+    "sha256": "2afd1b8566c3796c1fcd8d694248aa911d30a077d496f95654a72b9cbea6be88"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-infused-salt.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-infused-salt.mdoc",
+    "variant": "committed",
+    "sha256": "bd2aefc4e4c9bb72eabcfcda7c16f0255236fe5d10854c7781bcbaebd4fa73a9"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cannabis-sugar.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cannabis-sugar.mdoc",
+    "variant": "committed",
+    "sha256": "e8d55e91594ccf4a7529de3bda6977fdf0b8d6e5177e2e113f2f929d94b8185b"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/cooking-with-cannabis-edibles-101.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/cooking-with-cannabis-edibles-101.mdoc",
+    "variant": "committed",
+    "sha256": "37d6a5bea2687a23346f57e853465aed3dde2ae30cefc325891f525e3420464c"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/decarb-activate-cannabis-edibles.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/decarb-activate-cannabis-edibles.mdoc",
+    "variant": "committed",
+    "sha256": "6c86635b00a6c6a112fa8726c0b6bf3f7f662226137e5b6ed14fff9294f5d934"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/how-to-make-cannabis-tincture-green-golden-dragon.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/how-to-make-cannabis-tincture-green-golden-dragon.mdoc",
+    "variant": "committed",
+    "sha256": "08e232902b8b027de2413234af20a9d887e5ccc4a3d17b91eaf58ff21ac1a88f"
+  },
+  {
+    "file": "jazzy-astro5/posts/edibles/weed-infused-brookies-cookie-brownies.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/edibles/weed-infused-brookies-cookie-brownies.mdoc",
+    "variant": "committed",
+    "sha256": "ed865c4b24a7b20c8a55fbc3d59db2e92de3275865361648d4cd431a3fb2b14e"
+  },
+  {
+    "file": "jazzy-astro5/posts/growing/growing-cannabis-at-home.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/posts/growing/growing-cannabis-at-home.mdoc",
+    "variant": "committed",
+    "sha256": "f7ba40fe2b89809b1d240cba00f9deb0d8c2a0d9d9d401e954b606bb6dc5c175"
+  },
+  {
+    "file": "jazzy-astro5/recipes/brookies.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/brookies.mdoc",
+    "variant": "committed",
+    "sha256": "61413315f4447e35235aabae9f904bc17b5d92abb013ebc0b0de748bac07f7c3"
+  },
+  {
+    "file": "jazzy-astro5/recipes/cannabis-caramels.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/cannabis-caramels.mdoc",
+    "variant": "committed",
+    "sha256": "3b9bdcaf9bdad2cfd3a00b559516fe39e728613de9c17074ad5b7c38bb287507"
+  },
+  {
+    "file": "jazzy-astro5/recipes/cannabis-chocolate-chip-cookies.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/cannabis-chocolate-chip-cookies.mdoc",
+    "variant": "committed",
+    "sha256": "ae5645183c772b6f483fa977a3bd8c4526271a0cde2811ea9164dd4b6b66f8c5"
+  },
+  {
+    "file": "jazzy-astro5/recipes/cannabis-edible-cookie-dough.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/cannabis-edible-cookie-dough.mdoc",
+    "variant": "committed",
+    "sha256": "408c2ecb7eea52f7fb6f17aa0aba62404614f4ae0538a9b3e4fedbe34c2353aa"
+  },
+  {
+    "file": "jazzy-astro5/recipes/cannabutter.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/cannabutter.mdoc",
+    "variant": "committed",
+    "sha256": "86c41f4cc3f956ee0e49ec21e1bd3dd388bfcd5e7ca619444553ed9ee276bae9"
+  },
+  {
+    "file": "jazzy-astro5/recipes/coconut-oil.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/coconut-oil.mdoc",
+    "variant": "committed",
+    "sha256": "d52014eccda48e975e9e58b8f4f5a6dc9c3765d580813f44e0a751f22fa55680"
+  },
+  {
+    "file": "jazzy-astro5/recipes/crispy-rice-treats.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/crispy-rice-treats.mdoc",
+    "variant": "committed",
+    "sha256": "621f9b5be917a4758bbf31586a5c1e8a9867a6512bd76958fee65d5db06b6714"
+  },
+  {
+    "file": "jazzy-astro5/recipes/olive-oil.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/olive-oil.mdoc",
+    "variant": "committed",
+    "sha256": "8f94a89d6ea86c068f8ab216a08c7ceef8ecb72c298ab74f1b4a6fd06ef4302e"
+  },
+  {
+    "file": "jazzy-astro5/recipes/salt.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/salt.mdoc",
+    "variant": "committed",
+    "sha256": "b4bbf7e0b9ae93bef632734c1864725dcf2df4143322cacb29c3308ebf33dcd6"
+  },
+  {
+    "file": "jazzy-astro5/recipes/sugar.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/sugar.mdoc",
+    "variant": "committed",
+    "sha256": "91cf14625bf34076b547fdea19c8fc0c9e68f39f5ab30263ebe4b59d366bd1b0"
+  },
+  {
+    "file": "jazzy-astro5/recipes/tincture.mdoc",
+    "site": "jazzy-astro5",
+    "commit": "ea28ab6ce894627a848946f12667b76e862b6981",
+    "source": "src/content/recipes/tincture.mdoc",
+    "variant": "committed",
+    "sha256": "9aa11b2f57e61fe21bf3ffc54efedcef184c4e395a2d423e41913f41e2012a61"
+  },
+  {
+    "file": "jazzycabbages/content/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/_index.md",
+    "variant": "committed",
+    "sha256": "f51ff9cc2862d51ade0d0ef231300aef29559fed09359c55f5c7934f3b6cd697"
+  },
+  {
+    "file": "_worktree/crlf/jazzycabbages/content/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/_index.md",
+    "variant": "worktree-crlf",
+    "sha256": "ba9fcdc74ae5d59d22d2f5b939ab9f5bf64b6ed3caf9c0aea88e909b60b0d1b1"
+  },
+  {
+    "file": "jazzycabbages/content/about/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/about/index.md",
+    "variant": "committed",
+    "sha256": "55ea902689cb6a76ee9701e8c85b9bc239684beedff3eb79010b074f428bf9c8"
+  },
+  {
+    "file": "_worktree/crlf/jazzycabbages/content/about/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/about/index.md",
+    "variant": "worktree-crlf",
+    "sha256": "28eaa2d29e1da0d940d394711ac0907496703c00d44e17e35aa9fba800ec5cf2"
+  },
+  {
+    "file": "jazzycabbages/content/calculator.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/calculator.md",
+    "variant": "committed",
+    "sha256": "c2383609ad85066f868d255e7d684766935edff36f77332ff3bdc03895020174"
+  },
+  {
+    "file": "jazzycabbages/content/categories/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/categories/_index.md",
+    "variant": "committed",
+    "sha256": "cbf7ad2daf39f760deeefa0d7f9721d6c662555a30b7fbe67e47ab84dff742cf"
+  },
+  {
+    "file": "jazzycabbages/content/categories/guides/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/categories/guides/_index.md",
+    "variant": "committed",
+    "sha256": "ac029ae4dfb0a83e282beab9b05a1ba950790b4edef292315d2210d658e92394"
+  },
+  {
+    "file": "jazzycabbages/content/categories/recipes/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/categories/recipes/_index.md",
+    "variant": "committed",
+    "sha256": "d6da12f5fe54da73b8dccb34d104ee83579f8a21fbe15fad0c2789b387459859"
+  },
+  {
+    "file": "jazzycabbages/content/contact.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/contact.md",
+    "variant": "committed",
+    "sha256": "0c1f21f71b5197ab8ff8543b26b4a334d5a27a239bcb598331880f9e9b944723"
+  },
+  {
+    "file": "jazzycabbages/content/disclosures.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/disclosures.md",
+    "variant": "committed",
+    "sha256": "7f58a515b4f0cf64eabcd481022a1008e676d0b0bdc324171c42bdea20509422"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/_index.md",
+    "variant": "committed",
+    "sha256": "1af0a4b1d65867c821de10349a700d4a29a7523f0a73cdbf3effc4ea6c1f80de"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/cannabinoid.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/cannabinoid.md",
+    "variant": "committed",
+    "sha256": "8729cb46e12fefb2e1504f015aaa6f9851aec807d42431aac19cec86068eb793"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/cbd.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/cbd.md",
+    "variant": "committed",
+    "sha256": "96c523faa0c764aaa2281216ca5916ee92b51d60c450992a62178534eba9ba3c"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/concentrate.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/concentrate.md",
+    "variant": "committed",
+    "sha256": "d0fd5689e51d22d5f8515d4f2d8045e197d859907b7b83b575e3dce5417c804e"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/decarboxylate-decarb.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/decarboxylate-decarb.md",
+    "variant": "committed",
+    "sha256": "5707a47ad99c683d04dd7a9dbacf39a8c10e29262f17bbec1ab12d57fef9b4ba"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/feco.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/feco.md",
+    "variant": "committed",
+    "sha256": "e8746063e8e85c089fed09744ee73ff48a16feb5e324b8d23150b8507fd87ebd"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/indica.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/indica.md",
+    "variant": "committed",
+    "sha256": "808e9e1784c60cc74b0b66f03cbd979aff6c0252fd1b79491697e27bdda5cbf2"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/jazz-cabbage.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/jazz-cabbage.md",
+    "variant": "committed",
+    "sha256": "6069d683b0e6784ce04c1f8cf3ddb401c617cfa2cfcce0ba75609c8eaad9decc"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/kief.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/kief.md",
+    "variant": "committed",
+    "sha256": "eaef90ed03fa4a6b2fe03fd2c445709fff08bef0a4b0da213590ff026f833960"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/ruderalis.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/ruderalis.md",
+    "variant": "committed",
+    "sha256": "0fc75e0417d16a78bab39bcc2d43475150d65ce0c99b13f0ec21201e8fcc9bfa"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/sativa.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/sativa.md",
+    "variant": "committed",
+    "sha256": "6c1b9db7958a50f46ac643e26e9744537f6acb1c93930150f37cdd451d4886a4"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/strain.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/strain.md",
+    "variant": "committed",
+    "sha256": "6d8fbeb2110a8bc09b1f07b64bb7850144d08b51ed675446394dad61d8932584"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/terpene.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/terpene.md",
+    "variant": "committed",
+    "sha256": "db588d272630072ae05814c36c471be03552769f84a3c4b9969ae1a98f0f21f9"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/thc.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/thc.md",
+    "variant": "committed",
+    "sha256": "408576753754e5ebe6d031e85b4ab9804f3bfdaeb8a721ed85dbfd902f3a60a0"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/tincture.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/tincture.md",
+    "variant": "committed",
+    "sha256": "a9b17f78c6e464416512fafe2a794dc688e01f63deeb2018c37539e5fbcdc664"
+  },
+  {
+    "file": "jazzycabbages/content/glossary/trichome.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/glossary/trichome.md",
+    "variant": "committed",
+    "sha256": "6c1012c32de212610ef2b2b53d8d26283ba85d2448026446bf5cc4e5e8380ecb"
+  },
+  {
+    "file": "jazzycabbages/content/posts/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/_index.md",
+    "variant": "committed",
+    "sha256": "31a9eb41589de8f50e731b1fabb4d60421d8216774545be5f149ad7022d140f6"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-chocolate-chip-cookies/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-chocolate-chip-cookies/index.md",
+    "variant": "committed",
+    "sha256": "6afcb578357a8f180e80d0df5bde21d5f92694a6fbc23eba983758e6c0527b7b"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-edible-cookie-dough-recipe/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-edible-cookie-dough-recipe/index.md",
+    "variant": "committed",
+    "sha256": "e2ec99e5ce473f9beb7c4b448bf7d8265313af5c626fe8731ffd798b6ea980ff"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-infused-butter-cannabutter/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-infused-butter-cannabutter/index.md",
+    "variant": "committed",
+    "sha256": "1a3d6eee61d17a26fc86948df4a72292484024d404b9bf6bf6a65479208b4aab"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-infused-chewy-caramels/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-infused-chewy-caramels/index.md",
+    "variant": "committed",
+    "sha256": "e714b8f507c2d04d4a2914736f43cb197b1068cb9aaa891f464286ee8afbd43e"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-infused-coconut-oil/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-infused-coconut-oil/index.md",
+    "variant": "committed",
+    "sha256": "49799d16afb472ca10a88c3879f0739c423be48c53e0678456618ffd840fcad1"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-infused-olive-oil/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-infused-olive-oil/index.md",
+    "variant": "committed",
+    "sha256": "b27068415252d93d4e6be8d9ea0bc5ab541e73763b43c220c583ca7939ac47d7"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-infused-rice-krispies-treats/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-infused-rice-krispies-treats/index.md",
+    "variant": "committed",
+    "sha256": "48b423b1e115b5c9b01bc8914babf8c3496807686acbe9c35a32e20b6e6973ae"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-infused-salt/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-infused-salt/index.md",
+    "variant": "committed",
+    "sha256": "7b3c5a055b36651edcad4fd6159009d1a287f82d443a09e45d501682eec44dc2"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cannabis-infused-sugar/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cannabis-infused-sugar/index.md",
+    "variant": "committed",
+    "sha256": "554071e9d33b894004c76917cbbdba8f3c45d891913c37e48b0c03dc65ec35d3"
+  },
+  {
+    "file": "jazzycabbages/content/posts/cooking-with-cannabis-edibles-101/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/cooking-with-cannabis-edibles-101/index.md",
+    "variant": "committed",
+    "sha256": "576f7e7524baf826a53a54a27ed7d72c72be12d50dbae1263ac185d1adea865e"
+  },
+  {
+    "file": "jazzycabbages/content/posts/how-to-decarb-cannabis/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/how-to-decarb-cannabis/index.md",
+    "variant": "committed",
+    "sha256": "7ddd623c91a530ae84d6d3301d8afba7822ebeee2d8c569789081d343d67bcc6"
+  },
+  {
+    "file": "_worktree/mixed/jazzycabbages/content/posts/how-to-decarb-cannabis/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/how-to-decarb-cannabis/index.md",
+    "variant": "worktree-mixed",
+    "sha256": "7f2e5ac4e0232a94d77278dbba761d5525619f2d2dc7998c42364a56a535d72a"
+  },
+  {
+    "file": "jazzycabbages/content/posts/how-to-make-cannabis-tincture-green-golden-dragon/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/how-to-make-cannabis-tincture-green-golden-dragon/index.md",
+    "variant": "committed",
+    "sha256": "87570490d50cfeb2573bfe62beaca20df5f7d213705ab00c7672d4bf6656b970"
+  },
+  {
+    "file": "jazzycabbages/content/posts/weed-infused-brookies-cookie-brownies/index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/posts/weed-infused-brookies-cookie-brownies/index.md",
+    "variant": "committed",
+    "sha256": "dbdeca1379171cb86fa41245a474e1d073da583b8fae7288d775cab59ecaf843"
+  },
+  {
+    "file": "jazzycabbages/content/recipe-categories/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/recipe-categories/_index.md",
+    "variant": "committed",
+    "sha256": "328d7e0bf29095ac2be808b83d4ade54cbb136dcc85f753ba6d0a732ff86dc86"
+  },
+  {
+    "file": "jazzycabbages/content/recipe-categories/infusions-extractions/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/recipe-categories/infusions-extractions/_index.md",
+    "variant": "committed",
+    "sha256": "a825b0b72ce783c3cf859986fb9513d2180ce43873493867cb24e33f20b4ae92"
+  },
+  {
+    "file": "jazzycabbages/content/recipe-categories/sweets/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/recipe-categories/sweets/_index.md",
+    "variant": "committed",
+    "sha256": "00ff008e870425a5d90c3c71abbc73685fcc3483f7f652b391877e5643062320"
+  },
+  {
+    "file": "jazzycabbages/content/recipe-dietary/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/recipe-dietary/_index.md",
+    "variant": "committed",
+    "sha256": "e9f039f59b14dcb5da344493c88d39f2a468084b2e5af571502743fbbacf36e0"
+  },
+  {
+    "file": "jazzycabbages/content/recipe-dietary/dairy-free/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/recipe-dietary/dairy-free/_index.md",
+    "variant": "committed",
+    "sha256": "51e4d09b9bcf61b29b716e11455dae5c4c220e09055ecdc92ed1bffba41a4799"
+  },
+  {
+    "file": "jazzycabbages/content/recipe-dietary/vegan/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/recipe-dietary/vegan/_index.md",
+    "variant": "committed",
+    "sha256": "606781f2ff119aa7a547ce4673dae1c00433e54cb19343271d7d34ec315d25d0"
+  },
+  {
+    "file": "jazzycabbages/content/recipe-dietary/vegetarian/_index.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/recipe-dietary/vegetarian/_index.md",
+    "variant": "committed",
+    "sha256": "5c7bb26255c7a725f25efb7ef91b7c3ae8b528d65afc6ec2f938e8121f2afe67"
+  },
+  {
+    "file": "jazzycabbages/content/search.md",
+    "site": "jazzycabbages",
+    "commit": "61c13fcfbd940a2357f80e5b08390dd4e70a5459",
+    "source": "content/search.md",
+    "variant": "committed",
+    "sha256": "cf8ccb71a981b1dd62f97ca32d1f8659c681258486e1e65b177c41d918fb4cdf"
+  },
+  {
+    "file": "thosegeeks-astro/projects/appalachian-sustainable-development-website.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/appalachian-sustainable-development-website.mdx",
+    "variant": "committed",
+    "sha256": "80d36169dbb67d7071fe5150601a69643e746cda2efbee90ca57212fe7b2ef6d"
+  },
+  {
+    "file": "_worktree/crlf/thosegeeks-astro/projects/appalachian-sustainable-development-website.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/appalachian-sustainable-development-website.mdx",
+    "variant": "worktree-crlf",
+    "sha256": "c1649ed9fd24e633fa4eecb4b5c970bb9b4ff04f789ee68d85c11742288aee04"
+  },
+  {
+    "file": "thosegeeks-astro/projects/harvest-fest-raffle-ticket-e-commerce.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/harvest-fest-raffle-ticket-e-commerce.mdx",
+    "variant": "committed",
+    "sha256": "76b11eb4f4cd980345f15720eec6740565e90c5601d6063eca700670c3fbb60b"
+  },
+  {
+    "file": "_worktree/crlf/thosegeeks-astro/projects/harvest-fest-raffle-ticket-e-commerce.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/harvest-fest-raffle-ticket-e-commerce.mdx",
+    "variant": "worktree-crlf",
+    "sha256": "18e40f41dbdd11f99b2016afd5b5ce5eb3a83235224eff66328a92f90c7aab38"
+  },
+  {
+    "file": "thosegeeks-astro/projects/integrity-roofing-and-contracting.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/integrity-roofing-and-contracting.mdx",
+    "variant": "committed",
+    "sha256": "02af32ddafb6c606faf3c6cda2540eeeba2432087a472a2e7bb12a548a00db39"
+  },
+  {
+    "file": "_worktree/crlf/thosegeeks-astro/projects/integrity-roofing-and-contracting.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/integrity-roofing-and-contracting.mdx",
+    "variant": "worktree-crlf",
+    "sha256": "a17d2df71a387587f4e0e58f24e6c9db413f64a986c5adcba434662957a3b24f"
+  },
+  {
+    "file": "thosegeeks-astro/projects/smyth-county-public-libraries-digital-collection-migration.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/smyth-county-public-libraries-digital-collection-migration.mdx",
+    "variant": "committed",
+    "sha256": "c8492c15d3edb4226735759f6bc3d4df77f1fa81d7949651b495c0110ee39368"
+  },
+  {
+    "file": "thosegeeks-astro/projects/smyth-county-public-libraries-website.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/smyth-county-public-libraries-website.mdx",
+    "variant": "committed",
+    "sha256": "1a2c16011e172ba8a9fd0c8103fb80d771998d63ccac26e68d6b457524051042"
+  },
+  {
+    "file": "thosegeeks-astro/projects/washington-county-fair-and-fairgrounds-website.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/projects/washington-county-fair-and-fairgrounds-website.mdx",
+    "variant": "committed",
+    "sha256": "b9138821f6e58f03c22f501929efd1e290886abd2172c457c3e676e8f9631551"
+  },
+  {
+    "file": "thosegeeks-astro/services/content-strategy.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/services/content-strategy.mdx",
+    "variant": "committed",
+    "sha256": "e605c5fcb9787ef50472f44442ebd86d15f720ef0ab0c8ee425f81aa51d800be"
+  },
+  {
+    "file": "thosegeeks-astro/services/custom-web-development.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/services/custom-web-development.mdx",
+    "variant": "committed",
+    "sha256": "f23600162fbb2fc63d7dcb687f350de125f48e233a7666738ba675bb93da6529"
+  },
+  {
+    "file": "thosegeeks-astro/services/seo-search-engine-optimization.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/services/seo-search-engine-optimization.mdx",
+    "variant": "committed",
+    "sha256": "77d2fa9e35c5abe9153bd9f28e0e05d5621f2347c61aeba59937ec017b62a7b4"
+  },
+  {
+    "file": "thosegeeks-astro/services/website-design.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/services/website-design.mdx",
+    "variant": "committed",
+    "sha256": "dcd9e3807b1096a941debaa02aa451d5ab16e8311d97823a053fe4f0afe76a4f"
+  },
+  {
+    "file": "thosegeeks-astro/services/wordpress-development.mdx",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/services/wordpress-development.mdx",
+    "variant": "committed",
+    "sha256": "66cee508c11b3fb3cdc53c402c50b932b35e53a95411bf373a569e5606fdb6ad"
+  },
+  {
+    "file": "thosegeeks-astro/settings/index.yaml",
+    "site": "thosegeeks-astro",
+    "commit": "6f4e20a7a8cfeecb3fbfbb637e8b2895a2ad35e5",
+    "source": "src/content/settings/index.yaml",
+    "variant": "committed",
+    "sha256": "6be8992f2a2e588345208788214e6f8d6ea191db8f69e8999180a1b6f9bfcbf3"
+  },
+  {
+    "file": "cookingnerdy-astro/affiliate_links/bianco-di-napoli-organic-whole-peeled-tomatoes.yaml",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/affiliate_links/bianco-di-napoli-organic-whole-peeled-tomatoes.yaml",
+    "variant": "committed",
+    "sha256": "76bdd7a0608743a895e65a107243bbbf59feabfe03f780a59d01e53f0f5d079b"
+  },
+  {
+    "file": "_worktree/crlf/cookingnerdy-astro/affiliate_links/bianco-di-napoli-organic-whole-peeled-tomatoes.yaml",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/affiliate_links/bianco-di-napoli-organic-whole-peeled-tomatoes.yaml",
+    "variant": "worktree-crlf",
+    "sha256": "25bb62dea05afd2ac7f1022378d9f88b31e09821a96cb150af7b1d896f9c81ba"
+  },
+  {
+    "file": "cookingnerdy-astro/affiliate_links/cento-san-marzano-canned-tomatoes.yaml",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/affiliate_links/cento-san-marzano-canned-tomatoes.yaml",
+    "variant": "committed",
+    "sha256": "121c2367d762cb422b78252595cd57e21ec8ccfdf325dcc25ab0a5c99b8adb27"
+  },
+  {
+    "file": "_worktree/crlf/cookingnerdy-astro/affiliate_links/cento-san-marzano-canned-tomatoes.yaml",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/affiliate_links/cento-san-marzano-canned-tomatoes.yaml",
+    "variant": "worktree-crlf",
+    "sha256": "a2067099067b7ca81931133cd3dce24ab45fc15f49cb4256d3715cae01f7c49b"
+  },
+  {
+    "file": "cookingnerdy-astro/affiliate_links/deli-containers.yaml",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/affiliate_links/deli-containers.yaml",
+    "variant": "committed",
+    "sha256": "0d618fd0a6d4130ffd17fe6e3fe5a5507b6c2675d91509c249113dd390489c83"
+  },
+  {
+    "file": "cookingnerdy-astro/affiliate_links/kitchen-scale.yaml",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/affiliate_links/kitchen-scale.yaml",
+    "variant": "committed",
+    "sha256": "ab52b9b2b0ab1223058a16f5fad21b0a1f9f813c720400adca3d41aa2f90f31c"
+  },
+  {
+    "file": "cookingnerdy-astro/courses/condiments.mdx",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/courses/condiments.mdx",
+    "variant": "committed",
+    "sha256": "365200cc26b1ec4f5669111f7160741470130d71165de1541293d82fd80c3abb"
+  },
+  {
+    "file": "cookingnerdy-astro/cuisines/american.mdx",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/cuisines/american.mdx",
+    "variant": "committed",
+    "sha256": "415c8f7db465aaed356541ed38b4a6cc1977f9febd6f9079abf2fc3715baa0ba"
+  },
+  {
+    "file": "cookingnerdy-astro/posts/the-best-homemade-pizza-sauce.mdx",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/posts/the-best-homemade-pizza-sauce.mdx",
+    "variant": "committed",
+    "sha256": "79fe46f03698962b73474acd9966c45f1bdc2c27a52dd0b1e35d1343a9b43c9e"
+  },
+  {
+    "file": "cookingnerdy-astro/recipes/best-homemade-pizza-sauce.mdx",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/recipes/best-homemade-pizza-sauce.mdx",
+    "variant": "committed",
+    "sha256": "61b57843b6fb82232327a76c6678f252a55f80c379efb4242bef51ea99ed3be2"
+  },
+  {
+    "file": "cookingnerdy-astro/settings/index.yaml",
+    "site": "cookingnerdy-astro",
+    "commit": "1934f1724487c6418fa6a71e7d963cb9fa28afc8",
+    "source": "src/content/settings/index.yaml",
+    "variant": "committed",
+    "sha256": "21c001f14d6a595c8b81fc040f3f52d14c307407dc8a0131fff3845cf4f872be"
+  }
+]

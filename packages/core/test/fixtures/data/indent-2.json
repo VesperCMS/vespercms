@@ -1,0 +1,8 @@
+{
+  "title": "Two spaces",
+  "count": 2,
+  "tags": ["a", "b"],
+  "nested": {
+    "on": true
+  }
+}

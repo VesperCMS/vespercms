@@ -1,0 +1,8 @@
+- id: one
+  name: First
+  geo: { lat: 1, lng: 2 }
+- id: two
+  name: "Second"
+  geo:
+    lat: 3
+    lng: 4

@@ -1,0 +1,4 @@
+{
+  "$schema": "../schemas/settings.json",
+  "title": "Has a $schema key"
+}
