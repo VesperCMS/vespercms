@@ -15,7 +15,12 @@ export type Manifest = {
   generator: { name: string; version: string };
   /** SHA-256 of the manifest's content (everything except `generator` and `hash`). */
   hash: string;
-  site: { srcDir: string; contentConfig?: string };
+  site: {
+    srcDir: string;
+    contentConfig?: string;
+    /** IANA time zone for showing and entering times (spec §6.17), from vesper.config.ts. */
+    timeZone?: string;
+  };
   collections: CollectionManifest[];
   forms: FormManifest[];
   diagnostics: Diagnostic[];

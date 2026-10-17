@@ -1,3 +1,4 @@
+import { isoWithOffset, offsetOf, parseIsoWithOffset } from '../files/date-offset.ts';
 import { isPlainObject, type DataObject, type DataValue } from '../files/equal.ts';
 
 /*
@@ -11,7 +12,13 @@ const DATE_KEY = '$date';
 
 /** JSON-safe form of a parsed value: Dates become `{ $date: iso }`. */
 export function encodeValue(value: DataValue): unknown {
-  if (value instanceof Date) return { [DATE_KEY]: value.toISOString() };
+  if (value instanceof Date) {
+    // A date marked with an offset (the site's time zone) carries it in the text.
+    const offset = offsetOf(value);
+    return {
+      [DATE_KEY]: offset === undefined ? value.toISOString() : isoWithOffset(value, offset),
+    };
+  }
   if (Array.isArray(value)) return value.map(encodeValue);
   if (isPlainObject(value)) {
     return Object.fromEntries(
@@ -30,7 +37,7 @@ export function decodeValue(value: unknown): DataValue {
     const record = value as Record<string, unknown>;
     const keys = Object.keys(record);
     if (keys.length === 1 && keys[0] === DATE_KEY && typeof record[DATE_KEY] === 'string') {
-      return new Date(record[DATE_KEY]);
+      return parseIsoWithOffset(record[DATE_KEY]);
     }
     return Object.fromEntries(Object.entries(record).map(([k, v]) => [k, decodeValue(v)]));
   }

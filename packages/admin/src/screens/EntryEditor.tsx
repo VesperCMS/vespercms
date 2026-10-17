@@ -164,8 +164,16 @@ function EntryForm({
     setValues((current) => setIn(current, path, value));
   }, []);
   const editor = useMemo<EditorState>(
-    () => ({ collection, values, setValue, issues: issueMap, disabled: !editable || sourceOnly }),
-    [collection, values, setValue, issueMap, editable, sourceOnly],
+    () => ({
+      collection,
+      values,
+      setValue,
+      issues: issueMap,
+      disabled: !editable || sourceOnly,
+      isNew,
+      entryId,
+    }),
+    [collection, values, setValue, issueMap, editable, sourceOnly, isNew, entryId],
   );
 
   const save = useCallback(async () => {
@@ -511,8 +519,7 @@ function issueTarget(
 /** Whether a field's widget shows its children as their own fields (groups and repeaters do). */
 function usesChildren(field: FieldModel | undefined): boolean {
   if (!field) return true;
-  const widget = builtinWidget(field);
-  return widget.group === 'boxed' || (widget.group === true && field.kind === 'array');
+  return builtinWidget(field).rendersChildren === true;
 }
 
 /** The entry's page on the site, from the collection's URL pattern (spec §6.15.1, basic tokens only). */

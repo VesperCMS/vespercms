@@ -27,6 +27,12 @@ export type VesperConfig = {
   markdoc?: { tags?: Record<string, unknown> };
   /** Declared MDX components (spec §6.5.2). Used from Phase 2.5. */
   mdx?: { components?: Record<string, unknown> };
+  /**
+   * The site's time zone, as an IANA name such as `America/New_York`. Times
+   * are shown and entered in it, and stored as ISO 8601 with an offset
+   * (spec §6.17). Defaults to each editor's own time zone.
+   */
+  timeZone?: string;
   /** Role grants (spec §7.5). Cloud only, Phase 4. */
   roles?: Record<string, unknown>;
 };
@@ -36,7 +42,15 @@ export function defineConfig(config: VesperConfig): VesperConfig {
   return config;
 }
 
-const KNOWN_TOP_LEVEL = new Set(['collections', 'widgets', 'images', 'markdoc', 'mdx', 'roles']);
+const KNOWN_TOP_LEVEL = new Set([
+  'collections',
+  'widgets',
+  'images',
+  'markdoc',
+  'mdx',
+  'roles',
+  'timeZone',
+]);
 const KNOWN_COLLECTION = new Set([
   'label',
   'singleton',
@@ -104,6 +118,13 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
       }
     }
   }
+  const timeZone = record.timeZone;
+  if (timeZone !== undefined && !isTimeZone(timeZone)) {
+    problems.push({
+      level: 'error',
+      message: `timeZone must be an IANA time zone name such as "America/New_York", not ${JSON.stringify(timeZone)}.`,
+    });
+  }
   const widgets = record.widgets;
   if (widgets !== undefined && typeof widgets === 'object' && widgets !== null) {
     for (const [name, widget] of Object.entries(widgets)) {
@@ -117,4 +138,14 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
     }
   }
   return problems;
+}
+
+function isTimeZone(value: unknown): boolean {
+  if (typeof value !== 'string' || value === '') return false;
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
 }

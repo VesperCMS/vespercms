@@ -189,6 +189,18 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 **After any content file changes, Astro tells every open page to reload. The studio page skips that one reload (a `full-reload` with path `*` and no `triggeredBy`) through Vite's `vite:beforeFullReload` hook, because the studio made the change and reloading would throw away its state.** Code changes and manifest changes still reload it. This relies on Vite's client reading the payload after its listeners run (true in Vite 5 to 8). If that ever changes, the studio simply reloads after a save, as it did before. A file changed by someone else while it's open is caught at save time as a conflict.
 
+### 2026-10-17: Times are entered in the site's time zone and written with that day's offset
+
+**`vesper.config.ts` takes a `timeZone` (an IANA name, checked when the config loads). Date-time fields show and accept wall time in that zone, name the zone in text ("Times are in Eastern Time, the site's time zone."), and fall back to the editor's own zone, saying so, when none is set.** A value carries the offset the editor meant: the studio sends `{ "$date": "2026-11-07T10:00:00-05:00" }`, core keeps the offset as a hidden property on the Date, and the YAML writer uses it in place of the old value's offset. So a time moved across a DST change is written `-05:00`, not October's `-04:00`. A file that stores UTC (`Z`) keeps UTC. Plain `Intl`, no time zone library.
+
+### 2026-10-17: The geo field's map loads only when asked for
+
+**Latitude and longitude are two always-visible number fields, the real controls (spec §6.3.2). "Show on a map" loads MapLibre and OpenFreeMap tiles on demand.** The map is about 1 MB of code and fetches tiles from the internet, so it shouldn't load for every location entry, and the studio works offline without it. The pin is a real button: arrow keys move it (Shift for ten times as far) and each move is announced. MapLibre's worker is passed in with `setWorkerUrl` and a Vite `?url` import, so it works in dev and in a site's build.
+
+### 2026-10-17: References keep their stored shape, and lists of them keep their order
+
+**A reference field stores an entry ID, and a value already stored as `{ collection, id }` keeps that shape. A list of references is an ordered list with Move up, Move down and Remove buttons and a search box to add more,** because order usually matters (related posts) and must not depend on drag-and-drop. An entry is never offered as a reference to itself.
+
 ### 2026-10-17: Secondary fields go to Details by rule, and authors can override
 
 **The editor puts slugs, dates, tags, ordering, SEO and scheduling fields in the Details section (spec §10.3). Everything else stays in the main column, in schema order.** A field's `placement` overrides the rule, set either with `.meta({ placement: 'details' })` or in `vesper.config.ts` as `collections.blog.placement: { summary: 'details' }`.

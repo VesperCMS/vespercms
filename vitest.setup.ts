@@ -1,3 +1,4 @@
+import { afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 
 // Browser APIs jsdom lacks that React Aria's overlays and collections touch.
@@ -41,3 +42,12 @@ if (typeof window !== 'undefined') {
 }
 
 export {};
+
+// React Aria's live announcer appends its regions to <body> and keeps them,
+// outside any React root. Clear the page after each DOM test (after the test
+// file's own cleanup), so one test's announcements can't trip axe in the next.
+if (typeof document !== 'undefined') {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+}

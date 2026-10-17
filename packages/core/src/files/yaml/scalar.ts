@@ -1,4 +1,5 @@
 import { stringify, type Scalar, type ScalarTag } from 'yaml';
+import { isoWithOffset, offsetOf } from '../date-offset.ts';
 import type { DataValue } from '../equal.ts';
 import { readYaml } from './read.ts';
 import type { YamlStyle } from './style.ts';
@@ -14,6 +15,8 @@ const pad = (n: number, width = 2) => String(n).padStart(width, '0');
 
 /** A brand-new date: date-only at UTC midnight, otherwise ISO 8601 in UTC to the second. */
 export function formatNewDate(date: Date): string {
+  const offset = offsetOf(date);
+  if (offset !== undefined) return isoWithOffset(date, offset);
   const iso = date.toISOString();
   if (iso.endsWith('T00:00:00.000Z')) return iso.slice(0, 10);
   return date.getUTCMilliseconds() === 0 ? `${iso.slice(0, 19)}Z` : iso;
@@ -32,7 +35,14 @@ export function formatDateLike(date: Date, previous: string): string {
 
   if (separator === undefined) {
     // Date-only. Keep it date-only unless the new value has a time of day.
-    return iso.endsWith('T00:00:00.000Z') ? iso.slice(0, 10) : formatNewDate(date);
+    return iso.endsWith('T00:00:00.000Z') && offsetOf(date) === undefined
+      ? iso.slice(0, 10)
+      : formatNewDate(date);
+  }
+  // The offset the editor meant wins over the old one; a UTC (`Z`) file stays UTC.
+  const hinted = offsetOf(date);
+  if (hinted !== undefined && zone !== undefined && zone !== 'Z') {
+    return isoWithOffset(date, hinted).replace('T', separator);
   }
 
   let offsetMinutes = 0;

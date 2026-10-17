@@ -49,6 +49,7 @@ export type ManifestInput = {
   config?: {
     collections?: Record<string, CollectionConfig>;
     widgets?: Record<string, WidgetDefinition>;
+    timeZone?: string;
   };
   forms?: { name: string; schema: unknown; options?: Record<string, unknown> }[];
   /** Problems found while loading the site's configs. */
@@ -97,6 +98,7 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
     site: {
       srcDir: input.site.srcDir,
       ...(input.site.contentConfig ? { contentConfig: input.site.contentConfig } : {}),
+      ...(input.config?.timeZone ? { timeZone: input.config.timeZone } : {}),
     },
     collections,
     forms,

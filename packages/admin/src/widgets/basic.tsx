@@ -62,10 +62,6 @@ export function EmailWidget(props: WidgetProps<string>) {
   );
 }
 
-export function UrlWidget(props: WidgetProps<string>) {
-  return <input type="url" inputMode="url" {...textProps(props)} />;
-}
-
 export function TextAreaWidget(props: WidgetProps<string>) {
   const rows = props.field.widget === 'markdown' ? 8 : 3;
   return <textarea rows={rows} {...textProps(props)} className={cx(inputClass, 'resize-y')} />;
@@ -164,45 +160,6 @@ export function DateWidget({
       aria-invalid={invalid || undefined}
       disabled={disabled}
       className={cx(inputClass, 'max-w-56')}
-    />
-  );
-}
-
-/** Local date and time for the input, from an instant. */
-function dateTimeText(value: DataValue): string {
-  const date = value instanceof Date ? value : typeof value === 'string' ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return '';
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
-
-/** A date and time, entered in the editor's own time zone and stored as an instant. */
-export function DateTimeWidget({
-  value,
-  onChange,
-  id,
-  describedBy,
-  invalid,
-  disabled,
-}: WidgetProps<Date | string>) {
-  return (
-    <input
-      id={id}
-      type="datetime-local"
-      value={dateTimeText(value)}
-      onChange={(event) => {
-        const text = event.target.value;
-        if (text === '') {
-          onChange(undefined);
-          return;
-        }
-        const instant = new Date(text);
-        onChange(typeof value === 'string' ? instant.toISOString() : instant);
-      }}
-      aria-describedby={describedBy}
-      aria-invalid={invalid || undefined}
-      disabled={disabled}
-      className={cx(inputClass, 'max-w-64')}
     />
   );
 }

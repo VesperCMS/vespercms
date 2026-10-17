@@ -72,6 +72,8 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             'react/jsx-runtime',
             'react-dom/client',
             '@vesper/astro > @vesper/admin > react-aria-components',
+            // The geo field's map, loaded on demand.
+            '@vesper/astro > @vesper/admin > maplibre-gl',
             ...(options.studioFromSource
               ? // This workspace: the studio is TSX compiled in dev mode, and
                 // @vesper/core is linked source, so its own packages are named.

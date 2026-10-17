@@ -21,3 +21,22 @@
     font-weight: var(--font-weight-semibold);
   }
 }
+
+@layer components {
+  /* The geo field's map pin: a real button, so it has a visible focus ring. */
+  .vesper-map-pin {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px 9999px 9999px 0;
+    transform: rotate(-45deg);
+    background-color: var(--color-accent);
+    border: 2px solid var(--color-on-accent);
+    box-shadow: var(--shadow-overlay);
+    cursor: grab;
+  }
+
+  .vesper-map-pin:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+  }
+}

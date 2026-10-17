@@ -166,3 +166,10 @@ export {
 } from './studio/service.ts';
 export { issuesFromZod } from './studio/issues.ts';
 export { formatYamlSnippet, parseYamlSnippet, type YamlSnippetParse } from './files/yaml/text.ts';
+export {
+  withOffset,
+  offsetOf,
+  formatOffset,
+  isoWithOffset,
+  parseIsoWithOffset,
+} from './files/date-offset.ts';

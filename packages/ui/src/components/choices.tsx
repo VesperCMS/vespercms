@@ -33,7 +33,12 @@ import {
   type FieldTextProps,
 } from './shared.tsx';
 
-export type Option = { value: string; label: string };
+export type Option = {
+  value: string;
+  label: string;
+  /** Decorative content before the label, such as a colour swatch. Hidden from assistive tech. */
+  prefix?: ReactNode;
+};
 
 const listBoxItem = cx(
   'cursor-default rounded-sm px-3 py-2 text-base text-content outline-none',
@@ -408,6 +413,7 @@ export function RadioGroup({
               >
                 <span className="hidden size-2.5 rounded-full bg-accent group-data-[selected]:block" />
               </span>
+              {option.prefix && <span aria-hidden="true">{option.prefix}</span>}
               {option.label}
             </RadioButton>
           </RadioField>

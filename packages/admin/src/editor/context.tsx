@@ -10,6 +10,10 @@ export type EditorState = {
   /** Validation messages by `pathKey`, from the last save. */
   issues: ReadonlyMap<string, readonly string[]>;
   disabled: boolean;
+  /** The entry hasn't been saved yet. */
+  isNew: boolean;
+  /** The open entry's ID (`null` until a new entry is saved). */
+  entryId: string | null;
 };
 
 export const EditorContext = createContext<EditorState | null>(null);

@@ -3,7 +3,6 @@ import type { ComponentType } from 'react';
 import type { ValuePath } from '../editor/values.ts';
 import type { WidgetProps } from '../types.ts';
 import {
-  DateTimeWidget,
   DateWidget,
   EmailWidget,
   NumberWidget,
@@ -14,9 +13,11 @@ import {
   TagsWidget,
   TextAreaWidget,
   TextWidget,
-  UrlWidget,
 } from './basic.tsx';
+import { GeoWidget } from './geo.tsx';
 import { GroupWidget, RepeaterWidget } from './group.tsx';
+import { ReferencesWidget, ReferenceWidget } from './reference.tsx';
+import { ColorWidget, DateTimeWidget, MarkdownWidget, SlugWidget, UrlWidget } from './special.tsx';
 
 // Built-ins receive values of every shape; the registry can't be narrower.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,6 +30,8 @@ export type BuiltinWidget = {
    * groups); `'boxed'` also draws a hairline around it.
    */
   group?: true | 'boxed';
+  /** Renders each child (or item) as its own field, so their errors show there. */
+  rendersChildren?: true;
 };
 
 const BUILTIN: Record<string, BuiltinWidget> = {
@@ -44,13 +47,16 @@ const BUILTIN: Record<string, BuiltinWidget> = {
   radio: { component: RadioWidget, group: true },
   tags: { component: TagsWidget },
   multiselect: { component: TagsWidget },
-  group: { component: GroupWidget, group: 'boxed' },
-  repeater: { component: RepeaterWidget, group: true },
+  group: { component: GroupWidget, group: 'boxed', rendersChildren: true },
+  repeater: { component: RepeaterWidget, group: true, rendersChildren: true },
   raw: { component: RawWidget },
-  // Stand-ins until their dedicated controls land (Phase 2, later steps).
-  markdown: { component: TextAreaWidget },
-  slug: { component: TextWidget },
-  color: { component: TextWidget },
+  markdown: { component: MarkdownWidget },
+  slug: { component: SlugWidget },
+  color: { component: ColorWidget },
+  geo: { component: GeoWidget, group: 'boxed' },
+  reference: { component: ReferenceWidget },
+  references: { component: ReferencesWidget, group: true },
+  // A stand-in until uploads land (Phase 2, step 8).
   file: { component: TextWidget },
 };
 
@@ -62,8 +68,7 @@ const BY_KIND: Partial<Record<FieldKind, string>> = {
   enum: 'select',
   object: 'group',
   array: 'repeater',
-  // A reference is an entry ID until the reference picker lands.
-  reference: 'text',
+  reference: 'reference',
   image: 'text',
 };
 

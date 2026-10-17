@@ -10,7 +10,7 @@ export type Studio = {
   widgets: Record<string, WidgetComponent>;
   siteName: string;
   siteUrl: string | undefined;
-  collection(name: string): CollectionManifest | undefined;
+  collection: (name: string) => CollectionManifest | undefined;
 };
 
 export const StudioContext = createContext<Studio | null>(null);

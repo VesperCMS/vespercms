@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@vesper/core": "0.0.0",
+    "maplibre-gl": "^6.14.0",
     "react-aria-components": "^1.22.1"
   },
   "//peerDependencies": "One React for the studio and the site's custom widgets, which render inside it (spec §6.3.3).",

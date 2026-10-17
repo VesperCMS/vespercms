@@ -35,3 +35,16 @@ describe('checkConfig', () => {
     expect(checkConfig(null)[0]?.message).toContain('defineConfig');
   });
 });
+
+describe('timeZone', () => {
+  it('accepts IANA names and explains anything else', () => {
+    expect(checkConfig({ timeZone: 'America/New_York' })).toEqual([]);
+    expect(checkConfig({ timeZone: 'Eastern' })).toEqual([
+      {
+        level: 'error',
+        message:
+          'timeZone must be an IANA time zone name such as "America/New_York", not "Eastern".',
+      },
+    ]);
+  });
+});

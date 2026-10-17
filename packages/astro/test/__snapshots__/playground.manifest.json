@@ -2,7 +2,8 @@
   "manifestVersion": 1,
   "site": {
     "srcDir": "src",
-    "contentConfig": "src/content.config.ts"
+    "contentConfig": "src/content.config.ts",
+    "timeZone": "America/New_York"
   },
   "collections": [
     {
@@ -941,7 +942,8 @@
           "label": "Starts at",
           "widget": "datetime",
           "coerce": true,
-          "inferredWidget": "date"
+          "inferredWidget": "date",
+          "placement": "main"
         },
         {
           "path": [
@@ -952,7 +954,8 @@
           "label": "Ends at",
           "widget": "datetime",
           "coerce": true,
-          "inferredWidget": "date"
+          "inferredWidget": "date",
+          "placement": "main"
         },
         {
           "path": [
@@ -1190,5 +1193,5 @@
     }
   ],
   "diagnostics": [],
-  "hash": "be22ee02acdb913486f926f7cf4d0f4fc298dff2b35d889517fabcf0eab1fe64"
+  "hash": "abead61e0b44ea5a978786f5b9d4a840d80c13d2f884890ae05465a5c6b51521"
 }

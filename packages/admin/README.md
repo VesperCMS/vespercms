@@ -2,7 +2,7 @@
 
 The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
 
-**Status:** Phase 2, in progress. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, body as text, save with validation and conflict handling, delete, unsaved-changes guard). Basic widgets work; the reference picker, image and file fields, color, geo, slug and the rich body editor come next.
+**Status:** Phase 2, in progress. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, body as text, save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget except image and file uploads (next) and the rich body editor works, including the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone.
 
 ## How it's built
 
