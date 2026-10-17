@@ -34,6 +34,14 @@ The spec's D1–D17 are recorded in `vesper-spec.md` §3 and aren't repeated her
 
 **The integration builds a Pagefind index at build time into `dist/_vesper/search/`.** Search is plain static files that work on any host (D16), with no service to pay for or run. The cloud adds nothing required for search. A paid "search insights" extra is on the do-not-build list until Jeremy chooses it.
 
+### 2026-10-17: D13 and D15 are confirmed
+
+**Jeremy confirmed both decisions on October 17, 2026, ahead of Phase 4:**
+- D13: drafts live in the cloud, and git receives only published changes.
+- D15: per-site cloud data lives in a Durable Object per site, using its built-in SQLite.
+
+Phase 1's storage design already assumes D13: a draft records the git blob SHA it was based on, and conflicts are a version comparison.
+
 ## Process
 
 ### 2026-10-17: The repo starts private and goes public at launch
@@ -102,6 +110,59 @@ Rejected:
 ### 2026-10-17: axe gates on WCAG 2.1 A/AA and reports 2.2
 
 **Every built page must have zero axe violations for `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa`. `wcag22aa` findings are attached to the test as annotations but don't fail it.** D11 makes 2.1 AA the floor and 2.2 AA a goal "where it's cheap." Pages that are deliberately broken test fixtures are listed, with the reason, in `AXE_EXCLUDED` in `e2e/static-site.spec.ts`. They still have to load.
+
+## Studio
+
+### 2026-10-17: The UI kit is built on React Aria Components (spec §13.2)
+
+**`packages/ui` wraps React Aria Components (Apache-2.0), not Radix.**
+- The kit (spec §10.5) needs primitives Radix doesn't have:
+  - a combobox (reference and tag pickers);
+  - a tree (the WAI-ARIA tree with type-ahead, §6.15.2);
+  - a keyboard-navigable table;
+  - time-zone-aware date and time fields (scheduling, D18);
+  - drag and drop with keyboard alternatives.
+- With Radix, Vesper would hand-build exactly the hardest accessibility pieces.
+- Little Taproot reuse is lost: Taproot only imports Radix Dialog and Tabs.
+- The cost is a larger bundle and a more verbose API. Both are acceptable in a studio that loads only at `/admin`. It's styled with Tailwind 4 through React Aria's data attributes and our own tokens, never a kit's default look (D12).
+
+### 2026-10-17: The body editor splices changed blocks into the original text
+
+**Bodies are parsed with the parser the site renders with: remark/micromark (GFM) for `.md`, plus the MDX extensions for `.mdx`, and Markdoc's parser for `.mdoc`. Each top-level block keeps its source range.**
+- Tiptap 3 edits the document, and every block remembers the content it was loaded with.
+- On save, unchanged blocks copy their original bytes, and the whitespace between two untouched neighbors is kept too.
+- Only changed or new blocks are serialized, in one house style.
+- Blocks the writing view can't represent faithfully (JSX, Markdoc tags until Phase 2.5, raw HTML, front-loaded imports) are protected source blocks, edited as raw text.
+
+Rejected:
+- Tiptap's Markdown serializer for the whole body: it normalizes list markers, emphasis, escaping and wrapping, which spec §6.5 forbids.
+- Source-only editing: it fails the non-technical editors Vesper is for.
+
+This is the same rule §6.5.1 already sets for Markdoc tags, so `.md`, `.mdx` and `.mdoc` share one mechanism. The cost: an edit inside a long list re-serializes that whole list. It can be made finer later.
+
+### 2026-10-17: Map tiles come from MapLibre with OpenFreeMap by default (spec §13.9, tiles only)
+
+**`fields.geo` renders its map with MapLibre GL JS (BSD-3-Clause). The default style is OpenFreeMap: free, no API key, OpenStreetMap data. A `vesper.config.ts` option points it at MapTiler, Stadia or self-hosted tiles instead.**
+- OpenStreetMap's own tile servers forbid this use, and keyed providers don't suit free GitHub-mode sites.
+- The map loads lazily, only when a geo field is on screen.
+- The lat/lng number inputs stay the real controls, so a failed or blocked map never stops editing (§6.3.2).
+- OpenStreetMap attribution is shown.
+- OpenFreeMap is a community service without an SLA, which is why the style can be overridden.
+
+Geocoding (cloud address search) is still open. It is decided before Phase 4.
+
+### 2026-10-17: `/admin` is built by the site's Vite from a precompiled studio
+
+**`@vesper/admin` ships compiled JavaScript and CSS. The integration injects one prerendered `/admin` page whose client script the site's own Vite bundles, together with the site's custom widgets (through a virtual module) and the manifest.**
+- Custom widgets are the site's own components (spec §6.3.3), so only the site's build can bundle them.
+- A studio compiled per site from TypeScript and Tailwind would be slow and fragile, so the heavy part ships ready-made.
+- The site needs no `@astrojs/react` and no Tailwind, and Astro's `base` and `studio.deploy: false` keep working.
+
+Open risk, tested with a fixture site: a site that already depends on React 18 must not make the studio load the wrong React.
+
+### 2026-10-17: MDX components need a declared schema (spec §13.6)
+
+**An MDX component gets an editable block only when `vesper.config.ts` declares it with a Zod props schema. Undeclared components stay protected source chips.** Guessing props from TypeScript types is brittle. A wrong guess would show the wrong controls and could drop data on save.
 
 ## Schema introspection
 

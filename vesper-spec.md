@@ -66,9 +66,9 @@ A paid cloud service adds what static sites can't do on their own:
 | D10 | Billing uses Stripe Checkout and the Stripe Customer Portal. No custom payment UI. Prefer annual plans and per-account invoices (the 30¢ fixed fee hurts small monthly charges). | Decided |
 | D11 | Accessibility: WCAG 2.1 AA minimum for the admin, the dashboard and every component shipped onto customer sites. Meet 2.2 AA where it's cheap. | Decided |
 | D12 | Admin UI stack: React 19, Tailwind 4, headless accessible primitives and our own tokens. Don't adopt a component kit's default look (§10). | Decided |
-| D13 | **Drafts live in the cloud, not in git.** Git only receives published changes. An optional pull-request mode can come later. | Proposed (confirm at Phase 4) |
+| D13 | **Drafts live in the cloud, not in git.** Git only receives published changes. An optional pull-request mode can come later. | Decided (confirmed by Jeremy, October 17, 2026) |
 | D14 | **The studio always runs from the site itself at `/admin`, in every mode and on every host.** Cloud features are reached by signing in to the cloud from the studio (a quick redirect to `app.{{domain}}` and back, using OAuth 2 authorization code + PKCE). No third-party cookies are needed (§7.2). `app.{{domain}}` hosts only sign-in, the agency dashboard and the operator console, never a second copy of the editor. Without cloud access the studio still works fully in local or GitHub mode, and cloud features are simply absent. | Decided |
-| D15 | Per-site cloud data lives in a Durable Object per site, using its built-in SQLite. D1 is only for the shared control plane. Reason: D1 databases must be bound at deploy time (about 5,000 per Worker), while a Durable Object's database exists the moment you address it by ID. | Proposed (confirm at Phase 4) |
+| D15 | Per-site cloud data lives in a Durable Object per site, using its built-in SQLite. D1 is only for the shared control plane. Reason: D1 databases must be bound at deploy time (about 5,000 per Worker), while a Durable Object's database exists the moment you address it by ID. | Decided (confirmed by Jeremy, October 17, 2026) |
 | D16 | **The built site works on any static host:** Netlify, Cloudflare, Vercel, S3 (with or without CloudFront), GitHub Pages, or a traditional web host via FTP/SFTP. No feature may depend on a host's rewrites, headers, functions or image service. Host-specific extras (native redirect files, preview adapters) are optional enhancements, each with a universal fallback (§6.16). | Decided |
 | D17 | No cloud-rendered previews at launch. Sites without an SSR-capable host get studio preview, local preview and branch-deploy links (§6.11). Revisit after launch based on demand. | Decided |
 | D18 | Scheduling is **time-correct at build**. Entries carry `publishAt` / `unpublishAt`, and the `vesper:content` helpers filter by them during every build. Any rebuild at or after the scheduled time therefore produces the right site, on any host, with or without the cloud. The cloud's job is only to **trigger a rebuild at the exact time**. | Decided |
@@ -1601,7 +1601,7 @@ Confirm D13 and D15 before starting.
 ## 13. Open decisions
 
 1. **Name**: decided: **Vesper**. Still to do: claim the `@vesper` org on npmjs.com, and choose and register the cloud domain (replaces `{{domain}}`).
-2. **Headless primitives**: Radix (consistent with Taproot) or React Aria Components (stronger built-in accessibility behaviors). Decide in Phase 2.
+2. **Headless primitives**: decided October 17, 2026: **React Aria Components**. Radix lacks the combobox, tree, table and date/time primitives the kit needs (DECISIONS.md).
 3. **Cloud license**: fully closed, source-available, or open with a hosted-only business model.
 4. **Plans and prices**: tiers, limits and annual-only versus monthly. Should agency billing be per site or per bundle of sites?
 
@@ -1644,10 +1644,10 @@ Confirm D13 and D15 before starting.
    Entitlement keys to implement (§7.9): `sites`, `submissionsPerMonth`, `uploadStorageGB`, `mediaStorageGB`, `emailsPerMonth`, `a11yScanPages`, `a11yScanFrequency`, `whiteLabel`, `sso`, `retentionMonths`.
 
 5. **Pull-request mode** for teams that want GitHub review: Phase 9, or earlier for agencies that ask?
-6. **MDX props without declarations**: should the editor try to infer MDX component props from TypeScript types, or always require a declared Zod schema (§6.5.2)?
+6. **MDX props without declarations**: decided October 17, 2026: **always require a declared Zod schema**. Undeclared components stay protected source chips (§6.5.2).
 7. **Git Gateway–compatible API** so existing Decap sites can use the cloud without switching editors. It's a market wedge but adds maintenance. Decide before Phase 5.
 8. **Self-hosting the cloud** for agencies that want it (for example on Coolify). Likely never, or Enterprise only.
-9. **Map tiles and geocoding** for `fields.geo`: which tile source (for example MapLibre with OpenStreetMap-based tiles) and which geocoding provider the cloud proxies. Check usage terms and cost before Phase 4.
+9. **Map tiles and geocoding** for `fields.geo`: tiles decided October 17, 2026: **MapLibre GL JS with OpenFreeMap by default**, overridable in `vesper.config.ts`. Still open: which geocoding provider the cloud proxies for address search (decide before Phase 4; check usage terms and cost).
 10. **Alt text suggestions**: should the cloud ever offer machine-suggested alt text (clearly marked, never auto-applied, always human-confirmed), or stay strictly human-written?
 11. **Cloud-rendered previews for static-only hosts** (after launch): revisit if customers ask (D17). If built, it would be a paid add-on and the one exception to D9.
 12. **Conditional form fields**: support show/hide logic inside forms (with the accessibility work that requires), or keep forms static and rely on routing?

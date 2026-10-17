@@ -8,7 +8,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 |---|---|
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
-| 2 onward | Roadmap below |
+| 2 Integration and local mode | In progress. Decisions confirmed 2026-10-17 (DECISIONS.md, "Studio") |
+| 2.5 onward | Roadmap below |
 
 ## Phase 0: Scaffold
 
