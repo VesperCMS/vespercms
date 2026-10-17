@@ -89,3 +89,40 @@ export { MemoryStorage } from './storage/memory.ts';
 export { gitBlobSha } from './storage/git-blob-sha.ts';
 export { normalizePath, InvalidPathError } from './storage/paths.ts';
 export { validateChangeSet, type ValidatedChange } from './storage/validate.ts';
+
+// Widgets: resolution order of spec §6.3.
+export {
+  resolveWidgets,
+  inferWidget,
+  BUILTIN_WIDGETS,
+  type WidgetDefinition,
+  type WidgetCheck,
+  type ResolveOptions,
+} from './widgets/resolve.ts';
+
+// Collections: which files belong to a collection, and their IDs, as Astro computes them.
+export {
+  globMatcher,
+  defaultEntryId,
+  patternExtensions,
+  entryKindOf,
+} from './collections/entries.ts';
+
+// Manifest (spec §6.2).
+export {
+  buildManifest,
+  type ManifestInput,
+  type CollectionInput,
+  type CollectionConfig,
+  type LoaderInfo,
+} from './manifest/build.ts';
+export { canonicalJson, manifestHash } from './manifest/hash.ts';
+export type {
+  Manifest,
+  CollectionManifest,
+  CollectionSource,
+  CollectionPresentation,
+  FormManifest,
+  ReadOnlyCollectionReason,
+  SchedulePresentation,
+} from './manifest/types.ts';

@@ -29,14 +29,17 @@
   },
   "//dependencies": "yaml: Astro 7.4's own YAML parser, and a lossless CST for editing. js-yaml: what Astro 6.x-7.3 parse with; used to refuse structural edits where the two disagree.",
   "dependencies": {
+    "github-slugger": "^2.0.0",
     "js-yaml": "^4.3.2",
     "jsonc-parser": "^3.3.1",
+    "picomatch": "^4.0.7",
     "yaml": "^2.9.1"
   },
   "//devDependencies": "Test-only. @astrojs/internal-helpers: the frontmatter split is checked against Astro itself. zod: tests build real Zod 4 schemas for the walker (src/ never imports zod).",
   "devDependencies": {
     "@astrojs/internal-helpers": "^0.13.0",
     "@types/js-yaml": "^4.0.9",
+    "@types/picomatch": "^4.0.3",
     "zod": "^4.6.7"
   }
 }

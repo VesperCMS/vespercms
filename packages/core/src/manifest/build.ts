@@ -1,0 +1,223 @@
+import { dataFormatOf } from '../files/data-file.ts';
+import { entryKindOf, patternExtensions } from '../collections/entries.ts';
+import type { Diagnostic } from '../field-model.ts';
+import { humanize } from '../schema/humanize.ts';
+import { walkSchema } from '../schema/walk.ts';
+import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
+import { manifestHash } from './hash.ts';
+import type {
+  CollectionManifest,
+  CollectionPresentation,
+  CollectionSource,
+  FormManifest,
+  Manifest,
+  SchedulePresentation,
+} from './types.ts';
+
+/** How a collection's entries are loaded, as Vesper's config loader observed it. */
+export type LoaderInfo =
+  | { kind: 'glob'; base: string; pattern: string | string[]; customId: boolean }
+  | { kind: 'file'; path: string; customParser: boolean }
+  | { kind: 'other'; name?: string };
+
+export type CollectionInput = {
+  name: string;
+  loader: LoaderInfo;
+  /** The collection's Zod schema, already called with Vesper's `image()` if it was a function. */
+  schema: unknown;
+  /** Set when the config couldn't be evaluated for this collection. */
+  error?: string;
+};
+
+/** The presentation part of `vesper.config.ts` for one collection. Never field definitions (D2). */
+export type CollectionConfig = {
+  label?: string;
+  singleton?: boolean;
+  tree?: boolean;
+  url?: string | ((entry: unknown) => string);
+  listFields?: string[];
+  newEntryPath?: string;
+  schedule?: boolean | { unpublish?: boolean; publishAt?: string; unpublishAt?: string };
+  search?: boolean;
+};
+
+export type ManifestInput = {
+  site: { srcDir: string; contentConfig?: string };
+  collections: CollectionInput[];
+  config?: {
+    collections?: Record<string, CollectionConfig>;
+    widgets?: Record<string, WidgetDefinition>;
+  };
+  forms?: { name: string; schema: unknown; options?: Record<string, unknown> }[];
+  /** Problems found while loading the site's configs. */
+  diagnostics?: Diagnostic[];
+  generator?: { name: string; version: string };
+};
+
+/** Builds the manifest from a site's evaluated configs. Never throws for content problems; it reports them. */
+export async function buildManifest(input: ManifestInput): Promise<Manifest> {
+  const diagnostics: Diagnostic[] = [...(input.diagnostics ?? [])];
+  const widgets = input.config?.widgets ?? {};
+  const configured = input.config?.collections ?? {};
+
+  for (const name of Object.keys(configured)) {
+    if (!input.collections.some((c) => c.name === name)) {
+      diagnostics.push({
+        level: 'warning',
+        code: 'unknown-collection',
+        message: `vesper.config.ts configures "${name}", but content.config.ts has no collection by that name.`,
+        collection: name,
+      });
+    }
+  }
+
+  const collections = input.collections.map((collection) =>
+    buildCollection(collection, configured[collection.name] ?? {}, widgets, diagnostics),
+  );
+
+  const forms: FormManifest[] = (input.forms ?? []).map((form) => {
+    const walk = walkSchema(form.schema, { collection: `form:${form.name}` });
+    diagnostics.push(...walk.diagnostics);
+    return {
+      name: form.name,
+      fields: walk.fields
+        ? resolveWidgets(walk.fields, diagnostics, {
+            custom: widgets,
+            collection: `form:${form.name}`,
+          })
+        : null,
+      options: plainData(form.options ?? {}),
+    };
+  });
+
+  const content = {
+    manifestVersion: 1 as const,
+    site: {
+      srcDir: input.site.srcDir,
+      ...(input.site.contentConfig ? { contentConfig: input.site.contentConfig } : {}),
+    },
+    collections,
+    forms,
+    diagnostics,
+  };
+  return {
+    ...content,
+    generator: input.generator ?? { name: '@vesper/core', version: '0.0.0' },
+    hash: await manifestHash(content),
+  };
+}
+
+function buildCollection(
+  input: CollectionInput,
+  config: CollectionConfig,
+  widgets: Record<string, WidgetDefinition>,
+  diagnostics: Diagnostic[],
+): CollectionManifest {
+  const source = sourceOf(input.loader);
+  const formats =
+    source.loader === 'glob' ? source.formats : source.loader === 'file' ? [source.format] : [];
+  let readOnlyReason: CollectionManifest['readOnlyReason'];
+  if (input.error) readOnlyReason = 'config-error';
+  else if (source.loader === 'other') readOnlyReason = 'custom-loader';
+  else if (
+    source.loader === 'file' &&
+    (source.customParser || source.format === 'toml' || source.format === 'unknown')
+  ) {
+    readOnlyReason = 'unsupported-format';
+  } else if (source.loader === 'glob' && formats.length > 0 && formats.every((f) => f === 'toml')) {
+    readOnlyReason = 'unsupported-format';
+  }
+
+  if (input.error) {
+    diagnostics.push({
+      level: 'error',
+      code: 'config-error',
+      message: input.error,
+      collection: input.name,
+    });
+  } else if (source.loader === 'other') {
+    diagnostics.push({
+      level: 'info',
+      code: 'custom-loader',
+      message: `"${input.name}" uses a custom loader${source.name ? ` (${source.name})` : ''}. Only collections using glob() or file() can be edited, so it is listed read-only.`,
+      collection: input.name,
+    });
+  }
+
+  let fields: CollectionManifest['fields'] = null;
+  let extraKeys: CollectionManifest['extraKeys'];
+  if (input.schema !== undefined && input.schema !== null && !input.error) {
+    const walk = walkSchema(input.schema, { collection: input.name });
+    diagnostics.push(...walk.diagnostics);
+    fields = walk.fields
+      ? resolveWidgets(walk.fields, diagnostics, { custom: widgets, collection: input.name })
+      : null;
+    extraKeys = walk.extraKeys;
+  }
+
+  return {
+    name: input.name,
+    label: config.label ?? humanize(input.name),
+    editable: readOnlyReason === undefined,
+    ...(readOnlyReason ? { readOnlyReason } : {}),
+    source,
+    entryKind: source.loader === 'file' ? 'data' : entryKindOf(formats),
+    fields,
+    ...(extraKeys ? { extraKeys } : {}),
+    presentation: presentationOf(config),
+  };
+}
+
+function sourceOf(loader: LoaderInfo): CollectionSource {
+  if (loader.kind === 'glob') {
+    return {
+      loader: 'glob',
+      base: toPosix(loader.base),
+      pattern: loader.pattern,
+      generateId: loader.customId ? 'custom' : 'default',
+      formats: patternExtensions(loader.pattern),
+    };
+  }
+  if (loader.kind === 'file') {
+    return {
+      loader: 'file',
+      path: toPosix(loader.path),
+      format: dataFormatOf(loader.path) ?? 'unknown',
+      customParser: loader.customParser,
+    };
+  }
+  return loader.name ? { loader: 'other', name: loader.name } : { loader: 'other' };
+}
+
+function presentationOf(config: CollectionConfig): CollectionPresentation {
+  const presentation: CollectionPresentation = {};
+  if (config.singleton !== undefined) presentation.singleton = config.singleton;
+  if (config.tree !== undefined) presentation.tree = config.tree;
+  if (typeof config.url === 'string') presentation.url = config.url;
+  else if (typeof config.url === 'function') presentation.url = { kind: 'function' };
+  if (config.listFields) presentation.listFields = [...config.listFields];
+  if (config.newEntryPath !== undefined) presentation.newEntryPath = config.newEntryPath;
+  if (config.schedule) presentation.schedule = scheduleOf(config.schedule);
+  if (config.search !== undefined) presentation.search = config.search;
+  return presentation;
+}
+
+function scheduleOf(
+  schedule: true | { unpublish?: boolean; publishAt?: string; unpublishAt?: string },
+): SchedulePresentation {
+  const options = schedule === true ? {} : schedule;
+  return {
+    unpublish: options.unpublish ?? true,
+    publishAt: options.publishAt ?? 'publishAt',
+    unpublishAt: options.unpublishAt ?? 'unpublishAt',
+  };
+}
+
+const toPosix = (path: string) => path.replaceAll('\\', '/').replace(/^\.\//, '');
+
+/** Keeps only plain data (drops functions and class instances) so options can go into JSON. */
+function plainData(value: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(
+    JSON.stringify(value, (_key, v: unknown) => (typeof v === 'function' ? undefined : v)),
+  ) as Record<string, unknown>;
+}
