@@ -181,21 +181,3 @@ function indented(value: string, eol: LineEnding, indent: string): string {
 export function keepAll(parsed: ParsedBody): BodyItem[] {
   return parsed.blocks.map((_, keep) => ({ keep }));
 }
-
-/**
- * A block's text with its container's indentation taken off every line
- * after the first, so it can be parsed on its own. Returns null when a line
- * isn't indented like the rest (the block is then kept as written).
- */
-export function dedentedText(text: string, block: BodyBlock, indent: string): string | null {
-  const raw = text.slice(block.start, block.end);
-  if (indent === '') return raw;
-  const lines = raw.split('\n');
-  const out: string[] = [];
-  for (const [i, line] of lines.entries()) {
-    if (i === 0 || line.trim() === '') out.push(i === 0 ? line : line.replace(/^[ \t]*/, ''));
-    else if (line.startsWith(indent)) out.push(line.slice(indent.length));
-    else return null;
-  }
-  return out.join('\n');
-}

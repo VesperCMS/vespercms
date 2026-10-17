@@ -128,7 +128,7 @@ export type {
 } from './manifest/types.ts';
 
 // Bodies as blocks, for splice-on-save editing (DECISIONS.md, "Studio").
-export { parseBody, assembleBody, keepAll, dedentedText } from './body/blocks.ts';
+export { parseBody, assembleBody, keepAll } from './body/blocks.ts';
 export type {
   BodyFormat,
   BodyBlock,

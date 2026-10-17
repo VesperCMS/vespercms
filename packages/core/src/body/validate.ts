@@ -30,6 +30,8 @@ export type BodyIssue = {
   code: string;
   /** The tag or component the issue is about. */
   name?: string;
+  /** The attribute or prop at fault, so a settings form can show the message under it. */
+  attribute?: string;
 };
 
 export type MarkdocValidateOptions = {
@@ -90,6 +92,9 @@ export function validateMarkdocBody(body: string, options: MarkdocValidateOption
       code: error.id,
       message: plainMessage(error.id, error.message, name, name ? tags.get(name) : undefined),
       ...(name ? { name } : {}),
+      ...(error.id.startsWith('attribute-') && attributeOf(error.message)
+        ? { attribute: attributeOf(error.message) }
+        : {}),
     });
   }
 
@@ -283,6 +288,7 @@ export async function validateMdxBody(
             level: 'error',
             code: 'props',
             name: element.name,
+            ...(key ? { attribute: key } : {}),
             message: setting
               ? `${check.label}: ${setting}: ${issue.message}`
               : `${check.label}: ${issue.message}`,
@@ -294,4 +300,9 @@ export async function validateMdxBody(
   };
   await visit(mdastBlocks(body, true));
   return dedupe(issues);
+}
+
+/** The attribute a Markdoc message names in quotes, as in "Missing required attribute: 'title'". */
+function attributeOf(message: string): string | undefined {
+  return /'([^']+)'/.exec(message)?.[1];
 }

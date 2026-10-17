@@ -45,6 +45,7 @@ describe('validateMarkdocBody', () => {
         level: 'error',
         code: 'attribute-missing-required',
         name: 'youtube',
+        attribute: 'title',
         message: 'YouTube video: Video title is required.',
       },
     ]);
@@ -112,6 +113,7 @@ describe('validateMdxBody', () => {
         level: 'error',
         code: 'props',
         name: 'YouTube',
+        attribute: 'title',
         message: 'YouTube video: Title: This is required.',
       },
     ]);
