@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -172,9 +172,13 @@ describe('entry IDs and files match Astro’s own content layer', () => {
       cwd: playground,
       stdio: 'pipe',
     });
-    store = parseDevalue(
-      readFileSync(join(playground, '.astro', 'data-store.json'), 'utf8'),
-    ) as typeof store;
+    // `astro sync` writes the store to Astro's cache dir; builds write it to .astro/.
+    const storePath = [
+      join(playground, 'node_modules', '.astro', 'data-store.json'),
+      join(playground, '.astro', 'data-store.json'),
+    ].find((path) => existsSync(path));
+    if (!storePath) throw new Error('astro sync wrote no data store');
+    store = parseDevalue(readFileSync(storePath, 'utf8')) as typeof store;
     manifest = await generateManifest({ root: playground });
   }, 120_000);
 

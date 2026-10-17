@@ -7,7 +7,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Phase | Status |
 |---|---|
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
-| 1 Core | Designed below; starts after Jeremy reviews Phase 0 |
+| 1 Core | Built and verified locally (2026-10-17). See "Phase 1: outcome" below. |
 | 2 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -26,6 +26,27 @@ Two parts of the playground wait for their phase:
 
 - `<Form>` arrives in Phase 6. `src/forms.config.ts` holds the contact form's definition in raw Zod until then.
 - `<Search />` arrives in Phase 2.9. The header reserves its slot until then.
+
+## Phase 1: outcome
+
+All five "Done when" criteria are met and tested:
+
+| Criterion | Evidence |
+|---|---|
+| Every playground collection produces a correct manifest | `packages/astro/test/manifest.integration.test.ts`: a snapshot, assertions for each collection, no diagnostics, determinism, and entry IDs and file paths equal to Astro's own `.astro/data-store.json` |
+| No unrelated diffs across at least 30 real files | 165 real files from four sites plus 18 CRLF and mixed-EOL variants. The YAML and entry corpus tests apply the definition in DECISIONS.md |
+| Unmappable schema parts fall back to the raw field | `schema/walk.test.ts` (union, discriminated union, transform, record, tuple, intersection, any, numeric enum, recursion, a throwing schema). The playground's `series` field |
+| Meta before or after `.optional()` / `.default()` resolves identically | `schema/walk.test.ts`: every wrapper and every wrapper order |
+| An unknown widget name falls back with a warning | `widgets/resolve.test.ts` and the edge-site integration test |
+
+**Changes from the design:**
+- Astro 7.4 parses YAML with `yaml`, not js-yaml, so js-yaml is the parity check rather than the reader.
+- The `astro/loaders` shim is wired through a Vite alias (see DECISIONS.md).
+- Sequences of entries with ids are diffed by id.
+
+**Deferred:**
+- The Astro 6 fixture site and its CI job move to Phase 2, with the integration. Astro 6's `reference()` shape is already covered by a unit test.
+- Loading `markdoc.config.mjs` moves to Phase 2.5, which uses it.
 
 ## Phase 1: Core (design)
 

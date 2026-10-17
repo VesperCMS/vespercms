@@ -15,7 +15,8 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | Phase | Status |
 |---|---|
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
-| 1 Core | Designed in `PLAN.md`; starts after Jeremy reviews Phase 0 |
+| 1 Core | Built and verified locally (2026-10-17); outcome in `PLAN.md` |
+| 2 Integration and local mode | Next; confirm the items listed in `PLAN.md`'s roadmap first |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -32,6 +33,8 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 ## Commands
 
 Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `node`. The `.npmrc` sets `--conditions=@vesper/source`, and it only applies inside npm.
+
+**On Windows, stopping a background `npm run dev` leaves `astro dev` running, and it locks native modules so `npm ci` fails with EPERM.** Find the tree's root shell and stop it with `taskkill /PID <pid> /T /F`. Never kill Node processes that belong to other projects.
 
 | Command | What it does |
 |---|---|
@@ -83,6 +86,8 @@ Later phases add `packages/admin` (Phase 2), `templates/oauth-relay` (Phase 3), 
 **Never run a formatter over content, fixtures or the playground's content folders.** They are byte-exact test data, protected by `.prettierignore`, `.editorconfig` and `-text` in `.gitattributes`.
 
 **Read YAML with `files/yaml/read.ts` (Astro 7.4's exact options), and edit structurally only when it says the block is editable.** Astro 7.4 parses with `yaml` and older Astro with js-yaml; where they disagree, a structural save could silently change content for one of them.
+
+**Save through `writeEntryFile`, `writeDataFile` or `writeCollectionEntry`, never by writing text yourself.** They splice, verify the result reads back exactly, and refuse rather than write anything wrong.
 
 **Edit raw input values, never Zod's parsed output.** Defaults, coercions and transforms must not leak into files the editor didn't touch.
 

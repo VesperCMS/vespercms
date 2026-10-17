@@ -2,13 +2,19 @@
 
 The framework-free heart of Vesper. It runs unchanged in Node, in Cloudflare Workers and in the browser, so it imports nothing from Node, Astro, React, Vite or Zod.
 
-**Status:** Phase 0 skeleton. It exports the manifest format version and the normalized `FieldModel` type (spec §6.3.1). Phase 1 adds:
+**Status:** Phase 1 complete.
 
-- **Schema introspection:** walks a site's Zod 4 schemas into field models, resolves widgets, and builds the manifest.
-- **Serializers:** read and write `.md`, `.mdx`, `.mdoc`, `.json` and `.yaml` content with round-trip fidelity. Saving one field changes only that field's bytes.
-- **Storage adapter interface:** list, read and atomic multi-file commits, shared by the local, GitHub and cloud modes.
+| Area | Exports |
+|---|---|
+| **Files** (spec §6.5) | `readEntryFile` / `writeEntryFile` for `.md`, `.mdx` and `.mdoc`. `readDataFile` / `writeDataFile` and `readCollectionFile` / `writeCollectionEntry` for JSON and YAML data. Lower-level `readYaml` / `writeYaml`, `readJson` / `writeJson`, `splitFrontmatter` and `diffValues`. |
+| **Schema** (spec §6.2, §6.3) | `walkSchema` turns Zod 4 schemas into `FieldModel`s without importing Zod. `resolveWidgets` applies the spec §6.3 order. |
+| **Manifest** | `buildManifest`, deterministic and hashed. |
+| **Collections** | `globMatcher` and `defaultEntryId`, identical to Astro's glob loader. |
+| **Storage** | The `StorageAdapter` interface, `MemoryStorage`, `gitBlobSha`, and the contract suite at `@vesper/core/testing`. |
 
-The design is in the repository's `PLAN.md`.
+Saves change only the bytes of values that changed: an unchanged save returns identical bytes. Every write is re-read and verified before it is returned. When a save can't be done exactly, it throws `SerializationError` and nothing is written.
+
+See `test/README.md` for the round-trip corpus, and DECISIONS.md for the reasons behind each choice.
 
 ## Development
 

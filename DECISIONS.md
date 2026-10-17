@@ -129,6 +129,30 @@ A test runs `astro sync` on the playground and checks Vesper's entry IDs and fil
 
 **A schema counts as an Astro reference when it is a pipe from a string-or-object union into a transform, and a probe parse of a string returns `{ id, collection }`.** Astro 6.4's union has three options; 7.x adds a number option. Matching the exact shape would break between majors, but the probe works on both.
 
+### 2026-10-17: Refinements keep their base kind; transforms become raw fields
+
+**`.refine()` and `.check()` don't change a field's kind or widget. `.transform()` and `z.preprocess()` make the field `unknown`, edited as raw YAML.** The spec's "custom transforms, refinements, unions → raw YAML" was written with Zod 3 in mind, where refinements created a separate effects wrapper. In Zod 4, a refinement is a check on the same schema, so its type is still known. Validation still runs the refinement (the blog hero's "alt text or decorative" rule, for example), and the editor shows the real control. A transform changes what the file holds into something else, so editing the parsed form would write the wrong value back.
+
+### 2026-10-17: The field model extends the spec's shape with optional keys only
+
+**`FieldModel` keeps every key from spec §6.3.1, and adds only optional ones:**
+- `nullable`, `format`, `coerce`, `defaultDynamic`;
+- `inferredWidget`, `unknownReason`, `extraKeys`;
+- `hidden`, `readOnly`, `placeholder`, `autocomplete`, `safeToEcho`;
+- constraint details: `patternFlags`, `step`, `integer` and inclusive bounds.
+
+The studio needs each of them to render the right control or message. They stay optional, so the spec's shape is still a valid model.
+- **Date defaults** are almost always "now", so they get `defaultDynamic` and no stored value: a value frozen at build time would be wrong.
+- **Meta** is copied only for known keys, and only if it's plain JSON. Functions in `widgetOptions` are dropped with a warning, and Vesper's internal `vesper` marker key never reaches the manifest.
+
+### 2026-10-17: Widgets are resolved when the manifest is built
+
+**The spec §6.3 resolution order (explicit widget, custom `match`, inference, raw) runs in Node while the manifest is built. The manifest stores the resolved widget and the inferred fallback.** Custom widgets' `accepts` and `match` are functions in `vesper.config.ts`, and functions can't go into a JSON manifest. Resolving at build means the studio only looks components up by name, and falls back to `inferredWidget` if a component fails to load. A check that throws counts as a rejection with a warning; it never crashes the build.
+
+### 2026-10-17: The manifest is deterministic and hashed by content
+
+**The manifest has no timestamps. It keeps the configs' own order, uses POSIX paths, and carries a SHA-256 of its canonical JSON (sorted keys), excluding the generator version.** The same site must produce the same bytes on Windows and Linux, so the snapshot test is meaningful and the cloud can tell a schema change from a Vesper upgrade. The playground's manifest is committed as a snapshot (`packages/astro/test/__snapshots__/playground.manifest.json`), so schema-mapping changes show up in review as a readable diff.
+
 ## Content files
 
 ### 2026-10-17: Saves splice edits into the original text
@@ -145,6 +169,32 @@ A test runs `astro sync` on the playground and checks Vesper's entry IDs and fil
 - If the editor read with one parser while the site built with the other, a save could change what visitors see in a field nobody touched. Requiring agreement makes every structural edit safe on both Astro majors.
 - The real cost is small: every block in the committed corpus is editable, and its values match Astro's own `parseFrontmatter` exactly (`test/yaml-read.corpus.test.ts`).
 - The design first assumed js-yaml was the reader, because the Astro 7.3 install it was checked against still used js-yaml. The parity test against the installed Astro caught the change.
+
+### 2026-10-17: "No unrelated diff" has a precise, tested meaning
+
+**A save has no unrelated diff when:**
+1. an unchanged save returns the input bytes exactly;
+2. after trimming the common prefix and suffix, the bytes that changed for an edit at path P all lie within the lines holding P's key and value;
+3. a frontmatter edit leaves every body byte alone, and a body edit leaves every frontmatter byte alone.
+
+`packages/core/test/yaml-write.corpus.test.ts` and `entry-file.corpus.test.ts` check this:
+- for every editable YAML block and entry in the corpus (165 real files from four sites, plus CRLF and mixed-EOL variants) and the fixtures;
+- with one type-appropriate edit per top-level field, or its first nested leaf;
+- re-reading every result to the intended value.
+
+The anchors fixture is the one allowed exception, because it takes the flagged re-render fallback.
+
+### 2026-10-17: TOML is read-only in v1
+
+**Files with `+++` TOML frontmatter, and `.toml` data files, are read and shown but not edited.** No formatting-preserving TOML editor exists, and re-serializing would break round-trip fidelity. None of the sites in the corpus uses TOML. Revisit if a customer site needs it.
+
+### 2026-10-17: A file's version is its git blob SHA, in every storage mode
+
+**`StorageAdapter` versions are git blob SHA-1s, computed with Web Crypto.** Local, GitHub and cloud modes then agree on what "this exact file" means. A cloud draft's `base_sha` (spec §8.2) is just a version, and conflict checks are a string comparison. One shared validator (`storage/validate.ts`) applies the same rules in every adapter, and the contract suite (`@vesper/core/testing`) proves each adapter follows them.
+
+### 2026-10-17: Local saves are best-effort atomic
+
+**`LocalStorage.commit` checks every change first, writes new contents to temporary files and renames them into place, and restores the originals if any step fails.** Filesystems have no multi-file transactions, so a crash in the middle of a save can still leave part of it applied. Git shows exactly what happened, and local mode is a developer's own machine. It never lists or writes `node_modules`, `dist`, `.git`, `.astro` or `.vesper`.
 
 ### 2026-10-17: Line endings are pinned to LF, and fixtures are byte-exact
 
