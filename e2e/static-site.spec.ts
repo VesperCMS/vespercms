@@ -14,8 +14,16 @@ import { expect, test } from '@playwright/test';
 
 const dist = fileURLToPath(new URL('../apps/playground/dist/', import.meta.url));
 
-/** Pages that are deliberately inaccessible test fixtures, with the reason. */
-const AXE_EXCLUDED: Record<string, string> = {};
+/**
+ * Pages that are deliberately inaccessible test fixtures, with the reason.
+ * They must still load; they skip the structure and axe checks.
+ */
+const AXE_EXCLUDED: Record<string, string> = {
+  '/fixtures/accessibility-mistakes/':
+    'One deliberate mistake per studio accessibility check (spec §6.18, layer 1).',
+};
+
+const WCAG21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
 function builtPages(): string[] {
   const files = readdirSync(dist, { recursive: true, encoding: 'utf8' })
@@ -37,8 +45,6 @@ for (const path of builtPages()) {
   test(`page ${path}`, async ({ page }) => {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);
-    await expect(page.locator('main')).toHaveCount(1);
-    await expect(page.locator('h1')).toHaveCount(1);
 
     const excluded = AXE_EXCLUDED[path];
     if (excluded) {
@@ -46,9 +52,9 @@ for (const path of builtPages()) {
       return;
     }
 
-    const { violations } = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .analyze();
+    await expect(page.locator('main')).toHaveCount(1);
+    await expect(page.locator('h1')).toHaveCount(1);
+    const { violations } = await new AxeBuilder({ page }).withTags(WCAG21_AA).analyze();
     expect(
       violations.map(({ id, help, nodes }) => ({ id, help, targets: nodes.map((n) => n.target) })),
     ).toEqual([]);
@@ -66,10 +72,18 @@ test('unknown URLs get a real 404 with the site 404 page', async ({ page }) => {
   const response = await page.goto('/no/such/page/');
   expect(response?.status()).toBe(404);
   await expect(page.locator('h1')).toHaveText('Page not found');
-  const { violations } = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG21_AA).analyze();
   expect(violations).toEqual([]);
+});
+
+test('the axe gate can fail: it flags the deliberate fixture page', async ({ page }) => {
+  // Guards against a misconfigured scan that silently passes everything. Most
+  // of the fixture's mistakes are content problems axe can't see (an empty alt
+  // is valid HTML; skipped headings are best practice, not WCAG), which is why
+  // the studio has its own checks. Contrast is one axe does see.
+  await page.goto('/fixtures/accessibility-mistakes/');
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG21_AA).analyze();
+  expect(violations.map((v) => v.id)).toContain('color-contrast');
 });
 
 test('deep links work without rewrite rules', async ({ page }) => {

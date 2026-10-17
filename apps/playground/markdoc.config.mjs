@@ -22,6 +22,8 @@ export default defineMarkdocConfig({
       attributes: {
         id: { type: String, required: true },
         title: { type: String, required: true },
+        // Declared so the studio can ask "Confirm this video has captions" (spec §6.18).
+        captions: { type: Boolean },
       },
     },
     abbr: {

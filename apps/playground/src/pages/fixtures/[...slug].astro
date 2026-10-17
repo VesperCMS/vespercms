@@ -1,0 +1,19 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const fixtures = await getCollection('fixtures');
+  return fixtures.map((fixture) => ({ params: { slug: fixture.id }, props: { fixture } }));
+}
+
+const { fixture } = Astro.props;
+const { Content } = await render(fixture);
+---
+
+<BaseLayout title={fixture.data.title} description={fixture.data.summary}>
+  <h1>{fixture.data.title}</h1>
+  <div style={{ color: fixture.data.textColor }}>
+    <Content />
+  </div>
+</BaseLayout>

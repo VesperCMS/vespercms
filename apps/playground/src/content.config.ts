@@ -147,4 +147,45 @@ const locations = defineCollection({
   }),
 });
 
-export const collections = { blog, authors, pages, docs, settings, locations };
+/** An ISO 8601 date-time with offset, edited with the time shown in the site's zone. */
+const dateTime = () => z.coerce.date().meta({ widget: 'datetime' });
+
+const events = defineCollection({
+  // Scheduling is on for this collection (vesper.config.ts from Phase 1). The
+  // build-time filtering by publishAt/unpublishAt arrives in Phase 4.5 (D18).
+  loader: glob({ pattern: '**/[^_]*.md', base: './src/content/events' }),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string(),
+    startsAt: dateTime(),
+    endsAt: dateTime().optional(),
+    location: reference('locations').optional(),
+    publishAt: dateTime().optional(),
+    unpublishAt: dateTime().optional(),
+    unpublishRedirect: z
+      .string()
+      .meta({
+        widget: 'url',
+        description: 'Where visitors go after this event is unpublished.',
+      })
+      .optional(),
+  }),
+});
+
+const fixtures = defineCollection({
+  // Deliberately inaccessible test pages (addendum §7). Excluded from the
+  // e2e axe gate and from real-content checks; the studio's layer-1 checks
+  // must flag every mistake in them.
+  loader: glob({ pattern: '**/[^_]*.mdoc', base: './src/content/fixtures' }),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string(),
+    textColor: hexColor.meta({ widget: 'color' }),
+    brochure: z
+      .string()
+      .meta({ widget: 'file', widgetOptions: { accept: 'application/pdf' } })
+      .optional(),
+  }),
+});
+
+export const collections = { blog, authors, pages, docs, settings, locations, events, fixtures };

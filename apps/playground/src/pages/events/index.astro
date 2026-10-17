@@ -1,0 +1,49 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// Phase 0 lists every event. From Phase 4.5, vesper:content leaves out
+// entries whose publishAt is in the future or whose unpublishAt has passed,
+// judged at build time (D18).
+const events = (await getCollection('events')).sort(
+  (a, b) => a.data.startsAt.getTime() - b.data.startsAt.getTime(),
+);
+const rows = await Promise.all(
+  events.map(async (event) => ({
+    event,
+    location: event.data.location ? await getEntry(event.data.location) : undefined,
+  })),
+);
+const format = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: 'America/New_York',
+  timeZoneName: 'short',
+});
+---
+
+<BaseLayout title="Events" description="What's on at the college.">
+  <h1>Events</h1>
+  <ul class="entry-list">
+    {rows.map(({ event, location }) => (
+      <li>
+        <a href={`/events/${event.id}/`}>{event.data.title}</a>
+        <p class="muted">
+          <time datetime={event.data.startsAt.toISOString()}>
+            {format.format(event.data.startsAt)}
+          </time>
+          {location && ` · ${location.data.name}`}
+        </p>
+        {(event.data.publishAt || event.data.unpublishAt) && (
+          <p class="muted">
+            {event.data.publishAt && `Publishes ${format.format(event.data.publishAt)}. `}
+            {event.data.unpublishAt && `Unpublishes ${format.format(event.data.unpublishAt)}.`}
+          </p>
+        )}
+      </li>
+    ))}
+  </ul>
+</BaseLayout>

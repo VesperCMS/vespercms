@@ -28,11 +28,15 @@ npm run check -w @vesper/playground    # astro check
 | `docs` | `glob('**/[^_]*.mdoc')` | Markdoc (spec §6.5.1): a block tag with children (`callout`), a self-closing tag (`youtube`), an inline tag (`abbr`), a partial (`_support-hours.mdoc`, included from two folder depths), `$product` variables, `{% if %}`/`{% else /%}`, functions (`equals`, `and`) and a class annotation (`{% .lead %}`). Tags are defined in `markdoc.config.mjs`. |
 | `settings` | `glob('site.yaml')` | A singleton (one entry, ID `site`) read by the layout: a folded `>-` string, a commented-out key, a colour with a named palette, `z.url()`, the site time zone (spec §6.17), and a repeater mixing block and flow maps. |
 | `locations` | `file('src/data/locations.yaml')` | One YAML file holding many entries. `geo` (a lat/lng object) and `color` (a hex string), tagged with `.meta({ widget })` exactly as `fields.geo()` and `fields.color()` will produce them. Flow and block maps, single and double quotes. |
+| `events` | `glob('**/[^_]*.md')` | Scheduling (spec §6.17, D18): `publishAt` / `unpublishAt` as ISO 8601 with offsets, covering past, future, expired, an `unpublishRedirect`, and one entry whose publish and unpublish times are the two different 1:30 AMs of the November 1, 2026 daylight-saving change. Filtering arrives in Phase 4.5; for now every event is built. |
+| `fixtures` | `glob('**/[^_]*.mdoc')` | `accessibility-mistakes.mdoc`: one deliberate mistake per studio accessibility check (spec §6.18, layer 1), including a failing `textColor`, an untagged PDF (`public/files/untagged-brochure.pdf`) and a video with an empty title. Excluded from the e2e axe gate, which instead checks that axe flags it. |
 
 ## Other fixtures
 
 - `vesper.redirects.yaml`: a two-hop redirect chain and a manual 302 (spec §6.15.5). Data only until Phase 2.6.
 - `src/pages/contact.astro`: a static route that Phase 2.6's move validation must refuse to collide with.
+- `src/forms.config.ts`: the contact form (department select for routing, an upload field, a confirmation email). `<Form>` renders it from Phase 6.
+- The header reserves the spot for `<Search />` (Phase 2.9).
 
 ## Images
 
