@@ -1,0 +1,16 @@
+{
+  "name": "vesper-monorepo",
+  "private": true,
+  "type": "module",
+  "description": "Vesper: a git-based CMS for Astro sites.",
+  "license": "MIT",
+  "//engines": "Astro 7.4 needs Node 22.22+. Node 22.18+ also strips TypeScript types by default, which the @vesper/source dev loop relies on.",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {}
+}

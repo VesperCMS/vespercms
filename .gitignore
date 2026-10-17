@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.astro/
+# Build-time reports (accessibility report, §6.18) live outside dist/ and are never committed.
+.vesper/
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Secrets: local Worker vars and env files.
+.dev.vars
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
+Thumbs.db

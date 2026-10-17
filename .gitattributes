@@ -1,0 +1,23 @@
+# Everything is LF in the repository and in the working tree, whatever the
+# machine's core.autocrlf says. Git for Windows ships autocrlf=true, which
+# would otherwise rewrite every file as CRLF on checkout.
+* text=auto eol=lf
+
+# Content fixtures are byte-exact test data: some are deliberately CRLF,
+# mixed line endings or BOM-prefixed. Git must never normalize them.
+packages/core/test/corpus/** -text
+packages/core/test/fixtures/** -text
+apps/playground/src/content/blog/notes-from-the-field.md -text
+
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.heic binary
+*.heif binary
+*.pdf binary
+*.ico binary
+*.woff binary
+*.woff2 binary
