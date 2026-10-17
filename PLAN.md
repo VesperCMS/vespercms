@@ -9,7 +9,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
-| 2.5 onward | Roadmap below |
+| 2.5 Markdoc tags and MDX components | In progress. See "Phase 2.5 (design)" below. |
+| 2.6 onward | Roadmap below |
 
 ## Phase 0: Scaffold
 
@@ -113,6 +114,92 @@ The spec's three "Done when" criteria, with evidence:
 **Follow-ups noted, not blocking:**
 - The body editor and the compact Markdown field (Tiptap) now load on first use, like the map. The `/admin` script went from 1,818 KB to 843 KB minified in the playground build. Vite still warns that the two lazy chunks (the body editor, 972 KB, and the map, 1,018 KB) are over 500 KB. That no longer affects the first load.
 - `fields.image()` with focal points and crops is Phase 2.7. The image field keeps those values untouched until then.
+
+## Phase 2.5: Markdoc tags and MDX components (design)
+
+Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: an MDX component is editable only when `vesper.config.ts` declares it with a Zod props schema. Rendering real components inside the editor is v2 and stays out.
+
+**What was found first** (measured on the playground and the jazzy-astro5 corpus):
+- Markdoc nodes record line ranges only, never character offsets. Inline tags, variables and annotations have to be located in the text by Vesper's own scanner, and each scan is checked against Markdoc's tree.
+- Astro parses Markdoc with its own tokenizer options: `allowComments` always, plus `html` and `allowIndentation` when the integration has `allowHTML` (or `allowIndentation` alone with `ignoreIndentation`). Phase 2 parsed with Markdoc's defaults, so in jazzy the four `{% comment %}` tags inside `<!-- -->` looked like real (undefined) tags, and the playground's inline HTML looked like text. The options live only in the integration's closure, so they are read by loading `astro.config` with `@astrojs/markdoc` wrapped to record them.
+- Astro's build fails on any Markdoc error at `error` or `critical` level, except `variable-undefined` and "Partial … not found" (it resolves partial files itself and fails when one is missing).
+- Markdoc strings are double-quoted, with only `\"`, `\\`, `\n`, `\r` and `\t` as escapes.
+- mdast records positions for MDX JSX elements and for each attribute.
+- jazzy uses `affiliateLink` 69 times, almost always inline inside paragraphs and list items, and `faq` with multi-line array attributes. Inline tags matter as much as block tags.
+
+**Module layout.**
+- `packages/core/src/body/` (the Phase 2 `files/body.ts` moves here):
+  - `blocks.ts`: `parseBody` and `assembleBody`. Blocks can now be containers (a tag or component with content): an opening, child blocks, a closing. A container item keeps or replaces its opening and assembles its children with the same spacing rules as the body, recursively.
+  - `markdoc.ts`: parsing with Astro's tokenizer options, top-level and nested tag structure, inline chips.
+  - `markdoc-tag.ts`: a scanner for one tag's text (`{% name key=value … %}`) that records each attribute's span; Markdoc value serialization; editing an opening tag in place; new tags in house style.
+  - `mdx.ts`: JSX flow elements as containers, inline JSX and expressions as chips, attribute editing from mdast's positions, a JS-literal reader for `{…}` values.
+  - `inline.ts`: chips inside a Markdown block (offsets relative to the block), shared by both syntaxes.
+  - `validate.ts`: Markdoc validation with Astro's filter, mapped to plain-language messages and lines; MDX props validation through an injected function.
+- `packages/core/src/markdoc/`: the manifest's `markdoc` section (types), `extractMarkdocSchema(config)` (structural: reads constructors and classes by name, never imports Astro), `markdocConfigFromManifest()` for validating in the browser, and tag attributes as `FieldModel`s for the settings form.
+- `packages/core/src/manifest/`: optional `markdoc` and `mdx` sections. `mdx.components[]` carries field models from `walkSchema(props)`.
+- `packages/core/src/studio/`: `ContentService.listPartials()`, and body validation on save (`BodyValidator`, injected like `Validator`), returning `bodyIssues`.
+- `packages/astro/src/node/load-site.ts`: loads `markdoc.config.*` (Astro's four names) through the isolated server, merges it the way Astro does (`setupConfig` from `@astrojs/markdoc/runtime`), and reads the integration's options from `astro.config`. `vesper.config.ts` gains checked `markdoc.tags` hints and `mdx.components`.
+- `packages/astro/src/integration/`: the dev API validates bodies on save with the site's real Markdoc config and real Zod props schemas, and serves `GET partials`. `virtual:vesper/widgets` also exports the declared components' props schemas, so the studio validates MDX props with the real Zod schema in every mode.
+- `packages/admin/src/body/`:
+  - `nodes.ts`: Tiptap node types made from the manifest: one container type per tag or component with content (its content expression comes from Markdoc's `children`, so only allowed node types fit), one block card type for tags without content, one inline chip type, and the existing source block.
+  - `document.ts`: builds the editor document from the nested blocks and writes it back as nested items. Inline chips become private-use placeholders (`U+E000`, hex of the source, `U+E001`) for the Markdown parser and serializer, so marks can span chips and nothing escapes them.
+  - `views.tsx`: the frame, card and chip node views, each a labelled group with a Settings button.
+  - `settings.tsx`: the settings dialog, built from field models and rendered with the frontmatter widgets (`Field` gets an id prefix so ids can't collide with the entry's own fields). It also has Move up, Move down and Remove, so one dialog reaches every action.
+  - `insert.tsx`: the toolbar's Insert menu and the "/" plugin and listbox.
+  - `issues.ts`: per-block validation for inline errors.
+
+**How each construct appears** (the §6.5.1 table, made concrete):
+
+| Construct | Writing view | Saved as |
+|---|---|---|
+| Declared tag with content, opening and closing on their own lines (callout) | Frame: "Callout · Tip", Settings, "…" menu; content editable, limited to its `children` | Opening re-written only if attributes changed; children spliced block by block; closing kept |
+| Tag without content, or content on the opening's line (youtube) | Card with a one-line summary | The tag's text, attributes spliced |
+| Inline tag (abbr, jazzy's affiliateLink) | Chip inside the paragraph; its text content (if plain) is a field in Settings | The paragraph is re-serialized only if it changed; each chip writes its own source |
+| `{% partial file /%}` | Card with a file picker (`.mdoc` files whose name starts with `_` or that sit in a `partials` folder), stored relative to the entry | As a card |
+| `{% if %}` | Frame "Shown when …", condition edited as raw text; content editable | As a container |
+| `{% else /%}`, variables, functions, annotations, `{% table %}`, unknown tags, undeclared components, expressions, imports | Protected chips, block or inline, each editable as raw text in a small dialog | Byte-identical unless that chip's text is edited |
+| Declared MDX component | Frame (with `children: true`) or card; props from the Zod schema; spreads and non-literal expressions kept verbatim and shown read-only | Attributes spliced from mdast positions |
+
+**House style for new tags:** attributes in schema order, defaults and empty values omitted. Markdoc: `{% name a="x" /%}`, or `{% name a="x" %}` / content / `{% /name %}` on separate lines. MDX: `<Name a="x" />` or an opening and closing on their own lines. JSX strings use `"…"`, then `'…'`, then `{"…"}` when the value contains both quotes; other values are `{…}`.
+
+**Editing an existing tag:** a changed attribute replaces its value's span; an attribute set back to its default or cleared is removed with its leading space; a new attribute is inserted after the nearest earlier attribute in schema order (or before the first later one). Everything else in the tag, including quoting, spacing, attribute order and multi-line values, stays byte-identical.
+
+**Keyboard** (spec §6.5.1 accessibility):
+- Arrow keys move through content as ProseMirror does: into and out of a frame's content, and onto a card or chip as a node selection, which is announced ("YouTube video selected. Press Enter for settings.").
+- Escape inside a frame selects the frame; Escape on a selected block moves to the toolbar (Phase 2's way out).
+- On a selected tag: Enter opens Settings, Alt+↑/↓ move it, Delete removes it. Settings has the same actions as buttons.
+- Tab from inside a frame reaches that frame's Settings button only (the others are `tabIndex=-1`), so 69 chips never become 69 Tab stops.
+- "/" at the start of a line or after a space opens a listbox of what fits at the cursor (combobox pattern: the editor gets `role=combobox`, `aria-expanded`, `aria-controls` and `aria-activedescendant` while it's open). The toolbar's Insert button offers the same list as a menu.
+- A new tag with attributes opens its Settings straight away.
+
+**Validation:**
+- In the browser: `Markdoc.validate()` with a config rebuilt from the manifest (types, `matches`, `required`, `children`, `selfClosing`, `inline`, partial names), on the whole body (debounced, for the summary and the save gate) and on each block's own text (for its inline message). MDX props go through the real Zod schema from `virtual:vesper/widgets`.
+- On save, the dev API validates again with the site's real Markdoc config, so custom attribute classes and `validate` functions run, and refuses to write a body with blocking issues.
+- Blocking, as Astro's build does: Markdoc `error` and `critical`, except `variable-undefined` (Astro ignores it), Markdoc's own partial check (replaced by a check that the file exists relative to the entry), and `tag-undefined` / `function-undefined`, which are warnings because the studio may know less of the config than the build does (spec: "unknown tags: … a validation warning"). Zod props issues block.
+- Messages are plain language and name the block: "YouTube video: add a title. It's required."
+
+**Dependencies:** none new. Markdoc, mdast, Tiptap and React Aria are already in. The "/" menu is a small ProseMirror plugin, not `@tiptap/suggestion`.
+
+**Tests mapped to the "Done when" criteria:**
+- **Insert, configure, move and remove every playground tag by keyboard alone:** `e2e/studio/markdoc.spec.ts` drives callout, youtube, abbr and partial with the keyboard only (insert via "/" and via the Insert menu, Settings, Alt+↑/↓, Delete, cut and paste for the inline chip) and checks the file after each save. Unit tests in `packages/admin/src/body/*.test.tsx` cover the same commands in jsdom. axe runs with the menu and the dialog open.
+- **Editing one tag changes only that tag's text (snapshot tests):** core unit tests per edit kind (attribute changed, removed, added, default restored, content edited, moved, removed, inserted) assert the exact output; `body/markdoc.snapshot.test.ts` snapshots one edit per tag in the playground's docs; the admin document tests do the same through Tiptap.
+- **Variables, conditionals, functions and annotations survive any edit byte-identical:** for every playground and corpus `.mdoc`, every block is edited in turn (text appended, or an attribute changed), and every protected chip's bytes must appear unchanged, at the same relative place, in the result.
+- **A missing required attribute shows inline and blocks publish:** admin tests (inline message on the card, the error summary, `saveEntry` never called), a dev API test (the server refuses the body too) and an e2e test (insert a YouTube video, skip its title, Save is refused, add the title, Save works).
+- **A real Markdoc site's content passes the round-trip suite:** `packages/core/test/markdoc.corpus.test.ts` over jazzy-astro5's 108 files (committed and CRLF/mixed variants) with jazzy's tag definitions (copied, with their commit, into `test/helpers/jazzy-markdoc.ts`): keeping everything reproduces each file; replacing any block or chip changes nothing else; editing each tag's first attribute changes only that tag's opening; the inline scanner agrees with Markdoc's tree in every block; and validation finds no blocking issue in content the real site builds.
+
+**Commits, in order:**
+1. `docs`: this design.
+2. `refactor(core)`: move body parsing to `body/`; parse Markdoc with Astro's tokenizer options.
+3. `feat(core)`: Markdoc tag scanner, value serializer and in-place attribute edits.
+4. `feat(core)`: nested tag blocks and inline chips; containers in `assembleBody`.
+5. `feat(core)`: MDX components as nested blocks with attribute splicing.
+6. `feat(core)`: the manifest's `markdoc` and `mdx` sections, schema extraction and body validation.
+7. `feat(astro)`: load `markdoc.config` and the Markdoc options; declared MDX components; validate bodies on save; list partials.
+8. `feat(admin)`: tag and component blocks in the writing view.
+9. `feat(admin)`: settings forms and the Insert and "/" menus.
+10. `feat(admin)`: live body validation that blocks saving.
+11. `test`: the jazzy Markdoc corpus suite and the e2e keyboard specs.
+12. `docs`: decisions, READMEs and the Phase 2.5 outcome.
 
 ## Phase 1: Core (design)
 
