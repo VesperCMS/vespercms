@@ -173,3 +173,16 @@ export {
   isoWithOffset,
   parseIsoWithOffset,
 } from './files/date-offset.ts';
+export {
+  MediaService,
+  MEDIA_TYPES,
+  UPLOAD_MAX_BYTES,
+  UPLOAD_WARN_BYTES,
+  extensionOf,
+  isImagePath,
+  relativePath,
+  dirOf,
+  resolveMediaPath,
+  mediaReference,
+  type MediaServiceOptions,
+} from './studio/media.ts';

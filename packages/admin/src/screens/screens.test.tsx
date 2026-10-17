@@ -174,17 +174,19 @@ describe('the entry editor', () => {
       expect(summary).toHaveFocus();
     });
     expect(
-      within(summary).getByRole('link', { name: /Alt: Describe this image/ }),
+      within(summary).getByRole('link', { name: /Hero, alt: Describe this image/ }),
     ).toBeInTheDocument();
-    const alt = screen.getByRole('textbox', { name: 'Alt (required)' });
+    const alt = screen.getByRole('textbox', { name: 'Alt text (required)' });
     expect(alt).toHaveAttribute('aria-invalid', 'true');
-    expect(alt).toHaveAccessibleDescription('Describe this image, or mark it decorative.');
+    expect(alt).toHaveAccessibleDescription(
+      'Describe what this image communicates on this page. Describe this image, or mark it decorative.',
+    );
     // The date error is in Details, so Details opens.
     expect(screen.getByRole('button', { name: 'Details' })).toHaveAttribute(
       'aria-expanded',
       'true',
     );
-    await user.click(within(summary).getByRole('link', { name: /Alt:/ }));
+    await user.click(within(summary).getByRole('link', { name: /Hero, alt:/ }));
     expect(alt).toHaveFocus();
     expect(window.location.hash).toBe('#/c/blog/e/harbor-at-dawn');
   });

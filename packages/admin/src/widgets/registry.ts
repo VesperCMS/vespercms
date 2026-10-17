@@ -16,6 +16,7 @@ import {
 } from './basic.tsx';
 import { GeoWidget } from './geo.tsx';
 import { GroupWidget, RepeaterWidget } from './group.tsx';
+import { FileWidget, ImageWidget } from './image.tsx';
 import { ReferencesWidget, ReferenceWidget } from './reference.tsx';
 import { ColorWidget, DateTimeWidget, MarkdownWidget, SlugWidget, UrlWidget } from './special.tsx';
 
@@ -32,6 +33,8 @@ export type BuiltinWidget = {
   group?: true | 'boxed';
   /** Renders each child (or item) as its own field, so their errors show there. */
   rendersChildren?: true;
+  /** Ids of controls it renders for some of its children, as suffixes of its own id (`alt` → `-alt`). */
+  childControls?: Readonly<Record<string, string>>;
 };
 
 const BUILTIN: Record<string, BuiltinWidget> = {
@@ -56,8 +59,8 @@ const BUILTIN: Record<string, BuiltinWidget> = {
   geo: { component: GeoWidget, group: 'boxed' },
   reference: { component: ReferenceWidget },
   references: { component: ReferencesWidget, group: true },
-  // A stand-in until uploads land (Phase 2, step 8).
-  file: { component: TextWidget },
+  image: { component: ImageWidget, group: 'boxed', childControls: { alt: '-alt' } },
+  file: { component: FileWidget, group: true },
 };
 
 const BY_KIND: Partial<Record<FieldKind, string>> = {
@@ -69,7 +72,7 @@ const BY_KIND: Partial<Record<FieldKind, string>> = {
   object: 'group',
   array: 'repeater',
   reference: 'reference',
-  image: 'text',
+  image: 'image',
 };
 
 /**

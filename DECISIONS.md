@@ -201,6 +201,18 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 **A reference field stores an entry ID, and a value already stored as `{ collection, id }` keeps that shape. A list of references is an ordered list with Move up, Move down and Remove buttons and a search box to add more,** because order usually matters (related posts) and must not depend on drag-and-drop. An entry is never offered as a reference to itself.
 
+### 2026-10-17: Upload hygiene strips metadata losslessly unless the pixels must change
+
+**JPEG, PNG and WebP uploads lose their EXIF, XMP, IPTC, text and comment data by dropping those segments or chunks, so the image data is byte-for-byte the original. They're re-encoded through a canvas only when the pixels must change: a photo whose EXIF orientation isn't upright, or one larger than `maxUploadEdge` (3000px by default).** Re-encoding drops all metadata too. Colour profiles (JPEG APP2) are kept. SVG is sanitized with DOMPurify's SVG profile, plus `foreignObject`, `set` or `animate` that rewrite links or handlers, and `javascript:`/`data:` links. Files are typed by their bytes, not their names. Duplicates are found by SHA-256 against the site's files, and the editor chooses between reusing the existing file and uploading a copy. Over 5 MB asks first; over 20 MB is refused (the dev API enforces the hard limit too).
+
+### 2026-10-17: HEIC converts only where the browser can decode it, for now
+
+**HEIC photos are converted to JPEG when the browser can decode them (Safari). Elsewhere the studio says plainly to export a JPEG first or to use Safari.** The browser libraries that decode HEIC everywhere (libheif-js, heic-to) are LGPL-3.0. Whether that suits the studio bundle is Jeremy's call, raised at the end of Phase 2.
+
+### 2026-10-17: Images go beside their siblings; other files go to `public/files`
+
+**A new image goes into the folder of the image it replaces, else `<srcDir>/assets/<collection>/`, and the entry stores a path relative to its own file, so Astro's `image()` processes it. A file field (PDFs and so on) uploads to `public/files/` and stores `/files/name.pdf`,** because a file to link to must be served as is, and files under `src/assets` aren't. The media service lists `<srcDir>/assets` and `public`, and computes "Used on" by looking in every entry's file for each of the ways Astro resolves a path to that file.
+
 ### 2026-10-17: Secondary fields go to Details by rule, and authors can override
 
 **The editor puts slugs, dates, tags, ordering, SEO and scheduling fields in the Details section (spec §10.3). Everything else stays in the main column, in schema order.** A field's `placement` overrides the rule, set either with `.meta({ placement: 'details' })` or in `vesper.config.ts` as `collections.blog.placement: { summary: 'details' }`.

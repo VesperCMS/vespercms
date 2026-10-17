@@ -12,6 +12,8 @@ export type EditorState = {
   disabled: boolean;
   /** The entry hasn't been saved yet. */
   isNew: boolean;
+  /** The entry's file, site-relative; for a new entry, where it will most likely be saved. */
+  entryPath: string;
   /** The open entry's ID (`null` until a new entry is saved). */
   entryId: string | null;
 };

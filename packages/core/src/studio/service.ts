@@ -113,6 +113,34 @@ export class ContentService {
     return located.map((entry) => this.summarize(collection, entry));
   }
 
+  /**
+   * Every entry of every collection with the text that holds it: the file's
+   * text for glob() entries, the entry's values as JSON for file() entries.
+   * The media browser scans it to show where a file is used.
+   */
+  async scanEntries(): Promise<
+    { collection: string; id: string; title: string; path: string; text: string }[]
+  > {
+    const found: { collection: string; id: string; title: string; path: string; text: string }[] =
+      [];
+    for (const collection of this.collections.values()) {
+      for (const entry of await this.locateAll(collection)) {
+        const text =
+          collection.source.loader === 'file'
+            ? JSON.stringify(encodeValue(entry.data))
+            : (decodeUtf8(entry.file.bytes) ?? '');
+        found.push({
+          collection: collection.name,
+          id: entry.id,
+          title: titleOf(collection, entry.data, entry.id),
+          path: entry.path,
+          text,
+        });
+      }
+    }
+    return found;
+  }
+
   async readEntry(name: string, id: string): Promise<EntryDocument | null> {
     const collection = this.require(name);
     const entry = await this.locate(collection, id);

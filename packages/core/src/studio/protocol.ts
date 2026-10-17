@@ -116,6 +116,10 @@ export type MediaItem = {
   size: number;
   /** SHA-256 of the file's bytes, for duplicate detection on upload (spec §6.6.6). */
   hash: string;
+  /** The file's version (git blob SHA), for a delete that must not race an edit. */
+  version?: string;
+  /** Last change time, ISO 8601, when the back end knows it. */
+  modifiedAt?: string;
   /** Entries whose files mention this path ("Used on"). */
   usedBy: { collection: string; id: string; title: string }[];
 };

@@ -1,5 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ContentService, normalizePath, type SaveRequest } from '@vesper/core';
+import {
+  ContentService,
+  MEDIA_TYPES,
+  MediaService,
+  extensionOf,
+  normalizePath,
+  type SaveRequest,
+} from '@vesper/core';
 import { schemaValidator, type SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 
@@ -28,21 +35,6 @@ export type DevApiOptions = {
 type Handler = (req: IncomingMessage, res: ServerResponse, next: (error?: unknown) => void) => void;
 
 const MAX_BODY = 25 * 1024 * 1024;
-
-/** Files the studio may show (images, documents), by extension. Nothing else is served. */
-const FILE_TYPES: Record<string, string> = {
-  avif: 'image/avif',
-  gif: 'image/gif',
-  heic: 'image/heic',
-  jpeg: 'image/jpeg',
-  jpg: 'image/jpeg',
-  png: 'image/png',
-  svg: 'image/svg+xml',
-  webp: 'image/webp',
-  pdf: 'application/pdf',
-  mp4: 'video/mp4',
-  webm: 'video/webm',
-};
 
 export function createDevApi(options: DevApiOptions): Handler {
   const storage = new LocalStorage(options.root);
@@ -81,6 +73,11 @@ export function createDevApi(options: DevApiOptions): Handler {
     const service = new ContentService(storage, model.manifest, {
       validate: schemaValidator(model.schemas),
     });
+    // Media lives in <srcDir>/assets and public/ (spec §6.6.1).
+    const media = () =>
+      new MediaService(storage, service, {
+        roots: [`${model.manifest.site.srcDir}/assets`, 'public'],
+      });
     const collection = query.get('collection') ?? '';
     const known = model.manifest.collections.some((c) => c.name === collection);
 
@@ -97,6 +94,19 @@ export function createDevApi(options: DevApiOptions): Handler {
     } else if (route === 'entry' && method === 'PUT') {
       const request = (await readJson(req)) as SaveRequest;
       const result = await service.saveEntry(request);
+      send(res, statusOf(result), result);
+    } else if (route === 'media' && method === 'GET') {
+      send(res, 200, await media().list());
+    } else if (route === 'media' && method === 'POST') {
+      const bytes = new Uint8Array(await readBody(req));
+      const result = await media().upload(
+        bytes,
+        query.get('name') ?? '',
+        query.get('folder') ?? '',
+      );
+      send(res, result.ok ? 200 : 400, result);
+    } else if (route === 'media' && method === 'DELETE') {
+      const result = await media().remove(query.get('path') ?? '');
       send(res, statusOf(result), result);
     } else if (route === 'entry' && method === 'DELETE') {
       const result = await service.deleteEntry(
@@ -118,7 +128,8 @@ export function createDevApi(options: DevApiOptions): Handler {
       send(res, 400, { message: 'That isn’t a file path in this site.' });
       return;
     }
-    const type = FILE_TYPES[normalized.slice(normalized.lastIndexOf('.') + 1).toLowerCase()];
+    // Only media types, never source files, config or secrets.
+    const type = MEDIA_TYPES[extensionOf(normalized)];
     const file = type ? await storage.read(normalized) : null;
     if (!type || !file) {
       send(res, 404, { message: `${normalized} wasn't found.` });
@@ -191,7 +202,7 @@ function send(res: ServerResponse, status: number, body: unknown): void {
   res.end(text);
 }
 
-async function readJson(req: IncomingMessage): Promise<unknown> {
+async function readBody(req: IncomingMessage): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req as AsyncIterable<Buffer>) {
@@ -199,6 +210,10 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
     if (size > MAX_BODY) throw new Error('That request is too large.');
     chunks.push(chunk);
   }
-  const text = Buffer.concat(chunks).toString('utf8');
+  return Buffer.concat(chunks);
+}
+
+async function readJson(req: IncomingMessage): Promise<unknown> {
+  const text = (await readBody(req)).toString('utf8');
   return text ? (JSON.parse(text) as unknown) : {};
 }

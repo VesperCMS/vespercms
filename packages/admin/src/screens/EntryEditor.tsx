@@ -143,6 +143,7 @@ function EntryForm({
   }, [dirty]);
 
   const arranged = useMemo(() => arrangeFields(collection), [collection]);
+  const entryPath = doc?.path ?? likelyPath(collection);
   const titleText = titleOf(values, arranged.title) || entryId || 'New entry';
 
   // Issues are shown under the deepest field that's on screen for them.
@@ -172,8 +173,9 @@ function EntryForm({
       disabled: !editable || sourceOnly,
       isNew,
       entryId,
+      entryPath,
     }),
-    [collection, values, setValue, issueMap, editable, sourceOnly, isNew, entryId],
+    [collection, values, setValue, issueMap, editable, sourceOnly, isNew, entryId, entryPath],
   );
 
   const save = useCallback(async () => {
@@ -509,10 +511,15 @@ function issueTarget(
   }
   if (!model) return { path: [], focusId: 'main', label: 'Entry' };
   const id = fieldId(matched);
+  const widget = builtinWidget(model);
+  // A widget that draws its own control for the child at fault (an image's alt text) gets focus there.
+  const child = path[matched.length];
+  const childSuffix = typeof child === 'string' ? widget.childControls?.[child] : undefined;
+  const childLabel = models.find((m) => keyOf(m) === child)?.label;
   return {
     path: matched,
-    focusId: builtinWidget(model).group ? `${id}-label` : id,
-    label: model.label,
+    focusId: childSuffix ? `${id}${childSuffix}` : widget.group ? `${id}-label` : id,
+    label: childSuffix && childLabel ? `${model.label}, ${childLabel.toLowerCase()}` : model.label,
   };
 }
 
@@ -532,4 +539,16 @@ function pageUrl(
   if (typeof pattern !== 'string' || siteUrl === undefined) return null;
   const path = pattern.replace(/:(id|slug|path)\b/g, id).replace(/^\//, '');
   return `${siteUrl.endsWith('/') ? siteUrl : `${siteUrl}/`}${path}`;
+}
+
+/**
+ * Where a new entry will most likely be saved, so uploads can be referenced
+ * relative to it before it exists: the collection's folder, or its file.
+ */
+function likelyPath(collection: CollectionManifest): string {
+  const { source } = collection;
+  if (source.loader === 'file') return source.path;
+  if (source.loader === 'glob')
+    return `${source.base === '.' ? '' : `${source.base}/`}new-entry.${source.formats[0] ?? 'md'}`;
+  return 'new-entry.md';
 }

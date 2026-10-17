@@ -61,7 +61,9 @@ export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<Stu
       Promise.resolve({ ok: true, id: 'x', path: 'x', version: '', reformatted: false }),
     ),
     listMedia: vi.fn(() => Promise.resolve(data.media ?? [])),
-    upload: vi.fn(() => Promise.resolve({ ok: true, path: 'src/assets/x.jpg', reused: false })),
+    upload: vi.fn((_file: Blob, name: string, folder: string) =>
+      Promise.resolve({ ok: true, path: `${folder}/${name}`, reused: false }),
+    ),
     deleteMedia: vi.fn(() =>
       Promise.resolve({ ok: true, id: '', path: '', version: '', reformatted: false }),
     ),

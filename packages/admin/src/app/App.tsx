@@ -4,6 +4,7 @@ import { lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { EntryEditor } from '../screens/EntryEditor.tsx';
 import { EntryList } from '../screens/EntryList.tsx';
 import { Home } from '../screens/Home.tsx';
+import { MediaBrowser } from '../screens/MediaBrowser.tsx';
 import { NotFound } from '../screens/NotFound.tsx';
 import { Unavailable } from '../screens/Unavailable.tsx';
 import type { StudioOptions, WidgetComponent, WidgetLoader } from '../types.ts';
@@ -67,6 +68,7 @@ export function App({
 
 function CurrentScreen({ route, studio }: { route: Route; studio: Studio }) {
   if (route.screen === 'home') return <Home />;
+  if (route.screen === 'media') return <MediaBrowser />;
   if (route.screen === 'list' || route.screen === 'edit' || route.screen === 'new') {
     const collection = studio.collection(route.collection);
     if (!collection) {
