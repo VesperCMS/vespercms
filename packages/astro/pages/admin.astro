@@ -1,0 +1,29 @@
+---
+/*
+ * The studio page (spec §6.1), injected at /admin and always prerendered: a
+ * static shell that works with `output: 'static'` and no adapter. The
+ * studio's screens use hash routes, so deep links work on any host (D16).
+ */
+import { siteName } from 'virtual:vesper/page';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{siteName} · Vesper</title>
+  </head>
+  <body>
+    <div id="vesper-studio">
+      <p>Loading the studio…</p>
+      <noscript>
+        <p>The studio needs JavaScript.</p>
+      </noscript>
+    </div>
+    <script>
+      import 'virtual:vesper/studio';
+    </script>
+  </body>
+</html>

@@ -1,11 +1,22 @@
 {
   "name": "@vesper/astro",
   "version": "0.0.0",
-  "description": "The Vesper integration for Astro: schema helpers, config, and (from Phase 2) the studio at /admin.",
+  "description": "The Vesper integration for Astro: the studio at /admin, schema helpers and config.",
   "license": "MIT",
+  "keywords": [
+    "astro-integration",
+    "withastro",
+    "cms",
+    "git"
+  ],
   "type": "module",
-  "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/. ./node is Node-only (config loading, manifest, local storage).",
+  "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/. \".\" is the integration (astro add); ./node is Node-only (config loading, manifest, local storage).",
   "exports": {
+    ".": {
+      "@vesper/source": "./src/integration/index.ts",
+      "types": "./dist/integration/index.d.ts",
+      "default": "./dist/integration/index.js"
+    },
     "./fields": {
       "@vesper/source": "./src/fields/index.ts",
       "types": "./dist/fields/index.d.ts",
@@ -22,9 +33,11 @@
       "default": "./dist/node/index.js"
     }
   },
+  "//files": "pages/ holds the injected /admin page; src/ and dist/ both resolve it at ../../pages.",
   "files": [
     "dist",
     "src",
+    "pages",
     "!src/**/*.test.ts"
   ],
   "scripts": {
@@ -32,11 +45,18 @@
     "prepack": "tsc -b tsconfig.build.json"
   },
   "dependencies": {
+    "@vesper/admin": "0.0.0",
     "@vesper/core": "0.0.0"
   },
-  "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3).",
+  "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3). React is the studio's, shared with the site's custom widgets (spec §6.3.3).",
   "peerDependencies": {
-    "astro": "^6.0.0 || ^7.0.0"
+    "astro": "^6.0.0 || ^7.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "//devDependencies": "Tailwind compiles the studio stylesheet from source in this workspace only; published sites get dist/studio.css.",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3"
   },
   "bin": {
     "vesper": "./dist/node/cli.js"

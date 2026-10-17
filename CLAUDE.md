@@ -34,6 +34,8 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 
 Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `node`. The `.npmrc` sets `--conditions=@vesper/source`, and it only applies inside npm.
 
+**Preview the playground on port 4400 (`.claude/launch.json`), never 4321.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files.
+
 **On Windows, stopping a background `npm run dev` leaves `astro dev` running, and it locks native modules so `npm ci` fails with EPERM.** Find the tree's root shell and stop it with `taskkill /PID <pid> /T /F`. Never kill Node processes that belong to other projects.
 
 | Command | What it does |

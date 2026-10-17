@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "playground",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "@vesper/playground", "--", "--port", "4400"],
+      "port": 4400
+    }
+  ]
+}

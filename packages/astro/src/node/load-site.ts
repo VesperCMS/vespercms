@@ -48,6 +48,12 @@ const CONTENT_CONFIG_NAMES = [
   'content.config.js',
   'content.config.mjs',
 ];
+const FORMS_CONFIG_NAMES = [
+  'forms.config.ts',
+  'forms.config.mts',
+  'forms.config.js',
+  'forms.config.mjs',
+];
 const ROOT_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs'];
 
 export type LoadSiteOptions = {
@@ -59,23 +65,35 @@ export type LoadSiteOptions = {
 
 export type LoadedSite = Omit<ManifestInput, 'generator'> & { root: string };
 
+/** The config files Vesper reads, as absolute paths. Missing files are left out. */
+export function siteConfigFiles(
+  root: string,
+  srcDir = 'src',
+): { contentConfig?: string; vesperConfig?: string; formsConfig?: string } {
+  const contentConfig = CONTENT_CONFIG_NAMES.map((name) => join(root, srcDir, name)).find((path) =>
+    existsSync(path),
+  );
+  const vesperConfig = findRootFile(root, 'vesper.config');
+  const formsConfig = FORMS_CONFIG_NAMES.map((name) => join(root, srcDir, name)).find((path) =>
+    existsSync(path),
+  );
+  return {
+    ...(contentConfig ? { contentConfig } : {}),
+    ...(vesperConfig ? { vesperConfig } : {}),
+    ...(formsConfig ? { formsConfig } : {}),
+  };
+}
+
 /** Loads a site's configs and returns what `buildManifest` needs. Never throws for config problems; it reports them. */
 export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
   const root = resolve(options.root);
   const srcDir = options.srcDir ?? 'src';
   const diagnostics: Diagnostic[] = [];
-  const contentConfigPath = CONTENT_CONFIG_NAMES.map((name) => join(root, srcDir, name)).find(
-    (path) => existsSync(path),
-  );
-  const vesperConfigPath = findRootFile(root, 'vesper.config');
-  const formsConfigPath = [
-    'forms.config.ts',
-    'forms.config.mts',
-    'forms.config.js',
-    'forms.config.mjs',
-  ]
-    .map((name) => join(root, srcDir, name))
-    .find((path) => existsSync(path));
+  const {
+    contentConfig: contentConfigPath,
+    vesperConfig: vesperConfigPath,
+    formsConfig: formsConfigPath,
+  } = siteConfigFiles(root, srcDir);
 
   const server = await createIsolatedServer(root);
   try {

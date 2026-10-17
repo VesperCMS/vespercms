@@ -164,6 +164,27 @@ Open risk, tested with a fixture site: a site that already depends on React 18 m
 
 **An MDX component gets an editable block only when `vesper.config.ts` declares it with a Zod props schema. Undeclared components stay protected source chips.** Guessing props from TypeScript types is brittle. A wrong guess would show the wrong controls and could drop data on save.
 
+### 2026-10-17: The studio's content operations live in core, over the storage adapter
+
+**`ContentService` (`@vesper/core`) lists, reads, creates, saves and deletes entries over any `StorageAdapter`, exactly as Astro's `glob()` and `file()` loaders see them.** Local mode runs it in the dev server. GitHub mode (Phase 3) can run the same code in the browser over the GitHub adapter, so entry IDs, conflict checks and file fidelity can't differ between modes. Validation is injected (`Validator`), because only the site's own Zod schemas can validate, and they live wherever the site's config was loaded.
+
+### 2026-10-17: The local dev API answers only the studio, on this machine
+
+**The middleware at `<base>_vesper/api/` refuses a request unless:**
+- its Host is localhost, `127.0.0.1` or `::1` (this also defeats DNS rebinding);
+- `Sec-Fetch-Site`, when present, is `same-origin` or `none`, and any `Origin` matches the Host;
+- it carries `X-Vesper: 1`, which forces a CORS preflight on any cross-origin attempt.
+
+Why all three: Vite's default CORS policy allows every localhost origin, so another dev server open in the same browser (a different port on localhost is same-site) could otherwise read and write this site's files. The one exception to the header rule is `GET /file`, because `<img src>` can't send headers. It serves media types only (images, PDF, video), never escapes the site root, and still refuses cross-site requests.
+
+### 2026-10-17: Save errors are plain language; the schema author's own messages win
+
+**`issuesFromZod` rewrites Zod's built-in messages ("Invalid input: expected string, received undefined" becomes "This is required.") and keeps any message the schema's author wrote, such as a `.refine()` message.** It reads issues structurally, so core still never imports Zod. Saves validate with `reportInput: true` so a missing value can be told from a wrong one.
+
+### 2026-10-17: In this workspace, the integration compiles the studio's CSS from source
+
+**When `@vesper/admin/studio.css` resolves to `src/` (the `@vesper/source` condition), the integration adds `@tailwindcss/vite` to the site's Vite. Installed from npm, it resolves to the precompiled `dist/studio.css` and Tailwind never loads.** So the playground stays a zero-config site, and the dev loop still never builds `dist/`. `@tailwindcss/vite` is a devDependency of `@vesper/astro` for this reason only.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas
@@ -258,6 +279,14 @@ The anchors fixture is the one allowed exception, because it takes the flagged r
 ### 2026-10-17: A file's version is its git blob SHA, in every storage mode
 
 **`StorageAdapter` versions are git blob SHA-1s, computed with Web Crypto.** Local, GitHub and cloud modes then agree on what "this exact file" means. A cloud draft's `base_sha` (spec §8.2) is just a version, and conflict checks are a string comparison. One shared validator (`storage/validate.ts`) applies the same rules in every adapter, and the contract suite (`@vesper/core/testing`) proves each adapter follows them.
+
+### 2026-10-17: A `file()` entry's version is its own, not the file's
+
+**Entries of a `file()` collection share one file, so each entry's version is the git blob SHA of its canonical JSON (prefixed `entry:`), not the file's SHA.** Two people editing different authors in `authors.json` don't conflict. The save still re-reads the file, checks the entry's version, locates the entry by id and commits with the file's current SHA as the expected version, so a write can't race another one.
+
+### 2026-10-17: Appending to a JSON array splices the item in, shaped like its neighbours
+
+**jsonc-parser reformats the previous item when it inserts into a multi-line array, which is an unrelated diff. The writer now inserts the new item itself, on its own line at the last item's indent: one line if the last item is one line (keeping `{ "a": 1 }` or `{"a":1}` spacing), indented over several lines otherwise.** Found by the first `file()` collection create test; covered in `json/write.test.ts`.
 
 ### 2026-10-17: Local saves are best-effort atomic
 

@@ -102,3 +102,23 @@ test('the skip link moves focus to the main content', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.locator('main')).toBeFocused();
 });
+
+test('the studio shell loads at /admin, deep links included, and says where editing works', async ({
+  page,
+}) => {
+  // A static build has no back end until GitHub mode (Phase 3); local mode needs astro dev.
+  await page.goto('/admin/#/c/blog');
+  await expect(page.locator('h1')).toHaveText('Editing isn’t available here yet');
+  await expect(page).toHaveTitle(/Editing unavailable/);
+});
+
+test('the build publishes the manifest for the cloud', async ({ request }) => {
+  const response = await request.get('/_vesper/manifest.json');
+  expect(response.status()).toBe(200);
+  const manifest = (await response.json()) as {
+    manifestVersion: number;
+    collections: { name: string }[];
+  };
+  expect(manifest.manifestVersion).toBe(1);
+  expect(manifest.collections.map((c) => c.name)).toContain('blog');
+});

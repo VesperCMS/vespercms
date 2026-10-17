@@ -2,7 +2,28 @@
 
 The Vesper integration for Astro.
 
-**Status:** Phase 1. It ships the schema helpers and `defineConfig`, plus Node tooling that reads a site's configs and writes the manifest. The integration itself (`astro add`, the studio at `/admin`, dev middleware) arrives in Phase 2.
+**Status:** Phase 2, in progress. The integration injects the studio at `/admin` and serves local mode's API in `astro dev`. The studio's list and editor screens, widgets, media and the dev toolbar are still being built.
+
+## The integration
+
+```js
+// astro.config.mjs
+import vesper from '@vesper/astro';
+export default defineConfig({ integrations: [vesper()] });
+```
+
+Zero config. It:
+
+- injects `/admin`, one **prerendered** page, so it works with `output: 'static'` and no adapter. Studio screens use hash routes (`/admin/#/c/blog`), so deep links work on any host. Astro's `base` is respected.
+- in `astro dev`, serves local mode's API at `<base>_vesper/api/`. It reads and writes content files on disk, validates every save with the site's own Zod schemas, and refuses any request that isn't the studio on this machine (DECISIONS.md).
+- writes `dist/_vesper/manifest.json` after `astro build`, which is how the cloud learns the schema.
+
+| Option | Default | |
+|---|---|---|
+| `studio.deploy` | `true` | `false` leaves `/admin` out of production builds, for sites edited only locally. |
+| `siteName` | the host of Astro's `site`, then the package name | Shown in the studio's top bar and page titles. |
+
+The studio comes precompiled from `@vesper/admin`. React and React DOM are peer dependencies, shared with any custom widgets.
 
 ## Field helpers (`@vesper/astro/fields`)
 
