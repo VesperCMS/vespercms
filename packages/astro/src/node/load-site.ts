@@ -262,8 +262,56 @@ async function createIsolatedServer(root: string): Promise<ViteDevServer> {
       tsconfigPaths: true,
       alias: [{ find: /^astro\/loaders$/, replacement: LOADERS_SPECIFIER }],
     },
-    plugins: [vesperShims(realLoaders)],
+    plugins: [vesperShims(realLoaders), processConditions(vite)],
   });
+}
+
+/**
+ * Custom export conditions the Node process runs with (`--conditions=x`, on
+ * the command line or in NODE_OPTIONS), such as a monorepo that resolves
+ * workspace packages to source. Astro's own Vite sees whatever the site's
+ * config sets; this throwaway server has no config, so it follows the
+ * process instead. With no custom conditions, it changes nothing.
+ */
+export function customConditions(
+  execArgv: readonly string[],
+  nodeOptions: string | undefined,
+): string[] {
+  const args = [...execArgv, ...(nodeOptions ?? '').split(/\s+/)].filter(Boolean);
+  const found: string[] = [];
+  args.forEach((arg, i) => {
+    const inline = /^(?:--conditions|-C)=(.+)$/.exec(arg);
+    if (inline?.[1]) found.push(inline[1]);
+    else if ((arg === '--conditions' || arg === '-C') && args[i + 1])
+      found.push(args[i + 1] as string);
+  });
+  return [...new Set(found)];
+}
+
+function processConditions(vite: typeof import('vite')): Plugin {
+  const extra = customConditions(process.execArgv, process.env.NODE_OPTIONS);
+  return {
+    name: 'vesper:process-conditions',
+    configEnvironment(name, config) {
+      if (extra.length === 0) return;
+      const consumer = config.consumer ?? (name === 'client' ? 'client' : 'server');
+      const base =
+        config.resolve?.conditions ??
+        (consumer === 'client' ? vite.defaultClientConditions : vite.defaultServerConditions);
+      config.resolve = {
+        ...config.resolve,
+        conditions: [...extra, ...base.filter((c) => !extra.includes(c))],
+        ...(consumer === 'server'
+          ? {
+              externalConditions: [
+                ...extra,
+                ...(config.resolve?.externalConditions ?? []).filter((c) => !extra.includes(c)),
+              ],
+            }
+          : {}),
+      };
+    },
+  };
 }
 
 const CONTENT_ID = '\0vesper:astro-content';

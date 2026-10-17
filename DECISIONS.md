@@ -63,6 +63,12 @@ What it costs:
 
 `scripts/check-dist.mjs` covers the published path by importing every entry point with `NODE_OPTIONS` cleared.
 
+The Vite side is a plugin using `configEnvironment`, not plain `resolve.conditions`:
+- Astro loads `content.config.ts` in its own Vite environments (`astro` for dev and sync, `prerender` for builds), which top-level and `ssr` settings never reach.
+- Vesper's isolated config loader also adds the Node process's own custom `--conditions` to each of its environments. A real site has none, so nothing changes there.
+
+Found when CI's test job, which doesn't build first, failed to resolve `@vesper/astro/fields`. Locally a `dist/` left over from earlier builds had hidden it, so the loop is now verified with every `dist/` deleted.
+
 Rejected:
 - `tsc --watch` beside dev: a second process, and still racy.
 - Shipping TypeScript source to npm, as Taproot's Astro packages do: Node refuses to strip types under `node_modules`, and Astro imports integrations through Node.
