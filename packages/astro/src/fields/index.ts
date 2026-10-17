@@ -1,0 +1,124 @@
+import { z } from 'astro/zod';
+
+/*
+ * Field helpers (spec §6.3.2). Each one returns plain Zod with `.meta()`
+ * attached: Astro validates it like any other schema, and the content file
+ * holds a plain value. A site can drop the import and paste the Zod shown
+ * next to each helper to get identical behavior.
+ *
+ * Everything comes from `astro/zod`, the copy Astro validates with, so the
+ * meta hints are visible to Vesper (spec §6.3).
+ *
+ * `fields.image()` (focal point and crops) arrives in Phase 2.7.
+ */
+
+/**
+ * A hex colour, `"#1a73e8"` (8 digits with `alpha`).
+ *
+ * Raw equivalent: `z.string().regex(/^#[0-9a-f]{6}$/i).meta({ widget: 'color' })`.
+ *
+ * @param options.palette Named swatches, `{ Indigo: '#28335f' }`. The editor
+ *   then shows a radio group of names instead of a full picker.
+ */
+export function color(options: { palette?: Record<string, string>; alpha?: boolean } = {}) {
+  const pattern = options.alpha ? /^#[0-9a-f]{8}$/i : /^#[0-9a-f]{6}$/i;
+  return z
+    .string()
+    .regex(pattern)
+    .meta(withOptions('color', { palette: options.palette, alpha: options.alpha }));
+}
+
+/**
+ * A map position, `{ lat: 36.69, lng: -81.97 }`. The lat/lng number fields are
+ * the real controls; the map is an enhancement.
+ *
+ * Raw equivalent: `z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).meta({ widget: 'geo' })`.
+ */
+export function geo(options: { defaultCenter?: { lat: number; lng: number }; zoom?: number } = {}) {
+  return z
+    .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+    .meta(withOptions('geo', { defaultCenter: options.defaultCenter, zoom: options.zoom }));
+}
+
+/**
+ * A URL slug, `"my-post"`, which follows another field until edited by hand.
+ *
+ * Raw equivalent: `z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).meta({ widget: 'slug', widgetOptions: { from: 'title' } })`.
+ */
+export function slug(options: { from?: string } = {}) {
+  return z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .meta(withOptions('slug', { from: options.from }));
+}
+
+/** A web address. Raw equivalent: `z.url().meta({ widget: 'url' })`. */
+export function url() {
+  return z.url().meta({ widget: 'url' });
+}
+
+/** An email address. Raw equivalent: `z.email().meta({ widget: 'email', autocomplete: 'email' })`. */
+export function email() {
+  return z.email().meta({ widget: 'email', autocomplete: 'email' });
+}
+
+/**
+ * A date and time, stored as ISO 8601. The editor shows the site's time zone in text.
+ *
+ * Raw equivalent: `z.coerce.date().meta({ widget: 'datetime' })`.
+ */
+export function datetime() {
+  return z.coerce.date().meta({ widget: 'datetime' });
+}
+
+type SelectOptions =
+  | readonly [string, ...string[]]
+  | Readonly<Record<string, string>>
+  | readonly { value: string; label: string }[];
+
+/**
+ * One of a fixed set of values. The editor shows the labels and stores the
+ * values (a radio group for 4 or fewer options, otherwise a select).
+ *
+ * Raw equivalent: `z.enum(['a', 'b']).meta({ widgetOptions: { labels: { a: 'Alpha' } } })`.
+ *
+ * @param options Values (`['news', 'events']`), `{ value: label }`, or `[{ value, label }]`.
+ */
+export function select(options: SelectOptions) {
+  const pairs: [string, string][] = Array.isArray(options)
+    ? (options as readonly (string | { value: string; label: string })[]).map((option) =>
+        typeof option === 'string' ? [option, option] : [option.value, option.label],
+      )
+    : Object.entries(options as Record<string, string>);
+  const [first, ...rest] = pairs.map(([value]) => value);
+  if (first === undefined) throw new Error('fields.select() needs at least one option.');
+  return z.enum([first, ...rest]).meta({ widgetOptions: { labels: Object.fromEntries(pairs) } });
+}
+
+/**
+ * Short rich text in frontmatter, stored as a Markdown string.
+ *
+ * Raw equivalent: `z.string().meta({ widget: 'markdown', widgetOptions: { inline: true } })`.
+ */
+export function markdown(options: { inline?: boolean } = {}) {
+  return z.string().meta(withOptions('markdown', { inline: options.inline }));
+}
+
+/**
+ * A non-image file (a PDF, say), stored as a relative path.
+ *
+ * Raw equivalent: `z.string().meta({ widget: 'file', widgetOptions: { accept: 'application/pdf' } })`.
+ */
+export function file(options: { accept?: string | string[] } = {}) {
+  return z.string().meta(withOptions('file', { accept: options.accept }));
+}
+
+/** `{ widget }`, plus `widgetOptions` only when an option was given, matching the documented raw Zod. */
+function withOptions(widget: string, options: Record<string, unknown>): Record<string, unknown> {
+  const defined = Object.fromEntries(
+    Object.entries(options).filter(([, value]) => value !== undefined),
+  );
+  return Object.keys(defined).length > 0 ? { widget, widgetOptions: defined } : { widget };
+}
+
+export const fields = { color, geo, slug, url, email, datetime, select, markdown, file };

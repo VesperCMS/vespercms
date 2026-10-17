@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "//": "Editor, ESLint and test typecheck config: src/ plus tests. The published build is tsconfig.build.json.",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "composite": false,
+    "declaration": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

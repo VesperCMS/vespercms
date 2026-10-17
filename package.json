@@ -20,7 +20,7 @@
     "//check:dist": "Imports every published entry point from dist/ with the source condition off.",
     "check:dist": "npm run build && node scripts/check-dist.mjs",
     "//typecheck": "Package build configs through project references, then each package tsconfig (which includes tests), the e2e specs, and root tool configs.",
-    "typecheck": "tsc -b && tsc -p packages/core && tsc -p e2e && tsc -p tsconfig.tools.json",
+    "typecheck": "tsc -b && tsc -p packages/core && tsc -p packages/astro && tsc -p e2e && tsc -p tsconfig.tools.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "//e2e": "Playwright + axe against the built playground on a no-rewrite static server (the spec §6.16 plain host). Build the playground first.",

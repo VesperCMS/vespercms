@@ -1,0 +1,36 @@
+{
+  "name": "@vesper/astro",
+  "version": "0.0.0",
+  "description": "The Vesper integration for Astro: schema helpers, config, and (from Phase 2) the studio at /admin.",
+  "license": "MIT",
+  "type": "module",
+  "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/.",
+  "exports": {
+    "./fields": {
+      "@vesper/source": "./src/fields/index.ts",
+      "types": "./dist/fields/index.d.ts",
+      "default": "./dist/fields/index.js"
+    },
+    "./config": {
+      "@vesper/source": "./src/config/index.ts",
+      "types": "./dist/config/index.d.ts",
+      "default": "./dist/config/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "prepack": "tsc -b tsconfig.build.json"
+  },
+  "dependencies": {
+    "@vesper/core": "0.0.0"
+  },
+  "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3).",
+  "peerDependencies": {
+    "astro": "^6.0.0 || ^7.0.0"
+  }
+}

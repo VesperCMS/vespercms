@@ -1,5 +1,12 @@
 {
   "//": "Solution file for `tsc -b`. Each package compiles itself; tests and the playground are checked separately (see the typecheck script).",
   "files": [],
-  "references": [{ "path": "packages/core/tsconfig.build.json" }]
+  "references": [
+    {
+      "path": "packages/core/tsconfig.build.json"
+    },
+    {
+      "path": "packages/astro/tsconfig.build.json"
+    }
+  ]
 }
