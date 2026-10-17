@@ -7,6 +7,15 @@ An Astro 7 site that exercises every Vesper feature (spec §11, Phase 0). It sta
 - never run a formatter over `src/content/`, `src/data/` or `fixtures/` (they're in `.prettierignore`);
 - `src/content/blog/notes-from-the-field.md` is committed with CRLF line endings on purpose (`-text` in `.gitattributes`).
 
+## Schemas and config
+
+- `src/content.config.ts` uses every `fields.*` helper from `@vesper/astro/fields`:
+  - `select`, `email`, `url`, `slug`, `markdown`, `file`, `datetime`, `color` and `geo`;
+  - `locations` keeps their raw Zod equivalents on purpose;
+  - the blog hero stays raw Zod until `fields.image()` lands in Phase 2.7.
+- `vesper.config.ts` sets presentation only: labels, URL patterns, `tree` for pages, `singleton` for settings, `schedule` for events, and `search: false` for the fixtures (spec D2).
+- `npm run manifest` at the repo root prints the manifest Vesper builds from these files.
+
 ## Commands
 
 From the repository root:

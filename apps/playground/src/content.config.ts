@@ -1,12 +1,14 @@
 import { defineCollection, reference } from 'astro:content';
 import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
+import { fields } from '@vesper/astro/fields';
 
 /*
- * The playground's schemas exercise every field mapping in spec §6.2. They use
- * raw Zod plus `.meta()` hints until Phase 1 ships the `fields.*` helpers.
- * Where a helper is coming, the raw Zod here is exactly what that helper will
- * produce, so swapping it in changes nothing about validation.
+ * The playground's schemas exercise every field mapping in spec §6.2 and
+ * every `fields.*` helper (spec §6.3.2). The locations collection keeps
+ * the raw Zod that fields.geo() and fields.color() produce, as the
+ * documented equivalent. The blog hero stays raw until fields.image()
+ * ships in Phase 2.7.
  */
 
 /** A normalized rectangle, 0–1 with the origin top-left (spec §6.6.2). */
@@ -45,7 +47,7 @@ const blog = defineCollection({
       author: reference('authors'),
       related: z.array(reference('blog')).optional(),
       tags: z.array(z.string()).default([]),
-      category: z.enum(['news', 'guides', 'stories']),
+      category: fields.select({ news: 'News', guides: 'Guides', stories: 'Stories' }),
       publishedAt: z.coerce.date(),
       updatedAt: z.date().optional(),
       draft: z.boolean().default(false),
@@ -61,8 +63,10 @@ const authors = defineCollection({
   schema: z.object({
     name: z.string(),
     role: z.string().optional(),
-    email: z.email().meta({ autocomplete: 'email' }),
-    url: z.url().optional(),
+    email: fields.email(),
+    url: fields.url().optional(),
+    // A slug-style field that isn't named `slug`: on file() data, `id` decides the entry ID.
+    handle: fields.slug({ from: 'name' }).optional(),
   }),
 });
 
@@ -85,10 +89,11 @@ const pages = defineCollection({
       .array(
         z.object({
           heading: z.string(),
-          body: z.string().meta({ widget: 'markdown', widgetOptions: { inline: true } }),
+          body: fields.markdown({ inline: true }),
         }),
       )
       .default([]),
+    brochure: fields.file({ accept: 'application/pdf' }).optional(),
   }),
 });
 
@@ -100,7 +105,7 @@ const docs = defineCollection({
     title: z.string(),
     summary: z.string(),
     order: z.number().int().optional(),
-    updated: z.coerce.date().meta({ widget: 'datetime' }).optional(),
+    updated: fields.datetime().optional(),
   }),
 });
 
@@ -113,11 +118,9 @@ const settings = defineCollection({
   schema: z.object({
     siteName: z.string(),
     tagline: z.string().meta({ widget: 'textarea' }),
-    brandColor: hexColor.meta({
-      widget: 'color',
-      widgetOptions: { palette: { Indigo: '#28335f', Pine: '#2f5d50', Brick: '#8a3b3b' } },
-    }),
-    website: z.url(),
+    brandColor: fields.color({ palette: { Indigo: '#28335f', Pine: '#2f5d50', Brick: '#8a3b3b' } }),
+    website: fields.url(),
+    headquarters: fields.geo({ zoom: 14 }).optional(),
     timeZone: z
       .string()
       .meta({ description: 'IANA time zone name, for example America/New_York (spec §6.17).' }),
@@ -125,7 +128,7 @@ const settings = defineCollection({
       .array(
         z.object({
           network: z.enum(['mastodon', 'bluesky', 'instagram', 'youtube', 'linkedin']),
-          url: z.url(),
+          url: fields.url(),
         }),
       )
       .default([]),
@@ -147,9 +150,6 @@ const locations = defineCollection({
   }),
 });
 
-/** An ISO 8601 date-time with offset, edited with the time shown in the site's zone. */
-const dateTime = () => z.coerce.date().meta({ widget: 'datetime' });
-
 const events = defineCollection({
   // Scheduling is on for this collection (vesper.config.ts from Phase 1). The
   // build-time filtering by publishAt/unpublishAt arrives in Phase 4.5 (D18).
@@ -157,17 +157,14 @@ const events = defineCollection({
   schema: z.object({
     title: z.string(),
     summary: z.string(),
-    startsAt: dateTime(),
-    endsAt: dateTime().optional(),
+    startsAt: fields.datetime(),
+    endsAt: fields.datetime().optional(),
     location: reference('locations').optional(),
-    publishAt: dateTime().optional(),
-    unpublishAt: dateTime().optional(),
+    publishAt: fields.datetime().optional(),
+    unpublishAt: fields.datetime().optional(),
     unpublishRedirect: z
       .string()
-      .meta({
-        widget: 'url',
-        description: 'Where visitors go after this event is unpublished.',
-      })
+      .meta({ widget: 'url', description: 'Where visitors go after this event is unpublished.' })
       .optional(),
   }),
 });
@@ -180,11 +177,8 @@ const fixtures = defineCollection({
   schema: z.object({
     title: z.string(),
     summary: z.string(),
-    textColor: hexColor.meta({ widget: 'color' }),
-    brochure: z
-      .string()
-      .meta({ widget: 'file', widgetOptions: { accept: 'application/pdf' } })
-      .optional(),
+    textColor: fields.color(),
+    brochure: fields.file({ accept: 'application/pdf' }).optional(),
   }),
 });
 

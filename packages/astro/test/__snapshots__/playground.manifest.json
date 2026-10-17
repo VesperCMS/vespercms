@@ -7,7 +7,7 @@
   "collections": [
     {
       "name": "blog",
-      "label": "Blog",
+      "label": "Blog posts",
       "editable": true,
       "source": {
         "loader": "glob",
@@ -221,19 +221,26 @@
           "kind": "enum",
           "required": true,
           "label": "Category",
+          "widgetOptions": {
+            "labels": {
+              "news": "News",
+              "guides": "Guides",
+              "stories": "Stories"
+            }
+          },
           "constraints": {
             "options": [
               {
                 "value": "news",
-                "label": "news"
+                "label": "News"
               },
               {
                 "value": "guides",
-                "label": "guides"
+                "label": "Guides"
               },
               {
                 "value": "stories",
-                "label": "stories"
+                "label": "Stories"
               }
             ]
           },
@@ -285,11 +292,18 @@
         }
       ],
       "extraKeys": "strip",
-      "presentation": {}
+      "presentation": {
+        "url": "/blog/:id",
+        "listFields": [
+          "title",
+          "publishedAt"
+        ],
+        "newEntryPath": ":slug"
+      }
     },
     {
       "name": "authors",
-      "label": "Authors",
+      "label": "People",
       "editable": true,
       "source": {
         "loader": "file",
@@ -326,10 +340,10 @@
           "kind": "string",
           "required": true,
           "label": "Email",
+          "widget": "email",
           "autocomplete": "email",
           "format": "email",
-          "inferredWidget": "email",
-          "widget": "email"
+          "inferredWidget": "email"
         },
         {
           "path": [
@@ -338,9 +352,25 @@
           "kind": "string",
           "required": false,
           "label": "URL",
+          "widget": "url",
           "format": "url",
-          "inferredWidget": "url",
-          "widget": "url"
+          "inferredWidget": "url"
+        },
+        {
+          "path": [
+            "handle"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Handle",
+          "widget": "slug",
+          "widgetOptions": {
+            "from": "name"
+          },
+          "constraints": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "inferredWidget": "text"
         }
       ],
       "extraKeys": "strip",
@@ -472,10 +502,26 @@
           ],
           "inferredWidget": "repeater",
           "widget": "repeater"
+        },
+        {
+          "path": [
+            "brochure"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Brochure",
+          "widget": "file",
+          "widgetOptions": {
+            "accept": "application/pdf"
+          },
+          "inferredWidget": "text"
         }
       ],
       "extraKeys": "strip",
-      "presentation": {}
+      "presentation": {
+        "tree": true,
+        "url": "/:path"
+      }
     },
     {
       "name": "docs",
@@ -538,11 +584,13 @@
         }
       ],
       "extraKeys": "strip",
-      "presentation": {}
+      "presentation": {
+        "url": "/docs/:id"
+      }
     },
     {
       "name": "settings",
-      "label": "Settings",
+      "label": "Site settings",
       "editable": true,
       "source": {
         "loader": "glob",
@@ -603,9 +651,55 @@
           "kind": "string",
           "required": true,
           "label": "Website",
+          "widget": "url",
           "format": "url",
-          "inferredWidget": "url",
-          "widget": "url"
+          "inferredWidget": "url"
+        },
+        {
+          "path": [
+            "headquarters"
+          ],
+          "kind": "object",
+          "required": false,
+          "label": "Headquarters",
+          "widget": "geo",
+          "widgetOptions": {
+            "zoom": 14
+          },
+          "children": [
+            {
+              "path": [
+                "headquarters",
+                "lat"
+              ],
+              "kind": "number",
+              "required": true,
+              "label": "Lat",
+              "constraints": {
+                "min": -90,
+                "max": 90
+              },
+              "inferredWidget": "number",
+              "widget": "number"
+            },
+            {
+              "path": [
+                "headquarters",
+                "lng"
+              ],
+              "kind": "number",
+              "required": true,
+              "label": "Lng",
+              "constraints": {
+                "min": -180,
+                "max": 180
+              },
+              "inferredWidget": "number",
+              "widget": "number"
+            }
+          ],
+          "extraKeys": "strip",
+          "inferredWidget": "group"
         },
         {
           "path": [
@@ -681,9 +775,9 @@
                   "kind": "string",
                   "required": true,
                   "label": "URL",
+                  "widget": "url",
                   "format": "url",
-                  "inferredWidget": "url",
-                  "widget": "url"
+                  "inferredWidget": "url"
                 }
               ],
               "extraKeys": "strip",
@@ -696,7 +790,9 @@
         }
       ],
       "extraKeys": "strip",
-      "presentation": {}
+      "presentation": {
+        "singleton": true
+      }
     },
     {
       "name": "locations",
@@ -906,11 +1002,18 @@
         }
       ],
       "extraKeys": "strip",
-      "presentation": {}
+      "presentation": {
+        "url": "/events/:id",
+        "schedule": {
+          "unpublish": true,
+          "publishAt": "publishAt",
+          "unpublishAt": "unpublishAt"
+        }
+      }
     },
     {
       "name": "fixtures",
-      "label": "Fixtures",
+      "label": "Accessibility fixtures",
       "editable": true,
       "source": {
         "loader": "glob",
@@ -972,7 +1075,9 @@
         }
       ],
       "extraKeys": "strip",
-      "presentation": {}
+      "presentation": {
+        "search": false
+      }
     }
   ],
   "forms": [
@@ -1085,5 +1190,5 @@
     }
   ],
   "diagnostics": [],
-  "hash": "9806ace5539a4bfa4d508815b075a5876a0b333acdad42fa562a12dc3aad4622"
+  "hash": "be22ee02acdb913486f926f7cf4d0f4fc298dff2b35d889517fabcf0eab1fe64"
 }
