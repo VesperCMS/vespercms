@@ -1263,6 +1263,271 @@
       }
     }
   ],
+  "markdoc": {
+    "options": {
+      "allowHTML": true,
+      "ignoreIndentation": false
+    },
+    "tags": [
+      {
+        "name": "callout",
+        "label": "Callout",
+        "summary": "type",
+        "render": "./src/components/Callout.astro",
+        "selfClosing": false,
+        "children": [
+          "paragraph",
+          "list"
+        ],
+        "attributes": [
+          {
+            "name": "type",
+            "types": [
+              "String"
+            ],
+            "required": false,
+            "default": "note",
+            "matches": {
+              "values": [
+                "note",
+                "warning",
+                "tip"
+              ]
+            }
+          },
+          {
+            "name": "title",
+            "types": [
+              "String"
+            ],
+            "required": false
+          }
+        ],
+        "fields": [
+          {
+            "path": [
+              "type"
+            ],
+            "required": false,
+            "label": "Type",
+            "default": "note",
+            "kind": "enum",
+            "widget": "radio",
+            "constraints": {
+              "options": [
+                {
+                  "value": "note",
+                  "label": "Note"
+                },
+                {
+                  "value": "warning",
+                  "label": "Warning"
+                },
+                {
+                  "value": "tip",
+                  "label": "Tip"
+                }
+              ]
+            },
+            "inferredWidget": "radio"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "required": false,
+            "label": "Title",
+            "description": "Shown above the callout. Leave it empty to use the type.",
+            "kind": "string",
+            "inferredWidget": "text",
+            "widget": "text"
+          }
+        ]
+      },
+      {
+        "name": "youtube",
+        "label": "YouTube video",
+        "summary": "title",
+        "render": "./src/components/YouTube.astro",
+        "selfClosing": true,
+        "attributes": [
+          {
+            "name": "id",
+            "types": [
+              "String"
+            ],
+            "required": true
+          },
+          {
+            "name": "title",
+            "types": [
+              "String"
+            ],
+            "required": true
+          },
+          {
+            "name": "captions",
+            "types": [
+              "Boolean"
+            ],
+            "required": false
+          }
+        ],
+        "fields": [
+          {
+            "path": [
+              "id"
+            ],
+            "required": true,
+            "label": "Video ID",
+            "description": "The part after “v=” in the video’s address.",
+            "kind": "string",
+            "inferredWidget": "text",
+            "widget": "text"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "required": true,
+            "label": "Title",
+            "description": "Describes the video for screen reader users.",
+            "kind": "string",
+            "inferredWidget": "text",
+            "widget": "text"
+          },
+          {
+            "path": [
+              "captions"
+            ],
+            "required": false,
+            "label": "The video has captions",
+            "kind": "boolean",
+            "inferredWidget": "switch",
+            "widget": "switch"
+          }
+        ]
+      },
+      {
+        "name": "abbr",
+        "label": "Abbreviation",
+        "summary": "title",
+        "render": "./src/components/Abbr.astro",
+        "selfClosing": false,
+        "inline": true,
+        "attributes": [
+          {
+            "name": "title",
+            "types": [
+              "String"
+            ],
+            "required": true
+          }
+        ],
+        "fields": [
+          {
+            "path": [
+              "title"
+            ],
+            "required": true,
+            "label": "Full form",
+            "description": "What the abbreviation stands for.",
+            "kind": "string",
+            "inferredWidget": "text",
+            "widget": "text"
+          }
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "name": "heading",
+        "attributes": [
+          {
+            "name": "id",
+            "types": [
+              "String"
+            ],
+            "required": false
+          },
+          {
+            "name": "level",
+            "types": [
+              "Number"
+            ],
+            "required": true,
+            "default": 1
+          }
+        ]
+      }
+    ],
+    "variables": {
+      "product": {
+        "name": {},
+        "beta": {},
+        "tier": {}
+      }
+    },
+    "functions": [],
+    "partials": []
+  },
+  "mdx": {
+    "components": [
+      {
+        "name": "Callout",
+        "label": "Callout",
+        "summary": "type",
+        "children": true,
+        "inline": false,
+        "fields": [
+          {
+            "path": [
+              "type"
+            ],
+            "kind": "enum",
+            "required": false,
+            "label": "Type",
+            "default": "note",
+            "widgetOptions": {
+              "labels": {
+                "note": "Note",
+                "warning": "Warning",
+                "tip": "Tip"
+              }
+            },
+            "constraints": {
+              "options": [
+                {
+                  "value": "note",
+                  "label": "Note"
+                },
+                {
+                  "value": "warning",
+                  "label": "Warning"
+                },
+                {
+                  "value": "tip",
+                  "label": "Tip"
+                }
+              ]
+            },
+            "inferredWidget": "radio",
+            "widget": "radio"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "kind": "string",
+            "required": false,
+            "label": "Title",
+            "inferredWidget": "text",
+            "widget": "text"
+          }
+        ]
+      }
+    ]
+  },
   "diagnostics": [],
-  "hash": "173c1a21c8768b60dec274679dabaf672e26bbe1e604cf1eda9dc210531daf9a"
+  "hash": "538f3c8f58c88c9be721848829f379f4030d2eb6bc206b85e029d539579bd77d"
 }

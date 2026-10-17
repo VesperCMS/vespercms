@@ -159,6 +159,39 @@ describe('playground manifest (Phase 1: every collection produces a correct mani
     ]);
     expect(contact?.fields?.[0]).toMatchObject({ safeToEcho: true });
   });
+
+  it('reads Markdoc as Astro does: allowHTML from astro.config, the merged config, the hints', () => {
+    const markdoc = manifest.markdoc;
+    // `markdoc({ allowHTML: true })` in astro.config.mjs, read through the wrapper.
+    expect(markdoc?.options).toEqual({ allowHTML: true, ignoreIndentation: false });
+    expect(markdoc?.tags.map((t) => [t.name, t.label, t.summary, t.render])).toEqual([
+      ['callout', 'Callout', 'type', './src/components/Callout.astro'],
+      ['youtube', 'YouTube video', 'title', './src/components/YouTube.astro'],
+      ['abbr', 'Abbreviation', 'title', './src/components/Abbr.astro'],
+    ]);
+    const youtube = markdoc?.tags[1];
+    expect(youtube).toMatchObject({ selfClosing: true });
+    expect(youtube?.fields.map((f) => [f.path[0], f.label, f.widget, f.required])).toEqual([
+      ['id', 'Video ID', 'text', true],
+      ['title', 'Title', 'text', true],
+      ['captions', 'The video has captions', 'switch', false],
+    ]);
+    expect(markdoc?.tags[2]).toMatchObject({ inline: true });
+    // Astro's own heading node (with ids) comes from its setupConfig, merged in.
+    expect(markdoc?.nodes.map((n) => n.name)).toEqual(['heading']);
+    // Variables by key only: the values in markdoc.config.mjs never reach the manifest.
+    expect(markdoc?.variables).toEqual({ product: { name: {}, beta: {}, tier: {} } });
+  });
+
+  it('declares the MDX Callout with fields from its Zod props, and leaves Gallery out', () => {
+    expect(manifest.mdx?.components.map((c) => [c.name, c.children, c.summary])).toEqual([
+      ['Callout', true, 'type'],
+    ]);
+    expect(manifest.mdx?.components[0]?.fields?.map((f) => [f.path[0], f.kind, f.widget])).toEqual([
+      ['type', 'enum', 'radio'],
+      ['title', 'string', 'text'],
+    ]);
+  });
 });
 
 describe('entry IDs and files match Astro’s own content layer', () => {
@@ -255,6 +288,8 @@ describe('edge cases never crash and are explained', () => {
     expect(manifest.diagnostics.find((d) => d.code === 'vesper-config')?.message).toContain(
       'scehdule',
     );
+    // No Markdoc integration, config or collection: no markdoc section at all.
+    expect(manifest.markdoc).toBeUndefined();
   });
 
   it('reports a content config that imports a runtime-only module', async () => {

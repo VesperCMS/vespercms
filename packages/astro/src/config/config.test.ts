@@ -48,3 +48,41 @@ describe('timeZone', () => {
     ]);
   });
 });
+
+describe('markdoc and mdx', () => {
+  it('accepts tag hints and declared components', () => {
+    const props = { safeParse: () => ({ success: true }) };
+    expect(
+      checkConfig({
+        markdoc: {
+          tags: {
+            callout: {
+              label: 'Callout',
+              summary: 'type',
+              attributes: { type: { labels: { tip: 'Tip' }, widget: 'radio' } },
+            },
+          },
+        },
+        mdx: { components: { Callout: { label: 'Callout', children: true, props } } },
+      }),
+    ).toEqual([]);
+  });
+
+  it('explains what is wrong with them', () => {
+    expect(
+      checkConfig({
+        markdoc: { tags: { callout: { lable: 'x', attributes: { type: 'tip' } } } },
+        mdx: { components: { Callout: { props: {}, children: 'yes' } } },
+      }),
+    ).toEqual([
+      { level: 'warning', message: 'Unknown setting "markdoc.tags.callout.lable" is ignored.' },
+      { level: 'error', message: 'markdoc.tags.callout.attributes.type must be an object.' },
+      {
+        level: 'error',
+        message:
+          'mdx.components.Callout.props must be a Zod schema, such as z.object({ … }) from astro/zod.',
+      },
+      { level: 'error', message: 'mdx.components.Callout.children must be true or false.' },
+    ]);
+  });
+});

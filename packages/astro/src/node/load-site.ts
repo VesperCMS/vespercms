@@ -7,8 +7,10 @@ import {
   VESPER_META_KEY,
   type CollectionInput,
   type Diagnostic,
+  patternExtensions,
   type LoaderInfo,
   type ManifestInput,
+  type MarkdocConfigLike,
 } from '@vesper/core';
 import type { Plugin, ViteDevServer } from 'vite';
 import { checkConfig, type VesperConfig } from '../config/index.ts';
@@ -55,6 +57,12 @@ const FORMS_CONFIG_NAMES = [
   'forms.config.mjs',
 ];
 const ROOT_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs'];
+const MARKDOC_CONFIG_NAMES = [
+  'markdoc.config.js',
+  'markdoc.config.mjs',
+  'markdoc.config.mts',
+  'markdoc.config.ts',
+];
 
 export type LoadSiteOptions = {
   /** The site root (where astro.config lives). */
@@ -69,7 +77,12 @@ export type LoadedSite = Omit<ManifestInput, 'generator'> & { root: string };
 export function siteConfigFiles(
   root: string,
   srcDir = 'src',
-): { contentConfig?: string; vesperConfig?: string; formsConfig?: string } {
+): {
+  contentConfig?: string;
+  vesperConfig?: string;
+  formsConfig?: string;
+  markdocConfig?: string;
+} {
   const contentConfig = CONTENT_CONFIG_NAMES.map((name) => join(root, srcDir, name)).find((path) =>
     existsSync(path),
   );
@@ -77,11 +90,23 @@ export function siteConfigFiles(
   const formsConfig = FORMS_CONFIG_NAMES.map((name) => join(root, srcDir, name)).find((path) =>
     existsSync(path),
   );
+  // The same names, in the same order, as @astrojs/markdoc looks for.
+  const markdocConfig = MARKDOC_CONFIG_NAMES.map((name) => join(root, name)).find((path) =>
+    existsSync(path),
+  );
   return {
     ...(contentConfig ? { contentConfig } : {}),
     ...(vesperConfig ? { vesperConfig } : {}),
     ...(formsConfig ? { formsConfig } : {}),
+    ...(markdocConfig ? { markdocConfig } : {}),
   };
+}
+
+/** astro.config, which Vesper reads only to learn @astrojs/markdoc's options. */
+function astroConfigFile(root: string): string | undefined {
+  return ['mjs', 'js', 'ts', 'mts', 'cjs', 'cts']
+    .map((ext) => join(root, `astro.config.${ext}`))
+    .find((path) => existsSync(path));
 }
 
 /** Loads a site's configs and returns what `buildManifest` needs. Never throws for config problems; it reports them. */
@@ -93,6 +118,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
     contentConfig: contentConfigPath,
     vesperConfig: vesperConfigPath,
     formsConfig: formsConfigPath,
+    markdocConfig: markdocConfigPath,
   } = siteConfigFiles(root, srcDir);
 
   const server = await createIsolatedServer(root);
@@ -159,6 +185,14 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
       }
     }
 
+    const usesMarkdoc = collections.some(
+      (c) => c.loader.kind === 'glob' && patternExtensions(c.loader.pattern).includes('mdoc'),
+    );
+    const markdoc =
+      markdocConfigPath || usesMarkdoc
+        ? await loadMarkdoc(server, root, markdocConfigPath, diagnostics)
+        : undefined;
+
     return {
       root,
       site: {
@@ -172,15 +206,109 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
               ...(config.collections ? { collections: config.collections } : {}),
               ...(config.widgets ? { widgets: config.widgets } : {}),
               ...(config.timeZone ? { timeZone: config.timeZone } : {}),
+              ...(config.markdoc ? { markdoc: config.markdoc } : {}),
+              ...(config.mdx ? { mdx: config.mdx } : {}),
             },
           }
         : {}),
+      ...(markdoc ? { markdoc } : {}),
       forms,
       diagnostics,
     };
   } finally {
     await server.close();
   }
+}
+
+type MarkdocOptions = { allowHTML?: boolean; ignoreIndentation?: boolean };
+
+/**
+ * The site's Markdoc config, merged exactly as @astrojs/markdoc merges it
+ * (its own `setupConfig`: heading ids, `extends`, the HTML tag), and the
+ * integration's options, read from astro.config. Undefined when the site
+ * doesn't use @astrojs/markdoc at all.
+ */
+async function loadMarkdoc(
+  server: ViteDevServer,
+  root: string,
+  configPath: string | undefined,
+  diagnostics: Diagnostic[],
+): Promise<{ config: MarkdocConfigLike; options: MarkdocOptions } | undefined> {
+  const options = await markdocOptions(server, root, diagnostics);
+  if (options === null && !configPath) return undefined;
+
+  let user: object = {};
+  if (configPath) {
+    try {
+      const module = (await server.ssrLoadModule(configPath)) as { default?: unknown };
+      if (typeof module.default === 'object' && module.default !== null) user = module.default;
+    } catch (error) {
+      diagnostics.push({
+        level: 'error',
+        code: 'markdoc-config',
+        message: `${toPosix(relative(root, configPath))} could not be loaded: ${messageOf(error)}`,
+      });
+      return undefined;
+    }
+  }
+  let config = user as MarkdocConfigLike;
+  try {
+    const runtimePath = createRequire(join(root, 'package.json')).resolve(
+      '@astrojs/markdoc/runtime',
+    );
+    const runtime = (await import(pathToFileURL(runtimePath).href)) as {
+      setupConfig: (config: object, options: MarkdocOptions) => Promise<MarkdocConfigLike>;
+    };
+    config = await runtime.setupConfig(user, options ?? {});
+  } catch (error) {
+    diagnostics.push({
+      level: 'warning',
+      code: 'markdoc-config',
+      message: `Vesper couldn't merge the Markdoc config the way Astro does (${messageOf(error)}), so the studio's checks may differ from the build's.`,
+    });
+  }
+  return { config, options: options ?? {} };
+}
+
+/**
+ * @astrojs/markdoc's options, recorded by the wrapper when astro.config is
+ * loaded; null when astro.config has no Markdoc integration. When
+ * astro.config can't be read in isolation, Astro's defaults are assumed.
+ */
+async function markdocOptions(
+  server: ViteDevServer,
+  root: string,
+  diagnostics: Diagnostic[],
+): Promise<MarkdocOptions | null> {
+  const path = astroConfigFile(root);
+  if (!path) return null;
+  let integrations: unknown;
+  try {
+    const module = (await server.ssrLoadModule(path)) as {
+      default?: { integrations?: unknown };
+    };
+    integrations = module.default?.integrations;
+  } catch (error) {
+    diagnostics.push({
+      level: 'info',
+      code: 'markdoc-options',
+      message: `Vesper couldn't read astro.config on its own (${messageOf(error)}), so it parses Markdoc with @astrojs/markdoc's default options.`,
+    });
+    return {};
+  }
+  const flat = Array.isArray(integrations) ? (integrations.flat(Infinity) as unknown[]) : [];
+  for (const integration of flat) {
+    if (typeof integration !== 'object' || integration === null) continue;
+    const recorded = (integration as { [MARKDOC_OPTIONS]?: unknown })[MARKDOC_OPTIONS];
+    if (typeof recorded === 'object' && recorded !== null) {
+      const { allowHTML, ignoreIndentation } = recorded as MarkdocOptions;
+      return {
+        ...(allowHTML === true ? { allowHTML } : {}),
+        ...(ignoreIndentation === true ? { ignoreIndentation } : {}),
+      };
+    }
+  }
+  return null;
 }
 
 async function loadCollections(
@@ -268,7 +396,11 @@ async function createIsolatedServer(root: string): Promise<ViteDevServer> {
   // Astro's real loaders, from the site's own Astro. Vite externalizes bare
   // `astro/*` imports in SSR before any plugin sees them, so the shim is
   // wired in with an alias rather than resolveId.
-  const realLoaders = createRequire(join(root, 'package.json')).resolve('astro/loaders');
+  const fromSite = createRequire(join(root, 'package.json'));
+  const realLoaders = fromSite.resolve('astro/loaders');
+  // @astrojs/markdoc keeps its options in a closure; a wrapper records them
+  // when astro.config calls it, so Vesper parses Markdoc as Astro does.
+  const realMarkdoc = resolveFrom(fromSite, '@astrojs/markdoc');
   return vite.createServer({
     root,
     configFile: false,
@@ -279,10 +411,21 @@ async function createIsolatedServer(root: string): Promise<ViteDevServer> {
     optimizeDeps: { noDiscovery: true, include: [] },
     resolve: {
       tsconfigPaths: true,
-      alias: [{ find: /^astro\/loaders$/, replacement: LOADERS_SPECIFIER }],
+      alias: [
+        { find: /^astro\/loaders$/, replacement: LOADERS_SPECIFIER },
+        ...(realMarkdoc ? [{ find: /^@astrojs\/markdoc$/, replacement: MARKDOC_SPECIFIER }] : []),
+      ],
     },
-    plugins: [vesperShims(realLoaders), processConditions(vite)],
+    plugins: [vesperShims(realLoaders, realMarkdoc), processConditions(vite)],
   });
+}
+
+function resolveFrom(require: NodeJS.Require, specifier: string): string | undefined {
+  try {
+    return require.resolve(specifier);
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -336,19 +479,25 @@ function processConditions(vite: typeof import('vite')): Plugin {
 const CONTENT_ID = '\0vesper:astro-content';
 const LOADERS_SPECIFIER = 'virtual:vesper/astro-loaders';
 const LOADERS_ID = '\0vesper:astro-loaders';
+const MARKDOC_SPECIFIER = 'virtual:vesper/astro-markdoc';
+const MARKDOC_ID = '\0vesper:astro-markdoc';
 const UNAVAILABLE_PREFIX = '\0vesper:unavailable:';
+/** Where the wrapped @astrojs/markdoc integration keeps the options it was called with. */
+export const MARKDOC_OPTIONS = Symbol.for('vesper.markdocOptions');
 
 /**
- * The `astro:content` and `astro/loaders` shims described at the top of this
- * file. `realLoaders` is the absolute path of the site's own astro/loaders.
+ * The `astro:content`, `astro/loaders` and `@astrojs/markdoc` shims described
+ * at the top of this file. `realLoaders` and `realMarkdoc` are the absolute
+ * paths of the site's own modules.
  */
-export function vesperShims(realLoaders: string): Plugin {
+export function vesperShims(realLoaders: string, realMarkdoc?: string): Plugin {
   return {
     name: 'vesper:shims',
     enforce: 'pre',
     resolveId(source) {
       if (source === 'astro:content') return CONTENT_ID;
       if (source === LOADERS_SPECIFIER) return LOADERS_ID;
+      if (source === MARKDOC_SPECIFIER && realMarkdoc) return MARKDOC_ID;
       if (source.startsWith('astro:')) return `${UNAVAILABLE_PREFIX}${source}`;
       return null;
     },
@@ -382,6 +531,14 @@ export function vesperShims(realLoaders: string): Plugin {
           "const MARK = Symbol.for('vesper.loader');",
           "export function glob(options) { const loader = real.glob(options); loader[MARK] = { kind: 'glob', options }; return loader; }",
           "export function file(fileName, options) { const loader = real.file(fileName, options); loader[MARK] = { kind: 'file', fileName, options }; return loader; }",
+        ].join('\n');
+      }
+      if (id === MARKDOC_ID && realMarkdoc) {
+        const real = JSON.stringify(toPosix(realMarkdoc));
+        return [
+          `import real from ${real};`,
+          "const MARK = Symbol.for('vesper.markdocOptions');",
+          'export default function markdoc(options) { const integration = real(options); integration[MARK] = options ?? {}; return integration; }',
         ].join('\n');
       }
       if (id.startsWith(UNAVAILABLE_PREFIX)) {

@@ -1,4 +1,9 @@
-import type { CollectionConfig, FieldModel } from '@vesper/core';
+import type {
+  CollectionConfig,
+  FieldModel,
+  MarkdocTagHint,
+  MdxComponentConfig,
+} from '@vesper/core';
 
 /** What a custom widget component receives (spec §6.3.3). */
 export type { WidgetProps } from '@vesper/core';
@@ -21,15 +26,28 @@ export type CustomWidget = {
 
 export type VesperCollectionConfig = CollectionConfig;
 
+/** A declared MDX component. `props` is a Zod object schema made with astro/zod. */
+export type MdxComponent = MdxComponentConfig;
+
+export type { MarkdocTagHint };
+
 export type VesperConfig = {
   collections?: Record<string, VesperCollectionConfig>;
   widgets?: Record<string, CustomWidget>;
   /** Image ratios and upload limits (spec §6.6.3). Used from Phase 2.7. */
   images?: { ratios?: Record<string, number>; maxUploadEdge?: number };
-  /** UI hints for Markdoc tags (spec §6.5.1). Used from Phase 2.5. */
-  markdoc?: { tags?: Record<string, unknown> };
-  /** Declared MDX components (spec §6.5.2). Used from Phase 2.5. */
-  mdx?: { components?: Record<string, unknown> };
+  /**
+   * UI hints for Markdoc tags (spec §6.5.1): a friendly name, help text, the
+   * attribute the block's header summarizes, value labels and a widget per
+   * attribute. The tags themselves stay in markdoc.config.mjs.
+   */
+  markdoc?: { tags?: Record<string, MarkdocTagHint> };
+  /**
+   * MDX components the body editor may show as blocks (spec §6.5.2), each
+   * with a Zod props schema (from astro/zod). Undeclared components stay
+   * protected source chips.
+   */
+  mdx?: { components?: Record<string, MdxComponent> };
   /**
    * The site's time zone, as an IANA name such as `America/New_York`. Times
    * are shown and entered in it, and stored as ISO 8601 with an offset
@@ -128,6 +146,7 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
       message: `timeZone must be an IANA time zone name such as "America/New_York", not ${JSON.stringify(timeZone)}.`,
     });
   }
+  problems.push(...checkMarkdoc(record.markdoc), ...checkMdx(record.mdx));
   const widgets = record.widgets;
   if (widgets !== undefined && typeof widgets === 'object' && widgets !== null) {
     for (const [name, widget] of Object.entries(widgets)) {
@@ -137,6 +156,107 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
           level: 'error',
           message: `widgets.${name} needs a component: () => import('./YourWidget.tsx').`,
         });
+      }
+    }
+  }
+  return problems;
+}
+
+type Problem = { level: 'warning' | 'error'; message: string };
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+function unknownKeys(
+  value: Record<string, unknown>,
+  known: readonly string[],
+  where: string,
+): Problem[] {
+  return Object.keys(value)
+    .filter((key) => !known.includes(key))
+    .map((key) => ({ level: 'warning', message: `Unknown setting "${where}.${key}" is ignored.` }));
+}
+
+function checkMarkdoc(markdoc: unknown): Problem[] {
+  if (markdoc === undefined) return [];
+  if (!isObject(markdoc)) return [{ level: 'error', message: '"markdoc" must be an object.' }];
+  const problems = unknownKeys(markdoc, ['tags'], 'markdoc');
+  const { tags } = markdoc;
+  if (tags === undefined) return problems;
+  if (!isObject(tags)) {
+    return [
+      ...problems,
+      { level: 'error', message: 'markdoc.tags must be an object keyed by tag name.' },
+    ];
+  }
+  for (const [name, hint] of Object.entries(tags)) {
+    const where = `markdoc.tags.${name}`;
+    if (!isObject(hint)) {
+      problems.push({ level: 'error', message: `${where} must be an object.` });
+      continue;
+    }
+    problems.push(...unknownKeys(hint, ['label', 'description', 'summary', 'attributes'], where));
+    const { attributes } = hint;
+    if (attributes === undefined) continue;
+    if (!isObject(attributes)) {
+      problems.push({ level: 'error', message: `${where}.attributes must be an object.` });
+      continue;
+    }
+    for (const [attribute, attributeHint] of Object.entries(attributes)) {
+      if (!isObject(attributeHint)) {
+        problems.push({
+          level: 'error',
+          message: `${where}.attributes.${attribute} must be an object.`,
+        });
+      } else {
+        problems.push(
+          ...unknownKeys(
+            attributeHint,
+            ['label', 'description', 'labels', 'widget'],
+            `${where}.attributes.${attribute}`,
+          ),
+        );
+      }
+    }
+  }
+  return problems;
+}
+
+function checkMdx(mdx: unknown): Problem[] {
+  if (mdx === undefined) return [];
+  if (!isObject(mdx)) return [{ level: 'error', message: '"mdx" must be an object.' }];
+  const problems = unknownKeys(mdx, ['components'], 'mdx');
+  const { components } = mdx;
+  if (components === undefined) return problems;
+  if (!isObject(components)) {
+    return [
+      ...problems,
+      { level: 'error', message: 'mdx.components must be an object keyed by component name.' },
+    ];
+  }
+  for (const [name, component] of Object.entries(components)) {
+    const where = `mdx.components.${name}`;
+    if (!isObject(component)) {
+      problems.push({ level: 'error', message: `${where} must be an object.` });
+      continue;
+    }
+    problems.push(
+      ...unknownKeys(
+        component,
+        ['label', 'description', 'summary', 'children', 'inline', 'props'],
+        where,
+      ),
+    );
+    const { props } = component;
+    if (props !== undefined && !(isObject(props) && typeof props.safeParse === 'function')) {
+      problems.push({
+        level: 'error',
+        message: `${where}.props must be a Zod schema, such as z.object({ … }) from astro/zod.`,
+      });
+    }
+    for (const key of ['children', 'inline'] as const) {
+      if (component[key] !== undefined && typeof component[key] !== 'boolean') {
+        problems.push({ level: 'error', message: `${where}.${key} must be true or false.` });
       }
     }
   }

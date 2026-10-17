@@ -7,7 +7,7 @@ import {
   normalizePath,
   type SaveRequest,
 } from '@vesper/core';
-import { schemaValidator, type SiteModel } from '../node/manifest.ts';
+import { bodyValidator, schemaValidator, type SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 
 /*
@@ -70,8 +70,9 @@ export function createDevApi(options: DevApiOptions): Handler {
     }
 
     const model = await options.model();
-    const service = new ContentService(storage, model.manifest, {
+    const service: ContentService = new ContentService(storage, model.manifest, {
       validate: schemaValidator(model.schemas),
+      validateBody: bodyValidator(model, () => service.listPartials()),
     });
     // Media lives in <srcDir>/assets and public/ (spec §6.6.1).
     const media = () =>
@@ -95,6 +96,8 @@ export function createDevApi(options: DevApiOptions): Handler {
       const request = (await readJson(req)) as SaveRequest;
       const result = await service.saveEntry(request);
       send(res, statusOf(result), result);
+    } else if (route === 'partials' && method === 'GET') {
+      send(res, 200, await service.listPartials());
     } else if (route === 'media' && method === 'GET') {
       send(res, 200, await media().list());
     } else if (route === 'media' && method === 'POST') {

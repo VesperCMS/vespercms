@@ -3,7 +3,7 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Manifest } from '@vesper/core';
+import { extractMarkdocSchema, markdocFields, type Manifest } from '@vesper/core';
 import { z } from 'astro/zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevApi, refusal } from './dev-api.ts';
@@ -34,7 +34,49 @@ const manifest: Manifest = {
   diagnostics: [],
 };
 
-const schemas = new Map<string, unknown>([['blog', z.object({ title: z.string().min(1) })]]);
+// A Markdoc collection, with a tag whose title is required and a check only the real config has.
+const markdocConfig = {
+  tags: {
+    youtube: {
+      selfClosing: true,
+      attributes: {
+        id: {
+          type: String,
+          required: true,
+          validate: (value: unknown) =>
+            value === 'banned'
+              ? [{ id: 'id', level: 'error', message: 'That video is gone.' }]
+              : [],
+        },
+        title: { type: String, required: true },
+      },
+    },
+  },
+};
+manifest.collections.push({
+  name: 'docs',
+  label: 'Docs',
+  editable: true,
+  source: {
+    loader: 'glob',
+    base: 'src/content/docs',
+    pattern: '**/[^_]*.mdoc',
+    generateId: 'default',
+    formats: ['mdoc'],
+  },
+  entryKind: 'content',
+  fields: [{ path: ['title'], kind: 'string', required: true, label: 'Title' }],
+  presentation: {},
+});
+manifest.markdoc = extractMarkdocSchema(markdocConfig, {
+  hints: { youtube: { label: 'YouTube video' } },
+  fields: (tag, hint) => markdocFields(tag, hint),
+});
+
+const schemas = new Map<string, unknown>([
+  ['blog', z.object({ title: z.string().min(1) })],
+  ['docs', z.object({ title: z.string() })],
+]);
 
 let root: string;
 let server: Server;
@@ -47,10 +89,13 @@ beforeAll(async () => {
   writeFileSync(join(root, 'src/content/blog/hello.md'), '---\ntitle: Hello\n---\nBody\n');
   writeFileSync(join(root, 'src/assets/dot.png'), new Uint8Array([137, 80, 78, 71]));
   writeFileSync(join(root, '.env'), 'SECRET=1\n');
+  mkdirSync(join(root, 'src/content/docs'), { recursive: true });
+  writeFileSync(join(root, 'src/content/docs/intro.mdoc'), '---\ntitle: Intro\n---\nHi.\n');
+  writeFileSync(join(root, 'src/content/docs/_hours.mdoc'), 'Weekdays.\n');
   const api = createDevApi({
     root,
     base: '/_vesper/api/',
-    model: () => Promise.resolve({ manifest, schemas }),
+    model: () => Promise.resolve({ manifest, schemas, markdocConfig, mdxProps: new Map() }),
   });
   server = createServer((req, res) => {
     api(req, res, () => {
@@ -109,6 +154,7 @@ describe('the dev API', () => {
   it('lists, reads and saves entries on disk', async () => {
     expect(await (await fetch(`${base}/summary`, { headers: studio })).json()).toMatchObject([
       { collection: 'blog', count: 1 },
+      { collection: 'docs', count: 1 },
     ]);
     const doc = (await (
       await fetch(`${base}/entry?collection=blog&id=hello`, { headers: studio })
@@ -155,6 +201,45 @@ describe('the dev API', () => {
       }),
     });
     expect(stale.status).toBe(409);
+  });
+
+  it('refuses a body the site couldn’t build, using the real Markdoc config', async () => {
+    const read = await fetch(`${base}/entry?collection=docs&id=intro`, { headers: studio });
+    const doc = (await read.json()) as { version: string };
+    const save = (body: string) =>
+      fetch(`${base}/entry`, {
+        method: 'PUT',
+        headers: studio,
+        body: JSON.stringify({ collection: 'docs', id: 'intro', version: doc.version, body }),
+      });
+    const missing = await save('\n{% youtube id="abc" /%}\n');
+    expect(missing.status).toBe(422);
+    expect(await missing.json()).toMatchObject({
+      reason: 'invalid',
+      bodyIssues: [{ line: 2, level: 'error', message: 'YouTube video: Title is required.' }],
+    });
+    const custom = await save('\n{% youtube id="banned" title="T" /%}\n');
+    expect(await custom.json()).toMatchObject({
+      bodyIssues: [{ level: 'error', message: 'YouTube video: That video is gone.' }],
+    });
+    const partial = await save('\n{% partial file="_gone.mdoc" /%}\n');
+    expect(await partial.json()).toMatchObject({ bodyIssues: [{ code: 'partial-missing' }] });
+    expect(readFileSync(join(root, 'src/content/docs/intro.mdoc'), 'utf8')).toBe(
+      '---\ntitle: Intro\n---\nHi.\n',
+    );
+    const fine = await save(
+      '\n{% youtube id="abc" title="T" /%}\n\n{% partial file="_hours.mdoc" /%}\n',
+    );
+    expect(fine.status).toBe(200);
+  });
+
+  it('lists the files a partial can point at', async () => {
+    const res = await fetch(`${base}/partials`, { headers: studio });
+    expect(await res.json()).toEqual([
+      'src/content/blog/hello.md',
+      'src/content/docs/_hours.mdoc',
+      'src/content/docs/intro.mdoc',
+    ]);
   });
 
   it('answers 404 for unknown collections and entries', async () => {

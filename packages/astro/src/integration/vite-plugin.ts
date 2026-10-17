@@ -110,11 +110,17 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         return `export default ${JSON.stringify(manifest)};`;
       }
       if (name === WIDGETS) {
-        if (!options.vesperConfig) return 'export const widgets = {};';
+        if (!options.vesperConfig) return 'export const widgets = {};\nexport const mdxProps = {};';
         return [
           `import config from ${JSON.stringify(toPosix(options.vesperConfig))};`,
           'export const widgets = Object.fromEntries(',
           '  Object.entries(config?.widgets ?? {}).map(([name, widget]) => [name, widget.component]),',
+          ');',
+          // Declared MDX components' real Zod props schemas, so the studio
+          // checks props exactly as the site does, in every mode (spec §6.5.2).
+          'export const mdxProps = Object.fromEntries(',
+          '  Object.entries(config?.mdx?.components ?? {}).flatMap(([name, component]) =>',
+          '    component?.props ? [[name, component.props]] : []),',
           ');',
         ].join('\n');
       }
@@ -129,12 +135,13 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           `import { createLocalApi, mountStudio } from ${JSON.stringify(toPosix(options.adminEntry))};`,
           `import ${JSON.stringify(toPosix(options.adminCss))};`,
           `import manifest from '${MANIFEST}';`,
-          `import { widgets } from '${WIDGETS}';`,
+          `import { widgets, mdxProps } from '${WIDGETS}';`,
           "const element = document.getElementById('vesper-studio');",
           'if (element) {',
           '  mountStudio(element, {',
           '    manifest,',
           '    widgets,',
+          '    mdxProps,',
           // Local mode only while astro dev runs; GitHub and cloud modes arrive in Phases 3 and 4.
           `    api: import.meta.env.DEV ? createLocalApi(${JSON.stringify(options.apiBase)}) : null,`,
           `    siteName: ${JSON.stringify(options.siteName)},`,
