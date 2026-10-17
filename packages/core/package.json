@@ -29,9 +29,15 @@
   },
   "//dependencies": "yaml: Astro 7.4's own YAML parser, and a lossless CST for editing. js-yaml: what Astro 6.x-7.3 parse with; used to refuse structural edits where the two disagree.",
   "dependencies": {
+    "@markdoc/markdoc": "^0.5.10",
     "github-slugger": "^2.0.0",
     "js-yaml": "^4.3.2",
     "jsonc-parser": "^3.3.1",
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-gfm": "^3.1.0",
+    "mdast-util-mdx": "^3.0.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "micromark-extension-mdxjs": "^3.0.0",
     "picomatch": "^4.0.7",
     "yaml": "^2.9.1"
   },
@@ -39,6 +45,7 @@
   "devDependencies": {
     "@astrojs/internal-helpers": "^0.13.0",
     "@types/js-yaml": "^4.0.9",
+    "@types/mdast": "^4.0.4",
     "@types/picomatch": "^4.0.3",
     "zod": "^4.6.7"
   }

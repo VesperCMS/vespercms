@@ -126,3 +126,14 @@ export type {
   ReadOnlyCollectionReason,
   SchedulePresentation,
 } from './manifest/types.ts';
+
+// Bodies as blocks, for splice-on-save editing (DECISIONS.md, "Studio").
+export {
+  parseBody,
+  assembleBody,
+  keepAll,
+  type BodyFormat,
+  type BodyBlock,
+  type BodyItem,
+  type ParsedBody,
+} from './files/body.ts';
