@@ -64,6 +64,30 @@ jobs:
       # step, which is itself part of what's being tested.
       - run: npm test
 
+  astro6:
+    # Vesper supports Astro 6 and 7 (spec D1). The workspace runs on Astro 7;
+    # this job installs fixtures/astro6-site (Astro 6, Vite 7) on its own.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            fixtures/astro6-site/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix fixtures/astro6-site
+      # The astro:content shim covers Astro 6's exports, and the site's manifest is right.
+      # VESPER_ASTRO6 makes a missing install fail instead of skipping.
+      - run: npx vitest run --project integration packages/astro/test/astro-versions
+        env:
+          VESPER_ASTRO6: '1'
+      # A real Astro 6 build with vesper(): the studio shell and the manifest are emitted.
+      - run: npm run build --prefix fixtures/astro6-site
+      - run: test -f fixtures/astro6-site/dist/admin/index.html && test -f fixtures/astro6-site/dist/_vesper/manifest.json
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -102,7 +126,8 @@ jobs:
           path: apps/playground/dist
       - run: npx playwright install --with-deps chromium
       # Every page served by the no-rewrite static server (the spec §6.16 "plain host"),
-      # checked with axe.
+      # checked with axe; then the studio in local mode on astro dev, over a throwaway
+      # copy of the playground.
       - run: npm run e2e
       - uses: actions/upload-artifact@v7
         if: failure()

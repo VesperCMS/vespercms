@@ -3,7 +3,7 @@
 coverage/
 playwright-report/
 test-results/
-package-lock.json
+**/package-lock.json
 
 # Prose keeps its authored formatting; Prettier would re-pad every table.
 **/*.md
@@ -18,4 +18,7 @@ apps/playground/src/content/
 apps/playground/src/data/
 apps/playground/fixtures/
 packages/astro/test/fixtures/
+fixtures/astro6-site/src/content/
+fixtures/astro6-site/src/data/
 apps/playground/vesper.redirects.yaml
+e2e/.studio-site

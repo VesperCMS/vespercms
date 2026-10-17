@@ -23,7 +23,7 @@
     "typecheck": "tsc -b && tsc -p packages/core && tsc -p packages/astro && tsc -p packages/ui && tsc -p packages/admin && tsc -p e2e && tsc -p tsconfig.tools.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "//e2e": "Playwright + axe against the built playground on a no-rewrite static server (the spec §6.16 plain host). Build the playground first.",
+    "//e2e": "Playwright + axe: the built playground on a no-rewrite static server (the spec §6.16 plain host; build the playground first), and the studio in local mode on astro dev over a throwaway copy of the playground.",
     "e2e": "playwright test",
     "//manifest": "Prints the playground's manifest, generated from source by the vesper CLI.",
     "manifest": "node packages/astro/src/node/cli.ts manifest --root apps/playground",

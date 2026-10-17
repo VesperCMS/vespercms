@@ -1,0 +1,162 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page } from '@playwright/test';
+import { jpegFacts } from '../../packages/admin/src/media/formats.ts';
+
+/*
+ * The studio in local mode, end to end: astro dev over a throwaway copy of
+ * the playground (scripts/studio-site.mjs). The tests read the copy's files
+ * to prove what a save really wrote.
+ */
+
+const site = fileURLToPath(new URL('../.studio-site/', import.meta.url));
+const fixtures = fileURLToPath(new URL('../../apps/playground/fixtures/uploads/', import.meta.url));
+const read = (path: string) => readFileSync(`${site}${path}`, 'utf8');
+const WCAG21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+
+async function expectAccessible(page: Page) {
+  const { violations } = await new AxeBuilder({ page })
+    .withTags(WCAG21_AA)
+    // Astro's own dev toolbar isn't part of the studio.
+    .exclude('astro-dev-toolbar')
+    .analyze();
+  expect(violations.map(({ id, nodes }) => ({ id, targets: nodes.map((n) => n.target) }))).toEqual(
+    [],
+  );
+}
+
+test.beforeEach(async ({ context, baseURL }) => {
+  // Hermetic: map tiles and anything else off-site are blocked.
+  const origin = baseURL ?? '';
+  await context.route('**/*', (route) =>
+    route.request().url().startsWith(origin) ? route.continue() : route.abort(),
+  );
+});
+
+test('every screen passes axe: home, list, editor, media', async ({ page }) => {
+  await page.goto('/admin/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
+  await expect(page.getByText(/4 entries/)).toBeVisible();
+  await expectAccessible(page);
+
+  await page.goto('/admin/#/c/blog');
+  await expect(page.getByRole('grid', { name: 'Blog posts' })).toBeVisible();
+  await expectAccessible(page);
+
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toHaveValue(
+    'Harbor at dawn',
+  );
+  await expectAccessible(page);
+
+  await page.goto('/admin/#/media');
+  await expect(page.getByRole('heading', { level: 2, name: 'harbor-at-dawn.jpg' })).toBeVisible();
+  await expectAccessible(page);
+});
+
+test('a deep link survives a reload', async ({ page }) => {
+  await page.goto('/admin/#/c/pages/e/academics%2Fnursing');
+  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toBeVisible();
+  await page.reload();
+  await expect(page).toHaveURL(/#\/c\/pages\/e\/academics%2Fnursing$/);
+  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toBeVisible();
+});
+
+test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only that line changes', async ({
+  page,
+}) => {
+  const before = read('src/content/blog/welcome.md');
+  await page.goto('/admin/#/c/blog');
+  const row = page.getByRole('row', { name: /Welcome to the playground/ });
+  await row.focus();
+  await page.keyboard.press('Enter');
+  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  await expect(title).toHaveValue('Welcome to the playground');
+  await title.focus();
+  await page.keyboard.press('End');
+  await page.keyboard.type(', again');
+  await expect(page.getByRole('status').first()).toHaveText('Unsaved changes');
+  await page.keyboard.press('Control+s');
+  await expect(page.getByText('Saved just now')).toBeVisible();
+
+  const after = read('src/content/blog/welcome.md');
+  expect(after).toBe(
+    before.replace(
+      'title: "Welcome to the playground"',
+      'title: "Welcome to the playground, again"',
+    ),
+  );
+});
+
+test('the writing view rewrites only the paragraph that was edited', async ({ page }) => {
+  const before = read('src/content/blog/harbor-at-dawn.md');
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  const body = page.getByRole('textbox', { name: 'Body' });
+  await body.getByText(/^Park by the old customs house/).click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Bring a thermos.');
+  await page.keyboard.press('Control+s');
+  await expect(page.getByText('Saved just now')).toBeVisible();
+
+  const after = read('src/content/blog/harbor-at-dawn.md');
+  expect(after).toBe(
+    before.replace(
+      'takes twenty minutes at an easy pace.',
+      'takes twenty minutes at an easy pace. Bring a thermos.',
+    ),
+  );
+});
+
+test('a sideways phone photo is uploaded upright, without its location', async ({ page }) => {
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  await page.getByRole('button', { name: 'Replace image' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Choose an image' });
+  await dialog.locator('input[type=file]').setInputFiles(`${fixtures}portrait-exif-6.jpg`);
+  await expect(page.getByText(/Turned the photo upright\. Removed location data/)).toBeVisible();
+
+  const uploaded = readFileSync(`${site}src/assets/blog/portrait-exif-6.jpg`);
+  const facts = jpegFacts(new Uint8Array(uploaded));
+  // Stored portrait now: 1200 wide, 1600 tall, with no EXIF orientation or GPS left.
+  expect(facts).toMatchObject({ width: 1200, height: 1600, hasLocation: false });
+  expect(facts.orientation).toBeUndefined();
+});
+
+test('an SVG with scripts is sanitized; HEIC is explained where it can’t be converted', async ({
+  page,
+}) => {
+  await page.goto('/admin/#/media');
+  await expect(page.getByRole('heading', { level: 1, name: 'Media' })).toBeVisible();
+  const input = page.locator('input[type=file]');
+
+  await input.setInputFiles(`${fixtures}script.svg`);
+  await expect(page.getByRole('status').filter({ hasText: 'Added' })).toContainText(
+    'Removed scripts and unsafe links from the SVG',
+  );
+  const svg = read('src/assets/script.svg');
+  expect(svg).not.toMatch(/<script|onload|javascript:|foreignObject/i);
+
+  await input.setInputFiles(`${fixtures}iphone-gps.heic`);
+  await expect(page.getByRole('alert')).toContainText('can’t convert iPhone (HEIC) photos');
+});
+
+test('a custom widget edits its field', async ({ page }) => {
+  await page.goto('/admin/#/c/locations/e/main-campus');
+  const hours = page.getByRole('group', { name: 'Hours' });
+  await expect(hours.getByLabel('Days, row 1')).toHaveValue('Mon–Fri');
+  await hours.getByRole('button', { name: 'Add opening hours' }).click();
+  await hours.getByLabel('Days, row 3').fill('Holidays');
+  await page.keyboard.press('Control+s');
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  expect(read('src/data/locations.yaml')).toMatch(/days: Holidays/);
+});
+
+test('"Edit this page" knows which entries a page shows', async ({ page }) => {
+  await page.goto('/blog/harbor-at-dawn/');
+  const entries = JSON.parse(
+    (await page.locator('#vesper-page-entries').textContent()) ?? '[]',
+  ) as { collection: string; id: string; kind: string }[];
+  expect(entries).toContainEqual(
+    expect.objectContaining({ collection: 'blog', id: 'harbor-at-dawn', kind: 'shown' }),
+  );
+});

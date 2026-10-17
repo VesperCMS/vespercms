@@ -80,6 +80,8 @@ export default defineConfig(
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      // The studio e2e tests' throwaway copy of the playground.
+      'e2e/.studio-site/**',
       // Byte-exact content fixtures: never linted, never formatted.
       'packages/core/test/corpus/**',
       'packages/core/test/fixtures/**',
@@ -88,6 +90,7 @@ export default defineConfig(
       'apps/playground/fixtures/**',
       // Fixture Astro sites: their types come from astro:content, which only exists inside Astro.
       'packages/astro/test/fixtures/**',
+      'fixtures/**',
     ],
   },
   js.configs.recommended,

@@ -8,6 +8,8 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+# The studio e2e tests' throwaway copy of the playground (scripts/studio-site.mjs).
+e2e/.studio-site/
 
 # Secrets: local Worker vars and env files.
 .dev.vars

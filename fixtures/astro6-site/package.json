@@ -1,0 +1,13 @@
+{
+  "name": "vesper-astro6-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "//": "An Astro 6 site, installed on its own (not a workspace), so Vesper is tested against Astro 6's Vite 7 and Zod. @vesper/astro resolves from the repo root.",
+  "type": "module",
+  "scripts": {
+    "build": "node --conditions=@vesper/source node_modules/astro/bin/astro.mjs build"
+  },
+  "dependencies": {
+    "astro": "6.4.8"
+  }
+}

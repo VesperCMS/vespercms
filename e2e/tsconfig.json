@@ -8,5 +8,6 @@
     "declaration": false,
     "noEmit": true
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  "exclude": [".studio-site"]
 }
