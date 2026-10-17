@@ -2,6 +2,8 @@ import { builtinModules } from 'node:module';
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 // Package boundaries (spec §5, §12). Exported so the boundary test can assert
@@ -96,7 +98,7 @@ export default defineConfig(
         projectService: {
           // Root-level TypeScript files that no package tsconfig covers are
           // checked with tsconfig.tools.json.
-          allowDefaultProject: ['*.config.ts', 'scripts/*.d.mts'],
+          allowDefaultProject: ['*.config.ts', 'vitest.setup.ts', 'scripts/*.d.mts'],
           defaultProject: 'tsconfig.tools.json',
         },
         tsconfigRootDir: import.meta.dirname,
@@ -129,6 +131,11 @@ export default defineConfig(
     // type-checks it instead.
     files: ['apps/playground/**/*.ts'],
     extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    // The studio's React packages: accessibility and hooks rules (spec D11).
+    files: ['packages/{ui,admin}/**/*.tsx'],
+    extends: [jsxA11y.flatConfigs.strict, reactHooks.configs.flat.recommended],
   },
   {
     files: ['packages/core/src/**/*.ts'],

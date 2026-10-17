@@ -3,10 +3,10 @@
   "//": "Root-level TypeScript that no package owns: tool configs and declaration files for repo scripts. ESLint's project service uses it as the default project; npm run typecheck checks it.",
   "compilerOptions": {
     "lib": ["ES2023", "DOM"],
-    "types": ["node"],
+    "types": ["node", "@testing-library/jest-dom/vitest"],
     "composite": false,
     "declaration": false,
     "noEmit": true
   },
-  "include": ["*.config.ts", "scripts/*.d.mts"]
+  "include": ["*.config.ts", "vitest.setup.ts", "scripts/*.d.mts"]
 }

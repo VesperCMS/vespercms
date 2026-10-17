@@ -1,3 +1,4 @@
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 import { sourceConditions } from './scripts/vite-source-conditions.mjs';
 
@@ -5,7 +6,7 @@ import { sourceConditions } from './scripts/vite-source-conditions.mjs';
 // Tests run in Node by default; a file that needs a DOM opts in with a
 // `// @vitest-environment jsdom` docblock.
 export default defineConfig({
-  ...sourceConditions(),
+  plugins: [...(sourceConditions().plugins ?? []), react()],
   test: {
     projects: [
       {
@@ -14,6 +15,7 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['packages/*/src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
+          setupFiles: ['./vitest.setup.ts'],
         },
       },
       {

@@ -2,7 +2,17 @@
 
 Vesper's design tokens and, from Phase 2, its accessible component kit: Button, IconButton, Link, TextField, TextArea, Select, Combobox, Checkbox, Switch, RadioGroup, Dialog, Drawer, Menu, Disclosure, Table, InlineStatus and ErrorSummary (spec §10.5). Screens compose these and nothing else.
 
-**Status:** Phase 0. Only `src/tokens.css` exists. The package is private until the components land.
+**Status:** Phase 2, v1 of the kit. The kit is built on React Aria Components (DECISIONS.md). The package stays private: `@vesper/admin` compiles it into the studio bundle, and nothing else uses it yet.
+
+| Group | Components |
+|---|---|
+| Actions | `Button` (primary, secondary, quiet, danger), `IconButton` (close, more or drag only, always with a label), `Link` |
+| Text inputs | `TextField`, `TextArea`: visible label, "(required)" in words, help and error text linked with aria-describedby |
+| Choices | `Select`, `Combobox`, `MultiCombobox` (tags and multi-references, with named remove buttons), `Checkbox`, `Switch` (state also in words), `RadioGroup` |
+| Overlays | `Dialog` (focus trap, Escape, focus returns to the trigger), `Drawer`, `Menu` (the "…" menu), `Disclosure` |
+| Data and feedback | `Table`, `InlineStatus` (status in words), `ErrorSummary` (takes focus, links to fields) |
+
+Each component has axe and keyboard tests in `src/components/ui.test.tsx`. Colour contrast is checked separately, on the tokens.
 
 ## Tokens
 
