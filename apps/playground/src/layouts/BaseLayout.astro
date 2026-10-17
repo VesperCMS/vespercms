@@ -1,4 +1,5 @@
 ---
+import { getEntry } from 'astro:content';
 import '../styles/site.css';
 
 interface Props {
@@ -7,6 +8,9 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
+const settings = await getEntry('settings', 'site');
+if (!settings) throw new Error('src/content/settings/site.yaml is missing');
+const { siteName, tagline } = settings.data;
 const nav = [
   { href: '/', label: 'Home' },
   { href: '/about/', label: 'About' },
@@ -14,6 +18,7 @@ const nav = [
   { href: '/campus-life/', label: 'Campus life' },
   { href: '/blog/', label: 'Blog' },
   { href: '/docs/', label: 'Docs' },
+  { href: '/locations/', label: 'Locations' },
   { href: '/contact/', label: 'Contact' },
 ];
 const current = Astro.url.pathname;
@@ -25,7 +30,7 @@ const current = Astro.url.pathname;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title === 'Vesper playground' ? title : `${title} · Vesper playground`}</title>
+    <title>{title === siteName ? title : `${title} · ${siteName}`}</title>
     {description && <meta name="description" content={description} />}
   </head>
   <body>
@@ -34,7 +39,7 @@ const current = Astro.url.pathname;
     </a>
     <header class="site-header">
       <a class="site-name" href="/">
-        Vesper playground
+        {siteName}
       </a>
       <nav aria-label="Main">
         <ul>
@@ -63,7 +68,7 @@ const current = Astro.url.pathname;
       <slot />
     </main>
     <footer class="site-footer">
-      <p>A test site for Vesper. All content is fictional.</p>
+      <p>{tagline} All content is fictional.</p>
     </footer>
   </body>
 </html>

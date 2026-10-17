@@ -26,6 +26,8 @@ npm run check -w @vesper/playground    # astro check
 | `authors` | `file('src/data/authors.json')` | JSON data collection; `z.email()`, `z.url()` |
 | `pages` | `glob('**/[^_]*.{md,mdx}')` | The folder hierarchy (spec §6.15): section `index.md` pages, four levels deep at `academics/nursing/clinical-placements/`, `_order.yaml` files, a folder with no index (`admissions/`), an `_`-prefixed draft the pattern skips, a field group, a repeater with an inline-markdown widget, and an MDX page with a declared (`Callout`) and an undeclared, imported (`Gallery`) component. The root `index.md` is the home page's content. |
 | `docs` | `glob('**/[^_]*.mdoc')` | Markdoc (spec §6.5.1): a block tag with children (`callout`), a self-closing tag (`youtube`), an inline tag (`abbr`), a partial (`_support-hours.mdoc`, included from two folder depths), `$product` variables, `{% if %}`/`{% else /%}`, functions (`equals`, `and`) and a class annotation (`{% .lead %}`). Tags are defined in `markdoc.config.mjs`. |
+| `settings` | `glob('site.yaml')` | A singleton (one entry, ID `site`) read by the layout: a folded `>-` string, a commented-out key, a colour with a named palette, `z.url()`, the site time zone (spec §6.17), and a repeater mixing block and flow maps. |
+| `locations` | `file('src/data/locations.yaml')` | One YAML file holding many entries. `geo` (a lat/lng object) and `color` (a hex string), tagged with `.meta({ widget })` exactly as `fields.geo()` and `fields.color()` will produce them. Flow and block maps, single and double quotes. |
 
 ## Other fixtures
 

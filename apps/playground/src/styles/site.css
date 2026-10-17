@@ -186,3 +186,12 @@ code {
   padding: 2rem 1rem;
   background: var(--panel);
 }
+
+.swatch {
+  display: inline-block;
+  width: 0.875em;
+  height: 0.875em;
+  margin-right: 0.5rem;
+  border: 1px solid var(--fg);
+  vertical-align: baseline;
+}

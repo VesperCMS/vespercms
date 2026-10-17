@@ -104,4 +104,47 @@ const docs = defineCollection({
   }),
 });
 
-export const collections = { blog, authors, pages, docs };
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i);
+
+const settings = defineCollection({
+  // A singleton: one YAML file, one entry (ID `site`). vesper.config.ts marks
+  // it `singleton: true` from Phase 1.
+  loader: glob({ pattern: 'site.yaml', base: './src/content/settings' }),
+  schema: z.object({
+    siteName: z.string(),
+    tagline: z.string().meta({ widget: 'textarea' }),
+    brandColor: hexColor.meta({
+      widget: 'color',
+      widgetOptions: { palette: { Indigo: '#28335f', Pine: '#2f5d50', Brick: '#8a3b3b' } },
+    }),
+    website: z.url(),
+    timeZone: z
+      .string()
+      .meta({ description: 'IANA time zone name, for example America/New_York (spec §6.17).' }),
+    social: z
+      .array(
+        z.object({
+          network: z.enum(['mastodon', 'bluesky', 'instagram', 'youtube', 'linkedin']),
+          url: z.url(),
+        }),
+      )
+      .default([]),
+  }),
+});
+
+const locations = defineCollection({
+  loader: file('src/data/locations.yaml'),
+  schema: z.object({
+    name: z.string(),
+    address: z.string(),
+    // The raw Zod that fields.geo() and fields.color() produce (spec §6.3.2). These stay
+    // raw on purpose, as the documented equivalent of the helpers.
+    geo: z
+      .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+      .meta({ widget: 'geo', label: 'Map location' }),
+    color: hexColor.meta({ widget: 'color', label: 'Map pin color' }),
+    open: z.boolean(),
+  }),
+});
+
+export const collections = { blog, authors, pages, docs, settings, locations };

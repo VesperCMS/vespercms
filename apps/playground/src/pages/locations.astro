@@ -1,0 +1,31 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const locations = await getCollection('locations');
+---
+
+<BaseLayout title="Locations" description="Where to find the college.">
+  <h1>Locations</h1>
+  <ul class="entry-list">
+    {locations.map((location) => (
+      <li>
+        <h2>
+          <span
+            class="swatch"
+            style={{ backgroundColor: location.data.color }}
+            aria-hidden="true"
+          ></span>
+          {location.data.name}
+        </h2>
+        <p>
+          {location.data.address}
+          {!location.data.open && ' (closed for renovation)'}
+        </p>
+        <p class="muted">
+          Map pin {location.data.color} at {location.data.geo.lat}, {location.data.geo.lng}
+        </p>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>

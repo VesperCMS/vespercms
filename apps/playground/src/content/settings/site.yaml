@@ -1,0 +1,13 @@
+# Site-wide settings: a singleton (one entry, ID "site").
+siteName: Vesper playground
+tagline: >-
+  A small, fictional college website that exercises every feature of the
+  Vesper studio, from nested pages to Markdoc tags.
+# brandSecondary: '#8a3b3b'
+brandColor: '#28335f'
+website: https://playground.example.com
+timeZone: America/New_York
+social:
+  - network: mastodon
+    url: https://social.example.com/@playground
+  - { network: youtube, url: "https://www.youtube.com/@vesper-playground" }

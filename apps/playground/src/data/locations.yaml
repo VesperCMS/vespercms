@@ -1,0 +1,22 @@
+# One file, many entries (a file() collection). Mixed flow and block maps and
+# both quote styles on purpose: the serializer must keep each as it is.
+- id: main-campus
+  name: Main campus
+  address: "100 College Drive"
+  geo: { lat: 36.6954, lng: -81.9772 }
+  color: '#28335f'
+  open: true
+- id: harbor-center
+  name: 'Harbor Center'
+  address: 2 Wharf Street
+  geo:
+    lat: 36.7021
+    lng: -81.9655
+  color: "#2f5d50"
+  open: true
+- id: north-annex
+  name: North annex
+  address: 45 Ridge Road
+  geo: {lat: 36.7290, lng: -81.9510}
+  color: '#8a3b3b'
+  open: false
