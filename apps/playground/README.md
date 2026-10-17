@@ -38,6 +38,10 @@ npm run check -w @vesper/playground    # astro check
 - `src/forms.config.ts`: the contact form (department select for routing, an upload field, a confirmation email). `<Form>` renders it from Phase 6.
 - The header reserves the spot for `<Search />` (Phase 2.9).
 
+## Upload hygiene samples
+
+`fixtures/uploads/` holds a HEIC with GPS data, an EXIF-rotated JPEG and an SVG with embedded scripts, each with its expected result and provenance in that folder's README. They sit outside `public/`, so the build never serves them.
+
 ## Images
 
-The blog images are generated illustrations (simple SVG shapes rendered by sharp), not photographs. They will be replaced with openly licensed photos once those are approved. Their alt text describes what they actually show.
+The blog images are generated illustrations (simple SVG shapes rendered by sharp), not photographs. They're kept on purpose: they have no provenance risk, and the real-photo cases are covered by the hygiene samples. Their alt text describes what they actually show.

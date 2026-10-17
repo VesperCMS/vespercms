@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 120" width="120" height="120" onload="alert('svg onload')">
+  <!-- Upload-hygiene fixture (spec §6.6.6). Every script vector below must be stripped
+       before the file is committed. Kept out of public/ so it is never served. -->
+  <title>Badge with an embedded script</title>
+  <script type="text/javascript">alert('svg script element');</script>
+  <script href="https://example.com/evil.js"></script>
+  <rect width="120" height="120" rx="16" fill="#28335f" onclick="alert('rect onclick')"/>
+  <circle cx="80" cy="40" r="16" fill="#fff1c9" onmouseover="alert('circle onmouseover')"/>
+  <a xlink:href="javascript:alert('xlink javascript url')">
+    <text x="20" y="100" fill="#fff1c9" font-family="sans-serif" font-size="18">Click</text>
+  </a>
+  <a href="javascript:alert('href javascript url')"><rect x="70" y="80" width="30" height="20" fill="#f3c27a"/></a>
+  <foreignObject x="0" y="0" width="1" height="1">
+    <iframe xmlns="http://www.w3.org/1999/xhtml" src="javascript:alert('foreignObject iframe')"></iframe>
+  </foreignObject>
+  <set attributeName="onmouseover" to="alert('set animation handler')"/>
+  <animate attributeName="href" values="javascript:alert('animate href')"/>
+</svg>
