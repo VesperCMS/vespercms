@@ -73,6 +73,8 @@ export type FieldModel = {
   readOnly?: boolean;
   placeholder?: string;
   autocomplete?: string;
+  /** Where the editor shows the field: in the main column or the Details section (spec §10.3). */
+  placement?: 'main' | 'details';
   /** Forms: the value may be repeated in a confirmation email (D20). */
   safeToEcho?: boolean;
 };

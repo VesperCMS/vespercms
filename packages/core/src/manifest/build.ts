@@ -1,6 +1,6 @@
 import { dataFormatOf } from '../files/data-file.ts';
 import { entryKindOf, patternExtensions } from '../collections/entries.ts';
-import type { Diagnostic } from '../field-model.ts';
+import type { Diagnostic, FieldModel } from '../field-model.ts';
 import { humanize } from '../schema/humanize.ts';
 import { walkSchema } from '../schema/walk.ts';
 import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
@@ -39,6 +39,8 @@ export type CollectionConfig = {
   newEntryPath?: string;
   schedule?: boolean | { unpublish?: boolean; publishAt?: string; unpublishAt?: string };
   search?: boolean;
+  /** Editor placement per top-level field key, overriding `.meta({ placement })`. */
+  placement?: Record<string, 'main' | 'details'>;
 };
 
 export type ManifestInput = {
@@ -150,7 +152,10 @@ function buildCollection(
     const walk = walkSchema(input.schema, { collection: input.name });
     diagnostics.push(...walk.diagnostics);
     fields = walk.fields
-      ? resolveWidgets(walk.fields, diagnostics, { custom: widgets, collection: input.name })
+      ? withPlacement(
+          resolveWidgets(walk.fields, diagnostics, { custom: widgets, collection: input.name }),
+          config.placement,
+        )
       : null;
     extraKeys = walk.extraKeys;
   }
@@ -166,6 +171,17 @@ function buildCollection(
     ...(extraKeys ? { extraKeys } : {}),
     presentation: presentationOf(config),
   };
+}
+
+function withPlacement(
+  fields: FieldModel[],
+  placement: CollectionConfig['placement'],
+): FieldModel[] {
+  if (!placement) return fields;
+  return fields.map((field) => {
+    const where = placement[field.path[0] ?? ''];
+    return where === 'main' || where === 'details' ? { ...field, placement: where } : field;
+  });
 }
 
 function sourceOf(loader: LoaderInfo): CollectionSource {

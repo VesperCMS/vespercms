@@ -62,6 +62,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
 
         const adminEntry = fileURLToPath(import.meta.resolve('@vesper/admin'));
         const adminCss = fileURLToPath(import.meta.resolve('@vesper/admin/studio.css'));
+        const studioFromSource = adminCss.endsWith(`${sep}src${sep}studio.css`);
         const plugins: PluginOption[] = [
           studioPlugin({
             root,
@@ -73,12 +74,13 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             siteUrl: base,
             adminEntry,
             adminCss,
+            studioFromSource,
           }),
         ];
         // In this workspace the studio's stylesheet is its Tailwind source,
         // compiled on the fly. Installed from npm it's precompiled CSS
         // (dist/studio.css) and this never runs.
-        if (adminCss.endsWith(`${sep}src${sep}studio.css`)) {
+        if (studioFromSource) {
           const { default: tailwindcss } = await import('@tailwindcss/vite');
           plugins.push(tailwindcss());
         }

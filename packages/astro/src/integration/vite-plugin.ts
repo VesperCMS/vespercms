@@ -28,7 +28,24 @@ export type StudioPluginOptions = {
   /** Resolved `@vesper/admin` and its stylesheet: dist/ when installed, src/ in this workspace. */
   adminEntry: string;
   adminCss: string;
+  /** True in this workspace, where @vesper/admin resolves to its TypeScript source. */
+  studioFromSource: boolean;
 };
+
+/** @vesper/core's runtime packages, which the browser loads through the studio. */
+const CORE_DEPENDENCIES = [
+  '@markdoc/markdoc',
+  'github-slugger',
+  'js-yaml',
+  'jsonc-parser',
+  'mdast-util-from-markdown',
+  'mdast-util-gfm',
+  'mdast-util-mdx',
+  'micromark-extension-gfm',
+  'micromark-extension-mdxjs',
+  'picomatch/posix.js',
+  'yaml',
+];
 
 const STUDIO = 'virtual:vesper/studio';
 const MANIFEST = 'virtual:vesper/manifest';
@@ -53,10 +70,16 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           include: [
             'react',
             'react/jsx-runtime',
-            // This workspace compiles the studio's TSX in dev mode.
-            'react/jsx-dev-runtime',
             'react-dom/client',
             '@vesper/astro > @vesper/admin > react-aria-components',
+            ...(options.studioFromSource
+              ? // This workspace: the studio is TSX compiled in dev mode, and
+                // @vesper/core is linked source, so its own packages are named.
+                [
+                  'react/jsx-dev-runtime',
+                  ...CORE_DEPENDENCIES.map((dep) => `@vesper/astro > @vesper/core > ${dep}`),
+                ]
+              : ['@vesper/astro > @vesper/admin > @vesper/core']),
           ],
         },
       };
@@ -100,6 +123,17 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           `    siteUrl: ${JSON.stringify(options.siteUrl)},`,
           '  });',
           '}',
+          // Astro reloads every open page when a content file changes (a
+          // full-reload with path '*' and no triggeredBy). The studio made
+          // that change itself, and a reload would throw away its state, so
+          // it steps out of the way: Vite's client reads the payload after
+          // this listener and only reloads for a .html path matching the
+          // page. Code changes carry triggeredBy and still reload.
+          'if (import.meta.hot) {',
+          "  import.meta.hot.on('vite:beforeFullReload', (payload) => {",
+          "    if (payload.path === '*' && !payload.triggeredBy) payload.path = '/__vesper_studio_stays__.html';",
+          '  });',
+          '}',
         ].join('\n');
       }
       return null;
@@ -129,5 +163,6 @@ function reloadStudio(server: ViteDevServer): void {
   const client = server.environments.client;
   const module = client.moduleGraph.getModuleById(`\0${MANIFEST}`);
   if (module) client.moduleGraph.invalidateModule(module);
-  client.hot.send({ type: 'full-reload' });
+  // triggeredBy marks a real reload, which the studio page doesn't skip.
+  client.hot.send({ type: 'full-reload', path: '*', triggeredBy: 'vesper:manifest' });
 }

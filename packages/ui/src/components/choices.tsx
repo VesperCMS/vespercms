@@ -381,7 +381,12 @@ export function RadioGroup({
       {label && (
         <Label className="text-sm font-semibold text-content">
           {label}
-          {props.isRequired && <span className="font-normal text-content-muted"> (required)</span>}
+          {props.isRequired && (
+            <>
+              {' '}
+              <span className="font-normal text-content-muted">(required)</span>
+            </>
+          )}
         </Label>
       )}
       <div

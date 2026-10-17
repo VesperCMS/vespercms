@@ -1,12 +1,13 @@
 import type { CollectionManifest, Manifest } from '@vesper/core';
 import { createContext, useContext } from 'react';
-import type { WidgetLoader } from '../types.ts';
+import type { WidgetComponent } from '../types.ts';
 import type { StudioApi } from './api.ts';
 
 export type Studio = {
   manifest: Manifest;
   api: StudioApi;
-  widgets: Record<string, WidgetLoader>;
+  /** Custom widgets, as lazy components: each loads the first time a field uses it. */
+  widgets: Record<string, WidgetComponent>;
   siteName: string;
   siteUrl: string | undefined;
   collection(name: string): CollectionManifest | undefined;

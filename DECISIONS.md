@@ -181,6 +181,18 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 **`issuesFromZod` rewrites Zod's built-in messages ("Invalid input: expected string, received undefined" becomes "This is required.") and keeps any message the schema's author wrote, such as a `.refine()` message.** It reads issues structurally, so core still never imports Zod. Saves validate with `reportInput: true` so a missing value can be told from a wrong one.
 
+### 2026-10-17: Local mode saves when you press Save
+
+**In local mode the editor writes to disk only on Save (or Ctrl/⌘+S). It shows "Unsaved changes" in the top bar, asks before you leave with unsaved changes, and warns on reload.** Autosave to disk would write half-finished values that the schema rejects, and every write makes Astro reload the site. Autosave belongs to cloud drafts (Phase 4), where a draft isn't the published file.
+
+### 2026-10-17: The studio page ignores Astro's reload after content changes
+
+**After any content file changes, Astro tells every open page to reload. The studio page skips that one reload (a `full-reload` with path `*` and no `triggeredBy`) through Vite's `vite:beforeFullReload` hook, because the studio made the change and reloading would throw away its state.** Code changes and manifest changes still reload it. This relies on Vite's client reading the payload after its listeners run (true in Vite 5 to 8). If that ever changes, the studio simply reloads after a save, as it did before. A file changed by someone else while it's open is caught at save time as a conflict.
+
+### 2026-10-17: Secondary fields go to Details by rule, and authors can override
+
+**The editor puts slugs, dates, tags, ordering, SEO and scheduling fields in the Details section (spec §10.3). Everything else stays in the main column, in schema order.** A field's `placement` overrides the rule, set either with `.meta({ placement: 'details' })` or in `vesper.config.ts` as `collections.blog.placement: { summary: 'details' }`.
+
 ### 2026-10-17: In this workspace, the integration compiles the studio's CSS from source
 
 **When `@vesper/admin/studio.css` resolves to `src/` (the `@vesper/source` condition), the integration adds `@tailwindcss/vite` to the site's Vite. Installed from npm, it resolves to the precompiled `dist/studio.css` and Tailwind never loads.** So the playground stays a zero-config site, and the dev loop still never builds `dist/`. `@tailwindcss/vite` is a devDependency of `@vesper/astro` for this reason only.

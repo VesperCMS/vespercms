@@ -7,7 +7,7 @@ import type {
 } from '@vesper/core';
 import { render } from '@testing-library/react';
 import axe from 'axe-core';
-import { expect, vi } from 'vitest';
+import { expect, vi, type Mock } from 'vitest';
 import snapshot from '../../../astro/test/__snapshots__/playground.manifest.json' with { type: 'json' };
 import type { StudioApi } from '../app/api.ts';
 import { App } from '../app/App.tsx';
@@ -39,9 +39,7 @@ export type FakeData = {
 };
 
 /** An in-memory StudioApi. Every method is a `vi.fn`, so tests can assert on calls. */
-export function fakeApi(
-  data: FakeData = {},
-): StudioApi & { [K in keyof StudioApi]: ReturnType<typeof vi.fn> } {
+export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<StudioApi[K]> } {
   const notFound = (what: string) => Promise.reject(new Error(`${what} not found`));
   return {
     summary: vi.fn(() => Promise.resolve(data.summary ?? [])),
@@ -50,8 +48,14 @@ export function fakeApi(
       const doc = data.documents?.[`${collection}/${id}`];
       return doc ? Promise.resolve(structuredClone(doc)) : notFound(`${collection}/${id}`);
     }),
-    saveEntry: vi.fn(() =>
-      Promise.resolve({ ok: true, id: 'x', path: 'x', version: 'v2', reformatted: false }),
+    saveEntry: vi.fn((request: { id: string }) =>
+      Promise.resolve({
+        ok: true,
+        id: request.id || 'new-entry',
+        path: 'x',
+        version: 'v2',
+        reformatted: false,
+      }),
     ),
     deleteEntry: vi.fn(() =>
       Promise.resolve({ ok: true, id: 'x', path: 'x', version: '', reformatted: false }),

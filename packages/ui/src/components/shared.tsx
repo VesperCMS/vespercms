@@ -34,7 +34,12 @@ export function FieldLabel({ label, isRequired }: Pick<FieldTextProps, 'label' |
   return (
     <Label className="block text-sm font-semibold text-content">
       {label}
-      {isRequired && <span className="font-normal text-content-muted"> (required)</span>}
+      {isRequired && (
+        <>
+          {' '}
+          <span className="font-normal text-content-muted">(required)</span>
+        </>
+      )}
     </Label>
   );
 }

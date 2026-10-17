@@ -26,6 +26,8 @@ export type TableProps<T extends { id: string }> = {
   sort?: SortDescriptor;
   onSortChange?: (sort: SortDescriptor) => void;
   emptyState?: ReactNode;
+  /** Makes each row a link: Enter or a click opens it. */
+  rowHref?: (row: T) => string;
 };
 
 /**
@@ -40,6 +42,7 @@ export function Table<T extends { id: string }>({
   sort,
   onSortChange,
   emptyState,
+  rowHref,
 }: TableProps<T>) {
   return (
     <RACTable
@@ -77,7 +80,11 @@ export function Table<T extends { id: string }>({
         {(row) => (
           <Row
             id={row.id}
-            className={cx('border-b border-border data-[hovered]:bg-surface-sunken', focusRing)}
+            {...(rowHref ? { href: rowHref(row) } : {})}
+            className={cx(
+              'border-b border-border data-[hovered]:bg-surface-sunken data-[href]:cursor-pointer',
+              focusRing,
+            )}
           >
             {columns.map((column) => (
               <Cell key={column.id} className={cx('px-3 py-3 align-top', focusRing)}>

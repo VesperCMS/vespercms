@@ -46,6 +46,7 @@ const KNOWN_COLLECTION = new Set([
   'newEntryPath',
   'schedule',
   'search',
+  'placement',
 ]);
 
 /**

@@ -41,6 +41,7 @@ const META_KEYS = [
   'hidden',
   'readOnly',
   'autocomplete',
+  'placement',
   'safeToEcho',
 ] as const;
 
