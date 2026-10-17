@@ -23,13 +23,12 @@ import {
   TextArea,
   type MenuItem,
 } from '@vesper/ui';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
-import { BodyEditor } from '../body/BodyEditor.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
@@ -43,6 +42,12 @@ import {
   type ValuePath,
 } from '../editor/values.ts';
 import { builtinWidget } from '../widgets/registry.ts';
+
+// Tiptap and the Markdown tooling are most of the studio's weight, and only
+// entries with a body need them: they load the first time one is opened.
+const BodyEditor = lazy(() =>
+  import('../body/BodyEditor.tsx').then((module) => ({ default: module.BodyEditor })),
+);
 
 /**
  * Opens an entry (or starts a new one when `id` is null) and hands it to the
@@ -377,14 +382,22 @@ function EntryForm({
           )}
 
           {isContent && (
-            <BodyEditor
-              value={body}
-              onChange={setBody}
-              format={bodyFormat(doc, collection)}
-              disabled={!editable}
-              entryPath={entryPath}
-              imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}
-            />
+            <Suspense
+              fallback={
+                <p role="status" className="text-sm text-content-muted">
+                  Loading the body editor…
+                </p>
+              }
+            >
+              <BodyEditor
+                value={body}
+                onChange={setBody}
+                format={bodyFormat(doc, collection)}
+                disabled={!editable}
+                entryPath={entryPath}
+                imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}
+              />
+            </Suspense>
           )}
 
           {!sourceOnly && arranged.details.length > 0 && (

@@ -18,7 +18,7 @@ import { GeoWidget } from './geo.tsx';
 import { GroupWidget, RepeaterWidget } from './group.tsx';
 import { FileWidget, ImageWidget } from './image.tsx';
 import { ReferencesWidget, ReferenceWidget } from './reference.tsx';
-import { MarkdownWidget } from './markdown.tsx';
+import { LazyMarkdownWidget } from './markdown-lazy.tsx';
 import { ColorWidget, DateTimeWidget, SlugWidget, UrlWidget } from './special.tsx';
 
 // Built-ins receive values of every shape; the registry can't be narrower.
@@ -54,7 +54,7 @@ const BUILTIN: Record<string, BuiltinWidget> = {
   group: { component: GroupWidget, group: 'boxed', rendersChildren: true },
   repeater: { component: RepeaterWidget, group: true, rendersChildren: true },
   raw: { component: RawWidget },
-  markdown: { component: MarkdownWidget },
+  markdown: { component: LazyMarkdownWidget },
   slug: { component: SlugWidget },
   color: { component: ColorWidget },
   geo: { component: GeoWidget, group: 'boxed' },

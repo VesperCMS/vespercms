@@ -111,7 +111,7 @@ The spec's three "Done when" criteria, with evidence:
 - **React 18 sites.** The studio needs React 19 (a peer dependency). A site already on React 18, through `@astrojs/react`, would get a peer conflict. Not tested yet: decide whether to support it (load the studio's own React) or document React 19.
 
 **Follow-ups noted, not blocking:**
-- The `/admin` bundle is large, and Vite warns about it. Loading the body editor and MapLibre lazily would cut the first load. MapLibre already loads only on demand.
+- The body editor and the compact Markdown field (Tiptap) now load on first use, like the map. The `/admin` script went from 1,818 KB to 843 KB minified in the playground build. Vite still warns that the two lazy chunks (the body editor, 972 KB, and the map, 1,018 KB) are over 500 KB. That no longer affects the first load.
 - `fields.image()` with focal points and crops is Phase 2.7. The image field keeps those values untouched until then.
 
 ## Phase 1: Core (design)

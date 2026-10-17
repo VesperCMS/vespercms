@@ -109,7 +109,7 @@ describe('the entry editor', () => {
     expect(title).toHaveValue('Harbor at dawn');
     expect(screen.getByRole('textbox', { name: 'Summary (required)' })).toBeInTheDocument();
     // The body opens in the writing view.
-    expect(screen.getByRole('textbox', { name: 'Body' })).toHaveTextContent(
+    expect(await screen.findByRole('textbox', { name: 'Body' })).toHaveTextContent(
       'The first boats go out around five.',
     );
     // Dates and tags wait in Details, which starts closed.

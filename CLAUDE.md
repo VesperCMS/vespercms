@@ -16,7 +16,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 |---|---|
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100); outcome in `PLAN.md` |
-| 2 Integration and local mode | In progress; decisions recorded in DECISIONS.md ("Studio") |
+| 2 Integration and local mode | Done (2026-10-17); outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -41,15 +41,16 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | Command | What it does |
 |---|---|
 | `npm install` | Install all workspaces. |
-| `npm run dev` | The playground in `astro dev` (http://localhost:4321). Nothing to prebuild. |
+| `npm run dev` | The playground in `astro dev`, with the studio at `/admin`. Nothing to prebuild. Astro picks 4321 or the next free port; previews use 4402 (see above). |
 | `npm test` | Vitest, from source (no build needed). |
 | `npm run typecheck` | `tsc -b` over package build configs, then each package's `tsconfig.json` (which includes tests). |
 | `npm run lint` | ESLint, including the core package-boundary rules. |
 | `npm run format` / `format:check` | Prettier over code and config (never prose or content). |
 | `npm run a11y:contrast` | Token contrast (WCAG 2.1, both themes) and the §10.4 token budget, parsed from `packages/ui/src/tokens.css`. |
 | `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
+| `npm run build` | `dist/` for every package: tsc for the libraries, Vite for the studio bundle and its CSS. |
 | `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`. |
-| `npm run e2e` | Playwright + axe against the built playground on `scripts/static-server.mjs` (no rewrites, no headers). Build first. |
+| `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). |
 | `npm run manifest` | Print the playground's manifest, generated from source. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
@@ -57,13 +58,16 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 
 ```
 packages/core      Schema introspection, manifest, serializers, storage interface. No framework imports.
-packages/astro     The Astro integration: fields helpers, defineConfig, Node tooling (config loading, manifest CLI, local storage).
-packages/ui        Design tokens (Phase 0), accessible components (Phase 2). Tokens enforce the §10.4 budget.
+packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling.
+packages/ui        Design tokens and the accessible component kit. Tokens enforce the §10.4 budget.
+packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene. Precompiled for sites.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
-scripts/           Repo tooling (contrast check, static server, dist check).
+fixtures/          astro6-site: an Astro 6 site, installed on its own, for the Astro 6 CI job.
+e2e/               Playwright specs: static-site.spec.ts (the built site) and studio/ (local mode).
+scripts/           Repo tooling (contrast check, static server, dist check, studio test site).
 ```
 
-Later phases add `packages/admin` (Phase 2), `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/cloud-app` (Phase 4), `packages/create-vesper` and `apps/docs` (Phase 9).
+Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/cloud-app` (Phase 4), `packages/create-vesper` and `apps/docs` (Phase 9).
 
 ## Constraints that are easy to violate
 

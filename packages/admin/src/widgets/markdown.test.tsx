@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { EntryDocument, SaveRequest } from '@vesper/core';
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
@@ -35,9 +35,14 @@ describe('the compact Markdown field', () => {
     const api = fakeApi({ documents: { 'pages/about': about } });
     renderStudio('#/c/pages/e/about', { api });
     const user = userEvent.setup();
-    const [first] = await screen.findAllByRole('textbox', { name: 'Body (required)' });
-    if (!first) throw new Error('no section body');
-    expect(within(first).getByText('practical').tagName).toBe('EM');
+    // The editor loads on first use, then fills in; query afresh until it has.
+    await waitFor(
+      () => {
+        const [first] = screen.getAllByRole('textbox', { name: 'Body (required)' });
+        expect(first?.querySelector('em')).toHaveTextContent('practical');
+      },
+      { timeout: 5000 },
+    );
     expect(screen.getAllByRole('toolbar', { name: 'Formatting for Body' }).length).toBeGreaterThan(
       0,
     );
