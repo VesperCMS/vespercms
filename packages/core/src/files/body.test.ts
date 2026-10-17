@@ -41,6 +41,29 @@ describe('parseBody', () => {
     expect(mdoc.slice(blocks[1]?.start, blocks[1]?.end)).toBe('{% callout %}\nIn.\n{% /callout %}');
   });
 
+  it('protects what the writing view would change: tables, task items, footnotes, titles, reference links', () => {
+    const text = [
+      '| a | b |\n| - | - |\n| 1 | 2 |',
+      '- [ ] todo',
+      'Note[^1].',
+      '[^1]: The note.',
+      'A [link](https://example.com "Title").',
+      'A [reference][ref].',
+      'Plain **bold**, *em*, `code`, ~~gone~~ and a [link](/x) with ![alt](./a.jpg).',
+      '[ref]: https://example.com',
+    ].join('\n\n');
+    expect(parseBody(text, 'md').blocks.map((b) => b.kind)).toEqual([
+      'source',
+      'source',
+      'source',
+      'source',
+      'source',
+      'source',
+      'markdown',
+      'source',
+    ]);
+  });
+
   it('keeps block ranges exact with CRLF', () => {
     const text = '\r\nOne.\r\n\r\nTwo.\r\n';
     for (const format of ['md', 'mdoc'] as const) {

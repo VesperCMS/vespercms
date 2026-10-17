@@ -74,6 +74,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             '@vesper/astro > @vesper/admin > react-aria-components',
             // The geo field's map, loaded on demand.
             '@vesper/astro > @vesper/admin > maplibre-gl',
+            // The body editor, and SVG sanitizing for uploads.
+            ...[
+              '@tiptap/core',
+              '@tiptap/react',
+              '@tiptap/starter-kit',
+              '@tiptap/markdown',
+              '@tiptap/extension-image',
+              'dompurify',
+            ].map((dep) => `@vesper/astro > @vesper/admin > ${dep}`),
             ...(options.studioFromSource
               ? // This workspace: the studio is TSX compiled in dev mode, and
                 // @vesper/core is linked source, so its own packages are named.

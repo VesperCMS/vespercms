@@ -108,9 +108,9 @@ describe('the entry editor', () => {
     const title = await screen.findByRole('textbox', { name: 'Title (required)' });
     expect(title).toHaveValue('Harbor at dawn');
     expect(screen.getByRole('textbox', { name: 'Summary (required)' })).toBeInTheDocument();
-    // The line breaks between the frontmatter and the text stay out of the way.
-    expect(screen.getByRole('textbox', { name: 'Body' })).toHaveValue(
-      'The first boats go out around five.\n',
+    // The body opens in the writing view.
+    expect(screen.getByRole('textbox', { name: 'Body' })).toHaveTextContent(
+      'The first boats go out around five.',
     );
     // Dates and tags wait in Details, which starts closed.
     const details = screen.getByRole('button', { name: 'Details' });
@@ -145,7 +145,11 @@ describe('the entry editor', () => {
 
   it('keeps the body’s CRLF line endings when it is edited', async () => {
     const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
-    const body = await screen.findByRole('textbox', { name: 'Body' });
+    await screen.findByRole('textbox', { name: 'Body' });
+    // The source view shows the text without the line breaks after the frontmatter.
+    await user.click(screen.getByRole('button', { name: 'Edit as Markdown' }));
+    const body = screen.getByRole('textbox', { name: 'Body' });
+    expect(body).toHaveValue('The first boats go out around five.\n');
     await user.type(body, 'More.');
     await user.keyboard('{Control>}s{/Control}');
     await waitFor(() => {

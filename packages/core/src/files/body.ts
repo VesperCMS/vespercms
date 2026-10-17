@@ -43,23 +43,35 @@ export function parseBody(body: string, format: BodyFormat): ParsedBody {
   };
 }
 
-/** Node types that make a block impossible to round-trip through the writing view. */
-const SOURCE_TYPES = new Set([
-  'html',
-  'definition',
-  'footnoteDefinition',
-  'mdxjsEsm',
-  'mdxJsxFlowElement',
-  'mdxFlowExpression',
-  'mdxJsxTextElement',
-  'mdxTextExpression',
-  'yaml',
-  'toml',
+/**
+ * Node types the writing view can show and write back faithfully. Anything
+ * else makes the whole block a protected source block: JSX, expressions,
+ * imports, raw HTML, tables, footnotes, reference-style links and images,
+ * task list items, and links or images with a title.
+ */
+const WRITABLE_TYPES = new Set([
+  'paragraph',
+  'heading',
+  'list',
+  'listItem',
+  'blockquote',
+  'code',
+  'thematicBreak',
+  'text',
+  'emphasis',
+  'strong',
+  'inlineCode',
+  'link',
+  'image',
+  'break',
+  'delete',
 ]);
 
-function containsSource(node: Nodes): boolean {
-  if (SOURCE_TYPES.has(node.type)) return true;
-  return 'children' in node && (node.children as Nodes[]).some(containsSource);
+function writable(node: Nodes): boolean {
+  if (!WRITABLE_TYPES.has(node.type)) return false;
+  if (node.type === 'listItem' && node.checked !== null && node.checked !== undefined) return false;
+  if ((node.type === 'link' || node.type === 'image') && node.title) return false;
+  return !('children' in node) || (node.children as Nodes[]).every(writable);
 }
 
 function mdastBlocks(body: string, mdx: boolean): BodyBlock[] {
@@ -77,7 +89,7 @@ function mdastBlocks(body: string, mdx: boolean): BodyBlock[] {
     const start = node.position?.start.offset;
     const end = node.position?.end.offset;
     if (start === undefined || end === undefined) return [];
-    return [{ start, end, kind: containsSource(node) ? 'source' : 'markdown', type: node.type }];
+    return [{ start, end, kind: writable(node) ? 'markdown' : 'source', type: node.type }];
   });
 }
 
@@ -89,11 +101,29 @@ type MarkdocNode = {
   annotations?: unknown[];
 };
 
-/** Inline content the writing view can't show yet (Phase 2.5 adds tag blocks and chips). */
-const MARKDOC_SOURCE_TYPES = new Set(['tag', 'html', 'variable', 'function', 'error', 'comment']);
+/** Markdoc node types the writing view can show (Phase 2.5 adds tag blocks and chips). */
+const MARKDOC_WRITABLE_TYPES = new Set([
+  'paragraph',
+  'heading',
+  'list',
+  'item',
+  'blockquote',
+  'fence',
+  'hr',
+  'inline',
+  'text',
+  'strong',
+  'em',
+  's',
+  'link',
+  'code',
+  'image',
+  'hardbreak',
+  'softbreak',
+]);
 
 function markdocContainsSource(node: MarkdocNode, isRoot: boolean): boolean {
-  if (!isRoot && MARKDOC_SOURCE_TYPES.has(node.type)) return true;
+  if (!isRoot && !MARKDOC_WRITABLE_TYPES.has(node.type)) return true;
   if (node.annotations?.length) return true;
   // `{% $variable %}` and functions parse as text whose content isn't a string.
   if (node.type === 'text' && typeof node.attributes?.content !== 'string') return true;

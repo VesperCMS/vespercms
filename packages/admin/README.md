@@ -2,7 +2,7 @@
 
 The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
 
-**Status:** Phase 2, in progress. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, body as text, save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works except the rich body editor (next), including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone.
+**Status:** Phase 2, in progress. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone.
 
 ## How it's built
 
@@ -49,6 +49,10 @@ Custom widgets receive `WidgetProps` (spec §6.3.3): `{ value, onChange, field, 
 - Fields render through `Field` (label, help, error) and a widget from `widgets/registry.ts`, falling back from the resolved widget to the inferred one, then to the raw YAML field.
 - Saves send the whole value set; the server diffs it against the file, so untouched keys never change. The body is sent only when it changed, with its original line endings and leading line breaks restored.
 - Validation errors from the site's schema appear under the deepest field on screen and in an error summary that takes focus. Details opens when an error is inside it.
+
+## Body editor
+
+`body/document.ts` turns a body into editor nodes (one per writable block, tagged with its index) and protected source blocks, and back into text with `assembleBody`, so only changed blocks are rewritten. `body/BodyEditor.tsx` is the toolbar, the writing view, the source view, and the link and image dialogs.
 
 ## Media
 

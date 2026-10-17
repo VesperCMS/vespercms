@@ -3,6 +3,7 @@ import {
   deepEqual,
   encodeValue,
   lineEndings,
+  type BodyFormat,
   type CollectionManifest,
   type DataObject,
   type DataValue,
@@ -28,6 +29,7 @@ import { formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
+import { BodyEditor } from '../body/BodyEditor.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
@@ -41,7 +43,6 @@ import {
   type ValuePath,
 } from '../editor/values.ts';
 import { builtinWidget } from '../widgets/registry.ts';
-import { inputClass } from '../widgets/basic.tsx';
 
 /**
  * Opens an entry (or starts a new one when `id` is null) and hands it to the
@@ -102,7 +103,7 @@ function EntryForm({
   doc: EntryDocument | null;
   onReload: () => void;
 }) {
-  const { api, siteUrl } = useStudio();
+  const { api, siteUrl, manifest } = useStudio();
   const isNew = doc === null;
   const status = doc?.status ?? 'editable';
   const editable = collection.editable && status !== 'read-only';
@@ -378,21 +379,14 @@ function EntryForm({
           )}
 
           {isContent && (
-            <div className="flex flex-col gap-1">
-              <label htmlFor="entry-body" className="text-sm font-semibold text-content">
-                Body
-              </label>
-              <textarea
-                id="entry-body"
-                value={body}
-                onChange={(event) => {
-                  setBody(event.target.value);
-                }}
-                rows={18}
-                disabled={!editable}
-                className={`${inputClass} resize-y leading-relaxed`}
-              />
-            </div>
+            <BodyEditor
+              value={body}
+              onChange={setBody}
+              format={bodyFormat(doc, collection)}
+              disabled={!editable}
+              entryPath={entryPath}
+              imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}
+            />
           )}
 
           {!sourceOnly && arranged.details.length > 0 && (
@@ -551,4 +545,13 @@ function likelyPath(collection: CollectionManifest): string {
   if (source.loader === 'glob')
     return `${source.base === '.' ? '' : `${source.base}/`}new-entry.${source.formats[0] ?? 'md'}`;
   return 'new-entry.md';
+}
+
+/** The body's syntax: the file's own, or for a new entry the collection's first content format. */
+function bodyFormat(doc: EntryDocument | null, collection: CollectionManifest): BodyFormat {
+  if (doc && (doc.format === 'md' || doc.format === 'mdx' || doc.format === 'mdoc'))
+    return doc.format;
+  const formats = collection.source.loader === 'glob' ? collection.source.formats : [];
+  const first = formats.find((f) => f === 'md' || f === 'markdown' || f === 'mdx' || f === 'mdoc');
+  return first === 'mdx' ? 'mdx' : first === 'mdoc' ? 'mdoc' : 'md';
 }

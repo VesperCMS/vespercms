@@ -201,6 +201,14 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 **A reference field stores an entry ID, and a value already stored as `{ collection, id }` keeps that shape. A list of references is an ordered list with Move up, Move down and Remove buttons and a search box to add more,** because order usually matters (related posts) and must not depend on drag-and-drop. An entry is never offered as a reference to itself.
 
+### 2026-10-17: The writing view owns only blocks it can round-trip
+
+**A body block is editable in the writing view only if every node in it is one the editor writes back faithfully (paragraphs, headings, lists, quotes, code, rules, emphasis, strong, code spans, links, images, strikethrough), and parsing what the editor would save gives the same document again. Everything else is a protected source block, named in words ("Component, kept as written") and edited in the source view.** That covers tables, footnotes, reference-style links, task items, links or images with titles, HTML, JSX, expressions, imports and Markdoc tags. Each writable block's editor node remembers its block index (not copied when a block is split). On save, a node whose JSON is unchanged copies its original bytes, and `assembleBody` keeps the spacing around untouched neighbours, so typing in one paragraph changes only that paragraph's lines. Tiptap 3 with `@tiptap/markdown` (as in Taproot), StarterKit minus underline (no Markdown for it) and the trailing empty line.
+
+### 2026-10-17: The body editor's keyboard and toolbar
+
+**The formatting toolbar is one Tab stop (React Aria's toolbar pattern) with words, not icons (spec §10.4): Bold, Italic, Heading, Subheading, Bullets, Numbers, Quote, Code, Link, Image. Escape moves focus from the text to the toolbar, so leaving the editor never depends on Tab, which indents list items.** Images inserted into the body go through the same picker and hygiene as image fields, and need alt text (or "decorative") before they're inserted.
+
 ### 2026-10-17: Upload hygiene strips metadata losslessly unless the pixels must change
 
 **JPEG, PNG and WebP uploads lose their EXIF, XMP, IPTC, text and comment data by dropping those segments or chunks, so the image data is byte-for-byte the original. They're re-encoded through a canvas only when the pixels must change: a photo whose EXIF orientation isn't upright, or one larger than `maxUploadEdge` (3000px by default).** Re-encoding drops all metadata too. Colour profiles (JPEG APP2) are kept. SVG is sanitized with DOMPurify's SVG profile, plus `foreignObject`, `set` or `animate` that rewrite links or handlers, and `javascript:`/`data:` links. Files are typed by their bytes, not their names. Duplicates are found by SHA-256 against the site's files, and the editor chooses between reusing the existing file and uploading a copy. Over 5 MB asks first; over 20 MB is refused (the dev API enforces the hard limit too).

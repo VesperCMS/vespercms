@@ -40,3 +40,81 @@
     outline-offset: 3px;
   }
 }
+
+@layer components {
+  /* The body's writing view: hierarchy from size and weight, not boxes (spec §10.2). */
+  .vesper-body > * + * {
+    margin-top: 0.75em;
+  }
+
+  .vesper-body h1 {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .vesper-body h2 {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .vesper-body h3,
+  .vesper-body h4,
+  .vesper-body h5,
+  .vesper-body h6 {
+    font-size: 1.0625rem;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .vesper-body ul {
+    list-style: disc;
+    padding-left: 1.5em;
+  }
+
+  .vesper-body ol {
+    list-style: decimal;
+    padding-left: 1.5em;
+  }
+
+  .vesper-body blockquote {
+    border-left: 1px solid var(--color-border-strong);
+    padding-left: 1em;
+    color: var(--color-content-muted);
+  }
+
+  .vesper-body code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  .vesper-body pre {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    padding: 0.75em;
+    overflow-x: auto;
+  }
+
+  .vesper-body a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .vesper-body img {
+    display: inline-block;
+    max-height: 12rem;
+    border-radius: 0.25rem;
+  }
+
+  .vesper-body hr {
+    border: 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .vesper-body .ProseMirror-selectednode {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
