@@ -14,8 +14,8 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 
 | Phase | Status |
 |---|---|
-| 0 Scaffold | Built and verified locally (2026-10-17). Done once CI is green on GitHub. |
-| 1 Core | Designed in `PLAN.md`, not started |
+| 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
+| 1 Core | Designed in `PLAN.md`; starts after Jeremy reviews Phase 0 |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 

@@ -6,8 +6,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 | Phase | Status |
 |---|---|
-| 0 Scaffold | Built and verified locally (2026-10-17). Done once CI is green on GitHub. |
-| 1 Core | Designed below, not started |
+| 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
+| 1 Core | Designed below; starts after Jeremy reviews Phase 0 |
 | 2 onward | Roadmap below |
 
 ## Phase 0: Scaffold
