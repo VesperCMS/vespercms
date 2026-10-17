@@ -120,7 +120,9 @@ if (privateIndex !== -1) {
   if (!privateDir) throw new Error('--private needs a directory outside the repository');
   const resolved = resolve(privateDir);
   if (resolved.startsWith(resolve(repoRoot))) {
-    throw new Error('The private corpus must live outside the repository; client content is never committed.');
+    throw new Error(
+      'The private corpus must live outside the repository; client content is never committed.',
+    );
   }
   build(PRIVATE_SITES, resolved);
 }

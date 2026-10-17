@@ -11,17 +11,22 @@ rmSync(out, { recursive: true, force: true });
 
 const files = {
   // ---------------------------------------------------------------- frontmatter
-  'frontmatter/crlf.md': '---\r\ntitle: Line endings\r\ntags: [a, b]\r\n---\r\n\r\nEvery line ends with CRLF.\r\n',
+  'frontmatter/crlf.md':
+    '---\r\ntitle: Line endings\r\ntags: [a, b]\r\n---\r\n\r\nEvery line ends with CRLF.\r\n',
   'frontmatter/mixed-eol.md':
     '---\r\ntitle: Mixed endings\nsummary: Some lines CRLF, some LF\r\ncount: 3\n---\n\nBody line one.\r\nBody line two.\n',
-  'frontmatter/bom.md': '﻿---\ntitle: Starts with a byte-order mark\n---\n\nThe BOM must survive a save.\n',
-  'frontmatter/no-trailing-newline.md': '---\ntitle: No final newline\n---\n\nThe file ends without a newline.',
-  'frontmatter/leading-blank-lines.md': '\n\n---\ntitle: Blank lines before the fence\n---\n\nAstro accepts whitespace-only lines before the opening fence.\n',
+  'frontmatter/bom.md':
+    '﻿---\ntitle: Starts with a byte-order mark\n---\n\nThe BOM must survive a save.\n',
+  'frontmatter/no-trailing-newline.md':
+    '---\ntitle: No final newline\n---\n\nThe file ends without a newline.',
+  'frontmatter/leading-blank-lines.md':
+    '\n\n---\ntitle: Blank lines before the fence\n---\n\nAstro accepts whitespace-only lines before the opening fence.\n',
   'frontmatter/empty.md': '---\n---\n\nAn empty frontmatter block.\n',
   'frontmatter/none.md': '# No frontmatter\n\nThis file has a body only.\n',
   'frontmatter/dashes-in-body.md':
     '---\ntitle: Horizontal rules\n---\n\nAbove the rule.\n\n---\n\nBelow the rule.\n\n---\nnot: frontmatter\n---\n',
-  'frontmatter/toml.md': '+++\ntitle = "TOML frontmatter"\ntags = ["a", "b"]\n+++\n\nTOML is read-only in v1.\n',
+  'frontmatter/toml.md':
+    '+++\ntitle = "TOML frontmatter"\ntags = ["a", "b"]\n+++\n\nTOML is read-only in v1.\n',
   'frontmatter/comments.md': [
     '---',
     '# A leading comment',
@@ -55,7 +60,8 @@ const files = {
     'Anchors, aliases and merge keys take the reformatting fallback path.',
     '',
   ].join('\n'),
-  'frontmatter/tags.md': '---\ntitle: Explicit tags\nzip: !!str 01234\nratio: !!float 1\n---\n\nExplicit YAML tags.\n',
+  'frontmatter/tags.md':
+    '---\ntitle: Explicit tags\nzip: !!str 01234\nratio: !!float 1\n---\n\nExplicit YAML tags.\n',
   'frontmatter/block-scalars.md': [
     '---',
     'literal: |',
@@ -72,8 +78,8 @@ const files = {
     '',
     'indicator: |2',
     '    Explicit indentation indicator.',
-    'single: \'It\'\'s quoted',
-    '  across lines\'',
+    "single: 'It''s quoted",
+    "  across lines'",
     'double: "Escapes \\t and \\u00e9',
     '  continue here"',
     '---',
@@ -134,12 +140,15 @@ const files = {
     'Scalars whose type depends on quoting.',
     '',
   ].join('\n'),
-  'frontmatter/indent-4.md': '---\ntitle: Four-space indentation\nnav:\n    label: Home\n    order: 1\nitems:\n    -   name: a\n        value: 1\n    -   name: b\n        value: 2\n---\n\nIndented with four spaces.\n',
-  'frontmatter/duplicate-keys.md': '---\ntitle: First\ntitle: Second\n---\n\nDuplicate keys are an error in both parsers: source-only.\n',
-  'frontmatter/invalid-yaml.md': '---\ntitle: [unclosed\nsummary: broken\n---\n\nUnparseable frontmatter: source-only.\n',
+  'frontmatter/indent-4.md':
+    '---\ntitle: Four-space indentation\nnav:\n    label: Home\n    order: 1\nitems:\n    -   name: a\n        value: 1\n    -   name: b\n        value: 2\n---\n\nIndented with four spaces.\n',
+  'frontmatter/duplicate-keys.md':
+    '---\ntitle: First\ntitle: Second\n---\n\nDuplicate keys are an error in both parsers: source-only.\n',
+  'frontmatter/invalid-yaml.md':
+    '---\ntitle: [unclosed\nsummary: broken\n---\n\nUnparseable frontmatter: source-only.\n',
   'frontmatter/parser-disagreement.md': [
     '---',
-    "svg: '<svg viewBox=\"0 0 10 10\">",
+    'svg: \'<svg viewBox="0 0 10 10">',
     '<path d="M0 0h10v10z"/>',
     "</svg>'",
     'title: Multi-line single quotes at column 0',
@@ -158,7 +167,7 @@ const files = {
     'title: MDX with imports',
     '---',
     "import Chart from '../components/Chart.astro';",
-    "export const meta = { wide: true };",
+    'export const meta = { wide: true };',
     '',
     '# {frontmatter.title}',
     '',
@@ -181,19 +190,22 @@ const files = {
   ].join('\n'),
 
   // ---------------------------------------------------------------- data files
-  'data/indent-2.json': '{\n  "title": "Two spaces",\n  "count": 2,\n  "tags": ["a", "b"],\n  "nested": {\n    "on": true\n  }\n}\n',
+  'data/indent-2.json':
+    '{\n  "title": "Two spaces",\n  "count": 2,\n  "tags": ["a", "b"],\n  "nested": {\n    "on": true\n  }\n}\n',
   'data/indent-4.json': '{\n    "title": "Four spaces",\n    "count": 4\n}\n',
   'data/tabs.json': '{\n\t"title": "Tabs",\n\t"list": [\n\t\t1,\n\t\t2\n\t]\n}\n',
   'data/crlf.json': '{\r\n  "title": "CRLF",\r\n  "count": 1\r\n}\r\n',
   'data/no-trailing-newline.json': '{\n  "title": "No final newline"\n}',
   'data/minified.json': '{"title":"Minified","tags":["a","b"],"count":3}\n',
-  'data/schema-key.json': '{\n  "$schema": "../schemas/settings.json",\n  "title": "Has a $schema key"\n}\n',
+  'data/schema-key.json':
+    '{\n  "$schema": "../schemas/settings.json",\n  "title": "Has a $schema key"\n}\n',
   'data/file-loader-array.json':
     '[\n  { "id": "ada", "name": "Ada" },\n  {\n    "id": "sam",\n    "name": "Sam",\n    "role": "Writer"\n  }\n]\n',
   'data/file-loader-object.json':
     '{\n  "$schema": "./authors.schema.json",\n  "ada": { "name": "Ada" },\n  "sam": {\n    "name": "Sam"\n  }\n}\n',
   'data/duplicate-keys.json': '{\n  "title": "First",\n  "title": "Second"\n}\n',
-  'data/settings.yaml': '# A glob() data entry\nsiteName: Example\nsocial:\n  - network: mastodon\n    url: https://example.com/@a\n',
+  'data/settings.yaml':
+    '# A glob() data entry\nsiteName: Example\nsocial:\n  - network: mastodon\n    url: https://example.com/@a\n',
   'data/file-loader-array.yaml':
     '- id: one\n  name: First\n  geo: { lat: 1, lng: 2 }\n- id: two\n  name: "Second"\n  geo:\n    lat: 3\n    lng: 4\n',
   'data/file-loader-map.yaml': 'one:\n  name: First\ntwo:\n  name: Second\n',
