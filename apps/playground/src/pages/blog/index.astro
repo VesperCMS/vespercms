@@ -1,0 +1,31 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime(),
+);
+const rows = await Promise.all(
+  posts.map(async (post) => ({ post, author: await getEntry(post.data.author) })),
+);
+const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' });
+---
+
+<BaseLayout title="Blog" description="Posts from the Vesper playground.">
+  <h1>Blog</h1>
+  <ul class="entry-list">
+    {rows.map(({ post, author }) => (
+      <li>
+        <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+        <p class="muted">
+          {author?.data.name} ·{' '}
+          <time datetime={post.data.publishedAt.toISOString()}>
+            {date.format(post.data.publishedAt)}
+          </time>
+          {post.data.draft && ' · Draft'}
+        </p>
+        <p>{post.data.summary}</p>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>

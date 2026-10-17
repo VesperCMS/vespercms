@@ -115,6 +115,13 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
+    // The playground stands in for a customer's site. Its types come from
+    // `astro sync` (.astro/), which lint doesn't run, so `astro check`
+    // type-checks it instead.
+    files: ['apps/playground/**/*.ts'],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
     files: ['packages/core/src/**/*.ts'],
     ignores: ['**/*.test.ts'],
     rules: coreBoundaryRules,

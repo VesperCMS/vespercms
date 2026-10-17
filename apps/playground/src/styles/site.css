@@ -1,0 +1,143 @@
+/*
+ * The playground stands in for a customer's site, so it has its own plain
+ * stylesheet rather than the studio's tokens. Colours meet WCAG 2.1 AA in
+ * both schemes (checked by axe in e2e).
+ */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#ffffff, #12151f);
+  --fg: light-dark(#1d2433, #e8eaf0);
+  --muted: light-dark(#4d566b, #b3b9c8);
+  --link: light-dark(#2b4fb8, #9db4ff);
+  --rule: light-dark(#d9dde6, #2e3445);
+  --focus: light-dark(#1f5fd1, #8fb0ff);
+  --panel: light-dark(#f4f6fa, #1b2030);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--link);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  color: var(--link);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+.site-header,
+.site-footer,
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+}
+
+.site-name {
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--fg);
+}
+
+.site-header ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-header a[aria-current='page'] {
+  font-weight: 600;
+  text-decoration-thickness: 2px;
+}
+
+main:focus {
+  outline: none;
+}
+
+.site-footer {
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.entry-list {
+  padding: 0;
+  list-style: none;
+}
+
+.entry-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.hero {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.panel {
+  padding: 1rem;
+  background: var(--panel);
+  border-left: 4px solid var(--rule);
+}
+
+code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9375em;
+}

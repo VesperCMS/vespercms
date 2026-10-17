@@ -1,0 +1,26 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const posts = await getCollection('blog');
+const authors = await getCollection('authors');
+---
+
+<BaseLayout
+  title="Vesper playground"
+  description="A test site that exercises every Vesper feature."
+>
+  <h1>Vesper playground</h1>
+  <p>
+    This site exercises every feature of the Vesper studio. Each collection covers a different part
+    of the schema mapping, and the content files double as test fixtures.
+  </p>
+
+  <h2>Collections</h2>
+  <ul>
+    <li>
+      <a href="/blog/">Blog</a>: {posts.length} posts with images, references, tags and dates.
+    </li>
+    <li>Authors: {authors.length} people, stored as one JSON file.</li>
+  </ul>
+</BaseLayout>

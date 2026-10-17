@@ -1,0 +1,62 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection, getEntries, getEntry, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const author = await getEntry(post.data.author);
+const related = post.data.related ? await getEntries(post.data.related) : [];
+const { hero } = post.data;
+// Until <Img> lands (Phase 2.7), the focal point becomes object-position (spec §6.6.5).
+const objectPosition = hero?.focus
+  ? `${String(hero.focus.x * 100)}% ${String(hero.focus.y * 100)}%`
+  : 'center';
+const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' });
+---
+
+<BaseLayout title={post.data.title} description={post.data.summary}>
+  <article>
+    <h1>{post.data.title}</h1>
+    <p class="muted">
+      By {author.data.name} ·
+      <time datetime={post.data.publishedAt.toISOString()}>
+        {date.format(post.data.publishedAt)}
+      </time>
+      {post.data.draft && ' · Draft'}
+    </p>
+    {hero && (
+      <Image
+        class="hero"
+        src={hero.src}
+        alt={hero.decorative ? '' : hero.alt}
+        widths={[480, 960, 1440]}
+        sizes="(min-width: 46rem) 46rem, 100vw"
+        style={{ objectPosition }}
+      />
+    )}
+    <Content />
+    {post.data.tags.length > 0 && (
+      <p>
+        <strong>Tags:</strong> {post.data.tags.join(', ')}
+      </p>
+    )}
+    {related.length > 0 && (
+      <section aria-labelledby="related-heading">
+        <h2 id="related-heading">Related posts</h2>
+        <ul>
+          {related.map((entry) => (
+            <li>
+              <a href={`/blog/${entry.id}/`}>{entry.data.title}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </article>
+</BaseLayout>

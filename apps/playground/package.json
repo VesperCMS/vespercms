@@ -1,0 +1,22 @@
+{
+  "name": "@vesper/playground",
+  "version": "0.0.0",
+  "private": true,
+  "description": "An Astro 7 site that exercises every Vesper feature. Its content doubles as test fixtures.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "node ../../scripts/static-server.mjs dist",
+    "check": "astro check",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/markdoc": "^2.1.0",
+    "@astrojs/mdx": "^8.1.0",
+    "astro": "^7.4.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10"
+  }
+}
