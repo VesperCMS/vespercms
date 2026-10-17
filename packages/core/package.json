@@ -33,9 +33,10 @@
     "jsonc-parser": "^3.3.1",
     "yaml": "^2.9.1"
   },
-  "//devDependencies": "Test-only: the corpus tests check the frontmatter split against Astro's own implementation.",
+  "//devDependencies": "Test-only. @astrojs/internal-helpers: the frontmatter split is checked against Astro itself. zod: tests build real Zod 4 schemas for the walker (src/ never imports zod).",
   "devDependencies": {
     "@astrojs/internal-helpers": "^0.13.0",
-    "@types/js-yaml": "^4.0.9"
+    "@types/js-yaml": "^4.0.9",
+    "zod": "^4.6.7"
   }
 }

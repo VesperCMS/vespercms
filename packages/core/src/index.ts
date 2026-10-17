@@ -1,4 +1,24 @@
-export type { FieldConstraints, FieldKind, FieldModel, FieldOption } from './field-model.ts';
+export type {
+  Diagnostic,
+  DiagnosticLevel,
+  FieldConstraints,
+  FieldKind,
+  FieldModel,
+  FieldOption,
+} from './field-model.ts';
+
+// Schema introspection: Zod 4 schemas into field models (spec §6.2, §6.3.1).
+export {
+  walkSchema,
+  walkField,
+  referenceCollection,
+  isZodLike,
+  IMAGE_MARKER,
+  VESPER_META_KEY,
+  type SchemaWalk,
+  type ZodLike,
+} from './schema/walk.ts';
+export { humanize } from './schema/humanize.ts';
 
 /**
  * Version of the manifest format (spec §6.2). Bump on any breaking change to
