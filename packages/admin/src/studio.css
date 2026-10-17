@@ -1,0 +1,23 @@
+/*
+ * The studio's stylesheet: Tailwind plus Vesper's token budget. It is compiled
+ * when @vesper/admin is published (dist/studio.css), so sites need no
+ * Tailwind of their own. In this workspace the source is used directly.
+ */
+@import 'tailwindcss' source(none);
+@import '@vesper/ui/tokens.css';
+
+@source '../../ui/src';
+@source '.';
+
+@layer base {
+  /* The studio fills the page and never inherits the site's own styles. */
+  #vesper-studio {
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: var(--font-weight-semibold);
+  }
+}

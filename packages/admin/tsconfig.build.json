@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "//": "Declarations only; the JavaScript comes from vite build.",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "composite": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test",
+    "src/test-env.d.ts",
+    "src/build.ts"
+  ]
+}

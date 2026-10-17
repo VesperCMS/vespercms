@@ -137,3 +137,20 @@ export {
   type BodyItem,
   type ParsedBody,
 } from './files/body.ts';
+
+// The studio's API contract (spec §6.7).
+export {
+  encodeValue,
+  decodeValue,
+  decodeData,
+  type EntryStatus,
+  type EntryFormat,
+  type EntrySummary,
+  type CollectionSummary,
+  type EntryDocument,
+  type SaveRequest,
+  type SaveResponse,
+  type FieldIssue,
+  type MediaItem,
+  type UploadResponse,
+} from './studio/protocol.ts';

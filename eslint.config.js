@@ -135,7 +135,12 @@ export default defineConfig(
   {
     // The studio's React packages: accessibility and hooks rules (spec D11).
     files: ['packages/{ui,admin}/**/*.tsx'],
-    extends: [jsxA11y.flatConfigs.strict, reactHooks.configs.flat.recommended],
+    extends: [jsxA11y.flatConfigs.strict],
+  },
+  {
+    // Hooks live in .ts files too (load.ts, router.ts).
+    files: ['packages/{ui,admin}/**/*.{ts,tsx}'],
+    extends: [reactHooks.configs.flat.recommended],
   },
   {
     files: ['packages/core/src/**/*.ts'],

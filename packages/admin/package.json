@@ -1,0 +1,46 @@
+{
+  "name": "@vesper/admin",
+  "version": "0.0.0",
+  "description": "The Vesper studio: the editor UI served at /admin, one bundle for every storage mode.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "//exports": "Source in this workspace (@vesper/source); dist/ elsewhere. dist/studio.css is precompiled, so sites need no Tailwind (DECISIONS.md, Studio).",
+  "exports": {
+    ".": {
+      "@vesper/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/studio.js"
+    },
+    "./studio.css": {
+      "@vesper/source": "./src/studio.css",
+      "default": "./dist/studio.css"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx"
+  ],
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@vesper/core": "0.0.0",
+    "react-aria-components": "^1.22.1"
+  },
+  "//peerDependencies": "One React for the studio and the site's custom widgets, which render inside it (spec §6.3.3).",
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vesper/ui": "0.0.0",
+    "tailwindcss": "^4.3.3"
+  }
+}
