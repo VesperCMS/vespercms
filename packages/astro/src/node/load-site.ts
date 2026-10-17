@@ -1,0 +1,347 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  IMAGE_MARKER,
+  VESPER_META_KEY,
+  type CollectionInput,
+  type Diagnostic,
+  type LoaderInfo,
+  type ManifestInput,
+} from '@vesper/core';
+import type { Plugin, ViteDevServer } from 'vite';
+import { checkConfig, type VesperConfig } from '../config/index.ts';
+
+/*
+ * Reads a site's own config files (content.config.ts, vesper.config.ts,
+ * forms.config.ts) with the site's own Vite, in an isolated server, so it
+ * can introspect them without running Astro.
+ *
+ * Two modules are shimmed, and both only add information:
+ * - `astro:content` re-exports Astro's real defineCollection, reference()
+ *   and z from astro/content/runtime and astro/zod. Runtime-only functions
+ *   (getCollection, render…) throw if a config calls them.
+ * - `astro/loaders` wraps the real glob() and file(), so Astro's own option
+ *   checks still run, and records their options for the manifest.
+ *
+ * Schema functions are called with an image() that marks the field, because
+ * Astro's own image() is an unmarked string transform. Any other astro:*
+ * module makes the config fail to load, and every collection is then listed
+ * read-only with that message. Nothing crashes.
+ */
+
+export const LOADER_MARK = Symbol.for('vesper.loader');
+
+type MarkedLoader = {
+  name?: string;
+  [LOADER_MARK]?:
+    | { kind: 'glob'; options: GlobOptions }
+    | { kind: 'file'; fileName: string; options?: { parser?: unknown } };
+};
+type GlobOptions = { pattern: string | string[]; base?: string | URL; generateId?: unknown };
+type CollectionConfigObject = { loader?: unknown; schema?: unknown; type?: string };
+
+const CONTENT_CONFIG_NAMES = [
+  'content.config.ts',
+  'content.config.mts',
+  'content.config.js',
+  'content.config.mjs',
+];
+const ROOT_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs'];
+
+export type LoadSiteOptions = {
+  /** The site root (where astro.config lives). */
+  root: string;
+  /** Astro's srcDir, relative to root. Defaults to `src`. */
+  srcDir?: string;
+};
+
+export type LoadedSite = Omit<ManifestInput, 'generator'> & { root: string };
+
+/** Loads a site's configs and returns what `buildManifest` needs. Never throws for config problems; it reports them. */
+export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
+  const root = resolve(options.root);
+  const srcDir = options.srcDir ?? 'src';
+  const diagnostics: Diagnostic[] = [];
+  const contentConfigPath = CONTENT_CONFIG_NAMES.map((name) => join(root, srcDir, name)).find(
+    (path) => existsSync(path),
+  );
+  const vesperConfigPath = findRootFile(root, 'vesper.config');
+  const formsConfigPath = [
+    'forms.config.ts',
+    'forms.config.mts',
+    'forms.config.js',
+    'forms.config.mjs',
+  ]
+    .map((name) => join(root, srcDir, name))
+    .find((path) => existsSync(path));
+
+  const server = await createIsolatedServer(root);
+  try {
+    const astroZod = (await server.ssrLoadModule('astro/zod')) as {
+      z: { string: () => { meta: (m: object) => unknown } };
+    };
+    const markedImage = () => astroZod.z.string().meta({ [VESPER_META_KEY]: IMAGE_MARKER });
+
+    let collections: CollectionInput[] = [];
+    if (!contentConfigPath) {
+      diagnostics.push({
+        level: 'warning',
+        code: 'no-content-config',
+        message: `No content config found in ${srcDir}/.`,
+      });
+    } else {
+      collections = await loadCollections(
+        server,
+        root,
+        contentConfigPath,
+        markedImage,
+        diagnostics,
+      );
+    }
+
+    let config: VesperConfig | undefined;
+    if (vesperConfigPath) {
+      try {
+        const module = (await server.ssrLoadModule(vesperConfigPath)) as { default?: unknown };
+        for (const problem of checkConfig(module.default)) {
+          diagnostics.push({
+            level: problem.level,
+            code: 'vesper-config',
+            message: problem.message,
+          });
+        }
+        if (typeof module.default === 'object' && module.default !== null) config = module.default;
+      } catch (error) {
+        diagnostics.push({
+          level: 'error',
+          code: 'vesper-config',
+          message: `vesper.config could not be loaded: ${messageOf(error)}`,
+        });
+      }
+    }
+
+    let forms: ManifestInput['forms'] = [];
+    if (formsConfigPath) {
+      try {
+        const module = (await server.ssrLoadModule(formsConfigPath)) as {
+          forms?: Record<string, unknown>;
+        };
+        forms = Object.entries(module.forms ?? {}).map(([name, definition]) => {
+          const { schema, ...rest } = (definition ?? {}) as { schema?: unknown };
+          return { name, schema, options: rest };
+        });
+      } catch (error) {
+        diagnostics.push({
+          level: 'error',
+          code: 'forms-config',
+          message: `forms.config could not be loaded: ${messageOf(error)}`,
+        });
+      }
+    }
+
+    return {
+      root,
+      site: {
+        srcDir,
+        ...(contentConfigPath ? { contentConfig: toPosix(relative(root, contentConfigPath)) } : {}),
+      },
+      collections,
+      ...(config
+        ? {
+            config: {
+              ...(config.collections ? { collections: config.collections } : {}),
+              ...(config.widgets ? { widgets: config.widgets } : {}),
+            },
+          }
+        : {}),
+      forms,
+      diagnostics,
+    };
+  } finally {
+    await server.close();
+  }
+}
+
+async function loadCollections(
+  server: ViteDevServer,
+  root: string,
+  configPath: string,
+  markedImage: () => unknown,
+  diagnostics: Diagnostic[],
+): Promise<CollectionInput[]> {
+  let module: { collections?: Record<string, CollectionConfigObject> };
+  try {
+    module = (await server.ssrLoadModule(configPath)) as typeof module;
+  } catch (error) {
+    diagnostics.push({
+      level: 'error',
+      code: 'content-config',
+      message: `${toPosix(relative(root, configPath))} could not be loaded: ${messageOf(error)}`,
+    });
+    return [];
+  }
+
+  return Object.entries(module.collections ?? {}).map(([name, collection]): CollectionInput => {
+    const loader = loaderInfo(collection.loader, root);
+    let schema: unknown = collection.schema;
+    if (typeof schema === 'function') {
+      try {
+        schema = (schema as (context: { image: () => unknown }) => unknown)({ image: markedImage });
+      } catch (error) {
+        return {
+          name,
+          loader,
+          schema: null,
+          error: `The schema function for "${name}" threw: ${messageOf(error)}`,
+        };
+      }
+    }
+    return { name, loader, schema: schema ?? null };
+  });
+}
+
+function loaderInfo(loader: unknown, root: string): LoaderInfo {
+  if (typeof loader !== 'object' || loader === null) return { kind: 'other' };
+  const marked = loader as MarkedLoader;
+  const mark = marked[LOADER_MARK];
+  if (mark?.kind === 'glob') {
+    const base = mark.options.base ?? '.';
+    const basePath =
+      base instanceof URL ? fileURLToPath(base) : isAbsolute(base) ? base : resolve(root, base);
+    return {
+      kind: 'glob',
+      base: toPosix(relative(root, basePath)) || '.',
+      pattern: mark.options.pattern,
+      customId: typeof mark.options.generateId === 'function',
+    };
+  }
+  if (mark?.kind === 'file') {
+    return {
+      kind: 'file',
+      path: toPosix(mark.fileName).replace(/^\.\//, ''),
+      customParser: typeof mark.options?.parser === 'function',
+    };
+  }
+  return typeof marked.name === 'string' ? { kind: 'other', name: marked.name } : { kind: 'other' };
+}
+
+/** The site's own Vite, so Vesper never brings a second one (Vite 8 on Astro 7, Vite 7 on Astro 6). */
+async function importSiteVite(root: string): Promise<typeof import('vite')> {
+  const fromSite = createRequire(join(root, 'package.json'));
+  let vitePath: string;
+  try {
+    vitePath = fromSite.resolve('vite');
+  } catch {
+    const astroPackage = fromSite.resolve('astro/package.json');
+    vitePath = createRequire(astroPackage).resolve('vite');
+  }
+  // createRequire resolves the CommonJS entry; the ESM build sits beside it.
+  const esm = join(dirname(vitePath), 'index.js');
+  return (await import(
+    pathToFileURL(existsSync(esm) ? esm : vitePath).href
+  )) as typeof import('vite');
+}
+
+async function createIsolatedServer(root: string): Promise<ViteDevServer> {
+  const vite = await importSiteVite(root);
+  // Astro's real loaders, from the site's own Astro. Vite externalizes bare
+  // `astro/*` imports in SSR before any plugin sees them, so the shim is
+  // wired in with an alias rather than resolveId.
+  const realLoaders = createRequire(join(root, 'package.json')).resolve('astro/loaders');
+  return vite.createServer({
+    root,
+    configFile: false,
+    envDir: false,
+    logLevel: 'silent',
+    appType: 'custom',
+    server: { middlewareMode: true, hmr: false, ws: false, watch: null },
+    optimizeDeps: { noDiscovery: true, include: [] },
+    resolve: {
+      tsconfigPaths: true,
+      alias: [{ find: /^astro\/loaders$/, replacement: LOADERS_SPECIFIER }],
+    },
+    plugins: [vesperShims(realLoaders)],
+  });
+}
+
+const CONTENT_ID = '\0vesper:astro-content';
+const LOADERS_SPECIFIER = 'virtual:vesper/astro-loaders';
+const LOADERS_ID = '\0vesper:astro-loaders';
+const UNAVAILABLE_PREFIX = '\0vesper:unavailable:';
+
+/**
+ * The `astro:content` and `astro/loaders` shims described at the top of this
+ * file. `realLoaders` is the absolute path of the site's own astro/loaders.
+ */
+export function vesperShims(realLoaders: string): Plugin {
+  return {
+    name: 'vesper:shims',
+    enforce: 'pre',
+    resolveId(source) {
+      if (source === 'astro:content') return CONTENT_ID;
+      if (source === LOADERS_SPECIFIER) return LOADERS_ID;
+      if (source.startsWith('astro:')) return `${UNAVAILABLE_PREFIX}${source}`;
+      return null;
+    },
+    load(id) {
+      if (id === CONTENT_ID) {
+        return [
+          "import { createReference } from 'astro/content/runtime';",
+          "export { defineCollection, defineLiveCollection } from 'astro/content/runtime';",
+          "export { z } from 'astro/zod';",
+          'export const reference = createReference();',
+          'const unavailable = (name) => () => {',
+          "  throw new Error(`${name}() isn't available while Vesper reads your content config.`);",
+          '};',
+          ...[
+            'getCollection',
+            'getEntry',
+            'getEntries',
+            'render',
+            'getLiveCollection',
+            'getLiveEntry',
+            'getEntryBySlug',
+            'getDataEntryById',
+          ].map((name) => `export const ${name} = unavailable('${name}');`),
+        ].join('\n');
+      }
+      if (id === LOADERS_ID) {
+        const real = JSON.stringify(toPosix(realLoaders));
+        return [
+          `import * as real from ${real};`,
+          `export * from ${real};`,
+          "const MARK = Symbol.for('vesper.loader');",
+          "export function glob(options) { const loader = real.glob(options); loader[MARK] = { kind: 'glob', options }; return loader; }",
+          "export function file(fileName, options) { const loader = real.file(fileName, options); loader[MARK] = { kind: 'file', fileName, options }; return loader; }",
+        ].join('\n');
+      }
+      if (id.startsWith(UNAVAILABLE_PREFIX)) {
+        const name = id.slice(UNAVAILABLE_PREFIX.length);
+        return `throw new Error(${JSON.stringify(`${name} isn't available while Vesper reads your config. Move code that needs it out of content.config.ts.`)});`;
+      }
+      return null;
+    },
+  };
+}
+
+function findRootFile(root: string, base: string): string | undefined {
+  return ROOT_CONFIG_EXTENSIONS.map((ext) => join(root, `${base}.${ext}`)).find((path) =>
+    existsSync(path),
+  );
+}
+
+const toPosix = (path: string) => path.split('\\').join('/');
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? (error.message.split('\n')[0] ?? error.message) : String(error);
+}
+
+/** This package's version, for the manifest's `generator`. */
+export function packageVersion(): string {
+  const manifest = JSON.parse(
+    readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+  ) as { version: string };
+  return manifest.version;
+}

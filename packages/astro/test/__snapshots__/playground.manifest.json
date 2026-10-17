@@ -1,0 +1,1089 @@
+{
+  "manifestVersion": 1,
+  "site": {
+    "srcDir": "src",
+    "contentConfig": "src/content.config.ts"
+  },
+  "collections": [
+    {
+      "name": "blog",
+      "label": "Blog",
+      "editable": true,
+      "source": {
+        "loader": "glob",
+        "base": "src/content/blog",
+        "pattern": "**/[^_]*.md",
+        "generateId": "default",
+        "formats": [
+          "md"
+        ]
+      },
+      "entryKind": "content",
+      "fields": [
+        {
+          "path": [
+            "title"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Title",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "summary"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Summary",
+          "description": "One or two sentences for cards and search.",
+          "widget": "textarea",
+          "inferredWidget": "text"
+        },
+        {
+          "path": [
+            "hero"
+          ],
+          "kind": "object",
+          "required": false,
+          "label": "Hero",
+          "widget": "image",
+          "widgetOptions": {
+            "ratios": [
+              "wide",
+              "square"
+            ]
+          },
+          "children": [
+            {
+              "path": [
+                "hero",
+                "src"
+              ],
+              "kind": "image",
+              "required": true,
+              "label": "Src",
+              "inferredWidget": "image",
+              "widget": "image"
+            },
+            {
+              "path": [
+                "hero",
+                "alt"
+              ],
+              "kind": "string",
+              "required": true,
+              "label": "Alt",
+              "inferredWidget": "text",
+              "widget": "text"
+            },
+            {
+              "path": [
+                "hero",
+                "decorative"
+              ],
+              "kind": "boolean",
+              "required": false,
+              "label": "Decorative",
+              "inferredWidget": "switch",
+              "widget": "switch"
+            },
+            {
+              "path": [
+                "hero",
+                "focus"
+              ],
+              "kind": "object",
+              "required": false,
+              "label": "Focus",
+              "children": [
+                {
+                  "path": [
+                    "hero",
+                    "focus",
+                    "x"
+                  ],
+                  "kind": "number",
+                  "required": true,
+                  "label": "X",
+                  "constraints": {
+                    "min": 0,
+                    "max": 1
+                  },
+                  "inferredWidget": "number",
+                  "widget": "number"
+                },
+                {
+                  "path": [
+                    "hero",
+                    "focus",
+                    "y"
+                  ],
+                  "kind": "number",
+                  "required": true,
+                  "label": "Y",
+                  "constraints": {
+                    "min": 0,
+                    "max": 1
+                  },
+                  "inferredWidget": "number",
+                  "widget": "number"
+                }
+              ],
+              "extraKeys": "strip",
+              "inferredWidget": "group",
+              "widget": "group"
+            },
+            {
+              "path": [
+                "hero",
+                "crops"
+              ],
+              "kind": "unknown",
+              "required": false,
+              "label": "Crops",
+              "unknownReason": "record",
+              "inferredWidget": "raw",
+              "widget": "raw"
+            }
+          ],
+          "extraKeys": "strip",
+          "inferredWidget": "group"
+        },
+        {
+          "path": [
+            "author"
+          ],
+          "kind": "reference",
+          "required": true,
+          "label": "Author",
+          "reference": {
+            "collection": "authors"
+          },
+          "inferredWidget": "reference",
+          "widget": "reference"
+        },
+        {
+          "path": [
+            "related"
+          ],
+          "kind": "array",
+          "required": false,
+          "label": "Related",
+          "children": [
+            {
+              "path": [
+                "related",
+                "[]"
+              ],
+              "kind": "reference",
+              "required": true,
+              "label": "Item",
+              "reference": {
+                "collection": "blog"
+              },
+              "inferredWidget": "reference",
+              "widget": "reference"
+            }
+          ],
+          "inferredWidget": "references",
+          "widget": "references"
+        },
+        {
+          "path": [
+            "tags"
+          ],
+          "kind": "array",
+          "required": false,
+          "label": "Tags",
+          "default": [],
+          "children": [
+            {
+              "path": [
+                "tags",
+                "[]"
+              ],
+              "kind": "string",
+              "required": true,
+              "label": "Item",
+              "inferredWidget": "text",
+              "widget": "text"
+            }
+          ],
+          "inferredWidget": "tags",
+          "widget": "tags"
+        },
+        {
+          "path": [
+            "category"
+          ],
+          "kind": "enum",
+          "required": true,
+          "label": "Category",
+          "constraints": {
+            "options": [
+              {
+                "value": "news",
+                "label": "news"
+              },
+              {
+                "value": "guides",
+                "label": "guides"
+              },
+              {
+                "value": "stories",
+                "label": "stories"
+              }
+            ]
+          },
+          "inferredWidget": "radio",
+          "widget": "radio"
+        },
+        {
+          "path": [
+            "publishedAt"
+          ],
+          "kind": "date",
+          "required": true,
+          "label": "Published at",
+          "coerce": true,
+          "inferredWidget": "date",
+          "widget": "date"
+        },
+        {
+          "path": [
+            "updatedAt"
+          ],
+          "kind": "date",
+          "required": false,
+          "label": "Updated at",
+          "inferredWidget": "date",
+          "widget": "date"
+        },
+        {
+          "path": [
+            "draft"
+          ],
+          "kind": "boolean",
+          "required": false,
+          "label": "Draft",
+          "default": false,
+          "inferredWidget": "switch",
+          "widget": "switch"
+        },
+        {
+          "path": [
+            "series"
+          ],
+          "kind": "unknown",
+          "required": false,
+          "label": "Series",
+          "unknownReason": "union",
+          "inferredWidget": "raw",
+          "widget": "raw"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    },
+    {
+      "name": "authors",
+      "label": "Authors",
+      "editable": true,
+      "source": {
+        "loader": "file",
+        "path": "src/data/authors.json",
+        "format": "json",
+        "customParser": false
+      },
+      "entryKind": "data",
+      "fields": [
+        {
+          "path": [
+            "name"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Name",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "role"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Role",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "email"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Email",
+          "autocomplete": "email",
+          "format": "email",
+          "inferredWidget": "email",
+          "widget": "email"
+        },
+        {
+          "path": [
+            "url"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "URL",
+          "format": "url",
+          "inferredWidget": "url",
+          "widget": "url"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    },
+    {
+      "name": "pages",
+      "label": "Pages",
+      "editable": true,
+      "source": {
+        "loader": "glob",
+        "base": "src/content/pages",
+        "pattern": "**/[^_]*.{md,mdx}",
+        "generateId": "default",
+        "formats": [
+          "md",
+          "mdx"
+        ]
+      },
+      "entryKind": "content",
+      "fields": [
+        {
+          "path": [
+            "title"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Title",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "summary"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Summary",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "nav"
+          ],
+          "kind": "object",
+          "required": false,
+          "label": "Navigation",
+          "children": [
+            {
+              "path": [
+                "nav",
+                "label"
+              ],
+              "kind": "string",
+              "required": false,
+              "label": "Label",
+              "description": "Shorter title for menus.",
+              "inferredWidget": "text",
+              "widget": "text"
+            },
+            {
+              "path": [
+                "nav",
+                "hidden"
+              ],
+              "kind": "boolean",
+              "required": false,
+              "label": "Hidden",
+              "default": false,
+              "inferredWidget": "switch",
+              "widget": "switch"
+            }
+          ],
+          "extraKeys": "strip",
+          "inferredWidget": "group",
+          "widget": "group"
+        },
+        {
+          "path": [
+            "sections"
+          ],
+          "kind": "array",
+          "required": false,
+          "label": "Sections",
+          "default": [],
+          "children": [
+            {
+              "path": [
+                "sections",
+                "[]"
+              ],
+              "kind": "object",
+              "required": true,
+              "label": "Item",
+              "children": [
+                {
+                  "path": [
+                    "sections",
+                    "[]",
+                    "heading"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "Heading",
+                  "inferredWidget": "text",
+                  "widget": "text"
+                },
+                {
+                  "path": [
+                    "sections",
+                    "[]",
+                    "body"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "Body",
+                  "widget": "markdown",
+                  "widgetOptions": {
+                    "inline": true
+                  },
+                  "inferredWidget": "text"
+                }
+              ],
+              "extraKeys": "strip",
+              "inferredWidget": "group",
+              "widget": "group"
+            }
+          ],
+          "inferredWidget": "repeater",
+          "widget": "repeater"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    },
+    {
+      "name": "docs",
+      "label": "Docs",
+      "editable": true,
+      "source": {
+        "loader": "glob",
+        "base": "src/content/docs",
+        "pattern": "**/[^_]*.mdoc",
+        "generateId": "default",
+        "formats": [
+          "mdoc"
+        ]
+      },
+      "entryKind": "content",
+      "fields": [
+        {
+          "path": [
+            "title"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Title",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "summary"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Summary",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "order"
+          ],
+          "kind": "number",
+          "required": false,
+          "label": "Order",
+          "constraints": {
+            "integer": true
+          },
+          "inferredWidget": "number",
+          "widget": "number"
+        },
+        {
+          "path": [
+            "updated"
+          ],
+          "kind": "date",
+          "required": false,
+          "label": "Updated",
+          "widget": "datetime",
+          "coerce": true,
+          "inferredWidget": "date"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    },
+    {
+      "name": "settings",
+      "label": "Settings",
+      "editable": true,
+      "source": {
+        "loader": "glob",
+        "base": "src/content/settings",
+        "pattern": "site.yaml",
+        "generateId": "default",
+        "formats": [
+          "yaml"
+        ]
+      },
+      "entryKind": "data",
+      "fields": [
+        {
+          "path": [
+            "siteName"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Site name",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "tagline"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Tagline",
+          "widget": "textarea",
+          "inferredWidget": "text"
+        },
+        {
+          "path": [
+            "brandColor"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Brand color",
+          "widget": "color",
+          "widgetOptions": {
+            "palette": {
+              "Indigo": "#28335f",
+              "Pine": "#2f5d50",
+              "Brick": "#8a3b3b"
+            }
+          },
+          "constraints": {
+            "pattern": "^#[0-9a-f]{6}$",
+            "patternFlags": "i"
+          },
+          "inferredWidget": "text"
+        },
+        {
+          "path": [
+            "website"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Website",
+          "format": "url",
+          "inferredWidget": "url",
+          "widget": "url"
+        },
+        {
+          "path": [
+            "timeZone"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Time zone",
+          "description": "IANA time zone name, for example America/New_York (spec §6.17).",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "social"
+          ],
+          "kind": "array",
+          "required": false,
+          "label": "Social",
+          "default": [],
+          "children": [
+            {
+              "path": [
+                "social",
+                "[]"
+              ],
+              "kind": "object",
+              "required": true,
+              "label": "Item",
+              "children": [
+                {
+                  "path": [
+                    "social",
+                    "[]",
+                    "network"
+                  ],
+                  "kind": "enum",
+                  "required": true,
+                  "label": "Network",
+                  "constraints": {
+                    "options": [
+                      {
+                        "value": "mastodon",
+                        "label": "mastodon"
+                      },
+                      {
+                        "value": "bluesky",
+                        "label": "bluesky"
+                      },
+                      {
+                        "value": "instagram",
+                        "label": "instagram"
+                      },
+                      {
+                        "value": "youtube",
+                        "label": "youtube"
+                      },
+                      {
+                        "value": "linkedin",
+                        "label": "linkedin"
+                      }
+                    ]
+                  },
+                  "inferredWidget": "select",
+                  "widget": "select"
+                },
+                {
+                  "path": [
+                    "social",
+                    "[]",
+                    "url"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "URL",
+                  "format": "url",
+                  "inferredWidget": "url",
+                  "widget": "url"
+                }
+              ],
+              "extraKeys": "strip",
+              "inferredWidget": "group",
+              "widget": "group"
+            }
+          ],
+          "inferredWidget": "repeater",
+          "widget": "repeater"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    },
+    {
+      "name": "locations",
+      "label": "Locations",
+      "editable": true,
+      "source": {
+        "loader": "file",
+        "path": "src/data/locations.yaml",
+        "format": "yaml",
+        "customParser": false
+      },
+      "entryKind": "data",
+      "fields": [
+        {
+          "path": [
+            "name"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Name",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "address"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Address",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "geo"
+          ],
+          "kind": "object",
+          "required": true,
+          "label": "Map location",
+          "widget": "geo",
+          "children": [
+            {
+              "path": [
+                "geo",
+                "lat"
+              ],
+              "kind": "number",
+              "required": true,
+              "label": "Lat",
+              "constraints": {
+                "min": -90,
+                "max": 90
+              },
+              "inferredWidget": "number",
+              "widget": "number"
+            },
+            {
+              "path": [
+                "geo",
+                "lng"
+              ],
+              "kind": "number",
+              "required": true,
+              "label": "Lng",
+              "constraints": {
+                "min": -180,
+                "max": 180
+              },
+              "inferredWidget": "number",
+              "widget": "number"
+            }
+          ],
+          "extraKeys": "strip",
+          "inferredWidget": "group"
+        },
+        {
+          "path": [
+            "color"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Map pin color",
+          "widget": "color",
+          "constraints": {
+            "pattern": "^#[0-9a-f]{6}$",
+            "patternFlags": "i"
+          },
+          "inferredWidget": "text"
+        },
+        {
+          "path": [
+            "open"
+          ],
+          "kind": "boolean",
+          "required": true,
+          "label": "Open",
+          "inferredWidget": "switch",
+          "widget": "switch"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    },
+    {
+      "name": "events",
+      "label": "Events",
+      "editable": true,
+      "source": {
+        "loader": "glob",
+        "base": "src/content/events",
+        "pattern": "**/[^_]*.md",
+        "generateId": "default",
+        "formats": [
+          "md"
+        ]
+      },
+      "entryKind": "content",
+      "fields": [
+        {
+          "path": [
+            "title"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Title",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "summary"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Summary",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "startsAt"
+          ],
+          "kind": "date",
+          "required": true,
+          "label": "Starts at",
+          "widget": "datetime",
+          "coerce": true,
+          "inferredWidget": "date"
+        },
+        {
+          "path": [
+            "endsAt"
+          ],
+          "kind": "date",
+          "required": false,
+          "label": "Ends at",
+          "widget": "datetime",
+          "coerce": true,
+          "inferredWidget": "date"
+        },
+        {
+          "path": [
+            "location"
+          ],
+          "kind": "reference",
+          "required": false,
+          "label": "Location",
+          "reference": {
+            "collection": "locations"
+          },
+          "inferredWidget": "reference",
+          "widget": "reference"
+        },
+        {
+          "path": [
+            "publishAt"
+          ],
+          "kind": "date",
+          "required": false,
+          "label": "Publish at",
+          "widget": "datetime",
+          "coerce": true,
+          "inferredWidget": "date"
+        },
+        {
+          "path": [
+            "unpublishAt"
+          ],
+          "kind": "date",
+          "required": false,
+          "label": "Unpublish at",
+          "widget": "datetime",
+          "coerce": true,
+          "inferredWidget": "date"
+        },
+        {
+          "path": [
+            "unpublishRedirect"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Unpublish redirect",
+          "description": "Where visitors go after this event is unpublished.",
+          "widget": "url",
+          "inferredWidget": "text"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    },
+    {
+      "name": "fixtures",
+      "label": "Fixtures",
+      "editable": true,
+      "source": {
+        "loader": "glob",
+        "base": "src/content/fixtures",
+        "pattern": "**/[^_]*.mdoc",
+        "generateId": "default",
+        "formats": [
+          "mdoc"
+        ]
+      },
+      "entryKind": "content",
+      "fields": [
+        {
+          "path": [
+            "title"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Title",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "summary"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Summary",
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "textColor"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Text color",
+          "widget": "color",
+          "constraints": {
+            "pattern": "^#[0-9a-f]{6}$",
+            "patternFlags": "i"
+          },
+          "inferredWidget": "text"
+        },
+        {
+          "path": [
+            "brochure"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Brochure",
+          "widget": "file",
+          "widgetOptions": {
+            "accept": "application/pdf"
+          },
+          "inferredWidget": "text"
+        }
+      ],
+      "extraKeys": "strip",
+      "presentation": {}
+    }
+  ],
+  "forms": [
+    {
+      "name": "contact",
+      "fields": [
+        {
+          "path": [
+            "name"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Your name",
+          "autocomplete": "name",
+          "safeToEcho": true,
+          "constraints": {
+            "min": 1
+          },
+          "inferredWidget": "text",
+          "widget": "text"
+        },
+        {
+          "path": [
+            "email"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Email",
+          "autocomplete": "email",
+          "format": "email",
+          "inferredWidget": "email",
+          "widget": "email"
+        },
+        {
+          "path": [
+            "department"
+          ],
+          "kind": "enum",
+          "required": true,
+          "label": "Department",
+          "widgetOptions": {
+            "labels": {
+              "admissions": "Admissions",
+              "financial-aid": "Financial aid",
+              "registrar": "Registrar",
+              "other": "Something else"
+            }
+          },
+          "constraints": {
+            "options": [
+              {
+                "value": "admissions",
+                "label": "Admissions"
+              },
+              {
+                "value": "financial-aid",
+                "label": "Financial aid"
+              },
+              {
+                "value": "registrar",
+                "label": "Registrar"
+              },
+              {
+                "value": "other",
+                "label": "Something else"
+              }
+            ]
+          },
+          "inferredWidget": "radio",
+          "widget": "radio"
+        },
+        {
+          "path": [
+            "message"
+          ],
+          "kind": "string",
+          "required": true,
+          "label": "Message",
+          "widget": "textarea",
+          "constraints": {
+            "min": 10
+          },
+          "inferredWidget": "text"
+        },
+        {
+          "path": [
+            "attachment"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Attachment",
+          "widget": "upload",
+          "widgetOptions": {
+            "accept": [
+              "application/pdf",
+              ".docx"
+            ],
+            "maxSizeMB": 10,
+            "maxFiles": 1
+          },
+          "inferredWidget": "text"
+        }
+      ],
+      "options": {
+        "confirmation": {
+          "emailField": "email"
+        },
+        "successMessage": "Thanks, we will be in touch."
+      }
+    }
+  ],
+  "diagnostics": [],
+  "hash": "9806ace5539a4bfa4d508815b075a5876a0b333acdad42fa562a12dc3aad4622"
+}

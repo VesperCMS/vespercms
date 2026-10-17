@@ -84,6 +84,8 @@ export default defineConfig(
       'apps/playground/src/content/**',
       'apps/playground/src/data/**',
       'apps/playground/fixtures/**',
+      // Fixture Astro sites: their types come from astro:content, which only exists inside Astro.
+      'packages/astro/test/fixtures/**',
     ],
   },
   js.configs.recommended,
@@ -101,6 +103,11 @@ export default defineConfig(
       },
     },
     rules: {
+      // Destructuring a key out to drop it (`const { generator: _, ...rest }`) is intended.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
       // Template literals with numbers and booleans read fine; the strict
       // default flags them.
       '@typescript-eslint/restrict-template-expressions': [

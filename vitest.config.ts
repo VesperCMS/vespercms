@@ -25,6 +25,18 @@ export default defineConfig({
           include: ['packages/core/test/**/*.test.ts'],
         },
       },
+      {
+        // Real Astro sites: config loading through Vite, astro sync, the CLI.
+        extends: true,
+        test: {
+          name: 'integration',
+          environment: 'node',
+          include: ['packages/astro/test/**/*.test.ts'],
+          pool: 'forks',
+          testTimeout: 60_000,
+          hookTimeout: 120_000,
+        },
+      },
     ],
   },
 });

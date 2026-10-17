@@ -45,18 +45,20 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
 | `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`. |
 | `npm run e2e` | Playwright + axe against the built playground on `scripts/static-server.mjs` (no rewrites, no headers). Build first. |
+| `npm run manifest` | Print the playground's manifest, generated from source. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout
 
 ```
 packages/core      Schema introspection, manifest, serializers, storage interface. No framework imports.
+packages/astro     The Astro integration: fields helpers, defineConfig, Node tooling (config loading, manifest CLI, local storage).
 packages/ui        Design tokens (Phase 0), accessible components (Phase 2). Tokens enforce the §10.4 budget.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
 scripts/           Repo tooling (contrast check, static server, dist check).
 ```
 
-Later phases add `packages/astro` (Phase 1), `packages/admin` (Phase 2), `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/cloud-app` (Phase 4), `packages/create-vesper` and `apps/docs` (Phase 9).
+Later phases add `packages/admin` (Phase 2), `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/cloud-app` (Phase 4), `packages/create-vesper` and `apps/docs` (Phase 9).
 
 ## Constraints that are easy to violate
 

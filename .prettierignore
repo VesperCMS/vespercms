@@ -17,4 +17,5 @@ packages/core/test/fixtures/
 apps/playground/src/content/
 apps/playground/src/data/
 apps/playground/fixtures/
+packages/astro/test/fixtures/
 apps/playground/vesper.redirects.yaml

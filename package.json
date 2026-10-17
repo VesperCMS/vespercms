@@ -25,6 +25,8 @@
     "test:watch": "vitest",
     "//e2e": "Playwright + axe against the built playground on a no-rewrite static server (the spec §6.16 plain host). Build the playground first.",
     "e2e": "playwright test",
+    "//manifest": "Prints the playground's manifest, generated from source by the vesper CLI.",
+    "manifest": "node packages/astro/src/node/cli.ts manifest --root apps/playground",
     "//lint": "ESLint over the whole repo, including the package-boundary rules for @vesper/core.",
     "lint": "eslint .",
     "//format": "Prettier formats code and config only; prose and content files are ignored on purpose (.prettierignore).",
