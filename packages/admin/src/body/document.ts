@@ -187,20 +187,83 @@ function childIndex(path: unknown, parent: string | null): number | null {
   return Number(path.slice(dot + 1));
 }
 
+type ItemsContext = Pick<BodyContext, 'markdown' | 'containers'> & { parsed?: ParsedBody };
+
 /** The edited body as items: unchanged blocks keep their bytes, changed ones are written. */
 export function bodyItems(
   doc: JSONContent,
   initial: ReadonlyMap<string, string>,
-  context: Pick<BodyContext, 'markdown' | 'containers'>,
+  context: ItemsContext,
 ): BodyItem[] {
   return itemsOf(doc.content, null, initial, context);
+}
+
+/** The original block at a path ("3", "3.1"), and the indentation of the container holding it. */
+function blockAt(parsed: ParsedBody, path: string): { block: BodyBlock; indent: string } | null {
+  let blocks: readonly BodyBlock[] = parsed.blocks;
+  let indent = '';
+  const parts = path.split('.');
+  for (const [i, part] of parts.entries()) {
+    const block = blocks[Number(part)];
+    if (!block) return null;
+    if (i === parts.length - 1) return { block, indent };
+    if (!block.tag?.children) return null;
+    blocks = block.tag.children;
+    indent = block.tag.indent ?? '';
+  }
+  return null;
+}
+
+/** Each chip's source, in order, and the node with every chip's source blanked. */
+function chipShape(node: JSONContent): { sources: string[]; shape: string } {
+  const sources: string[] = [];
+  const blank = (n: JSONContent): JSONContent => {
+    if (n.type === 'vesperInline') {
+      sources.push(String(n.attrs?.source ?? ''));
+      return { ...n, attrs: { ...n.attrs, source: '' } };
+    }
+    return n.content ? { ...n, content: n.content.map(blank) } : n;
+  };
+  return { sources, shape: JSON.stringify(blank(node)) };
+}
+
+/**
+ * When a Markdown block's only change is inside its chips (an inline tag's
+ * settings, a variable edited as text), the chips' new text is spliced into
+ * the block's original text, so nothing else in it is re-serialized: editing
+ * one tag changes only that tag's text. Null when anything else changed.
+ */
+function chipSplice(
+  node: JSONContent,
+  path: string,
+  initial: ReadonlyMap<string, string>,
+  parsed: ParsedBody | undefined,
+): string | null {
+  const before = initial.get(path);
+  const found = parsed ? blockAt(parsed, path) : null;
+  if (!before || !parsed || !found?.block.chips) return null;
+  const was = chipShape(JSON.parse(before) as JSONContent);
+  const now = chipShape(node);
+  const chips = found.block.chips;
+  if (was.shape !== now.shape || now.sources.length !== chips.length) return null;
+  let text = parsed.text.slice(found.block.start, found.block.end);
+  // Right to left, so earlier offsets stay valid.
+  for (let i = chips.length - 1; i >= 0; i--) {
+    const chip = chips[i];
+    if (!chip) return null;
+    const from = chip.start - found.block.start;
+    const to = chip.end - found.block.start;
+    text = text.slice(0, from) + (now.sources[i] ?? '') + text.slice(to);
+  }
+  // The assembler indents lines after the first like their container's content.
+  return dedent(text, found.indent);
 }
 
 function itemsOf(
   nodes: readonly JSONContent[] | undefined,
   parent: string | null,
   initial: ReadonlyMap<string, string>,
-  context: Pick<BodyContext, 'markdown' | 'containers'>,
+  context: ItemsContext,
 ): BodyItem[] {
   const items: BodyItem[] = [];
   for (const node of nodes ?? []) {
@@ -229,7 +292,11 @@ function itemsOf(
       items.push({ keep: index });
       continue;
     }
-    const text = nodeText(node, context.markdown);
+    const spliced =
+      index !== null && typeof path === 'string'
+        ? chipSplice(node, path, initial, context.parsed)
+        : null;
+    const text = spliced ?? nodeText(node, context.markdown);
     // An empty paragraph (the line the cursor sits on) writes nothing.
     if (text === '' && index === null) continue;
     items.push(index === null ? { text } : { text, replaces: index });

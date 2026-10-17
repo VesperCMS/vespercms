@@ -56,7 +56,7 @@ export function open(body: string, format: BodyFormat = 'md') {
   const save = () =>
     assembleBody(
       built.parsed,
-      bodyItems(editor?.getJSON() ?? {}, initial, { markdown, containers }),
+      bodyItems(editor?.getJSON() ?? {}, initial, { markdown, containers, parsed: built.parsed }),
     );
   return { built, save, editor, containers };
 }
@@ -203,6 +203,18 @@ describe('Markdoc blocks', () => {
       }),
     );
     expect(save()).toBe(DOC.replace('type="tip"', 'type="warning"'));
+  });
+
+  it('changing an inline tag changes only that tag, even beside Markdown the editor would restyle', () => {
+    const body = 'A __strong__ word and the {% abbr title="x" %}CMS{% /abbr %}  \nhere.\n';
+    const { save, editor: e } = open(body, 'mdoc');
+    const pos = find(e, 'vesperInline');
+    e.view.dispatch(
+      e.state.tr.setNodeMarkup(pos, undefined, {
+        source: '{% abbr title="content system" %}CMS{% /abbr %}',
+      }),
+    );
+    expect(save()).toBe(body.replace('title="x"', 'title="content system"'));
   });
 
   it('typing next to a chip keeps the chip’s bytes', () => {

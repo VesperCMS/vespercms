@@ -372,6 +372,7 @@ function WritingView({
       const items = bodyItems(updated.getJSON(), model.current.initial, {
         markdown: updated.markdown as MarkdownManager,
         containers,
+        parsed: model.current.built.parsed,
       });
       onChangeRef.current(assembleBody(model.current.built.parsed, items));
     },
