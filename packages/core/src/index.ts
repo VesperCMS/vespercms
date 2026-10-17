@@ -152,6 +152,16 @@ export {
   type MarkdocTagLayout,
   type MarkdocAttributeSpan,
 } from './body/markdoc-tag.ts';
+export {
+  jsxTagLayout,
+  jsxAttribute,
+  jsxOpening,
+  jsxClosing,
+  editJsxTag,
+  readJsLiteral,
+  type JsxAttribute,
+  type JsxTagLayout,
+} from './body/jsx-tag.ts';
 
 // The studio's API contract (spec §6.7).
 export {
