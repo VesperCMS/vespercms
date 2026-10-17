@@ -14,7 +14,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 
 | Phase | Status |
 |---|---|
-| 0 Scaffold | In progress |
+| 0 Scaffold | Built and verified locally (2026-10-17). Done once CI is green on GitHub. |
 | 1 Core | Designed in `PLAN.md`, not started |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
@@ -36,6 +36,7 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | Command | What it does |
 |---|---|
 | `npm install` | Install all workspaces. |
+| `npm run dev` | The playground in `astro dev` (http://localhost:4321). Nothing to prebuild. |
 | `npm test` | Vitest, from source (no build needed). |
 | `npm run typecheck` | `tsc -b` over package build configs, then each package's `tsconfig.json` (which includes tests). |
 | `npm run lint` | ESLint, including the core package-boundary rules. |

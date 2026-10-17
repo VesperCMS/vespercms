@@ -6,7 +6,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 | Phase | Status |
 |---|---|
-| 0 Scaffold | In progress |
+| 0 Scaffold | Built and verified locally (2026-10-17). Done once CI is green on GitHub. |
 | 1 Core | Designed below, not started |
 | 2 onward | Roadmap below |
 

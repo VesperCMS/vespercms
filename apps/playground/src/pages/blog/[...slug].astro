@@ -24,7 +24,7 @@ const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UT
   <article>
     <h1>{post.data.title}</h1>
     <p class="muted">
-      By {author.data.name} ·
+      By {author.data.name} ·{' '}
       <time datetime={post.data.publishedAt.toISOString()}>
         {date.format(post.data.publishedAt)}
       </time>

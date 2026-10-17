@@ -13,6 +13,8 @@
     "apps/*"
   ],
   "scripts": {
+    "//dev": "The playground in astro dev. Workspace packages load from source, so there is nothing to prebuild.",
+    "dev": "npm run dev -w @vesper/playground",
     "//build": "Emits dist/ for every package. Only publishing and check:dist read it; dev and tests run from source.",
     "build": "tsc -b",
     "//check:dist": "Imports every published entry point from dist/ with the source condition off.",
