@@ -92,8 +92,10 @@ export default defineConfig(
     languageOptions: {
       parserOptions: {
         projectService: {
-          // Root-level TypeScript files that no package tsconfig covers.
+          // Root-level TypeScript files that no package tsconfig covers are
+          // checked with tsconfig.tools.json.
           allowDefaultProject: ['*.config.ts', 'scripts/*.d.mts'],
+          defaultProject: 'tsconfig.tools.json',
         },
         tsconfigRootDir: import.meta.dirname,
       },

@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "//": "Type-checks the Playwright specs; Playwright transpiles them itself.",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "composite": false,
+    "declaration": false,
+    "noEmit": true
+  },
+  "include": ["**/*.ts"]
+}

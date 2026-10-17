@@ -42,6 +42,8 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run format` / `format:check` | Prettier over code and config (never prose or content). |
 | `npm run a11y:contrast` | Token contrast (WCAG 2.1, both themes) and the §10.4 token budget, parsed from `packages/ui/src/tokens.css`. |
 | `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
+| `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`. |
+| `npm run e2e` | Playwright + axe against the built playground on `scripts/static-server.mjs` (no rewrites, no headers). Build first. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout
@@ -82,6 +84,8 @@ Later phases add `packages/astro` (Phase 1), `packages/admin` (Phase 2), `templa
 ### Static output, any host
 
 **No feature may depend on a host's rewrites, headers, functions or image service.** The built site and the studio must work when `dist/` is copied to an FTP host (D4, D16). Host-specific extras are optional and always have a universal fallback.
+
+**Test static behavior against `scripts/static-server.mjs`, never a dev server or a host with rewrites.** It behaves like Apache with no `.htaccess`: `/x/` serves `x/index.html`, `/x` redirects to `/x/` only if that folder exists, everything else is a 404.
 
 **The studio uses hash routing (`/admin/#/…`) and respects Astro's `base`, `trailingSlash` and `build.format`.** Deep links must survive a reload on a host with no rewrite rules.
 

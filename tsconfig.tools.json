@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "//": "Root-level TypeScript that no package owns: tool configs and declaration files for repo scripts. ESLint's project service uses it as the default project; npm run typecheck checks it.",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "composite": false,
+    "declaration": false,
+    "noEmit": true
+  },
+  "include": ["*.config.ts", "scripts/*.d.mts"]
+}
