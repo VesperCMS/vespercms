@@ -12,5 +12,20 @@
     "packages/*",
     "apps/*"
   ],
-  "scripts": {}
+  "scripts": {
+    "//build": "Emits dist/ for every package. Only publishing and check:dist read it; dev and tests run from source.",
+    "build": "tsc -b",
+    "//check:dist": "Imports every published entry point from dist/ with the source condition off.",
+    "check:dist": "npm run build && node scripts/check-dist.mjs",
+    "//typecheck": "Package sources through project references, then each package's tests (which may use Node types).",
+    "typecheck": "tsc -b && tsc -p packages/core/tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.0",
+    "typescript": "6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
 }

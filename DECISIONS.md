@@ -48,6 +48,33 @@ The spec's D1–D17 are recorded in `vesper-spec.md` §3 and aren't repeated her
 
 **Every committed photo, PDF or sample upload is CC0, public domain or MIT-compatible, with its source and license recorded next to it.** The repo is MIT and will be public. Hygiene samples (a HEIC with GPS data, an EXIF-rotated JPEG) come from openly licensed test sets, and each download is approved first.
 
+## Packages and tooling
+
+### 2026-10-17: Workspace packages resolve to source through a custom export condition
+
+**Every package's `exports` lists `"@vesper/source": "./src/index.ts"` first. Node gets the condition from `.npmrc` (`node-options=--conditions=@vesper/source`), Vite and Vitest from `scripts/vite-source-conditions.mjs`, and TypeScript from `customConditions`.** Nothing in the dev loop reads `dist/`, so it can never be stale. Taproot's `pre*` build hooks exist because of exactly that staleness.
+
+Node 22.18+ strips types from `.ts` files whose real path is outside `node_modules`. Workspace symlinks resolve to `packages/*/src`, so this works without a build step. Astro loads `astro.config.mjs` with a plain Node `import()` first, so a site config in this workspace can import `@vesper/astro` from source. `scripts/source-condition.test.mjs` keeps this proven.
+
+What it costs:
+- Only erasable TypeScript syntax (`erasableSyntaxOnly`).
+- Relative imports use `.ts` (`rewriteRelativeImportExtensions` emits `.js`).
+- Tools must run through `npm run`, because a bare `npx` outside npm scripts doesn't see `.npmrc`'s node-options.
+
+`scripts/check-dist.mjs` covers the published path by importing every entry point with `NODE_OPTIONS` cleared.
+
+Rejected:
+- `tsc --watch` beside dev: a second process, and still racy.
+- Shipping TypeScript source to npm, as Taproot's Astro packages do: Node refuses to strip types under `node_modules`, and Astro imports integrations through Node.
+
+### 2026-10-17: TypeScript 6.0, not 7
+
+**Pin `typescript` to 6.0.3.** TypeScript 7.0 is out, but typescript-eslint 8.71 supports `>=4.8.4 <6.1.0`, and `@astrojs/check` supports `^5 || ^6`. Revisit when both support 7.
+
+### 2026-10-17: `@vesper/core` builds without `@types/node`
+
+**Core's tsconfig sets `lib: ["ES2023", "DOM"]` and `types: []`.** `DOM` provides the platform APIs shared by browsers, Workers and Node (`TextDecoder`, `crypto.subtle`, `URL`). With no Node types, any use of `process`, `Buffer` or `node:*` fails typecheck, which enforces spec §12's "runs in Node, Workers and the browser" before review has to. Tests use a separate `tsconfig.test.json` that adds Node types, since they read fixtures from disk.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas

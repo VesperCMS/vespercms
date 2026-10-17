@@ -36,6 +36,9 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | Command | What it does |
 |---|---|
 | `npm install` | Install all workspaces. |
+| `npm test` | Vitest, from source (no build needed). |
+| `npm run typecheck` | `tsc -b` over package sources, then each package's test tsconfig. |
+| `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout
 
@@ -55,6 +58,14 @@ Later phases add `packages/astro` (Phase 1), `packages/admin` (Phase 2), `templa
 **`packages/core` imports nothing from Node, Astro, React, Vite or Zod.** It must run in Node, in Workers and in the browser (spec §12), and it reads site schemas structurally.
 
 **In anything that touches a site's schemas, import Zod from `astro/zod`, never `zod`.** A second Zod copy makes `.meta()` hints silently disappear (spec §6.3).
+
+**Workspace code imports `@vesper/*` by package name, which resolves to `src/` through the `@vesper/source` condition. Never import from a `dist/` path.** The dev loop never builds, so `dist/` is stale by definition; `check:dist` covers the published path.
+
+**Use only erasable TypeScript syntax: no enums, namespaces or constructor parameter properties.** Node's built-in type stripping runs workspace sources directly, and it can't transform those (`erasableSyntaxOnly` enforces this).
+
+**Relative imports carry the `.ts` extension.** Node needs real file names, and `rewriteRelativeImportExtensions` turns them into `.js` in `dist/`.
+
+**`packages/core` has no `@types/node`. If code there needs `process`, `Buffer` or `node:*`, it belongs in `@vesper/astro`.** The missing types make typecheck fail before review has to catch it.
 
 ### Content files
 

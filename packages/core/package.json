@@ -1,0 +1,25 @@
+{
+  "name": "@vesper/core",
+  "version": "0.0.0",
+  "description": "Vesper's framework-free core: schema introspection, manifest, serializers and the storage adapter interface.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/.",
+  "exports": {
+    ".": {
+      "@vesper/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "prepack": "tsc -b"
+  }
+}
