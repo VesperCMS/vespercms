@@ -36,6 +36,7 @@ export type FakeData = {
   entries?: Record<string, EntrySummary[]>;
   documents?: Record<string, EntryDocument>;
   media?: MediaItem[];
+  partials?: string[];
 };
 
 /** An in-memory StudioApi. Every method is a `vi.fn`, so tests can assert on calls. */
@@ -67,6 +68,7 @@ export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<Stu
     deleteMedia: vi.fn(() =>
       Promise.resolve({ ok: true, id: '', path: '', version: '', reformatted: false }),
     ),
+    listPartials: vi.fn(() => Promise.resolve(data.partials ?? [])),
     fileUrl: vi.fn((path: string) => `/_vesper/api/file?path=${encodeURIComponent(path)}`),
   } as never;
 }

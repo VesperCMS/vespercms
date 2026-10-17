@@ -1,63 +1,35 @@
-import { Extension, Node, type JSONContent } from '@tiptap/core';
+import type { JSONContent } from '@tiptap/core';
 import type { MarkdownManager } from '@tiptap/markdown';
-import { parseBody, type BodyFormat, type BodyItem, type ParsedBody } from '@vesper/core';
+import {
+  parseBody,
+  type BodyBlock,
+  type BodyFormat,
+  type BodyItem,
+  type MarkdocParseOptions,
+  type ParsedBody,
+} from '@vesper/core';
+import type { Catalog } from './catalog.ts';
+import { hasPlaceholderCharacters, restoreChips, withPlaceholders } from './chips.ts';
+import { WRITABLE_NODES, type ContainerTypes } from './nodes.ts';
 
 /*
- * The body as blocks (DECISIONS.md: "The body editor splices changed blocks
- * into the original text"). Each Markdown block becomes one editor node
- * tagged with its index; anything the writing view can't show faithfully
- * becomes a protected source block. On save, a node whose content didn't
- * change copies its original bytes, and only changed or new blocks are
- * written by the Markdown serializer.
+ * The body as editor nodes, and back (DECISIONS.md: "The body editor splices
+ * changed blocks into the original text"). Each block becomes one node
+ * tagged with its path: Markdown the writing view can show faithfully, a
+ * tag or component the site declares (a container with editable children,
+ * or a card), or a protected source block. On save, a node whose content
+ * didn't change copies its original bytes, a container re-writes its
+ * opening only if its attributes changed, and only changed or new blocks
+ * are written by the Markdown serializer.
  */
 
-/** Editor node types a Markdown block may become. Anything else stays source. */
-const WRITABLE_NODES = new Set([
-  'paragraph',
-  'heading',
-  'bulletList',
-  'orderedList',
-  'blockquote',
-  'codeBlock',
-  'horizontalRule',
-]);
-
-/** Remembers which original block a node came from. Not copied when a block is split. */
-export const BlockIndex = Extension.create({
-  name: 'vesperBlockIndex',
-  addGlobalAttributes() {
-    return [
-      {
-        types: [...WRITABLE_NODES],
-        attributes: {
-          vesperBlock: { default: null, keepOnSplit: false, rendered: false },
-        },
-      },
-    ];
-  },
-});
-
-/** A block the writing view can't show: kept exactly, edited in the source view. */
-export const SourceBlock = Node.create({
-  name: 'sourceBlock',
-  group: 'block',
-  atom: true,
-  selectable: true,
-  draggable: false,
-  addAttributes() {
-    return {
-      index: { default: null, rendered: false },
-      text: { default: '', rendered: false },
-      blockType: { default: '', rendered: false },
-    };
-  },
-  parseHTML() {
-    return [];
-  },
-  renderHTML() {
-    return ['div', { 'data-vesper-source': '' }];
-  },
-});
+export type BodyContext = {
+  format: BodyFormat;
+  markdown: MarkdownManager;
+  catalog: Catalog;
+  containers: ContainerTypes;
+  markdoc?: MarkdocParseOptions;
+};
 
 export type BodyDocument = {
   /** The text the document was built from, and its blocks. */
@@ -66,23 +38,101 @@ export type BodyDocument = {
 };
 
 /** Builds the editor document for a body. */
-export function buildDocument(
-  body: string,
-  format: BodyFormat,
-  markdown: MarkdownManager,
-): BodyDocument {
-  const parsed = parseBody(body, format);
-  const content = parsed.blocks.map((block, index): JSONContent => {
-    const text = body.slice(block.start, block.end);
-    // Blocks with inline chips stay protected until the writing view shows chips.
-    const node = block.kind === 'markdown' && !block.chips ? writableNode(markdown, text) : null;
-    if (node) return { ...node, attrs: { ...node.attrs, vesperBlock: index } };
-    return { type: 'sourceBlock', attrs: { index, text, blockType: block.type } };
-  });
+export function buildDocument(body: string, context: BodyContext): BodyDocument {
+  const parsed = parseBody(
+    body,
+    context.format,
+    context.markdoc ? { markdoc: context.markdoc } : {},
+  );
+  const content = nodesOf(parsed.text, parsed.blocks, null, '', context, null);
   return {
     parsed,
     doc: { type: 'doc', content: content.length > 0 ? content : [{ type: 'paragraph' }] },
   };
+}
+
+const pathOf = (parent: string | null, index: number) =>
+  parent === null ? String(index) : `${parent}.${String(index)}`;
+
+function nodesOf(
+  text: string,
+  blocks: readonly BodyBlock[],
+  parent: string | null,
+  indent: string,
+  context: BodyContext,
+  allows: ((type: string) => boolean) | null,
+): JSONContent[] {
+  return blocks.map((block, index) => {
+    const path = pathOf(parent, index);
+    const node = nodeOf(text, block, path, indent, context);
+    return allows && !allows(node.type ?? '') ? sourceNode(text, block, path) : node;
+  });
+}
+
+function sourceNode(text: string, block: BodyBlock, path: string): JSONContent {
+  return {
+    type: 'sourceBlock',
+    attrs: { vesperBlock: path, text: text.slice(block.start, block.end), blockType: block.type },
+  };
+}
+
+function nodeOf(
+  text: string,
+  block: BodyBlock,
+  path: string,
+  indent: string,
+  context: BodyContext,
+): JSONContent {
+  const raw = text.slice(block.start, block.end);
+  if (block.kind === 'markdown' && !hasPlaceholderCharacters(raw)) {
+    const chips = (block.chips ?? []).map((c) => ({
+      start: c.start - block.start,
+      end: c.end - block.start,
+    }));
+    const source = dedent(withPlaceholders(raw, chips), indent);
+    const node = source === null ? null : writableNode(context.markdown, source);
+    if (node) return { ...node, attrs: { ...node.attrs, vesperBlock: path } };
+    return sourceNode(text, block, path);
+  }
+  const tag = block.tag;
+  const kind = block.kind === 'tag' && tag ? context.catalog.find(tag.syntax, tag.name) : undefined;
+  if (!tag || !kind) return sourceNode(text, block, path);
+
+  const containerType = context.containers.typeOf(kind);
+  if (containerType && tag.children && tag.closeStart !== undefined) {
+    const children = nodesOf(text, tag.children, path, tag.indent ?? '', context, (type) =>
+      context.containers.allows(kind, type),
+    );
+    return {
+      type: containerType,
+      attrs: {
+        vesperBlock: path,
+        syntax: tag.syntax,
+        name: tag.name,
+        open: text.slice(block.start, tag.openEnd),
+        close: text.slice(tag.closeStart, block.end),
+      },
+      content: children.length > 0 ? children : [{ type: 'paragraph' }],
+    };
+  }
+  return {
+    type: 'vesperCard',
+    attrs: { vesperBlock: path, syntax: tag.syntax, name: tag.name, source: raw },
+  };
+}
+
+/** Text with `indent` taken off every line after the first; null when a line isn't indented so. */
+export function dedent(text: string, indent: string): string | null {
+  if (indent === '') return text;
+  const lines = text.split('\n');
+  const out: string[] = [];
+  for (const [i, line] of lines.entries()) {
+    if (i === 0) out.push(line);
+    else if (line.trim() === '') out.push(line.trim());
+    else if (line.startsWith(indent)) out.push(line.slice(indent.length));
+    else return null;
+  }
+  return out.join('\n');
 }
 
 /**
@@ -104,44 +154,97 @@ function writableNode(markdown: MarkdownManager, text: string): JSONContent | nu
   }
 }
 
-/** The JSON of each block-tagged node as the editor first holds it, by block index. */
-export function snapshot(doc: JSONContent): Map<number, string> {
-  const initial = new Map<number, string>();
-  for (const node of doc.content ?? []) {
-    const index = node.attrs?.vesperBlock as unknown;
-    if (typeof index === 'number' && !initial.has(index)) initial.set(index, JSON.stringify(node));
-  }
+const isContainer = (node: JSONContent, containers: ContainerTypes) =>
+  node.type !== undefined && containers.kindOf(node.type) !== undefined;
+
+/** How every node with a path first looked: its JSON, or for a container its opening. */
+export function snapshot(doc: JSONContent, containers: ContainerTypes): Map<string, string> {
+  const initial = new Map<string, string>();
+  const visit = (nodes: readonly JSONContent[] | undefined) => {
+    for (const node of nodes ?? []) {
+      const path = node.attrs?.vesperBlock as unknown;
+      if (typeof path === 'string' && !initial.has(path)) {
+        initial.set(
+          path,
+          isContainer(node, containers)
+            ? JSON.stringify({ open: node.attrs?.open as unknown })
+            : JSON.stringify(node),
+        );
+      }
+      if (isContainer(node, containers)) visit(node.content);
+    }
+  };
+  visit(doc.content);
   return initial;
 }
 
-/** The edited body: unchanged blocks keep their bytes, changed ones are serialized. */
+/** The index of `path` within `parent`, when it's a direct child of it there. */
+function childIndex(path: unknown, parent: string | null): number | null {
+  if (typeof path !== 'string') return null;
+  const dot = path.lastIndexOf('.');
+  const parentPart = dot === -1 ? null : path.slice(0, dot);
+  if (parentPart !== parent) return null;
+  return Number(path.slice(dot + 1));
+}
+
+/** The edited body as items: unchanged blocks keep their bytes, changed ones are written. */
 export function bodyItems(
   doc: JSONContent,
-  initial: ReadonlyMap<number, string>,
-  markdown: MarkdownManager,
+  initial: ReadonlyMap<string, string>,
+  context: Pick<BodyContext, 'markdown' | 'containers'>,
+): BodyItem[] {
+  return itemsOf(doc.content, null, initial, context);
+}
+
+function itemsOf(
+  nodes: readonly JSONContent[] | undefined,
+  parent: string | null,
+  initial: ReadonlyMap<string, string>,
+  context: Pick<BodyContext, 'markdown' | 'containers'>,
 ): BodyItem[] {
   const items: BodyItem[] = [];
-  for (const node of doc.content ?? []) {
-    if (node.type === 'sourceBlock') {
-      const index = node.attrs?.index as unknown;
-      if (typeof index === 'number') items.push({ keep: index });
+  for (const node of nodes ?? []) {
+    const path = node.attrs?.vesperBlock as unknown;
+    const index = childIndex(path, parent);
+    if (isContainer(node, context.containers)) {
+      const open = String(node.attrs?.open ?? '');
+      if (index !== null && typeof path === 'string') {
+        const before = initial.get(path);
+        const children = itemsOf(node.content, path, initial, context);
+        items.push({
+          replaces: index,
+          ...(before !== JSON.stringify({ open }) ? { open } : {}),
+          children,
+        });
+      } else {
+        items.push({
+          open,
+          close: String(node.attrs?.close ?? ''),
+          children: itemsOf(node.content, null, initial, context),
+        });
+      }
       continue;
     }
-    const index = node.attrs?.vesperBlock as unknown;
-    const block = typeof index === 'number' ? index : undefined;
-    if (block !== undefined && initial.get(block) === JSON.stringify(node)) {
-      items.push({ keep: block });
+    if (index !== null && typeof path === 'string' && initial.get(path) === JSON.stringify(node)) {
+      items.push({ keep: index });
       continue;
     }
-    const { vesperBlock: _vesperBlock, ...attrs } = node.attrs ?? {};
-    const text = markdown
-      .serialize({ type: 'doc', content: [{ ...node, attrs }] })
-      .replace(/\s+$/, '');
+    const text = nodeText(node, context.markdown);
     // An empty paragraph (the line the cursor sits on) writes nothing.
-    if (text === '' && block === undefined) continue;
-    items.push(block === undefined ? { text } : { text, replaces: block });
+    if (text === '' && index === null) continue;
+    items.push(index === null ? { text } : { text, replaces: index });
   }
   return items;
+}
+
+/** A node's text as it will be saved. */
+export function nodeText(node: JSONContent, markdown: MarkdownManager): string {
+  if (node.type === 'sourceBlock') return String(node.attrs?.text ?? '');
+  if (node.type === 'vesperCard') return String(node.attrs?.source ?? '');
+  const { vesperBlock: _vesperBlock, ...attrs } = node.attrs ?? {};
+  return restoreChips(
+    markdown.serialize({ type: 'doc', content: [{ ...node, attrs }] }).replace(/\s+$/, ''),
+  );
 }
 
 /** A plain-language name for a protected block, from its parser type. */
@@ -151,6 +254,8 @@ export function sourceLabel(blockType: string): string {
     mdxJsxFlowElement: 'Component',
     mdxFlowExpression: 'Expression',
     html: 'HTML',
+    html_block: 'HTML',
+    comment: 'Comment',
     definition: 'Link reference',
     footnoteDefinition: 'Footnote',
     table: 'Table',

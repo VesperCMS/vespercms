@@ -22,6 +22,11 @@ export type StudioOptions = {
   api: StudioApi | null;
   /** Custom widgets by name (spec §6.3.3). */
   widgets?: Record<string, WidgetLoader>;
+  /**
+   * Declared MDX components' Zod props schemas, from vesper.config.ts, so
+   * props are checked exactly as the site checks them (spec §6.5.2).
+   */
+  mdxProps?: Record<string, unknown>;
   /** Shown in the top bar and the page title. */
   siteName?: string;
   /** The site's home page, for "View site". */

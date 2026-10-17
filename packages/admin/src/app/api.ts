@@ -22,6 +22,8 @@ export interface StudioApi {
   listMedia(): Promise<MediaItem[]>;
   upload(file: Blob, name: string, folder: string): Promise<UploadResponse>;
   deleteMedia(path: string): Promise<SaveResponse>;
+  /** Site-relative paths of the Markdoc and Markdown files a `{% partial %}` can point at. */
+  listPartials(): Promise<string[]>;
   /** A URL the studio can show a file from, given its site-relative path. */
   fileUrl(path: string): string;
 }
@@ -100,6 +102,7 @@ export function createLocalApi(base: string, fetcher: typeof fetch = fetch): Stu
         headers: { 'Content-Type': 'application/octet-stream' },
       }),
     deleteMedia: (path) => call(`/media${query({ path })}`, { method: 'DELETE' }),
+    listPartials: () => call('/partials'),
     fileUrl: (path) => `${root}/file${query({ path })}`,
   };
 }

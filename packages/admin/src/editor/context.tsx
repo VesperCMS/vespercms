@@ -16,6 +16,8 @@ export type EditorState = {
   entryPath: string;
   /** The open entry's ID (`null` until a new entry is saved). */
   entryId: string | null;
+  /** Prefix for field ids in a form that isn't the entry's own (a block's settings). */
+  idPrefix?: string;
 };
 
 export const EditorContext = createContext<EditorState | null>(null);

@@ -24,7 +24,7 @@ export type FieldProps = {
 export function Field({ field, path, label }: FieldProps) {
   const editor = useEditor();
   const { widgets } = useStudio();
-  const id = fieldId(path);
+  const id = fieldId(path, editor.idPrefix);
   const errors = editor.issues.get(pathKey(path)) ?? [];
   const helpId = field.description ? `${id}-help` : undefined;
   const errorId = errors.length > 0 ? `${id}-error` : undefined;

@@ -41,11 +41,12 @@ function setAt(node: DataValue, path: ValuePath, index: number, value: DataValue
 }
 
 /** A DOM id for the control at `path`: stable, unique per entry, and safe in selectors. */
-export function fieldId(path: ValuePath): string {
+export function fieldId(path: ValuePath, prefix = 'field'): string {
   // Segments joined with dots, and no hyphens anywhere: ids built by adding
   // `-label`, `-help` and so on to a field's id can then never equal another
   // field's id (a group's `-label` legend and a child field called `label`).
-  return `field.${path.map((s) => String(s).replace(/[^A-Za-z0-9_]/g, '_')).join('.')}`;
+  // A form other than the entry's (a block's settings) uses its own prefix.
+  return `${prefix}.${path.map((s) => String(s).replace(/[^A-Za-z0-9_]/g, '_')).join('.')}`;
 }
 
 /** Key for matching validation issues to fields. */
