@@ -1,0 +1,11 @@
+{
+  "$schema": "../node_modules/@changesets/config/schema.json",
+  "baseBranch": "main",
+  "access": "public",
+  "commit": false,
+  "fixed": [["@vesper/*"]],
+  "ignore": [],
+  "updateInternalDependencies": "patch",
+  "privatePackages": { "version": false, "tag": false },
+  "changelog": "@changesets/cli/changelog"
+}

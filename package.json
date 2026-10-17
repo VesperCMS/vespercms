@@ -27,9 +27,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "//a11y:contrast": "Parses packages/ui/src/tokens.css and checks every colour pair against WCAG 2.1 in both themes, plus the spec §10.4 token budget.",
-    "a11y:contrast": "node scripts/a11y-contrast.mjs"
+    "a11y:contrast": "node scripts/a11y-contrast.mjs",
+    "//changeset": "Record a release note and version bump for changed @vesper/* packages (see .changeset/README.md).",
+    "changeset": "changeset"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^9.39.5",
     "@types/node": "^24.13.0",
     "eslint": "^9.39.5",

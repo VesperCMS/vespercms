@@ -41,6 +41,7 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run lint` | ESLint, including the core package-boundary rules. |
 | `npm run format` / `format:check` | Prettier over code and config (never prose or content). |
 | `npm run a11y:contrast` | Token contrast (WCAG 2.1, both themes) and the §10.4 token budget, parsed from `packages/ui/src/tokens.css`. |
+| `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout
