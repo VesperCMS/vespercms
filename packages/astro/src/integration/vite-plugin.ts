@@ -74,12 +74,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             'react',
             'react/jsx-runtime',
             'react-dom/client',
+            // Declared MDX components' props schemas reach the studio through vesper.config.ts.
+            'astro/zod',
             '@vesper/astro > @vesper/admin > react-aria-components',
             // The geo field's map, loaded on demand.
             '@vesper/astro > @vesper/admin > maplibre-gl',
             // The body editor, and SVG sanitizing for uploads.
             ...[
               '@tiptap/core',
+              '@tiptap/pm/state',
               '@tiptap/react',
               '@tiptap/starter-kit',
               '@tiptap/markdown',
@@ -149,14 +152,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           '  });',
           '}',
           // Astro reloads every open page when a content file changes (a
-          // full-reload with path '*' and no triggeredBy). The studio made
-          // that change itself, and a reload would throw away its state, so
-          // it steps out of the way: Vite's client reads the payload after
-          // this listener and only reloads for a .html path matching the
-          // page. Code changes carry triggeredBy and still reload.
+          // full-reload with path '*', or with no path at all for Markdoc
+          // entries, and no triggeredBy). The studio made that change
+          // itself, and a reload would throw away its state, so it steps
+          // out of the way: Vite's client reads the payload after this
+          // listener and only reloads for a .html path matching the page.
+          // Code changes carry triggeredBy and still reload.
           'if (import.meta.hot) {',
           "  import.meta.hot.on('vite:beforeFullReload', (payload) => {",
-          "    if (payload.path === '*' && !payload.triggeredBy) payload.path = '/__vesper_studio_stays__.html';",
+          "    if ((payload.path === '*' || payload.path === undefined) && !payload.triggeredBy) payload.path = '/__vesper_studio_stays__.html';",
           '  });',
           '}',
         ].join('\n');
