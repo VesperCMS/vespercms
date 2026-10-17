@@ -154,3 +154,14 @@ export {
   type MediaItem,
   type UploadResponse,
 } from './studio/protocol.ts';
+
+// The studio's content operations over any storage adapter.
+export {
+  ContentService,
+  titleOf,
+  slugify,
+  expandNewEntryPath,
+  type ContentServiceOptions,
+  type Validator,
+} from './studio/service.ts';
+export { issuesFromZod } from './studio/issues.ts';

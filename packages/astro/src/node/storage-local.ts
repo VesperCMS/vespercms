@@ -52,8 +52,17 @@ export class LocalStorage implements StorageAdapter {
         if (dirent.isDirectory()) {
           if (!SKIPPED.has(dirent.name)) await visit(path);
         } else if (dirent.isFile() && path.startsWith(prefix)) {
-          const bytes = new Uint8Array(await fs.readFile(join(this.root, ...path.split('/'))));
-          entries.push({ path, version: await gitBlobSha(bytes), size: bytes.length });
+          const absolutePath = join(this.root, ...path.split('/'));
+          const [bytes, stat] = await Promise.all([
+            fs.readFile(absolutePath),
+            fs.stat(absolutePath),
+          ]);
+          entries.push({
+            path,
+            version: await gitBlobSha(new Uint8Array(bytes)),
+            size: bytes.length,
+            modifiedAt: stat.mtime.toISOString(),
+          });
         }
       }
     };

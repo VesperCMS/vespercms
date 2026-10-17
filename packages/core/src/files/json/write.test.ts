@@ -32,6 +32,27 @@ describe('writeJson', () => {
     );
   });
 
+  it('appends to a multi-line array without touching the items already there', () => {
+    // A file() collection of one-line items: the new item is one line too.
+    expect(
+      writeJson('[\n  { "id": "a", "n": 1 },\n  { "id": "b", "n": 2 }\n]\n', [
+        { id: 'a', n: 1 },
+        { id: 'b', n: 2 },
+        { id: 'c', n: 3, tags: ['x'] },
+      ]).text,
+    ).toBe(
+      '[\n  { "id": "a", "n": 1 },\n  { "id": "b", "n": 2 },\n  { "id": "c", "n": 3, "tags": ["x"] }\n]\n',
+    );
+    // Items over several lines: the new item is indented the same way.
+    expect(
+      writeJson('{\r\n  "list": [\r\n    {\r\n      "id": "a"\r\n    }\r\n  ]\r\n}\r\n', {
+        list: [{ id: 'a' }, { id: 'b' }],
+      }).text,
+    ).toBe(
+      '{\r\n  "list": [\r\n    {\r\n      "id": "a"\r\n    },\r\n    {\r\n      "id": "b"\r\n    }\r\n  ]\r\n}\r\n',
+    );
+  });
+
   it('keeps a file without a final newline that way, and keeps minified files minified', () => {
     expect(edit('{\n  "a": 1\n}', (v) => (v.a = 2))).toBe('{\n  "a": 2\n}');
     expect(edit('{"a":1,"b":[1,2]}\n', (v) => (v.a = 5))).toBe('{"a":5,"b":[1,2]}\n');

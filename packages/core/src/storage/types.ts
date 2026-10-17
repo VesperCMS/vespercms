@@ -23,7 +23,13 @@ export interface StorageAdapter {
   commit(changeSet: ChangeSet): Promise<CommitResult>;
 }
 
-export type StorageEntry = { path: string; version: string; size: number };
+export type StorageEntry = {
+  path: string;
+  version: string;
+  size: number;
+  /** Last change time, ISO 8601, where the adapter knows it cheaply (for "edited 2 hours ago"). */
+  modifiedAt?: string;
+};
 
 export type StoredFile = { path: string; bytes: Uint8Array; version: string };
 

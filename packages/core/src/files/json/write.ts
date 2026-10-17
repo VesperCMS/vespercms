@@ -75,6 +75,55 @@ function inlineAppend(text: string, path: (string | number)[], value: DataValue)
   return [{ offset: last.offset + last.length, length: 0, content: `, ${item}` }];
 }
 
+/**
+ * Appending to an array whose last item starts its own line: jsonc-parser
+ * would reformat that item along with the new one, so the new item is
+ * spliced in after it, on its own line at the same indent. It copies the
+ * last item's shape: one line (`{ "id": "a", "name": "A" }`, spaced or
+ * not) or indented over several lines.
+ */
+function blockAppend(
+  text: string,
+  path: (string | number)[],
+  value: DataValue,
+  options: FormattingOptions,
+): Edit[] | null {
+  const tree = parseTree(text);
+  const array = tree && findNodeAtLocation(tree, path);
+  const last = array?.type === 'array' ? array.children?.at(-1) : undefined;
+  if (!last) return null;
+  const lineStart = text.lastIndexOf('\n', last.offset) + 1;
+  const before = text.slice(lineStart, last.offset);
+  if (before.trim() !== '') return null;
+  const source = text.slice(last.offset, last.offset + last.length);
+  const eol = options.eol ?? '\n';
+  let item: string;
+  if (source.includes('\n')) {
+    const unit = options.insertSpaces === false ? '\t' : ' '.repeat(options.tabSize ?? 2);
+    item = JSON.stringify(value, null, unit).split('\n').join(`${eol}${before}`);
+  } else {
+    item = inlineJson(value, /^[{[]\s|:\s|,\s/.test(source));
+  }
+  return [{ offset: last.offset + last.length, length: 0, content: `,${eol}${before}${item}` }];
+}
+
+/** One-line JSON, with `{ "a": 1, "b": 2 }` spacing or `{"a":1,"b":2}`. */
+function inlineJson(value: DataValue, spaced: boolean): string {
+  if (Array.isArray(value)) {
+    const items = value.map((v) => inlineJson(v, spaced));
+    if (items.length === 0) return '[]';
+    return spaced ? `[${items.join(', ')}]` : `[${items.join(',')}]`;
+  }
+  if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+    const entries = Object.entries(value)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${JSON.stringify(k)}:${spaced ? ' ' : ''}${inlineJson(v, spaced)}`);
+    if (entries.length === 0) return '{}';
+    return spaced ? `{ ${entries.join(', ')} }` : `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
 /** Indentation and line endings as the file already uses them. */
 export function detectJsonFormatting(text: string): FormattingOptions {
   const indented = /\n([ \t]+)\S/.exec(text);
@@ -109,6 +158,7 @@ export function writeJson(text: string, next: DataValue): JsonWriteResult {
     const edits =
       patch.op === 'push'
         ? (inlineAppend(out, path, patch.value) ??
+          blockAppend(out, path, patch.value, formattingOptions) ??
           modify(out, [...path, -1], patch.value, { formattingOptions, isArrayInsertion: true }))
         : modify(out, path, patch.op === 'delete' ? undefined : patch.value, { formattingOptions });
     out = applyEdits(out, edits);

@@ -89,6 +89,8 @@ export type SaveRequest = {
   version: string | null;
   data?: unknown;
   body?: string;
+  /** Source-only entries: the whole frontmatter as YAML text, replacing `data`. */
+  rawFrontmatter?: string;
   /** New entries only: the file name or path pattern inside the collection, without extension. */
   slug?: string;
 };
