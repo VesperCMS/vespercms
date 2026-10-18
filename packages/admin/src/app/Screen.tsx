@@ -2,7 +2,7 @@ import { cx, Menu } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useStudio } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
-import { hrefFor, navigate } from './router.ts';
+import { hrefFor, navigate, parseRoute } from './router.ts';
 
 export type ScreenProps = {
   /** The screen's one `h1`, and the start of the page title. */
@@ -101,9 +101,12 @@ export function Screen({
 /** The top bar on every screen but the editor: the Content menu and the site menu. */
 function DefaultBar() {
   const { manifest, siteUrl } = useStudio();
+  const route = parseRoute(window.location.hash);
+  const here = 'collection' in route ? route.collection : null;
   const items = manifest.collections.map((collection) => ({
     id: collection.name,
     label: collection.label,
+    isCurrent: collection.name === here,
   }));
   return (
     <nav aria-label="Studio" className="ml-auto flex items-center gap-2">

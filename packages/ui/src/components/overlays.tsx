@@ -116,7 +116,14 @@ export function Drawer({ title, isOpen, onOpenChange, children }: DrawerProps) {
   );
 }
 
-export type MenuItem = { id: string; label: string; isDanger?: boolean; isDisabled?: boolean };
+export type MenuItem = {
+  id: string;
+  label: string;
+  isDanger?: boolean;
+  isDisabled?: boolean;
+  /** Where the person is now (the Content menu's open collection): accent-subtle and its halo. */
+  isCurrent?: boolean;
+};
 
 export type MenuProps = {
   /** Accessible name of the "…" trigger, e.g. "More actions for Harbor at dawn". */
@@ -188,6 +195,7 @@ export function Menu({ label, items, onAction, triggerText }: MenuProps) {
                   'flex min-h-9 cursor-default items-center rounded-md px-3 text-body outline-none',
                   'data-[focused]:bg-accent-subtle data-[disabled]:opacity-50',
                   item.isDanger ? 'text-danger' : 'text-content',
+                  item.isCurrent && 'bg-accent-subtle shadow-glow-selected',
                 )}
               >
                 {item.label}
