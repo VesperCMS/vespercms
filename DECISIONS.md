@@ -404,3 +404,13 @@ Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a f
 ### 2026-10-17: Trailing whitespace belongs to the gap after a block
 
 **A Markdoc block's range stops at its last non-whitespace character. Trailing spaces on its last line, and the blank line Markdoc counts into a list, belong to the gap after it, which a save keeps.** Rewriting a block used to drop them (the serializer trims), an unrelated diff the jazzy corpus suite found in seven files. mdast already ended blocks there.
+
+## URLs, hierarchy and redirects
+
+### 2026-10-18: The redirects file lives at the site root
+
+**`vesper.redirects.yaml` sits next to the site's `astro.config`, not at the repository root (spec §6.15.5 says "repo root").** For a normal site they're the same folder. In a monorepo or an agency repository holding several sites they aren't, and redirects belong to one site: its URLs, its build, its host's output. The integration knows the site root and has no reliable way to find the repository's. The playground already keeps the file there. Confirmed with Jeremy.
+
+### 2026-10-18: Page trees have no default depth limit
+
+**`maxDepth` is an optional per-collection setting in `vesper.config.ts` (`pages: { tree: true, maxDepth: 4 }`), with no default.** A built-in limit would refuse legitimate moves on sites nested deeper than we guessed: the playground is four levels deep, and university sites often go further. When a site sets it, a move or new page beyond it is refused before anything is written, with a plain message ("Pages can be at most 4 levels deep here"). Confirmed with Jeremy.
