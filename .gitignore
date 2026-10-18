@@ -14,6 +14,8 @@ e2e/.studio-site/
 e2e/.move-site/
 # The images integration test's copy of the playground, built without the crop step.
 e2e/.images-site/
+# The accessibility integration test's copy of the playground, built twice.
+e2e/.a11y-site/
 
 # Secrets: local Worker vars and env files.
 .dev.vars

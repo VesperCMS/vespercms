@@ -102,10 +102,19 @@ jobs:
       - run: npm run check:dist
       # Static output with no adapter (spec D4).
       - run: npm run build -w @vesper/playground
+      # The accessibility report (spec §6.18) is written beside dist/, never into it.
+      - run: test -f apps/playground/.vesper/a11y-report.json && test -z "$(find apps/playground/dist -name '*a11y*' -o -name '.vesper')"
       - uses: actions/upload-artifact@v7
         with:
           name: playground-dist
           path: apps/playground/dist
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        with:
+          name: playground-a11y-report
+          path: apps/playground/.vesper/a11y-report.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
@@ -124,6 +133,10 @@ jobs:
         with:
           name: playground-dist
           path: apps/playground/dist
+      - uses: actions/download-artifact@v8
+        with:
+          name: playground-a11y-report
+          path: apps/playground/.vesper
       - run: npx playwright install --with-deps chromium
       # Every page served by the no-rewrite static server (the spec §6.16 "plain host"),
       # checked with axe; then the studio in local mode on astro dev, over a throwaway

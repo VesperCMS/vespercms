@@ -90,6 +90,27 @@ test('the axe gate can fail: it flags the deliberate fixture page', async ({ pag
   expect(violations.map((v) => v.id)).toContain('color-contrast');
 });
 
+test('the build’s accessibility report maps issues to entries, and stays out of dist', () => {
+  // Spec §6.18, layer 2: written beside dist/ by the same build this suite serves.
+  const report = JSON.parse(
+    readFileSync(new URL('../apps/playground/.vesper/a11y-report.json', import.meta.url), 'utf8'),
+  ) as {
+    pages: { url: string; entry: { collection: string; id: string; file: string } | null }[];
+  };
+  expect(report.pages.map((p) => [p.url, p.entry])).toEqual([
+    [
+      '/fixtures/accessibility-mistakes/',
+      expect.objectContaining({
+        collection: 'fixtures',
+        id: 'accessibility-mistakes',
+        file: 'src/content/fixtures/accessibility-mistakes.mdoc',
+      }),
+    ],
+  ]);
+  const files = readdirSync(dist, { recursive: true, encoding: 'utf8' });
+  expect(files.filter((file) => /a11y|\.vesper/i.test(file))).toEqual([]);
+});
+
 test('deep links work without rewrite rules', async ({ page }) => {
   const response = await page.goto('/blog/2026/winter-market');
   // The plain host redirects to the trailing-slash form, then serves index.html.
