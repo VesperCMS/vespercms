@@ -104,6 +104,7 @@ export {
 export {
   globMatcher,
   defaultEntryId,
+  folderKey,
   patternExtensions,
   entryKindOf,
 } from './collections/entries.ts';

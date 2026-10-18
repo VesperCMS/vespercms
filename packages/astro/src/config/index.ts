@@ -1,8 +1,10 @@
-import type {
-  CollectionConfig,
-  FieldModel,
-  MarkdocTagHint,
-  MdxComponentConfig,
+import {
+  NATIVE_TARGETS,
+  type CollectionConfig,
+  type FieldModel,
+  type MarkdocTagHint,
+  type MdxComponentConfig,
+  type NativeTarget,
 } from '@vesper/core';
 
 /** What a custom widget component receives (spec §6.3.3). */
@@ -56,6 +58,15 @@ export type VesperConfig = {
   timeZone?: string;
   /** Role grants (spec §7.5). Cloud only, Phase 4. */
   roles?: Record<string, unknown>;
+  /**
+   * How redirects from `vesper.redirects.yaml` reach the live site (spec
+   * §6.15.5). By default Astro writes an HTML redirect page at each old URL,
+   * which works on any host. `native` adds the host's own rules too (true
+   * 301s): `netlify`, `cloudflare` and `vercel` are detected from the
+   * build environment; `apache` (most shared hosting) and `nginx` are set
+   * here.
+   */
+  redirects?: { native?: NativeTarget[] };
 };
 
 /** Typed identity for `vesper.config.ts`. Validation happens when Vesper loads the file. */
@@ -71,6 +82,7 @@ const KNOWN_TOP_LEVEL = new Set([
   'mdx',
   'roles',
   'timeZone',
+  'redirects',
 ]);
 const KNOWN_COLLECTION = new Set([
   'label',
@@ -82,6 +94,7 @@ const KNOWN_COLLECTION = new Set([
   'schedule',
   'search',
   'placement',
+  'maxDepth',
 ]);
 
 /**
@@ -129,11 +142,20 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
             });
           }
         }
-        const { url } = value as { url?: unknown };
+        const { url, maxDepth } = value as { url?: unknown; maxDepth?: unknown };
         if (url !== undefined && typeof url !== 'string' && typeof url !== 'function') {
           problems.push({
             level: 'error',
             message: `collections.${name}.url must be a pattern string or a function.`,
+          });
+        }
+        if (
+          maxDepth !== undefined &&
+          !(typeof maxDepth === 'number' && Number.isInteger(maxDepth) && maxDepth >= 1)
+        ) {
+          problems.push({
+            level: 'error',
+            message: `collections.${name}.maxDepth must be a whole number of levels, 1 or more.`,
           });
         }
       }
@@ -146,7 +168,11 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
       message: `timeZone must be an IANA time zone name such as "America/New_York", not ${JSON.stringify(timeZone)}.`,
     });
   }
-  problems.push(...checkMarkdoc(record.markdoc), ...checkMdx(record.mdx));
+  problems.push(
+    ...checkMarkdoc(record.markdoc),
+    ...checkMdx(record.mdx),
+    ...checkRedirects(record.redirects),
+  );
   const widgets = record.widgets;
   if (widgets !== undefined && typeof widgets === 'object' && widgets !== null) {
     for (const [name, widget] of Object.entries(widgets)) {
@@ -258,6 +284,26 @@ function checkMdx(mdx: unknown): Problem[] {
       if (component[key] !== undefined && typeof component[key] !== 'boolean') {
         problems.push({ level: 'error', message: `${where}.${key} must be true or false.` });
       }
+    }
+  }
+  return problems;
+}
+
+function checkRedirects(redirects: unknown): Problem[] {
+  if (redirects === undefined) return [];
+  if (!isObject(redirects)) return [{ level: 'error', message: '"redirects" must be an object.' }];
+  const problems = unknownKeys(redirects, ['native'], 'redirects');
+  const { native } = redirects;
+  if (native === undefined) return problems;
+  if (!Array.isArray(native)) {
+    return [...problems, { level: 'error', message: 'redirects.native must be a list of hosts.' }];
+  }
+  for (const target of native) {
+    if (!NATIVE_TARGETS.includes(target as NativeTarget)) {
+      problems.push({
+        level: 'error',
+        message: `redirects.native: ${JSON.stringify(target)} isn't a host Vesper writes rules for. Use ${NATIVE_TARGETS.join(', ')}.`,
+      });
     }
   }
   return problems;

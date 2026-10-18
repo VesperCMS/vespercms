@@ -1,6 +1,5 @@
-import { slug as githubSlug } from 'github-slugger';
 import type { BodyFormat } from '../body/types.ts';
-import { defaultEntryId, globMatcher } from '../collections/entries.ts';
+import { defaultEntryId, folderKey, globMatcher } from '../collections/entries.ts';
 import {
   readCollectionFile,
   readDataFile,
@@ -358,7 +357,7 @@ export class PageService {
     }
 
     // Every page that moves, with its address before and after.
-    const site = await this.siteKeys();
+    const site = await this.pageKeys();
     // The pages that move: the page and everything under it, not a parent that only gains a folder.
     const moving = data.entries.filter((e) => files.has(e.path) && e !== parentEntry);
     const pages: { entry: StoredEntry; from: string | null; to: string | null; id: string }[] = [];
@@ -638,7 +637,7 @@ export class PageService {
     }
     const key = this.keyOf(collection, id, request.data);
     if (key !== null) {
-      const problem = this.checkAddress(key, await this.siteKeys(), new Set());
+      const problem = this.checkAddress(key, await this.pageKeys(), new Set());
       if (problem) return fail(problem);
     }
     const order = data.orders.get(parent);
@@ -673,7 +672,7 @@ export class PageService {
   async redirects(): Promise<RedirectsDocument> {
     const file = await this.storage.read(REDIRECTS_FILE);
     const list = file ? readList(file) : [];
-    const site = await this.siteKeys();
+    const site = await this.pageKeys();
     const { warnings } = cleanRedirects(list ?? [], { isPage: (key) => site.has(key) });
     return {
       version: file?.version ?? null,
@@ -699,7 +698,7 @@ export class PageService {
         return refuse(`${item.from} belongs to the studio, so it can’t be redirected.`);
       }
     }
-    const site = await this.siteKeys();
+    const site = await this.pageKeys();
     const written = await this.redirectChanges(
       () => next,
       (key) => site.has(key),
@@ -812,8 +811,8 @@ export class PageService {
     return key === null ? null : formatUrl(key, this.settings);
   }
 
-  /** Every page's key on the site, with its title, for duplicate checks. */
-  private async siteKeys(): Promise<Map<string, string>> {
+  /** Every page's key on the site (content and static routes), with its title. */
+  async pageKeys(): Promise<Map<string, string>> {
     const keys = new Map<string, string>();
     for (const collection of this.manifest.collections) {
       if (this.patternOf(collection) === undefined) continue;
@@ -871,10 +870,7 @@ export class PageService {
       if (relativeDir === '') return;
       const disk = relativeDir.split('/');
       for (let depth = 1; depth <= disk.length; depth++) {
-        const key = disk
-          .slice(0, depth)
-          .map((s) => githubSlug(s))
-          .join('/');
+        const key = folderKey(disk.slice(0, depth).join('/'));
         if (!folders.has(key)) folders.set(key, disk.slice(0, depth).join('/'));
       }
     };
@@ -892,12 +888,7 @@ export class PageService {
       const file = await this.storage.read(listed.path);
       if (!file) continue;
       const names = readOrder(file);
-      const key = folder
-        .split('/')
-        .filter(Boolean)
-        .map((s) => githubSlug(s))
-        .join('/');
-      orders.set(key, { path: listed.path, names: names ?? [], file, readable: names !== null });
+      orders.set(folderKey(folder), { path: listed.path, names: names ?? [], file, readable: names !== null });
     }
 
     const tree = buildTree(

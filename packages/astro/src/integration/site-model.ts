@@ -35,4 +35,10 @@ export class SiteModelCache {
   reset(): void {
     this.pending = null;
   }
+
+  /** Replaces the cached model with a changed copy (the build records routes in it). */
+  update(change: (model: SiteModel) => Promise<SiteModel>): Promise<SiteModel> {
+    this.pending = this.get().then(change);
+    return this.pending;
+  }
 }

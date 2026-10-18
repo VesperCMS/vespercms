@@ -69,6 +69,8 @@ export type LoadSiteOptions = {
   root: string;
   /** Astro's srcDir, relative to root. Defaults to `src`. */
   srcDir?: string;
+  /** Astro's URL settings (base, trailingSlash, build.format, site), when loaded inside Astro. */
+  urls?: NonNullable<ManifestInput['site']['urls']>;
 };
 
 export type LoadedSite = Omit<ManifestInput, 'generator'> & { root: string };
@@ -198,6 +200,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
       site: {
         srcDir,
         ...(contentConfigPath ? { contentConfig: toPosix(relative(root, contentConfigPath)) } : {}),
+        ...(options.urls ? { urls: options.urls } : {}),
       },
       collections,
       ...(config
@@ -208,6 +211,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
               ...(config.timeZone ? { timeZone: config.timeZone } : {}),
               ...(config.markdoc ? { markdoc: config.markdoc } : {}),
               ...(config.mdx ? { mdx: config.mdx } : {}),
+              ...(config.redirects ? { redirects: config.redirects } : {}),
             },
           }
         : {}),

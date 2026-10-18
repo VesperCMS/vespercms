@@ -3,9 +3,15 @@ import {
   ContentService,
   MEDIA_TYPES,
   MediaService,
+  PageService,
   extensionOf,
   normalizePath,
+  type MoveRequest,
+  type ReorderRequest,
+  type SaveRedirectsRequest,
   type SaveRequest,
+  type StaticRoutes,
+  type TreeHooks,
 } from '@vesper/core';
 import { bodyValidator, schemaValidator, type SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
@@ -30,6 +36,8 @@ export type DevApiOptions = {
   /** Where the API is mounted, with a trailing slash, e.g. `/_vesper/api/`. */
   base: string;
   model: () => Promise<SiteModel>;
+  /** The site's static routes, for refusing pages at addresses src/pages already owns. */
+  routes?: () => StaticRoutes;
 };
 
 type Handler = (req: IncomingMessage, res: ServerResponse, next: (error?: unknown) => void) => void;
@@ -73,6 +81,12 @@ export function createDevApi(options: DevApiOptions): Handler {
     const service: ContentService = new ContentService(storage, model.manifest, {
       validate: schemaValidator(model.schemas),
       validateBody: bodyValidator(model, () => service.listPartials()),
+      // Pages and moves (spec §6.15): created on the line below, called only once both exist.
+      tree: (): TreeHooks => pages.hooks(),
+    });
+    const pages: PageService = new PageService(storage, model.manifest, service, {
+      routes: options.routes ?? (() => new Map()),
+      ...(model.urlFunctions ? { urlFunctions: model.urlFunctions } : {}),
     });
     // Media lives in <srcDir>/assets and public/ (spec §6.6.1).
     const media = () =>
@@ -98,6 +112,28 @@ export function createDevApi(options: DevApiOptions): Handler {
       send(res, statusOf(result), result);
     } else if (route === 'partials' && method === 'GET') {
       send(res, 200, await service.listPartials());
+    } else if (route === 'pages' && method === 'GET') {
+      send(res, 200, await pages.pages());
+    } else if (route === 'tree' && method === 'GET') {
+      if (!known) send(res, 404, { message: `There's no collection called "${collection}".` });
+      else send(res, 200, await pages.tree(collection));
+    } else if (route === 'move' && method === 'POST') {
+      const request = (await readJson(req)) as MoveRequest;
+      const result =
+        query.get('dryRun') === '1' ? await pages.planMove(request) : await pages.move(request);
+      send(res, statusOf(result), result);
+    } else if (route === 'reorder' && method === 'POST') {
+      const result = await pages.reorder((await readJson(req)) as ReorderRequest);
+      send(res, statusOf(result), result);
+    } else if (route === 'section' && method === 'POST') {
+      const request = (await readJson(req)) as { collection?: string; path?: string };
+      const result = await pages.createSection(request.collection ?? '', request.path ?? '');
+      send(res, statusOf(result), result);
+    } else if (route === 'redirects' && method === 'GET') {
+      send(res, 200, await pages.redirects());
+    } else if (route === 'redirects' && method === 'PUT') {
+      const result = await pages.saveRedirects((await readJson(req)) as SaveRedirectsRequest);
+      send(res, statusOf(result), result);
     } else if (route === 'media' && method === 'GET') {
       send(res, 200, await media().list());
     } else if (route === 'media' && method === 'POST') {

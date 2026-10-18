@@ -47,6 +47,18 @@ export function defaultEntryId(relativePath: string, data?: { slug?: unknown } |
     .replace(/\/index$/, '');
 }
 
+/**
+ * A folder's path in a collection's tree: each segment slugged as entry IDs
+ * are, so `Academics/Nursing Programs` is `academics/nursing-programs`.
+ */
+export function folderKey(relativeFolder: string): string {
+  return relativeFolder
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => githubSlug(segment))
+    .join('/');
+}
+
 const CONTENT_EXTENSIONS = new Set(['md', 'mdx', 'mdoc', 'markdown']);
 const DATA_EXTENSIONS = new Set(['json', 'yaml', 'yml', 'toml']);
 
