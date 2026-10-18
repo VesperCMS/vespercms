@@ -185,6 +185,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
           // The screen's one primary action.
           <ButtonLink
             variant="primary"
+            icon="add"
             href={hrefFor({ screen: 'new', collection: collection.name })}
             className="ml-auto"
           >
@@ -473,20 +474,27 @@ function menuItems(
   options: { editable: boolean; maxDepth: number | undefined },
 ): MenuItem[] {
   const items: MenuItem[] = [];
-  if (row.entryId !== undefined) items.push({ id: 'open', label: 'Open' });
+  if (row.entryId !== undefined) items.push({ id: 'open', label: 'Open', icon: 'open' });
   if (!options.editable) return items;
   const siblings = siblingsOf(row, rows, byPath);
   const index = siblings.indexOf(row);
   const canHaveChild = options.maxDepth === undefined || row.depth < options.maxDepth;
-  if (row.path !== '' && canHaveChild) items.push({ id: 'child', label: 'Add child page' });
-  if (row.entryId === undefined) items.push({ id: 'section', label: 'Create section page' });
+  if (row.path !== '' && canHaveChild)
+    items.push({ id: 'child', label: 'Add child page', icon: 'add-child' });
+  if (row.entryId === undefined)
+    items.push({ id: 'section', label: 'Create section page', icon: 'add-child' });
   if (row.path !== '') {
-    items.push({ id: 'move', label: 'Move to…' });
-    items.push({ id: 'up', label: 'Move up', isDisabled: index <= 0 });
-    items.push({ id: 'down', label: 'Move down', isDisabled: index === siblings.length - 1 });
+    items.push({ id: 'move', label: 'Move to…', icon: 'move-to' });
+    items.push({ id: 'up', label: 'Move up', icon: 'move-up', isDisabled: index <= 0 });
+    items.push({
+      id: 'down',
+      label: 'Move down',
+      icon: 'move-down',
+      isDisabled: index === siblings.length - 1,
+    });
   }
   if (row.entryId !== undefined && row.path !== '') {
-    items.push({ id: 'delete', label: 'Delete…', isDanger: true });
+    items.push({ id: 'delete', label: 'Delete…', icon: 'delete', isDanger: true });
   }
   return items;
 }

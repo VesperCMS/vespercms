@@ -93,7 +93,7 @@ export function EntryEditor({
     return (
       <Screen title="Couldn’t open this entry">
         <p className="mb-4">{load.message}</p>
-        <Link href={hrefFor({ screen: 'list', collection: collection.name })}>
+        <Link icon="back" href={hrefFor({ screen: 'list', collection: collection.name })}>
           Back to {collection.label}
         </Link>
       </Screen>
@@ -503,9 +503,9 @@ function EntryForm({
       ? pageUrl(collection, entryId, saved.values, manifest)
       : null;
   const menuItems: MenuItem[] = [
-    ...(viewUrl ? [{ id: 'view', label: 'View on site' }] : []),
+    ...(viewUrl ? [{ id: 'view', label: 'View on site', icon: 'view-on-site' as const }] : []),
     ...(!isNew && editable && !collection.presentation.singleton
-      ? [{ id: 'delete', label: 'Delete…', isDanger: true }]
+      ? [{ id: 'delete', label: 'Delete…', isDanger: true, icon: 'delete' as const }]
       : []),
   ];
 
@@ -529,8 +529,7 @@ function EntryForm({
   const detailProblems = issues.filter((issue) => detailKeys.has(String(issue.path[0]))).length;
   const bar = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
-      <Link href={back.href} className="text-small">
-        <span aria-hidden="true">← </span>
+      <Link icon="back" href={back.href} className="text-small">
         {back.label}
       </Link>
       {/* On a narrow screen the title field is just below, so the bar leaves it out. */}
@@ -554,6 +553,7 @@ function EntryForm({
           // The problem count is words, so the drawer's errors are known before it opens.
           <Button
             variant="quiet"
+            icon="details"
             onPress={() => {
               setDetailsOpen(true);
             }}

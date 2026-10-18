@@ -78,6 +78,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
         <TextField
           label="Search"
           type="search"
+          icon="search"
           value={query}
           onChange={setQuery}
           className="w-full max-w-xs"
@@ -101,6 +102,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
           // The screen's one primary action.
           <ButtonLink
             variant="primary"
+            icon="add"
             href={hrefFor({ screen: 'new', collection: collection.name })}
             className="ml-auto"
           >

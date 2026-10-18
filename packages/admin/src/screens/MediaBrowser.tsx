@@ -1,11 +1,12 @@
 import { dirOf, extensionOf, isImagePath, type MediaItem } from '@vesper/core';
-import { Button, Dialog, Select, TextField } from '@vesper/ui';
+import { Button, Dialog, Icon, Select, TextField } from '@vesper/ui';
 import { useMemo, useRef, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';
 import { hrefFor } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
 import { fileSize } from '../media/hygiene.ts';
+import { fileIcon } from '../media/file-icon.ts';
 import { UploadStatus } from '../media/MediaPicker.tsx';
 import { checkUpload, sendUpload, type UploadStep } from '../media/upload.ts';
 
@@ -57,6 +58,7 @@ export function MediaBrowser() {
         <TextField
           label="Search by file name"
           type="search"
+          icon="search"
           value={query}
           onChange={setQuery}
           className="w-full max-w-xs"
@@ -107,6 +109,7 @@ export function MediaBrowser() {
         />
         <Button
           variant="primary"
+          icon="upload"
           className="ml-auto"
           onPress={() => {
             input.current?.click();
@@ -156,8 +159,9 @@ export function MediaBrowser() {
             ) : (
               <span
                 aria-hidden="true"
-                className="flex h-36 items-center justify-center rounded-md bg-surface-sunken text-small text-content-muted uppercase"
+                className="flex h-36 flex-col items-center justify-center gap-2 rounded-md bg-surface-sunken text-caption text-content-muted uppercase"
               >
+                <Icon name={fileIcon(extensionOf(item.path))} size={32} />
                 {extensionOf(item.path)}
               </span>
             )}

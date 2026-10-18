@@ -108,11 +108,13 @@ export function Redirects() {
         <TextField
           label="Search"
           type="search"
+          icon="search"
           value={query}
           onChange={setQuery}
           className="w-full max-w-xs"
         />
         <FileButton
+          icon="import"
           accept={['.csv', 'text/csv', 'text/plain']}
           onSelect={(file) => {
             void file.text().then((text) => {
@@ -124,6 +126,7 @@ export function Redirects() {
         </FileButton>
         <Button
           variant="primary"
+          icon="add"
           className="ml-auto"
           isDisabled={!current}
           onPress={() => {
@@ -182,8 +185,8 @@ export function Redirects() {
               <Menu
                 label={`Actions for the redirect from ${row.from}`}
                 items={[
-                  { id: 'edit', label: 'Edit…' },
-                  { id: 'delete', label: 'Delete…', isDanger: true },
+                  { id: 'edit', label: 'Edit…', icon: 'edit' },
+                  { id: 'delete', label: 'Delete…', isDanger: true, icon: 'delete' },
                 ]}
                 onAction={(action) => {
                   if (action === 'edit') {

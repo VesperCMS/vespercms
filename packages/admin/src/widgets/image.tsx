@@ -127,6 +127,7 @@ export function ImageWidget({
                 id={id}
                 isDisabled={disabled}
                 aria-describedby={[describedBy, `${id}-file`].filter(Boolean).join(' ')}
+                icon="replace-image"
                 onPress={() => {
                   setPicking(true);
                 }}

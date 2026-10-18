@@ -1,9 +1,10 @@
 import { extensionOf, isImagePath, type MediaItem } from '@vesper/core';
-import { Button, Dialog, TextField } from '@vesper/ui';
+import { Button, Dialog, Icon, TextField } from '@vesper/ui';
 import { useMemo, useRef, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';
 import { fileSize, megabytes } from './hygiene.ts';
+import { fileIcon } from './file-icon.ts';
 import { checkUpload, sendUpload, type UploadStep } from './upload.ts';
 
 export type MediaPickerProps = {
@@ -129,6 +130,7 @@ function PickerBody({
         />
         <div>
           <Button
+            icon="upload"
             onPress={() => {
               input.current?.click();
             }}
@@ -150,7 +152,13 @@ function PickerBody({
         <h3 id="picker-existing" className="text-heading-3">
           Or choose one already in the site
         </h3>
-        <TextField label="Search by file name" type="search" value={query} onChange={setQuery} />
+        <TextField
+          label="Search by file name"
+          type="search"
+          icon="search"
+          value={query}
+          onChange={setQuery}
+        />
         {media.state === 'loading' && (
           <p className="text-small text-content-muted">Loading files…</p>
         )}
@@ -195,9 +203,9 @@ function MediaChoice({ item, onChoose }: { item: MediaItem; onChoose: (path: str
       ) : (
         <span
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-caption text-content-muted uppercase"
+          className="flex size-12 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-content-muted"
         >
-          {extensionOf(item.path)}
+          <Icon name={fileIcon(extensionOf(item.path))} size={24} />
         </span>
       )}
       <span className="min-w-0">

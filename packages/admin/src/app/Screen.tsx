@@ -128,9 +128,9 @@ function DefaultBar() {
         label="Site"
         triggerText="Site"
         items={[
-          { id: 'media', label: 'Media' },
-          { id: 'redirects', label: 'Redirects' },
-          ...(siteUrl ? [{ id: 'view', label: 'View site' }] : []),
+          { id: 'media', label: 'Media', icon: 'media' as const },
+          { id: 'redirects', label: 'Redirects', icon: 'redirects' as const },
+          ...(siteUrl ? [{ id: 'view', label: 'View site', icon: 'view-on-site' as const }] : []),
         ]}
         onAction={(id) => {
           if (id === 'media') navigate({ screen: 'media' });

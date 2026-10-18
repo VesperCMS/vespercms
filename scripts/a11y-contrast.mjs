@@ -68,6 +68,8 @@ export const PAIRS = [
   ['focus', 'accent-subtle', 3, 'focus ring on the selected row'],
   ['warning', 'surface', 3, 'warning marker beside a field'],
   ['warning', 'surface-raised', 3, 'warning marker in overlays'],
+  ['warning', 'glass-raised', 3, 'warning mark in the notes drawer, over any backdrop'],
+
   ['content-muted', 'accent-subtle', 4.5, 'secondary text on the current item'],
   ['accent', 'accent-subtle', 4.5, 'a link or quiet button on the current item'],
   ['content', 'glass-bar', 4.5, 'the top bar, over whatever scrolls beneath'],

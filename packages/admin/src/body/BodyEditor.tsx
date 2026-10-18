@@ -15,6 +15,7 @@ import {
   Button,
   Checkbox,
   Dialog,
+  Icon,
   TextArea,
   SuggestField,
   ToggleButton,
@@ -223,11 +224,14 @@ function BodyNotes({
           return (
             <li
               key={id}
-              className="flex flex-wrap items-start justify-between gap-2 border-l border-warning pl-3 text-small text-content"
+              className="flex flex-wrap items-start justify-between gap-2 text-small text-content"
             >
-              <p id={id} className="m-0 min-w-0 flex-1">
-                {lines && note.target.kind === 'body' ? `Line ${String(note.target.line)}. ` : ''}
-                <NoteText note={note} />
+              <p id={id} className="m-0 flex min-w-0 flex-1 gap-2">
+                <Icon name="warning" size={16} className="mt-0.5 text-warning" />
+                <span>
+                  {lines && note.target.kind === 'body' ? `Line ${String(note.target.line)}. ` : ''}
+                  <NoteText note={note} />
+                </span>
               </p>
               <Button
                 variant="quiet"

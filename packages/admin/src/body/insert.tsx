@@ -281,6 +281,7 @@ export function InsertMenu({
     <Menu
       label="Insert a block"
       triggerText="Insert"
+      triggerIcon="add"
       items={available.map((c) => ({
         id: `${c.kind.key}|${c.shape}`,
         label: c.shape === 'inline' ? `${c.kind.label} (in this line)` : c.kind.label,

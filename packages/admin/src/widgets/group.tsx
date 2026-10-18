@@ -139,6 +139,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
       </ol>
       <div>
         <Button
+          icon="add"
           isDisabled={disabled}
           onPress={() => {
             update([...items, emptyItem(item)]);

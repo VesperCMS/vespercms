@@ -1,5 +1,5 @@
 import type { A11yNote } from '@vesper/core';
-import { Button, Drawer } from '@vesper/ui';
+import { Button, Drawer, Icon } from '@vesper/ui';
 import { NoteText } from './FieldNotes.tsx';
 
 /** The notes about one field (or the body), under its name. */
@@ -48,18 +48,18 @@ export function NotesDrawer({
               {group.notes.map((note, index) => {
                 const id = `a11y-note-${group.key}-${String(index)}`;
                 return (
-                  <li
-                    key={id}
-                    className="flex flex-col items-start gap-2 border-l border-warning pl-3"
-                  >
-                    <p id={id} className="m-0">
-                      <NoteText note={note} />
-                      {isBlocking(note) && (
-                        <span className="font-semibold">
-                          {' '}
-                          This site doesn’t save until it’s fixed.
-                        </span>
-                      )}
+                  <li key={id} className="flex flex-col items-start gap-2">
+                    <p id={id} className="m-0 flex gap-2">
+                      <Icon name="warning" size={16} className="mt-1 text-warning" />
+                      <span>
+                        <NoteText note={note} />
+                        {isBlocking(note) && (
+                          <span className="font-semibold">
+                            {' '}
+                            This site doesn’t save until it’s fixed.
+                          </span>
+                        )}
+                      </span>
                     </p>
                     <Button
                       aria-describedby={id}
