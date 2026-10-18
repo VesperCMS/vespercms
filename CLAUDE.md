@@ -17,7 +17,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100); outcome in `PLAN.md` |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810); outcome and open questions in `PLAN.md` |
-| 2.5 Markdoc tags and MDX components | Done locally (2026-10-17); CI runs once the push is approved. Outcome in `PLAN.md` |
+| 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652); outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 

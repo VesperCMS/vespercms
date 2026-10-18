@@ -9,7 +9,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
-| 2.5 Markdoc tags and MDX components | Done locally (2026-10-17). CI runs once the push is approved. See "Phase 2.5: outcome" below. |
+| 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
 | 2.6 onward | Roadmap below |
 
 ## Phase 0: Scaffold
