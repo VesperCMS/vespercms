@@ -1,6 +1,11 @@
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { DEFAULT_URL_SETTINGS, folderKey, readDataFile } from '@vesper/core';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createDevApi } from './dev-api.ts';
+import type { StaticRoutes } from '@vesper/core';
+import type { SiteModel } from '../node/manifest.ts';
+import type { HelperData } from '../runtime/helpers.ts';
 import type { SiteModelCache } from './site-model.ts';
 
 /*
@@ -32,6 +37,10 @@ export type StudioPluginOptions = {
   adminCss: string;
   /** True in this workspace, where @vesper/admin resolves to its TypeScript source. */
   studioFromSource: boolean;
+  /** The site's static routes, for the dev API's collision checks. */
+  routes?: () => StaticRoutes;
+  /** The `vesper:content` helpers' runtime (runtime/helpers): TypeScript here, JavaScript once built. */
+  helpersEntry: string;
 };
 
 /** @vesper/core's runtime packages, which the browser loads through the studio. */
@@ -106,7 +115,18 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       return IDS.has(id) ? `\0${id}` : null;
     },
     async load(id) {
-      if (id === `\0${CONTENT}`) return contentModule(options.command === 'dev');
+      if (id === `\0${CONTENT}`) {
+        const model = await options.cache.get();
+        return contentModule({
+          dev: options.command === 'dev',
+          helpers: toPosix(options.helpersEntry),
+          data: helperData(model, options.root),
+          vesperConfig:
+            options.vesperConfig && Object.keys(model.urlFunctions ?? {}).length > 0
+              ? toPosix(options.vesperConfig)
+              : undefined,
+        });
+      }
       if (!id.startsWith('\0virtual:vesper/')) return null;
       const name = id.slice(1);
       if (name === MANIFEST) {
@@ -181,6 +201,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           root: options.root,
           base: options.apiBase,
           model: () => options.cache.get(),
+          ...(options.routes ? { routes: options.routes } : {}),
         }),
       );
       const onChange = (file: string) => {
@@ -191,6 +212,19 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       server.watcher.on('change', onChange);
       server.watcher.on('add', onChange);
       server.watcher.on('unlink', onChange);
+      // Page order lives in _order.yaml files, which aren't entries: the helpers
+      // embed them, so a change reloads the site's pages (not the studio).
+      const onOrder = (file: string) => {
+        if (!toPosix(file).endsWith('/_order.yaml')) return;
+        for (const environment of Object.values(server.environments)) {
+          const module = environment.moduleGraph.getModuleById(`\0${CONTENT}`);
+          if (module) environment.moduleGraph.invalidateModule(module);
+        }
+        server.environments.client.hot.send({ type: 'full-reload', path: '*' });
+      };
+      server.watcher.on('change', onOrder);
+      server.watcher.on('add', onOrder);
+      server.watcher.on('unlink', onOrder);
     },
   };
 }
@@ -211,8 +245,33 @@ function reloadStudio(server: ViteDevServer): void {
  * `getCollection()` and `getEntries()` (which `getStaticPaths` calls for
  * every page of a route). In builds it's a plain re-export: zero cost.
  */
-function contentModule(dev: boolean): string {
-  if (!dev) return "export * from 'astro:content';";
+function contentModule(options: {
+  dev: boolean;
+  helpers: string;
+  data: HelperData;
+  vesperConfig: string | undefined;
+}): string {
+  const helpers = [
+    `import { createHelpers } from ${JSON.stringify(options.helpers)};`,
+    ...(options.vesperConfig
+      ? [
+          `import vesperConfig from ${JSON.stringify(options.vesperConfig)};`,
+          "const urlFunctions = Object.fromEntries(Object.entries(vesperConfig?.collections ?? {}).flatMap(([name, c]) => typeof c?.url === 'function' ? [[name, c.url]] : []));",
+        ]
+      : ['const urlFunctions = {};']),
+    `const helpers = createHelpers(${JSON.stringify(options.data)}, (name) => getCollection(name), urlFunctions);`,
+    'export const getTree = helpers.getTree;',
+    'export const getChildren = helpers.getChildren;',
+    'export const getBreadcrumbs = helpers.getBreadcrumbs;',
+    'export const getUrl = helpers.getUrl;',
+  ];
+  if (!options.dev) {
+    return [
+      "import { getCollection } from 'astro:content';",
+      "export * from 'astro:content';",
+      ...helpers,
+    ].join('\n');
+  }
   return [
     "import * as content from 'astro:content';",
     "export * from 'astro:content';",
@@ -231,5 +290,67 @@ function contentModule(dev: boolean): string {
     "export async function getEntries(...args) { const list = await content.getEntries(...args); list.forEach((e) => note(e, 'listed')); return list; }",
     "export async function getCollection(...args) { const list = await content.getCollection(...args); list.forEach((e) => note(e, 'listed')); return list; }",
     "export async function render(entry, ...rest) { note(entry, 'shown'); return content.render(entry, ...rest); }",
+    ...helpers,
   ].join('\n');
 }
+
+const TITLE_KEYS = ['title', 'name', 'label', 'heading'];
+
+/**
+ * What the helpers need, as JSON: the URL settings, and for each collection
+ * its pattern, where to read a title, and its parsed `_order.yaml` files.
+ */
+export function helperData(model: SiteModel, root: string): HelperData {
+  const { manifest } = model;
+  const settings = manifest.site.urls ?? {
+    ...DEFAULT_URL_SETTINGS,
+    ...(manifest.site.timeZone ? { timeZone: manifest.site.timeZone } : {}),
+  };
+  const collections: HelperData['collections'] = {};
+  for (const collection of manifest.collections) {
+    const fieldKeys = (collection.fields ?? [])
+      .filter((f) => f.path.length === 1 && f.kind === 'string')
+      .map((f) => String(f.path[0]))
+      .filter((key) => TITLE_KEYS.includes(key));
+    const titleKeys = [
+      ...new Set([
+        ...fieldKeys,
+        'title',
+        'name',
+        ...(collection.presentation.listFields ?? []).slice(0, 1),
+      ]),
+    ];
+    collections[collection.name] = {
+      ...(typeof collection.presentation.url === 'string'
+        ? { url: collection.presentation.url }
+        : {}),
+      titleKeys,
+      orders:
+        collection.source.loader === 'glob' ? orderFiles(join(root, collection.source.base)) : {},
+    };
+  }
+  return { settings, collections };
+}
+
+/** Every `_order.yaml` under a folder, parsed, keyed by its folder's path in the tree. */
+function orderFiles(base: string): Record<string, string[]> {
+  const found: Record<string, string[]> = {};
+  if (!existsSync(base)) return found;
+  const visit = (dir: string, relative: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (!SKIPPED.has(entry.name))
+          visit(join(dir, entry.name), relative ? `${relative}/${entry.name}` : entry.name);
+      } else if (entry.name === '_order.yaml') {
+        const read = readDataFile(new Uint8Array(readFileSync(join(dir, entry.name))), 'yaml');
+        if (read.status === 'editable' && Array.isArray(read.value)) {
+          found[folderKey(relative)] = read.value.filter((v): v is string => typeof v === 'string');
+        }
+      }
+    }
+  };
+  visit(base, '');
+  return found;
+}
+
+const SKIPPED = new Set(['node_modules', '.git', 'dist', '.astro', '.vesper']);
