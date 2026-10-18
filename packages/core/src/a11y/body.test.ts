@@ -9,6 +9,7 @@ const markdoc: MarkdocManifest = {
     {
       name: 'youtube',
       label: 'YouTube video',
+      summary: 'title',
       selfClosing: true,
       attributes: [
         { name: 'id', types: ['String'], required: true },
@@ -238,7 +239,7 @@ describe('tags and components', () => {
       'mdoc',
     );
     expect(notes.map((n) => [n.rule, n.message, n.subject])).toEqual([
-      ['tag-name-empty', 'YouTube video needs a title.', 'YouTube video'],
+      ['tag-name-empty', 'YouTube video needs a title.', undefined],
     ]);
   });
 
@@ -247,9 +248,9 @@ describe('tags and components', () => {
       '{% youtube id="a" title="A" /%}\n\n{% youtube id="b" title="B" captions=false /%}\n\n{% youtube id="c" title="C" captions=true /%}\n',
       'mdoc',
     );
-    expect(notes.map((n) => [n.rule, n.message])).toEqual([
-      ['video-captions', 'Confirm this video has captions.'],
-      ['video-captions', 'Confirm this video has captions.'],
+    expect(notes.map((n) => [n.rule, n.message, n.subject])).toEqual([
+      ['video-captions', 'Confirm this video has captions.', 'YouTube video “A”'],
+      ['video-captions', 'Confirm this video has captions.', 'YouTube video “B”'],
     ]);
   });
 

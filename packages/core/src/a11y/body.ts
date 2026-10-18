@@ -58,6 +58,8 @@ export type TagDefinition = {
   names: { name: string; label: string }[];
   /** The attribute that says the video has captions, when the schema has one. */
   captions?: string;
+  /** The attribute that tells one use from another (the block's summary), for the note's subject. */
+  summary?: string;
 };
 
 export type TagDefinitions = {
@@ -80,6 +82,7 @@ export function tagDefinitions(markdoc?: MarkdocManifest, mdx?: MdxManifest): Ta
         .filter((a) => a.required && NAME_ATTRIBUTES.has(a.name.toLowerCase()))
         .map((a) => ({ name: a.name, label: labelOf(a.name) })),
       ...(tag.attributes.some((a) => a.name === 'captions') ? { captions: 'captions' } : {}),
+      ...(tag.summary ? { summary: tag.summary } : {}),
     });
   }
   const components = new Map<string, TagDefinition>();
@@ -91,6 +94,7 @@ export function tagDefinitions(markdoc?: MarkdocManifest, mdx?: MdxManifest): Ta
         .filter((f) => f.required && NAME_ATTRIBUTES.has(String(f.path[0]).toLowerCase()))
         .map((f) => ({ name: String(f.path[0]), label: f.label })),
       ...(fields.some((f) => f.path[0] === 'captions') ? { captions: 'captions' } : {}),
+      ...(component.summary ? { summary: component.summary } : {}),
     });
   }
   return { markdoc: markdocTags, mdx: components };
@@ -211,6 +215,11 @@ export function checkBody(
           fact.syntax === 'markdoc' ? options.tags?.markdoc : options.tags?.mdx
         )?.get(fact.name);
         if (!definition) break;
+        const shown = definition.summary ? fact.attributes[definition.summary] : undefined;
+        const subject =
+          typeof shown === 'string' && shown.trim() !== ''
+            ? `${definition.label} ${quoted(shown)}`
+            : definition.label;
         for (const { name, label } of definition.names) {
           const value = fact.attributes[name];
           if (typeof value === 'string' && value.trim() === '') {
@@ -218,14 +227,15 @@ export function checkBody(
             note(
               'tag-name-empty',
               `${definition.label} needs ${/^[aeiou]/.test(noun) ? 'an' : 'a'} ${noun}.`,
-              definition.label,
+              // The message names the tag already.
+              subject === definition.label ? undefined : subject,
             );
           }
         }
         if (definition.captions !== undefined) {
           const value = fact.attributes[definition.captions];
           if (value === undefined || value === false || value === 'false')
-            note('video-captions', 'Confirm this video has captions.', definition.label);
+            note('video-captions', 'Confirm this video has captions.', subject);
         }
         break;
       }
