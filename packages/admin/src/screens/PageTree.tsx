@@ -105,6 +105,17 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
   };
 
   const onRowKeyDown = (row: Row, event: KeyboardEvent<HTMLDivElement>) => {
+    // Shift+F10 or the menu key opens the row's "…" menu, as a context menu would.
+    if ((event.key === 'F10' && event.shiftKey) || event.key === 'ContextMenu') {
+      event.preventDefault();
+      event.stopPropagation();
+      (event.target as HTMLElement)
+        .querySelector<HTMLButtonElement>(
+          `button[aria-label="More actions for ${CSS.escape(row.title)}"]`,
+        )
+        ?.click();
+      return;
+    }
     if (!editable || !event.altKey || row.path === '') return;
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault();
@@ -161,8 +172,9 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
       )}
       <div className="mb-6 flex flex-wrap items-end gap-4">
         <p className="max-w-2xl text-content-muted">
-          Pages are listed as they nest on the site. Use each page’s “…” menu to add a page under
-          it, move it or change its order. Alt+↑ and Alt+↓ move the page you’re on.
+          Pages are listed as they nest on the site. Each page’s “…” menu adds a page under it,
+          moves it or changes its order. From a page, the right arrow or Shift+F10 reaches its menu,
+          and Alt+↑ and Alt+↓ move it.
         </p>
         {editable && (
           // The screen's one primary action: a link styled as the primary button.
