@@ -723,3 +723,19 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 - The favicon is an inline `data:image/svg+xml` in the injected `/admin` page, so it costs no request and needs no file in the site. A favicon can't read CSS variables, so it carries Pine's `content` and `accent` values for each theme and switches with `prefers-color-scheme` inside the SVG.
 - The site's own pages keep their own favicon; only `/admin` gets this one.
 - White-label (the higher paid tier, Phase 9) replaces both. Keeping the mark in one component and one favicon makes that a single swap.
+
+### 2026-10-18: Icons are Lucide's, beside words; the body's formatting tools are icons alone (an exception to spec §10.4)
+
+**Jeremy chose, after the design pass: the body editor's formatting tools (and the compact Markdown field's) are icons alone, each with an accessible name, `aria-keyshortcuts` where it has a shortcut, and a tooltip with its name and shortcut. Insert keeps its word. Everywhere else an icon sits beside its words: action buttons, the "…" menus' items, back links, the warning mark on accessibility notes, the error mark on the error summary, search fields, and file types in Media and the picker.**
+- Spec §10.4 allows icon-only buttons only for close, overflow ("…") and drag handles, and DECISIONS added the outline's expand toggle. The formatting tools are the fifth exception. Rich-text toolbars are where icons are the convention, the words wrapped the toolbar onto several rows, and the tooltip and accessible name carry the words. "The body editor's keyboard and toolbar" (2026-10-17) chose words; this replaces that part of it.
+- The icons are Lucide's (ISC), drawn by the kit's one `Icon` component at the design system's weight: 1.75px strokes at any size, round caps and joins, `currentColor`. Close, "…", the drag handle, chevrons and the select's tick moved to Lucide too, so the studio has one drawing style. The kit imports only the icons it uses, and `@vesper/admin` bundles them at publish, so sites install nothing for them.
+- An accessibility note now starts with the warning mark instead of a warning hairline on its left, as the design system's InlineStatus shows a field warning. The words still say what it is.
+
+### 2026-10-18: A collection's icon is named in vesper.config.ts and resolved at build
+
+**`collections.<name>.icon` names a Lucide icon in kebab case, as lucide.dev lists them (`'newspaper'`, `'calendar-days'`). When the site's manifest is built, `@vesper/astro` loads `lucide` from the site's own install, looks the name up and puts that one drawing into the manifest (`presentation.icon`). The studio shows it beside the collection's name on Home, in the Content menu and in the collection's heading. Collections without one get a default: a page for collections, an outline for tree collections, sliders for singletons.**
+- Jeremy asked for icons per collection. Resolving at build means the studio never carries the whole icon set: `lucide-react` would have shipped every icon to `/admin`, or a separate file per icon.
+- `lucide` is an optional peer dependency of `@vesper/astro`, as `sharp` is. It's 22 MB installed, so a site that names no icon doesn't pay for it. A site that names one without `lucide` installed gets a plain warning saying to install it, and the default icon.
+- An unknown name warns once ("collections.blog.icon: \"newspapr\" isn't a Lucide icon name…") and falls back to the default.
+- The kit draws a manifest icon only from Lucide's shapes and geometry attributes (`path`, `circle`, `rect`, `line`, `polyline`, `polygon`, `ellipse`), so manifest data can't put anything else into the page.
+- Free, like every other `vesper.config.ts` presentation setting: it isn't the studio's branding, which is white-label's.

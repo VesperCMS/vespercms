@@ -181,7 +181,7 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - At most one primary (accent-filled) button per screen.
 - At most two levels of navigation visible at once.
 - No colored status badges. Status is text.
-- No icon-only buttons except close, overflow ("…"), drag handles and the outline's expand toggle (DECISIONS.md, 2026-10-18), all with accessible names.
+- No icon-only buttons except close, overflow ("…"), drag handles, the outline's expand toggle and the body editor's formatting tools (DECISIONS.md, 2026-10-18), all with accessible names; the formatting tools also show a tooltip. Everywhere else an icon sits beside its words, and icons come only from the kit's `Icon` (Lucide).
 - At most five color tokens beyond neutrals on any screen: accent, accent-subtle, danger, focus, plus optional warning.
 - No tabs inside the editor.
 - Body text 15–16px, line-height ≥ 1.5, two font weights.
