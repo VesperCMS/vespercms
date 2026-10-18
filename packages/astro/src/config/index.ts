@@ -1,7 +1,11 @@
 import {
+  A11Y_RULE_IDS,
   NATIVE_TARGETS,
   RATIO_NAME,
+  isA11yRuleId,
   isRatio,
+  parseHexColor,
+  type A11yRuleId,
   type CollectionConfig,
   type FieldModel,
   type MarkdocTagHint,
@@ -75,6 +79,14 @@ export type VesperConfig = {
    * here.
    */
   redirects?: { native?: NativeTarget[] };
+  /**
+   * Accessibility checks (spec §6.18). `blockPublishOn` lists the rules whose
+   * notes refuse a save, such as `['missing-alt']`; by default every note only
+   * warns. `backgrounds` names the colours the site draws text on, so text
+   * colours from `fields.color({ contrast: 'text' })` can be checked against
+   * each: `{ 'Page': '#ffffff', 'Footer': '#1d2433' }`.
+   */
+  a11y?: { blockPublishOn?: A11yRuleId[]; backgrounds?: Record<string, string> };
 };
 
 /** Typed identity for `vesper.config.ts`. Validation happens when Vesper loads the file. */
@@ -91,6 +103,7 @@ const KNOWN_TOP_LEVEL = new Set([
   'roles',
   'timeZone',
   'redirects',
+  'a11y',
 ]);
 const KNOWN_COLLECTION = new Set([
   'label',
@@ -103,6 +116,7 @@ const KNOWN_COLLECTION = new Set([
   'search',
   'placement',
   'maxDepth',
+  'headingStart',
 ]);
 
 /**
@@ -150,7 +164,11 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
             });
           }
         }
-        const { url, maxDepth } = value as { url?: unknown; maxDepth?: unknown };
+        const { url, maxDepth, headingStart } = value as {
+          url?: unknown;
+          maxDepth?: unknown;
+          headingStart?: unknown;
+        };
         if (url !== undefined && typeof url !== 'string' && typeof url !== 'function') {
           problems.push({
             level: 'error',
@@ -164,6 +182,20 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
           problems.push({
             level: 'error',
             message: `collections.${name}.maxDepth must be a whole number of levels, 1 or more.`,
+          });
+        }
+        if (
+          headingStart !== undefined &&
+          !(
+            typeof headingStart === 'number' &&
+            Number.isInteger(headingStart) &&
+            headingStart >= 1 &&
+            headingStart <= 6
+          )
+        ) {
+          problems.push({
+            level: 'error',
+            message: `collections.${name}.headingStart must be a heading level from 1 to 6: usually 2, when the page's title is its h1.`,
           });
         }
       }
@@ -181,6 +213,7 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
     ...checkMdx(record.mdx),
     ...checkRedirects(record.redirects),
     ...checkImages(record.images),
+    ...checkA11y(record.a11y),
   );
   const widgets = record.widgets;
   if (widgets !== undefined && typeof widgets === 'object' && widgets !== null) {
@@ -351,6 +384,44 @@ function checkImages(images: unknown): Problem[] {
       level: 'error',
       message: 'images.maxUploadEdge must be a whole number of pixels, such as 3000.',
     });
+  }
+  return problems;
+}
+
+function checkA11y(a11y: unknown): Problem[] {
+  if (a11y === undefined) return [];
+  if (!isObject(a11y)) return [{ level: 'error', message: '"a11y" must be an object.' }];
+  const problems = unknownKeys(a11y, ['blockPublishOn', 'backgrounds'], 'a11y');
+  const { blockPublishOn, backgrounds } = a11y;
+  if (blockPublishOn !== undefined && !Array.isArray(blockPublishOn)) {
+    problems.push({
+      level: 'error',
+      message: "a11y.blockPublishOn must be a list of rule names, such as ['missing-alt'].",
+    });
+  } else if (blockPublishOn !== undefined) {
+    for (const rule of blockPublishOn as unknown[]) {
+      if (!isA11yRuleId(rule)) {
+        problems.push({
+          level: 'warning',
+          message: `a11y.blockPublishOn: ${JSON.stringify(rule)} isn't a rule, so it blocks nothing. The rules are ${A11Y_RULE_IDS.join(', ')}.`,
+        });
+      }
+    }
+  }
+  if (backgrounds !== undefined && !isObject(backgrounds)) {
+    problems.push({
+      level: 'error',
+      message: "a11y.backgrounds must name each background colour, such as { Page: '#ffffff' }.",
+    });
+  } else if (backgrounds !== undefined) {
+    for (const [name, color] of Object.entries(backgrounds)) {
+      if (typeof color !== 'string' || parseHexColor(color) === null) {
+        problems.push({
+          level: 'error',
+          message: `a11y.backgrounds.${name} must be a hex colour such as '#ffffff', not ${JSON.stringify(color)}.`,
+        });
+      }
+    }
   }
   return problems;
 }

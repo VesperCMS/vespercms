@@ -213,6 +213,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
               ...(config.mdx ? { mdx: config.mdx } : {}),
               ...(config.redirects ? { redirects: config.redirects } : {}),
               ...(config.images ? { images: config.images } : {}),
+              ...(config.a11y ? { a11y: config.a11y } : {}),
             },
           }
         : {}),

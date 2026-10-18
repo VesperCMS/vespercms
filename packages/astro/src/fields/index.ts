@@ -17,13 +17,28 @@ import { z } from 'astro/zod';
  *
  * @param options.palette Named swatches, `{ Indigo: '#28335f' }`. The editor
  *   then shows a radio group of names instead of a full picker.
+ * @param options.contrast What the colour is used for, so the studio can check
+ *   it against the site's `a11y.backgrounds` (spec §6.18): `'text'` needs
+ *   4.5:1, `'large-text'` and `'graphic'` 3:1. Without it, no check.
  */
-export function color(options: { palette?: Record<string, string>; alpha?: boolean } = {}) {
+export function color(
+  options: {
+    palette?: Record<string, string>;
+    alpha?: boolean;
+    contrast?: 'text' | 'large-text' | 'graphic';
+  } = {},
+) {
   const pattern = options.alpha ? /^#[0-9a-f]{8}$/i : /^#[0-9a-f]{6}$/i;
   return z
     .string()
     .regex(pattern)
-    .meta(withOptions('color', { palette: options.palette, alpha: options.alpha }));
+    .meta(
+      withOptions('color', {
+        palette: options.palette,
+        alpha: options.alpha,
+        contrast: options.contrast,
+      }),
+    );
 }
 
 /**

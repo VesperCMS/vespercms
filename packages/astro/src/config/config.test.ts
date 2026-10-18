@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { A11Y_RULE_IDS } from '@vesper/core';
 import { checkConfig, defineConfig } from './index.ts';
 
 describe('defineConfig', () => {
@@ -154,6 +155,50 @@ describe('images', () => {
       {
         level: 'error',
         message: 'images.ratios must be an object of names and ratios, such as { wide: 16 / 9 }.',
+      },
+    ]);
+  });
+});
+
+describe('accessibility', () => {
+  it('accepts the publish gate, backgrounds and a heading start', () => {
+    expect(
+      checkConfig({
+        a11y: {
+          blockPublishOn: ['missing-alt', 'pdf-untagged'],
+          backgrounds: { Page: '#ffffff', Footer: '#1d2433' },
+        },
+        collections: { docs: { headingStart: 1 } },
+      }),
+    ).toEqual([]);
+  });
+
+  it('explains what it can’t use', () => {
+    expect(
+      checkConfig({
+        a11y: { blockPublishOn: ['missing-alts'], backgrounds: { Page: 'white' }, strict: true },
+        collections: { docs: { headingStart: 0 } },
+      }),
+    ).toEqual([
+      {
+        level: 'error',
+        message:
+          "collections.docs.headingStart must be a heading level from 1 to 6: usually 2, when the page's title is its h1.",
+      },
+      { level: 'warning', message: 'Unknown setting "a11y.strict" is ignored.' },
+      {
+        level: 'warning',
+        message: `a11y.blockPublishOn: "missing-alts" isn't a rule, so it blocks nothing. The rules are ${A11Y_RULE_IDS.join(', ')}.`,
+      },
+      {
+        level: 'error',
+        message: 'a11y.backgrounds.Page must be a hex colour such as \'#ffffff\', not "white".',
+      },
+    ]);
+    expect(checkConfig({ a11y: { blockPublishOn: 'missing-alt' } })).toEqual([
+      {
+        level: 'error',
+        message: "a11y.blockPublishOn must be a list of rule names, such as ['missing-alt'].",
       },
     ]);
   });

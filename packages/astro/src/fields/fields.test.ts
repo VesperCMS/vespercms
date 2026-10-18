@@ -44,6 +44,14 @@ describe('fields helpers: each equals its documented raw Zod', () => {
         .meta({ widget: 'color', widgetOptions: { palette: { Indigo: '#28335f' } } }),
     ],
     [
+      'color with a contrast check',
+      color({ contrast: 'text' }),
+      z
+        .string()
+        .regex(/^#[0-9a-f]{6}$/i)
+        .meta({ widget: 'color', widgetOptions: { contrast: 'text' } }),
+    ],
+    [
       'geo',
       geo(),
       z
