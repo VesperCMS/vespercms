@@ -78,6 +78,8 @@ export default defineConfig(
       '**/.astro/**',
       '**/node_modules/**',
       'coverage/**',
+      // Other sessions' git worktrees: separate checkouts, linted there.
+      '.claude/**',
       'playwright-report/**',
       'test-results/**',
       // The studio e2e tests' throwaway copy of the playground.
