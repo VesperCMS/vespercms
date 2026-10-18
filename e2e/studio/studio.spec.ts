@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
@@ -13,10 +13,17 @@ import { jpegFacts } from '../../packages/admin/src/media/formats.ts';
 const site = fileURLToPath(new URL('../.studio-site/', import.meta.url));
 const fixtures = fileURLToPath(new URL('../../apps/playground/fixtures/uploads/', import.meta.url));
 const read = (path: string) => readFileSync(`${site}${path}`, 'utf8');
-const write = (path: string, text: string) => {
-  writeFileSync(`${site}${path}`, text);
-};
 const WCAG21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+
+/** Files the running test saves or uploads, as they were before it (null: not there yet). */
+const touched = new Map<string, Buffer | null>();
+function touches(...paths: string[]) {
+  for (const path of paths) {
+    if (!touched.has(path)) {
+      touched.set(path, existsSync(`${site}${path}`) ? readFileSync(`${site}${path}`) : null);
+    }
+  }
+}
 
 async function expectAccessible(page: Page) {
   const { violations } = await new AxeBuilder({ page })
@@ -35,6 +42,17 @@ test.beforeEach(async ({ context, baseURL }) => {
   await context.route('**/*', (route) =>
     route.request().url().startsWith(origin) ? route.continue() : route.abort(),
   );
+});
+
+// Every test leaves the site as it found it, so a CI retry starts from the
+// same files. Uploads never replace a file, so a second upload of the same
+// name would otherwise be reused or numbered, not added.
+test.afterEach(() => {
+  for (const [path, bytes] of touched) {
+    if (bytes === null) rmSync(`${site}${path}`, { force: true });
+    else writeFileSync(`${site}${path}`, bytes);
+  }
+  touched.clear();
 });
 
 test('every screen passes axe: home, list, editor, media', async ({ page }) => {
@@ -69,6 +87,7 @@ test('a deep link survives a reload', async ({ page }) => {
 test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only that line changes', async ({
   page,
 }) => {
+  touches('src/content/blog/welcome.md');
   const before = read('src/content/blog/welcome.md');
   await page.goto('/admin/#/c/blog');
   const row = page.getByRole('row', { name: /Welcome to the playground/ });
@@ -94,32 +113,29 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
 
 test('the writing view rewrites only the paragraph that was edited', async ({ page }) => {
   const path = 'src/content/blog/harbor-at-dawn.md';
+  touches(path);
   const before = read(path);
-  try {
-    await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-    const body = page.getByRole('textbox', { name: 'Body' });
-    await expect(body.getByText(/^Park by the old customs house/)).toBeVisible();
-    // The paragraph is the body's last block. End would reach only the end
-    // of the visual line a click landed on, which depends on how it wraps.
-    await body.focus();
-    await page.keyboard.press('Control+End');
-    await page.keyboard.type(' Bring a thermos.');
-    await page.keyboard.press('Control+s');
-    await expect(page.getByText('Saved just now')).toBeVisible();
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  const body = page.getByRole('textbox', { name: 'Body' });
+  await expect(body.getByText(/^Park by the old customs house/)).toBeVisible();
+  // The paragraph is the body's last block. End would reach only the end
+  // of the visual line a click landed on, which depends on how it wraps.
+  await body.focus();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type(' Bring a thermos.');
+  await page.keyboard.press('Control+s');
+  await expect(page.getByText('Saved just now')).toBeVisible();
 
-    expect(read(path)).toBe(
-      before.replace(
-        'takes twenty minutes at an easy pace.',
-        'takes twenty minutes at an easy pace. Bring a thermos.',
-      ),
-    );
-  } finally {
-    // A retry starts from the same text.
-    write(path, before);
-  }
+  expect(read(path)).toBe(
+    before.replace(
+      'takes twenty minutes at an easy pace.',
+      'takes twenty minutes at an easy pace. Bring a thermos.',
+    ),
+  );
 });
 
 test('a sideways phone photo is uploaded upright, without its location', async ({ page }) => {
+  touches('src/assets/blog/portrait-exif-6.jpg');
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
   await page.getByRole('button', { name: 'Replace image' }).click();
   const dialog = page.getByRole('dialog', { name: 'Choose an image' });
@@ -136,6 +152,7 @@ test('a sideways phone photo is uploaded upright, without its location', async (
 test('an SVG with scripts is sanitized; HEIC is explained where it can’t be converted', async ({
   page,
 }) => {
+  touches('src/assets/script.svg');
   await page.goto('/admin/#/media');
   await expect(page.getByRole('heading', { level: 1, name: 'Media' })).toBeVisible();
   const input = page.locator('input[type=file]');
@@ -152,6 +169,7 @@ test('an SVG with scripts is sanitized; HEIC is explained where it can’t be co
 });
 
 test('a custom widget edits its field', async ({ page }) => {
+  touches('src/data/locations.yaml');
   await page.goto('/admin/#/c/locations/e/main-campus');
   const hours = page.getByRole('group', { name: 'Hours' });
   await expect(hours.getByLabel('Days, row 1')).toHaveValue('Mon–Fri');
