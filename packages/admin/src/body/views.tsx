@@ -243,7 +243,7 @@ export function SourceView({ node, getPos, selected }: ReactNodeViewProps) {
         <Button
           variant="quiet"
           excludeFromTabOrder
-          aria-label={`Edit ${label.toLowerCase()} as text`}
+          aria-label={`Edit as text: ${label}`}
           isDisabled={ui.disabled}
           onPress={() => {
             const pos = getPos();
