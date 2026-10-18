@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/. ./testing is the storage contract suite other adapters run. ./urls is URL patterns, page trees and redirects without the parsers, for a site's own pages.",
+  "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/. ./testing is the storage contract suite other adapters run. ./urls is URL patterns, page trees and redirects without the parsers, for a site's own pages. ./images is aspect ratios, focal points and crops, shared by the studio, <Img> and the build.",
   "exports": {
     ".": {
       "@vesper/source": "./src/index.ts",
@@ -21,6 +21,11 @@
       "@vesper/source": "./src/urls/index.ts",
       "types": "./dist/urls/index.d.ts",
       "default": "./dist/urls/index.js"
+    },
+    "./images": {
+      "@vesper/source": "./src/images/index.ts",
+      "types": "./dist/images/index.d.ts",
+      "default": "./dist/images/index.js"
     }
   },
   "files": [

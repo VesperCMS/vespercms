@@ -271,3 +271,6 @@ export {
   type FilePlace,
   type RewriteCount,
 } from './studio/links.ts';
+
+// Aspect ratios, focal points and crops (spec §6.6). Also `@vesper/core/images`.
+export * from './images/index.ts';
