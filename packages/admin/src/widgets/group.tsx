@@ -79,7 +79,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
 
   return (
     <div className="flex flex-col gap-3">
-      {items.length === 0 && <p className="text-sm text-content-muted">None yet.</p>}
+      {items.length === 0 && <p className="text-small text-content-muted">None yet.</p>}
       <ol className="flex flex-col gap-3">
         {items.map((entry, index) => {
           const name = itemSummary(entry, index, itemLabel);

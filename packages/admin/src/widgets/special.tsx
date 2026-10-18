@@ -155,7 +155,7 @@ export function SlugWidget({
         className={cx(inputClass, 'font-mono')}
       />
       {following && sourceLabel && (
-        <p id={`${id}-follows`} className="text-sm text-content-muted">
+        <p id={`${id}-follows`} className="text-small text-content-muted">
           Follows the {sourceLabel.toLowerCase()} until you edit it.
         </p>
       )}
@@ -265,7 +265,7 @@ export function DateTimeWidget({
         required={field.required}
         className={cx(inputClass, 'max-w-64')}
       />
-      <p id={`${id}-zone`} className="text-sm text-content-muted">
+      <p id={`${id}-zone`} className="text-small text-content-muted">
         {isSite
           ? `Times are in ${name}, the site’s time zone.`
           : `Times are in your time zone, ${name}.`}

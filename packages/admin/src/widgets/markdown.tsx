@@ -148,9 +148,9 @@ export function MarkdownWidget(props: WidgetProps<string>) {
           aria-describedby={[describedBy, `${id}-md`].filter(Boolean).join(' ')}
           aria-invalid={invalid || undefined}
           disabled={disabled}
-          className={cx(inputClass, 'resize-y font-mono text-sm')}
+          className={cx(inputClass, 'resize-y font-mono text-small')}
         />
-        <p id={`${id}-md`} className="text-sm text-content-muted">
+        <p id={`${id}-md`} className="text-small text-content-muted">
           This uses Markdown the compact editor can’t show, so it’s edited as text.
         </p>
       </>
@@ -186,7 +186,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
         </Toolbar>
       </div>
       <EditorContent editor={editor} />
-      <p id={`${id}-md`} className="text-sm text-content-muted">
+      <p id={`${id}-md`} className="text-small text-content-muted">
         Saved as Markdown. Escape moves to the formatting buttons.
       </p>
       <LinkDialog editor={editor} isOpen={linkOpen} onOpenChange={setLinkOpen} />

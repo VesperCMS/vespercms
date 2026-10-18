@@ -214,11 +214,11 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
             <>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-content">{row.title}</span>
-                <span className="block truncate text-sm text-content-muted">
+                <span className="block truncate text-small text-content-muted">
                   {row.url ?? `${row.path}/`}
                 </span>
               </span>
-              <span className="shrink-0 text-sm text-content-muted">{statusOf(row)}</span>
+              <span className="shrink-0 text-small text-content-muted">{statusOf(row)}</span>
               <Menu
                 label={`More actions for ${row.title}`}
                 items={menuItems(row, rows, byPath, { editable, maxDepth })}

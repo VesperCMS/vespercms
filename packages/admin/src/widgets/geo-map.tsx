@@ -139,12 +139,12 @@ export default function GeoMap({
         className="h-64 w-full overflow-hidden rounded-md border border-border-strong"
       />
       {failed && (
-        <p className="text-sm text-content-muted">
+        <p className="text-small text-content-muted">
           The map couldn’t load (it needs an internet connection). The number fields above work
           without it.
         </p>
       )}
-      <p className="text-sm text-content-muted">
+      <p className="text-small text-content-muted">
         Drag the pin, click the map, or focus the pin and use the arrow keys.
       </p>
       <p role="status" className="sr-only">

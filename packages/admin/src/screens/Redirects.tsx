@@ -143,7 +143,7 @@ export function Redirects() {
       )}
       {current && current.warnings.length > 0 && (
         <section aria-labelledby="redirect-warnings" className="mb-6 max-w-2xl">
-          <h2 id="redirect-warnings" className="mb-2 text-lg">
+          <h2 id="redirect-warnings" className="mb-2 text-heading-2">
             Needs a look
           </h2>
           <ul className="list-disc pl-6">
@@ -436,7 +436,7 @@ function ImportDialog({
           </p>
           {parsed.problems.length > 0 && (
             <section aria-labelledby="import-skipped">
-              <h3 id="import-skipped" className="mb-1 text-base font-semibold">
+              <h3 id="import-skipped" className="mb-1 text-body font-semibold">
                 {parsed.problems.length === 1
                   ? '1 row is skipped'
                   : `${String(parsed.problems.length)} rows are skipped`}

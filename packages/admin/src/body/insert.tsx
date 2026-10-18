@@ -226,7 +226,7 @@ export function SlashList({
             tabIndex={-1}
             aria-selected={index === active}
             className={cx(
-              'cursor-default rounded-sm px-3 py-2 text-base text-content',
+              'cursor-default rounded-sm px-3 py-2 text-body text-content',
               index === active && 'bg-accent-subtle',
             )}
             onMouseDown={(event) => {

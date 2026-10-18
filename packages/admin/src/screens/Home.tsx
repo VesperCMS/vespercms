@@ -21,19 +21,19 @@ export function Home() {
   const singletons = manifest.collections.filter((c) => c.presentation.singleton);
 
   return (
-    <Screen title="Content">
+    <Screen title="Content" afterglow>
       {summary.state === 'failed' && (
         <p className="mb-6 text-danger" role="alert">
           Couldn’t load entry counts: {summary.message}
         </p>
       )}
       {manifest.collections.length === 0 ? (
-        <p className="text-content-muted">
-          This site has no content collections yet. Add one in <code>src/content.config.ts</code>{' '}
-          and it appears here.
+        <p className="max-w-2xl text-content-muted">
+          This site has no content collections yet. Add one in{' '}
+          <code className="font-mono text-small">src/content.config.ts</code> and it appears here.
         </p>
       ) : (
-        <div className="grid max-w-2xl gap-10">
+        <div className="grid max-w-2xl gap-12">
           {collections.length > 0 && (
             <CollectionList
               heading="Collections"
@@ -69,19 +69,16 @@ function CollectionList({
 }) {
   return (
     <section aria-labelledby={`home-${heading}`}>
-      <h2 id={`home-${heading}`} className="mb-2 text-lg">
+      <h2 id={`home-${heading}`} className="mb-3 text-heading-2 text-content">
         {heading}
       </h2>
       <ul className="divide-y divide-border border-y border-border">
         {collections.map((collection) => (
           <li
             key={collection.name}
-            className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3"
+            className="flex min-h-12 flex-wrap items-center justify-between gap-x-6 gap-y-1 py-3"
           >
-            <Link
-              href={hrefFor({ screen: 'list', collection: collection.name })}
-              className="text-base"
-            >
+            <Link variant="title" href={hrefFor({ screen: 'list', collection: collection.name })}>
               {collection.label}
             </Link>
             <CollectionFacts
@@ -114,9 +111,5 @@ function CollectionFacts({
   } else if (loading) {
     facts.push('Loading…');
   }
-  return (
-    <InlineStatus live={false} className="text-content-muted">
-      {facts.join(' · ')}
-    </InlineStatus>
-  );
+  return <InlineStatus live={false}>{facts.join(' · ')}</InlineStatus>;
 }

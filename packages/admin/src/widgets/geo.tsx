@@ -76,7 +76,7 @@ export function GeoWidget({
         />
       </div>
       {showMap ? (
-        <Suspense fallback={<p className="text-sm text-content-muted">Loading the map…</p>}>
+        <Suspense fallback={<p className="text-small text-content-muted">Loading the map…</p>}>
           <GeoMap
             label={field.label}
             point={point.lat !== undefined && point.lng !== undefined ? (point as LatLng) : null}
@@ -138,7 +138,7 @@ function Coordinate({
   }
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm text-content">
+      <label htmlFor={id} className="text-small text-content">
         {label}
       </label>
       <input
@@ -162,7 +162,7 @@ function Coordinate({
         disabled={disabled}
         className={cx(inputClass, 'w-44')}
       />
-      <p id={`${id}-hint`} className="text-sm text-content-muted">
+      <p id={`${id}-hint`} className="text-small text-content-muted">
         {hint}
       </p>
     </div>

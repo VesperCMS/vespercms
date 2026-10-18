@@ -127,7 +127,7 @@ export function MediaBrowser() {
             setStep(null);
           }}
         />
-        <p role="status" className="text-sm text-content-muted">
+        <p role="status" className="text-small text-content-muted">
           {message}
         </p>
       </div>
@@ -156,15 +156,15 @@ export function MediaBrowser() {
             ) : (
               <span
                 aria-hidden="true"
-                className="flex h-36 items-center justify-center rounded-sm bg-surface-sunken text-sm uppercase text-content-muted"
+                className="flex h-36 items-center justify-center rounded-sm bg-surface-sunken text-small uppercase text-content-muted"
               >
                 {extensionOf(item.path)}
               </span>
             )}
-            <h2 className="break-all text-base">
+            <h2 className="break-all text-body">
               {item.path.slice(item.path.lastIndexOf('/') + 1)}
             </h2>
-            <p className="break-all text-sm text-content-muted">
+            <p className="break-all text-small text-content-muted">
               {dirOf(item.path)} · {fileSize(item.size)}
             </p>
             <UsedOn item={item} />
@@ -229,9 +229,9 @@ export function MediaBrowser() {
 
 function UsedOn({ item }: { item: MediaItem }) {
   if (item.usedBy.length === 0)
-    return <p className="text-sm text-content-muted">Not used on any page</p>;
+    return <p className="text-small text-content-muted">Not used on any page</p>;
   return (
-    <p className="text-sm">
+    <p className="text-small">
       Used on{' '}
       {item.usedBy.map((use, index) => (
         <span key={`${use.collection}/${use.id}`}>

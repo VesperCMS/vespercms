@@ -277,9 +277,9 @@ function TagForm({ editor, target, kind }: { editor: Editor; target: Target; kin
 
   return (
     <EditorContext.Provider value={state}>
-      {kind.description && <p className="text-sm text-content-muted">{kind.description}</p>}
+      {kind.description && <p className="text-small text-content-muted">{kind.description}</p>}
       {problem && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-small text-danger">
           {problem}
         </p>
       )}
@@ -308,7 +308,7 @@ function TagForm({ editor, target, kind }: { editor: Editor; target: Target; kin
         />
       )}
       {Object.keys(code).length > 0 && (
-        <div className="text-sm text-content-muted">
+        <div className="text-small text-content-muted">
           <p>Set in the page’s code, so kept as written:</p>
           <ul className="list-disc pl-5">
             {Object.entries(code).map(([key, text]) => (
@@ -445,7 +445,7 @@ function RawForm({
       value={value}
       rows={Math.min(12, value.split('\n').length + 1)}
       isDisabled={ui.disabled}
-      inputClassName="font-mono text-sm"
+      inputClassName="font-mono text-small"
       onChange={(next) => {
         setAttrs(editor, target, { [key]: next });
       }}

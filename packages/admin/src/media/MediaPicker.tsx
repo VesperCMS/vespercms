@@ -98,10 +98,10 @@ function PickerBody({
   return (
     <div className="flex flex-col gap-6">
       <section aria-labelledby="picker-upload" className="flex flex-col gap-3">
-        <h3 id="picker-upload" className="text-base">
+        <h3 id="picker-upload" className="text-body">
           Upload from your computer
         </h3>
-        <p className="text-sm text-content-muted">
+        <p className="text-small text-content-muted">
           {kind === 'image'
             ? `Large photos are scaled down, turned upright, and stripped of location data before they’re added to ${siteName}.`
             : `The file is added to ${folder}.`}
@@ -147,7 +147,7 @@ function PickerBody({
       </section>
 
       <section aria-labelledby="picker-existing" className="flex flex-col gap-3">
-        <h3 id="picker-existing" className="text-base">
+        <h3 id="picker-existing" className="text-body">
           Or choose one already in the site
         </h3>
         <TextField label="Search by file name" type="search" value={query} onChange={setQuery} />
@@ -193,14 +193,14 @@ function MediaChoice({ item, onChoose }: { item: MediaItem; onChoose: (path: str
       ) : (
         <span
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-xs uppercase text-content-muted"
+          className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-caption uppercase text-content-muted"
         >
           {extensionOf(item.path)}
         </span>
       )}
       <span className="min-w-0">
         <span className="block truncate font-semibold">{name}</span>
-        <span className="block truncate text-sm text-content-muted">
+        <span className="block truncate text-small text-content-muted">
           {item.path.slice(0, item.path.lastIndexOf('/'))} · {fileSize(item.size)}
         </span>
       </span>
@@ -229,7 +229,7 @@ export function UploadStatus({
     );
   }
   const notes = step.upload.notes.length > 0 && (
-    <ul className="list-disc pl-5 text-sm text-content-muted">
+    <ul className="list-disc pl-5 text-small text-content-muted">
       {step.upload.notes.map((note) => (
         <li key={note}>{note}</li>
       ))}

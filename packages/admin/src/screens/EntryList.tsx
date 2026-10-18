@@ -140,7 +140,7 @@ function Cell({ entry, column }: { entry: EntrySummary; column: string }) {
       <span className="font-semibold text-content">
         {entry.title}
         {entry.title !== entry.id && (
-          <span className="block text-sm font-normal text-content-muted">{entry.id}</span>
+          <span className="block text-small font-normal text-content-muted">{entry.id}</span>
         )}
       </span>
     );

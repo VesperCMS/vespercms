@@ -18,6 +18,7 @@ import {
   TextArea,
   SuggestField,
   ToggleButton,
+  ToolbarSeparator,
   ToolButton,
   Toolbar,
   cx,
@@ -139,7 +140,7 @@ export function BodyEditor(props: BodyEditorProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span id="entry-body-label" className="text-sm font-semibold text-content">
+        <span id="entry-body-label" className="text-label text-content">
           Body
         </span>
         <Button
@@ -171,13 +172,13 @@ export function BodyEditor(props: BodyEditorProps) {
             rows={20}
             spellCheck={false}
             disabled={props.disabled}
-            className={cx(inputClass, 'resize-y font-mono text-sm leading-relaxed')}
+            className={cx(inputClass, 'resize-y font-mono text-small leading-relaxed')}
           />
-          <p id="entry-body-source-help" className="text-sm text-content-muted">
+          <p id="entry-body-source-help" className="text-small text-content-muted">
             The whole body as {formatName}, exactly as it’s saved.
           </p>
           {blocking.length > 0 && (
-            <ul id="entry-body-issues" className="flex flex-col gap-1 text-sm text-danger">
+            <ul id="entry-body-issues" className="flex flex-col gap-1 text-small text-danger">
               {blocking.map((issue) => (
                 <li key={`${String(issue.line)}${issue.message}`}>
                   Line {issue.line}: {issue.message}
@@ -209,7 +210,7 @@ function BodyNotes({
   if (notes.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <p id="entry-body-a11y-label" className="text-sm font-semibold text-content">
+      <p id="entry-body-a11y-label" className="text-label text-content">
         Accessibility notes in the body
       </p>
       <ul aria-labelledby="entry-body-a11y-label" className="m-0 flex list-none flex-col gap-2 p-0">
@@ -218,7 +219,7 @@ function BodyNotes({
           return (
             <li
               key={id}
-              className="flex flex-wrap items-start justify-between gap-2 border-l border-warning pl-3 text-sm text-content"
+              className="flex flex-wrap items-start justify-between gap-2 border-l border-warning pl-3 text-small text-content"
             >
               <p id={id} className="m-0 min-w-0 flex-1">
                 {lines && note.target.kind === 'body' ? `Line ${String(note.target.line)}. ` : ''}
@@ -440,10 +441,8 @@ function WritingView({
         id: 'entry-body',
         'aria-labelledby': 'entry-body-label',
         'aria-describedby': 'entry-body-help',
-        class: cx(
-          inputClass,
-          'vesper-body min-h-72 resize-y overflow-y-auto leading-relaxed outline-none',
-        ),
+        // The frame around the toolbar and text draws the boundary and the focus ring.
+        class: 'vesper-body min-h-72 resize-y overflow-y-auto px-4 py-3 text-body outline-none',
         // A textbox, or a combobox while the "/" list is open.
         ...slashAttributes(state, {
           ...slashIds,
@@ -557,31 +556,43 @@ function WritingView({
   return (
     <BodyUiContext.Provider value={ui}>
       <div data-vesper-body="" className="flex flex-col gap-2">
-        <div>
-          <FormatToolbar
-            editor={editor}
-            disabled={disabled}
-            onLink={() => {
-              setLinkOpen(true);
-            }}
-            onImage={() => {
-              setPicking(true);
-            }}
-            insert={
-              hasBlocks ? (
-                <InsertMenu
-                  editor={editor}
-                  choices={(state) => choicesAt(state, catalog, containers)}
-                  onChoose={(choice) => {
-                    insertChoice(choice);
-                  }}
-                  disabled={disabled}
-                />
-              ) : null
-            }
-          />
+        {/*
+         * One hairline frame holds the toolbar and the text. Focus in the text
+         * rings the frame; the toolbar's buttons ring themselves.
+         */}
+        <div
+          className={cx(
+            'rounded-md border border-border-strong bg-surface-raised',
+            'has-[#entry-body:focus-visible]:outline-2 has-[#entry-body:focus-visible]:outline-offset-2 has-[#entry-body:focus-visible]:outline-focus',
+            'has-[#entry-body:focus-visible]:ring-6 has-[#entry-body:focus-visible]:ring-(color:--glow-focus)',
+          )}
+        >
+          <div className="border-b border-border p-1">
+            <FormatToolbar
+              editor={editor}
+              disabled={disabled}
+              onLink={() => {
+                setLinkOpen(true);
+              }}
+              onImage={() => {
+                setPicking(true);
+              }}
+              insert={
+                hasBlocks ? (
+                  <InsertMenu
+                    editor={editor}
+                    choices={(state) => choicesAt(state, catalog, containers)}
+                    onChoose={(choice) => {
+                      insertChoice(choice);
+                    }}
+                    disabled={disabled}
+                  />
+                ) : null
+              }
+            />
+          </div>
+          <EditorContent editor={editor} />
         </div>
-        <EditorContent editor={editor} />
         <SlashList
           editor={editor}
           {...slashIds}
@@ -593,7 +604,7 @@ function WritingView({
         <p className="sr-only" role="status">
           {announcement}
         </p>
-        <p id="entry-body-help" className="text-sm text-content-muted">
+        <p id="entry-body-help" className="text-small text-content-muted">
           Ctrl+B bold, Ctrl+I italic, Ctrl+K link.
           {hasBlocks &&
             ' Type / to insert a block. Arrow onto a block and press Enter for its settings; Alt+↑ and Alt+↓ move it.'}{' '}
@@ -708,6 +719,7 @@ function FormatToolbar({
       >
         Italic
       </ToggleButton>
+      <ToolbarSeparator />
       <ToggleButton
         isDisabled={disabled}
         isSelected={state.heading2}
@@ -722,6 +734,7 @@ function FormatToolbar({
       >
         Subheading
       </ToggleButton>
+      <ToolbarSeparator />
       <ToggleButton
         isDisabled={disabled}
         isSelected={state.bullets}
@@ -750,6 +763,8 @@ function FormatToolbar({
       >
         Code
       </ToggleButton>
+      <ToolbarSeparator />
+
       <ToolButton isDisabled={disabled} onPress={onLink}>
         {state.link ? 'Edit link' : 'Link'}
       </ToolButton>
@@ -882,7 +897,7 @@ function ImageAltDialog({
           <img src={previewUrl} alt="" className="max-h-40 self-start rounded-md object-contain" />
         )}
         {path && (
-          <p className="text-sm text-content-muted">{path.slice(path.lastIndexOf('/') + 1)}</p>
+          <p className="text-small text-content-muted">{path.slice(path.lastIndexOf('/') + 1)}</p>
         )}
         {!decorative && (
           <TextArea

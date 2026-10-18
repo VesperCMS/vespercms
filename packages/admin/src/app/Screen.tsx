@@ -1,4 +1,4 @@
-import { Menu } from '@vesper/ui';
+import { cx, Menu } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useStudio } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
@@ -11,6 +11,8 @@ export type ScreenProps = {
   hideTitle?: boolean;
   /** Replaces the top bar's middle and right side (the editor's bar, spec §10.3). */
   bar?: ReactNode;
+  /** The accent's wash at the top of a welcoming screen: home and empty states, never a form. */
+  afterglow?: boolean;
   children: ReactNode;
 };
 
@@ -20,7 +22,13 @@ export type ScreenProps = {
  * screen's heading, so keyboard and screen-reader users land on the content
  * they asked for instead of at the top of the page.
  */
-export function Screen({ title, hideTitle = false, bar, children }: ScreenProps) {
+export function Screen({
+  title,
+  hideTitle = false,
+  bar,
+  afterglow = false,
+  children,
+}: ScreenProps) {
   const { siteName } = useStudio();
   const navigation = useContext(NavigationContext);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -34,7 +42,7 @@ export function Screen({ title, hideTitle = false, bar, children }: ScreenProps)
   }, [navigation.count]);
 
   return (
-    <>
+    <div className={cx('min-h-screen', afterglow && 'afterglow')}>
       <a
         href="#main"
         onClick={(event) => {
@@ -42,32 +50,40 @@ export function Screen({ title, hideTitle = false, bar, children }: ScreenProps)
           event.preventDefault();
           document.getElementById('main')?.focus();
         }}
-        className="sr-only rounded-md bg-surface-raised px-3 py-2 text-accent focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
+        className="sr-only rounded-md bg-surface-raised px-3 py-2 text-accent shadow-overlay focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
       >
         Skip to content
       </a>
-      <header className="border-b border-border">
-        <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
+      {/* Sticky and frosted, so the page stays present as it scrolls beneath. */}
+      <header className="glass-bar sticky top-0 z-40 shadow-glass-edge">
+        <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:gap-x-4">
           <a
             href={hrefFor({ screen: 'home' })}
-            className="rounded-sm font-semibold text-content no-underline focus-visible:outline-2"
+            className={cx(
+              'rounded-sm text-heading-3 tracking-tight text-content lowercase no-underline',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+            )}
           >
             {siteName}
           </a>
           {bar ?? <DefaultBar />}
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-8 outline-none">
+      <main
+        id="main"
+        tabIndex={-1}
+        className={cx('mx-auto max-w-6xl px-4 pb-16 outline-none', hideTitle ? 'pt-8' : 'pt-12')}
+      >
         <h1
           ref={heading}
           tabIndex={-1}
-          className={hideTitle ? 'sr-only' : 'mb-6 text-2xl outline-none'}
+          className={hideTitle ? 'sr-only' : 'mb-8 text-heading-1 text-content outline-none'}
         >
           {title}
         </h1>
         {children}
       </main>
-    </>
+    </div>
   );
 }
 

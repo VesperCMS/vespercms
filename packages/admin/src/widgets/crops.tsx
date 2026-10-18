@@ -66,7 +66,7 @@ export function CropPreviews({
   const [open, setOpen] = useState<Ratio | null>(null);
   const [announcement, setAnnouncement] = useState('');
   if (!size) {
-    return <p className="text-sm text-content-muted">Loading the image for the crop previews…</p>;
+    return <p className="text-small text-content-muted">Loading the image for the crop previews…</p>;
   }
   const buttonId = (name: string) => `${id}-crop-${name}`;
   const afterDialog = (name: string) => {
@@ -96,7 +96,7 @@ export function CropPreviews({
                     style={cropStyle(rect)}
                   />
                 </div>
-                <figcaption className="text-sm text-content">
+                <figcaption className="text-small text-content">
                   {label} · {ratioLabel(ratio)}
                   {custom && <span className="text-content-muted"> · Custom crop</span>}
                 </figcaption>
@@ -279,7 +279,7 @@ export function CropDialog({
         };
         return (
           <>
-            <p id="vesper-crop-help" className="text-sm text-content-muted">
+            <p id="vesper-crop-help" className="text-small text-content-muted">
               Drag the box to move it, or a corner to resize it. With the box focused, the arrow
               keys move it, Shift and the arrow keys resize it, Enter applies and Escape cancels.
             </p>

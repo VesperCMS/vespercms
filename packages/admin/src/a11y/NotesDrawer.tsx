@@ -43,7 +43,7 @@ export function NotesDrawer({
           <section key={group.key} aria-labelledby={`a11y-group-${group.key}`}>
             <h3
               id={`a11y-group-${group.key}`}
-              className="mb-2 text-base font-semibold text-content"
+              className="mb-2 text-body font-semibold text-content"
             >
               {group.label}
             </h3>

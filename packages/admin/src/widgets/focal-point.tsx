@@ -95,7 +95,7 @@ export function FocalPointControl({
 
   return (
     <div className="flex flex-col gap-3">
-      <p id={`${id}-focus-help`} className="text-sm text-content-muted">
+      <p id={`${id}-focus-help`} className="text-small text-content-muted">
         The focal point stays in view when the image is cropped. Click the image or drag the marker;
         or focus the image and use the arrow keys (Shift moves 10%).
       </p>
@@ -208,7 +208,7 @@ function PercentField({
   }
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm text-content">
+      <label htmlFor={id} className="text-small text-content">
         {label}
       </label>
       <input
@@ -232,7 +232,7 @@ function PercentField({
         aria-describedby={`${id}-hint`}
         className={cx(inputClass, 'w-28')}
       />
-      <p id={`${id}-hint`} className="text-sm text-content-muted">
+      <p id={`${id}-hint`} className="text-small text-content-muted">
         {hint}
       </p>
     </div>

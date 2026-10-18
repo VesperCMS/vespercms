@@ -56,7 +56,7 @@ export function Field({ field, path, label }: FieldProps) {
 
   const control = Custom ? (
     <WidgetBoundary fallback={<builtin.component {...props} />} name={field.widget ?? ''}>
-      <Suspense fallback={<p className="text-sm text-content-muted">Loading…</p>}>
+      <Suspense fallback={<p className="text-small text-content-muted">Loading…</p>}>
         <Custom {...props} />
       </Suspense>
     </WidgetBoundary>
@@ -72,12 +72,12 @@ export function Field({ field, path, label }: FieldProps) {
     </>
   ) : null;
   const help = helpId ? (
-    <p id={helpId} className="text-sm text-content-muted">
+    <p id={helpId} className="text-small text-content-muted">
       {field.description}
     </p>
   ) : null;
   const error = errorId ? (
-    <p id={errorId} className="text-sm text-danger">
+    <p id={errorId} className="text-small text-danger">
       {errors.join(' ')}
     </p>
   ) : null;
@@ -95,7 +95,7 @@ export function Field({ field, path, label }: FieldProps) {
         <legend
           id={`${id}-label`}
           tabIndex={-1}
-          className="mb-1 text-sm font-semibold text-content outline-none"
+          className="mb-1 text-label text-content outline-none"
         >
           {text}
           {required}
@@ -109,7 +109,7 @@ export function Field({ field, path, label }: FieldProps) {
   }
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <label id={`${id}-label`} htmlFor={id} className="text-sm font-semibold text-content">
+      <label id={`${id}-label`} htmlFor={id} className="text-label text-content">
         {text}
         {required}
       </label>
@@ -139,7 +139,7 @@ class WidgetBoundary extends Component<
     if (!this.state.failed) return this.props.children;
     return (
       <>
-        <p className="text-sm text-content-muted">
+        <p className="text-small text-content-muted">
           The “{this.props.name}” control couldn’t load, so this is a plain one.
         </p>
         {this.props.fallback}

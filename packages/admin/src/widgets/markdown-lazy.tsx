@@ -11,7 +11,7 @@ export function LazyMarkdownWidget(props: WidgetProps<string>) {
   return (
     <Suspense
       fallback={
-        <p role="status" className="text-sm text-content-muted">
+        <p role="status" className="text-small text-content-muted">
           Loading the editor…
         </p>
       }

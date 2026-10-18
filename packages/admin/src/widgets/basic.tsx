@@ -17,8 +17,9 @@ import type { WidgetProps } from '../types.ts';
 
 /** Native inputs share the ui kit's control look. */
 export const inputClass = cx(
-  'w-full rounded-md border border-border-strong bg-surface-sunken px-3 py-2 text-base text-content',
+  'min-h-10 w-full rounded-md border border-border-strong bg-surface-sunken px-3 py-2 text-body text-content',
   'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+  'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
   'aria-[invalid=true]:border-danger disabled:opacity-60',
 );
 
@@ -288,16 +289,16 @@ export function RawWidget({
           .join(' ')}
         aria-invalid={invalid || problem !== null || undefined}
         disabled={disabled}
-        className={cx(inputClass, 'resize-y font-mono text-sm')}
+        className={cx(inputClass, 'resize-y font-mono text-small')}
       />
-      <p id={`${id}-raw`} className="text-sm text-content-muted">
+      <p id={`${id}-raw`} className="text-small text-content-muted">
         Edited as YAML
         {field.unknownReason
           ? `: Vesper has no control for this ${field.unknownReason} field.`
           : '.'}
       </p>
       {problem && (
-        <p id={problemId} className="text-sm text-danger">
+        <p id={problemId} className="text-small text-danger">
           {problem}
         </p>
       )}

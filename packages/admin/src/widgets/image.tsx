@@ -114,12 +114,12 @@ export function ImageWidget({
               className="max-h-48 max-w-full rounded-md border border-border object-contain"
             />
           ) : (
-            <p className="text-sm text-content-muted">
+            <p className="text-small text-content-muted">
               The studio can’t show a preview of {srcText}.
             </p>
           )}
           <div className="flex min-w-0 flex-col gap-2">
-            <p id={`${id}-file`} className="break-all text-sm">
+            <p id={`${id}-file`} className="break-all text-small">
               {fileName(srcText)}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -163,14 +163,14 @@ export function ImageWidget({
         </div>
       )}
       {notes.length > 0 && (
-        <p role="status" className="text-sm text-content-muted">
+        <p role="status" className="text-small text-content-muted">
           Added. {notes.join('. ')}.
         </p>
       )}
 
       {hasAlt && !decorative && (
         <div className="flex flex-col gap-1">
-          <label htmlFor={`${id}-alt`} className="text-sm font-semibold text-content">
+          <label htmlFor={`${id}-alt`} className="text-label text-content">
             Alt text <span className="font-normal text-content-muted">(required)</span>
           </label>
           <textarea
@@ -191,7 +191,7 @@ export function ImageWidget({
             disabled={disabled}
             className={cx(inputClass, 'resize-y')}
           />
-          <p id={`${id}-alt-help`} className="text-sm text-content-muted">
+          <p id={`${id}-alt-help`} className="text-small text-content-muted">
             Describe what this image communicates on this page.
           </p>
           {altNotes.length > 0 && <FieldNotes id={`${id}-alt-a11y`} notes={altNotes} />}
@@ -311,7 +311,7 @@ export function FileWidget({
   return (
     <div className="flex flex-col gap-2">
       {current && (
-        <p id={`${id}-file`} className="text-sm">
+        <p id={`${id}-file`} className="text-small">
           {sitePath ? (
             <a
               href={api.fileUrl(sitePath)}

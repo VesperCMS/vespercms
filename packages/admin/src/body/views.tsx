@@ -32,7 +32,7 @@ const SELECTED =
 function Issues({ id, issues }: { id: string; issues: readonly BodyIssue[] }) {
   if (issues.length === 0) return null;
   return (
-    <ul id={id} className="mt-2 flex flex-col gap-1 text-sm">
+    <ul id={id} className="mt-2 flex flex-col gap-1 text-small">
       {issues.map((issue) => (
         <li
           key={`${String(issue.line)}${issue.message}`}
@@ -89,7 +89,7 @@ export function ContainerView({ node, getPos, selected, editor }: ReactNodeViewP
       )}
     >
       <div contentEditable={false} className="mb-2 flex items-center justify-between gap-2">
-        <p id={headerId} className="text-sm font-semibold text-content-muted">
+        <p id={headerId} className="text-label text-content-muted">
           {headerText(label, summary)}
         </p>
         <SettingsButton label={label} getPos={getPos} inTabOrder={inside} />
@@ -122,7 +122,7 @@ function SettingsButton({
         const pos = getPos();
         if (typeof pos === 'number') ui.openSettings(pos);
       }}
-      className="min-h-8 px-2 text-sm"
+      className="min-h-8 px-2 text-small"
     >
       Settings
     </Button>
@@ -160,7 +160,7 @@ export function CardView({ node, getPos, selected }: ReactNodeViewProps) {
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <p id={headerId} className="text-sm font-semibold text-content">
+        <p id={headerId} className="text-label text-content">
           {headerText(label, summary)}
         </p>
         <SettingsButton label={label} getPos={getPos} inTabOrder={false} />
@@ -203,7 +203,7 @@ export function InlineView({ node, selected }: ReactNodeViewProps) {
       // One piece to the browser too: a caret can't land inside it.
       contentEditable={false}
       className={cx(
-        'mx-0.5 rounded-sm border border-border-strong bg-surface-sunken px-1 py-0.5 text-sm',
+        'mx-0.5 rounded-sm border border-border-strong bg-surface-sunken px-1 py-0.5 text-small',
         !known && 'font-mono',
         issues.length > 0 && 'border-danger',
         selected && SELECTED,
@@ -239,7 +239,7 @@ export function SourceView({ node, getPos, selected }: ReactNodeViewProps) {
       )}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-content-muted">{label}, kept as written.</p>
+        <p className="text-label text-content-muted">{label}, kept as written.</p>
         <Button
           variant="quiet"
           excludeFromTabOrder
@@ -249,12 +249,12 @@ export function SourceView({ node, getPos, selected }: ReactNodeViewProps) {
             const pos = getPos();
             if (typeof pos === 'number') ui.openSettings(pos);
           }}
-          className="min-h-8 px-2 text-sm"
+          className="min-h-8 px-2 text-small"
         >
           Edit as text
         </Button>
       </div>
-      <pre className="overflow-x-auto font-mono text-sm whitespace-pre-wrap text-content">
+      <pre className="overflow-x-auto font-mono text-small whitespace-pre-wrap text-content">
         {lines.slice(0, 6).join('\n')}
         {lines.length > 6 ? `\n… ${String(lines.length - 6)} more lines` : ''}
       </pre>

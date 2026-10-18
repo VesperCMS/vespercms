@@ -21,7 +21,7 @@ export function FieldNotes({ id, notes }: { id: string; notes: readonly A11yNote
       {notes.map((note, index) => (
         <li
           key={`${note.rule}:${String(index)}`}
-          className="border-l border-warning pl-3 text-sm text-content"
+          className="border-l border-warning pl-3 text-small text-content"
         >
           <span className="font-semibold">Accessibility note: </span>
           <NoteText note={note} />

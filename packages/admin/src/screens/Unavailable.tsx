@@ -11,7 +11,7 @@ export function Unavailable({ siteName }: { siteName: string }) {
   }, [siteName]);
   return (
     <main id="main" className="mx-auto max-w-2xl px-4 py-16">
-      <h1 className="mb-4 text-2xl">Editing isn’t available here yet</h1>
+      <h1 className="mb-4 text-heading-1">Editing isn’t available here yet</h1>
       <p className="mb-3">
         This copy of {siteName} was built without a way to save changes. For now, content is edited
         while the site runs on a developer’s computer.

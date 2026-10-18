@@ -157,6 +157,8 @@ function EntryForm({
   const [notice, setNotice] = useState<Notice>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  /** Each successful save glows Save once (glow-accent). */
+  const [savedPulse, setSavedPulse] = useState(0);
 
   const dirty =
     !deepEqual(values, saved.values) || body !== saved.body || (sourceOnly && raw !== saved.raw);
@@ -404,6 +406,7 @@ function EntryForm({
         setIssues([]);
         setRefusals(0);
         setNotice({ kind: 'saved', at: new Date(), reformatted: result.reformatted });
+        setSavedPulse((n) => n + 1);
         if (isNew || result.id !== entryId) {
           navigate(
             { screen: 'edit', collection: collection.name, id: result.id },
@@ -509,40 +512,53 @@ function EntryForm({
     ? { href: hrefFor({ screen: 'home' }), label: 'Content' }
     : { href: hrefFor({ screen: 'list', collection: collection.name }), label: collection.label };
 
+  const statusLine = [draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ');
   const bar = (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
-      <Link href={back.href}>
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
+      <Link href={back.href} className="text-small">
         <span aria-hidden="true">← </span>
         {back.label}
       </Link>
-      <span className="min-w-0 flex-1 truncate text-content-muted">{titleText}</span>
-      <InlineStatus>{[draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ')}</InlineStatus>
-      {notes.length > 0 && (
-        // Outside the live status, so typing doesn't announce every change in the count.
-        <Button
-          variant="quiet"
-          onPress={() => {
-            setNotesOpen(true);
-          }}
-        >
-          {notesCount(notes.length, blocking.length)}
-        </Button>
-      )}
-      {editable && (
-        <Button variant="primary" onPress={() => void save()} isPending={saving}>
-          Save
-        </Button>
-      )}
-      {menuItems.length > 0 && (
-        <Menu
-          label={`More actions for ${titleText}`}
-          items={menuItems}
-          onAction={(action) => {
-            if (action === 'view' && viewUrl) window.open(viewUrl, '_blank', 'noopener');
-            if (action === 'delete') setConfirmDelete(true);
-          }}
-        />
-      )}
+      {/* On a narrow screen the title field is just below, so the bar leaves it out. */}
+      <span className="hidden min-w-0 flex-1 truncate font-semibold text-content sm:block">
+        {titleText}
+      </span>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2 sm:gap-x-4">
+        <InlineStatus dot={statusLine !== ''}>{statusLine}</InlineStatus>
+        {notes.length > 0 && (
+          // Outside the live status, so typing doesn't announce every change in the count.
+          <Button
+            variant="quiet"
+            onPress={() => {
+              setNotesOpen(true);
+            }}
+          >
+            {notesCount(notes.length, blocking.length)}
+          </Button>
+        )}
+        <div className="flex items-center gap-2">
+          {editable && (
+            <Button
+              variant="primary"
+              onPress={() => void save()}
+              isPending={saving}
+              pulse={savedPulse}
+            >
+              Save
+            </Button>
+          )}
+          {menuItems.length > 0 && (
+            <Menu
+              label={`More actions for ${titleText}`}
+              items={menuItems}
+              onAction={(action) => {
+                if (action === 'view' && viewUrl) window.open(viewUrl, '_blank', 'noopener');
+                if (action === 'delete') setConfirmDelete(true);
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 
@@ -573,7 +589,7 @@ function EntryForm({
   return (
     <Screen title={titleText} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar}>
       <EditorContext.Provider value={editor}>
-        <div className="mx-auto flex max-w-[720px] flex-col gap-6">
+        <div className="mx-auto flex max-w-editor flex-col gap-6">
           {doc?.message && (
             <p className="rounded-md border border-warning bg-surface-raised p-4">{doc.message}</p>
           )}
@@ -589,7 +605,7 @@ function EntryForm({
             </p>
           )}
           {notice?.kind === 'saved' && notice.reformatted && (
-            <p className="text-sm text-content-muted">
+            <p className="text-small text-content-muted">
               Saved. This file uses YAML features Vesper can’t edit in place, so its frontmatter was
               rewritten in a standard layout.
             </p>
@@ -619,7 +635,7 @@ function EntryForm({
           {isContent && (
             <Suspense
               fallback={
-                <p role="status" className="text-sm text-content-muted">
+                <p role="status" className="text-small text-content-muted">
                   Loading the body editor…
                 </p>
               }
@@ -641,7 +657,7 @@ function EntryForm({
 
           {!sourceOnly && arranged.details.length > 0 && (
             <Disclosure title="Details" isExpanded={detailsOpen} onExpandedChange={setDetailsOpen}>
-              <div className="flex flex-col gap-6 pt-2">
+              <div className="flex flex-col gap-6 pt-2 pl-6">
                 {arranged.details.map((field) => (
                   <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
                 ))}
@@ -734,7 +750,7 @@ function TitleField({ field }: { field: FieldModel }) {
   const value = getIn(editor.values, path);
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-semibold text-content-muted">
+      <label htmlFor={id} className="text-small font-semibold text-content-muted">
         {field.label}
         {field.required && (
           <>
@@ -757,10 +773,10 @@ function TitleField({ field }: { field: FieldModel }) {
         aria-describedby={errors.length > 0 ? `${id}-error` : undefined}
         disabled={editor.disabled || field.readOnly === true}
         placeholder={field.placeholder ?? 'Untitled'}
-        className="w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-3xl font-semibold text-content outline-none placeholder:text-content-muted focus-visible:border-border-strong focus-visible:px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus aria-[invalid=true]:border-danger aria-[invalid=true]:px-2"
+        className="w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-title text-content outline-none placeholder:text-content-muted focus-visible:border-border-strong focus-visible:px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus) aria-[invalid=true]:border-danger aria-[invalid=true]:px-2"
       />
       {errors.length > 0 && (
-        <p id={`${id}-error`} className="text-sm text-danger">
+        <p id={`${id}-error`} className="text-small text-danger">
           {errors.join(' ')}
         </p>
       )}
