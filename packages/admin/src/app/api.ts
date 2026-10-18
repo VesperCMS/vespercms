@@ -3,6 +3,15 @@ import type {
   EntryDocument,
   EntrySummary,
   MediaItem,
+  MoveRequest,
+  MoveResult,
+  PageLink,
+  PageTree,
+  RedirectsDocument,
+  ReorderRequest,
+  ReorderResult,
+  SaveRedirectsRequest,
+  SaveRedirectsResult,
   SaveRequest,
   SaveResponse,
   UploadResponse,
@@ -26,6 +35,17 @@ export interface StudioApi {
   listPartials(): Promise<string[]>;
   /** A URL the studio can show a file from, given its site-relative path. */
   fileUrl(path: string): string;
+  /** Every page with a URL, in every collection, for the link picker (spec §6.15.6). */
+  listPages(): Promise<PageLink[]>;
+  /** A tree collection's outline (spec §6.15.2). */
+  pageTree(collection: string): Promise<PageTree>;
+  /** Moves a page and everything under it; `dryRun` only describes what would happen. */
+  movePage(request: MoveRequest, options?: { dryRun?: boolean }): Promise<MoveResult>;
+  reorderPage(request: ReorderRequest): Promise<ReorderResult>;
+  /** Creates the missing section page of a folder in the tree. */
+  createSection(collection: string, path: string): Promise<SaveResponse>;
+  readRedirects(): Promise<RedirectsDocument>;
+  saveRedirects(request: SaveRedirectsRequest): Promise<SaveRedirectsResult>;
 }
 
 export class ApiError extends Error {
@@ -104,5 +124,18 @@ export function createLocalApi(base: string, fetcher: typeof fetch = fetch): Stu
     deleteMedia: (path) => call(`/media${query({ path })}`, { method: 'DELETE' }),
     listPartials: () => call('/partials'),
     fileUrl: (path) => `${root}/file${query({ path })}`,
+    listPages: () => call('/pages'),
+    pageTree: (collection) => call(`/tree${query({ collection })}`),
+    movePage: (request, options = {}) =>
+      call(`/move${options.dryRun ? query({ dryRun: '1' }) : ''}`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    reorderPage: (request) => call('/reorder', { method: 'POST', body: JSON.stringify(request) }),
+    createSection: (collection, path) =>
+      call('/section', { method: 'POST', body: JSON.stringify({ collection, path }) }),
+    readRedirects: () => call('/redirects'),
+    saveRedirects: (request) =>
+      call('/redirects', { method: 'PUT', body: JSON.stringify(request) }),
   };
 }

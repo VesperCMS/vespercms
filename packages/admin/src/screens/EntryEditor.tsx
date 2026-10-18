@@ -1,7 +1,10 @@
 import {
+  DEFAULT_URL_SETTINGS,
   decodeData,
   deepEqual,
   encodeValue,
+  entryUrlKey,
+  formatUrl,
   lineEndings,
   type BodyFormat,
   type BodyIssue,
@@ -11,6 +14,8 @@ import {
   type EntryDocument,
   type FieldIssue,
   type FieldModel,
+  type Manifest,
+  type PageTreeNode,
   type SaveRequest,
 } from '@vesper/core';
 import {
@@ -58,9 +63,12 @@ const BodyEditor = lazy(() =>
 export function EntryEditor({
   collection,
   id,
+  parent,
 }: {
   collection: CollectionManifest;
   id: string | null;
+  /** New pages in a tree collection: the parent page's path (spec §6.15.2). */
+  parent?: string;
 }) {
   const { api } = useStudio();
   const [load, reload] = useLoad<EntryDocument | null>(
@@ -91,6 +99,7 @@ export function EntryEditor({
       collection={collection}
       doc={load.value}
       onReload={reload}
+      {...(parent !== undefined ? { parent } : {})}
     />
   );
 }
@@ -105,10 +114,12 @@ function EntryForm({
   collection,
   doc,
   onReload,
+  parent,
 }: {
   collection: CollectionManifest;
   doc: EntryDocument | null;
   onReload: () => void;
+  parent?: string;
 }) {
   const { api, siteUrl, manifest, loadMdxProps } = useStudio();
   const isNew = doc === null;
@@ -260,6 +271,7 @@ function EntryForm({
       ...(isContent && (bodyChanged || isNew)
         ? { body: bodyPrefix + (bodyEol === '\r\n' ? body.replace(/\n/g, '\r\n') : body) }
         : {}),
+      ...(isNew && parent !== undefined ? { parent } : {}),
     };
     try {
       const result = await api.saveEntry(request);
@@ -312,6 +324,7 @@ function EntryForm({
     api,
     arranged.details,
     checks,
+    parent,
   ]);
 
   // Ctrl+S / ⌘S saves; unsaved changes are protected from navigation and reloads.
@@ -349,7 +362,10 @@ function EntryForm({
     }
   };
 
-  const viewUrl = !isNew && entryId ? pageUrl(collection, entryId, siteUrl) : null;
+  const viewUrl =
+    !isNew && entryId && siteUrl !== undefined
+      ? pageUrl(collection, entryId, saved.values, manifest)
+      : null;
   const menuItems: MenuItem[] = [
     ...(viewUrl ? [{ id: 'view', label: 'View on site' }] : []),
     ...(!isNew && editable && !collection.presentation.singleton
@@ -436,6 +452,7 @@ function EntryForm({
             </p>
           )}
           <ErrorSummary title="The entry wasn’t saved" errors={errors} focusKey={refusals} />
+          {isNew && parent !== undefined && <ParentNote collection={collection} parent={parent} />}
 
           {sourceOnly ? (
             <TextArea
@@ -513,6 +530,26 @@ function EntryForm({
         </div>
       </Dialog>
     </Screen>
+  );
+}
+
+/** Where a new page will go in the tree: under its parent, named by title. */
+function ParentNote({ collection, parent }: { collection: CollectionManifest; parent: string }) {
+  const { api } = useStudio();
+  const [load] = useLoad(() => api.pageTree(collection.name), `${collection.name}:${parent}`);
+  const find = (nodes: PageTreeNode[]): PageTreeNode | undefined => {
+    for (const node of nodes) {
+      if (node.path === parent) return node;
+      const found = find(node.children);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  const title = load.state === 'ready' ? find(load.value.nodes)?.title : undefined;
+  return (
+    <p className="text-content-muted">
+      This page will go under “{title ?? parent}”. Its address comes from its title.
+    </p>
   );
 }
 
@@ -611,16 +648,26 @@ function usesChildren(field: FieldModel | undefined): boolean {
   return builtinWidget(field).rendersChildren === true;
 }
 
-/** The entry's page on the site, from the collection's URL pattern (spec §6.15.1, basic tokens only). */
+/**
+ * The entry's page on the site, from the collection's URL pattern (spec
+ * §6.15.1), written as the site writes it: base, trailing slash and all. A
+ * function-form pattern runs only where vesper.config.ts is loaded, so
+ * those entries have no "View on site" here.
+ */
 function pageUrl(
   collection: CollectionManifest,
   id: string,
-  siteUrl: string | undefined,
+  data: DataObject,
+  manifest: Manifest,
 ): string | null {
   const pattern = collection.presentation.url;
-  if (typeof pattern !== 'string' || siteUrl === undefined) return null;
-  const path = pattern.replace(/:(id|slug|path)\b/g, id).replace(/^\//, '');
-  return `${siteUrl.endsWith('/') ? siteUrl : `${siteUrl}/`}${path}`;
+  if (typeof pattern !== 'string') return null;
+  const settings = manifest.site.urls ?? {
+    ...DEFAULT_URL_SETTINGS,
+    ...(manifest.site.timeZone ? { timeZone: manifest.site.timeZone } : {}),
+  };
+  const key = entryUrlKey(pattern, { id, collection: collection.name, data }, settings);
+  return key === null ? null : formatUrl(key, settings);
 }
 
 /**

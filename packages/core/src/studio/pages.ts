@@ -92,6 +92,8 @@ export type PageTreeNode = {
   depth: number;
   /** The entry's file, site-relative. */
   file?: string;
+  /** The entry's version, for a delete that must not race an edit. */
+  version?: string;
   status?: EntryStatus;
   draft?: boolean;
   /** Whether the entry is its folder's section page (`folder/index.md`). */
@@ -256,6 +258,7 @@ export class PageService {
         ...(entry
           ? {
               file: entry.path,
+              version: entry.version,
               status: data.collection.editable ? entry.status : 'read-only',
               section: isSectionFile(entry.path),
               ...(isPlainObject(entry.data) && entry.data.draft === true ? { draft: true } : {}),

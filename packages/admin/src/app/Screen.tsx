@@ -93,10 +93,12 @@ function DefaultBar() {
         triggerText="Site"
         items={[
           { id: 'media', label: 'Media' },
+          { id: 'redirects', label: 'Redirects' },
           ...(siteUrl ? [{ id: 'view', label: 'View site' }] : []),
         ]}
         onAction={(id) => {
           if (id === 'media') navigate({ screen: 'media' });
+          if (id === 'redirects') navigate({ screen: 'redirects' });
           if (id === 'view' && siteUrl) window.open(siteUrl, '_blank', 'noopener');
         }}
       />

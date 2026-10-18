@@ -10,8 +10,9 @@ export type Route =
   | { screen: 'home' }
   | { screen: 'list'; collection: string }
   | { screen: 'edit'; collection: string; id: string }
-  | { screen: 'new'; collection: string }
+  | { screen: 'new'; collection: string; parent?: string }
   | { screen: 'media' }
+  | { screen: 'redirects' }
   | { screen: 'not-found'; path: string };
 
 export type KnownRoute = Exclude<Route, { screen: 'not-found' }>;
@@ -21,9 +22,14 @@ export function parseRoute(hash: string): Route {
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent);
   if (parts.length === 0) return { screen: 'home' };
   if (parts[0] === 'media' && parts.length === 1) return { screen: 'media' };
+  if (parts[0] === 'redirects' && parts.length === 1) return { screen: 'redirects' };
   if (parts[0] === 'c' && parts[1]) {
     if (parts.length === 2) return { screen: 'list', collection: parts[1] };
     if (parts[2] === 'new' && parts.length === 3) return { screen: 'new', collection: parts[1] };
+    // A new page under a parent in a tree collection (spec §6.15.2: "Add child page").
+    if (parts[2] === 'new' && parts[3] !== undefined && parts.length === 4) {
+      return { screen: 'new', collection: parts[1], parent: parts[3] };
+    }
     if (parts[2] === 'e' && parts[3] !== undefined && parts.length === 4) {
       return { screen: 'edit', collection: parts[1], id: parts[3] };
     }
@@ -38,10 +44,14 @@ export function hrefFor(route: KnownRoute): string {
       return '#/';
     case 'media':
       return '#/media';
+    case 'redirects':
+      return '#/redirects';
     case 'list':
       return `#/c/${enc(route.collection)}`;
     case 'new':
-      return `#/c/${enc(route.collection)}/new`;
+      return route.parent !== undefined
+        ? `#/c/${enc(route.collection)}/new/${enc(route.parent)}`
+        : `#/c/${enc(route.collection)}/new`;
     case 'edit':
       return `#/c/${enc(route.collection)}/e/${enc(route.id)}`;
   }
