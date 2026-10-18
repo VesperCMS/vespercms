@@ -234,12 +234,15 @@ function EntryForm({
 
   // Accessibility notes (spec §6.18): field notes go under their field, the
   // body's under the body.
+  const fileUrl = useCallback((path: string) => api.fileUrl(path), [api]);
   const found = useEntryNotes({
     manifest,
     collection,
     values,
     body: isContent && !sourceOnly ? body : undefined,
     format,
+    entryPath,
+    fileUrl,
   });
   const notes = found.notes;
   const bodyNotes = useMemo(() => notes.filter((n) => n.target.kind === 'body'), [notes]);
