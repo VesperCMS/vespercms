@@ -1,12 +1,16 @@
 import {
   dirOf,
   extensionOf,
+  imageValueOf,
   isPlainObject,
   mediaReference,
   resolveMediaPath,
+  siteRatios,
   type DataValue,
+  type FieldModel,
+  type ImageSize,
 } from '@vesper/core';
-import { Button, Checkbox, cx } from '@vesper/ui';
+import { Button, Checkbox, Disclosure, cx } from '@vesper/ui';
 import { useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useEditor } from '../editor/context.tsx';
@@ -14,13 +18,16 @@ import type { ValuePath } from '../editor/values.ts';
 import { MediaPicker } from '../media/MediaPicker.tsx';
 import type { WidgetProps } from '../types.ts';
 import { inputClass } from './basic.tsx';
+import { CropPreviews, type Ratio } from './crops.tsx';
+import { FocalPointControl } from './focal-point.tsx';
 
 /*
  * The image field (spec §6.6.2) and the file field (§6.3.2). Uploads go
  * through the media picker: hygiene, duplicate check, then into the assets
  * folder, and the entry stores a path relative to its own file, so Astro's
- * image() resolves it. Focal point and crops arrive in Phase 2.7; values
- * already in the file are kept as they are.
+ * image() resolves it. A `fields.image()` field also has a focal point and
+ * crops per ratio, behind one "Focal point & crops" disclosure (§6.6.4).
+ * They only ever change the entry: the image file is never touched.
  */
 
 /** Where new uploads for this field go: beside the current file, else `src/assets/<collection>`. */
@@ -30,6 +37,15 @@ function uploadFolder(current: string | null, srcDir: string, collection: string
 
 function fileName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
+}
+
+/** The ratios a field previews: the ones it lists, else every ratio the site has (spec §6.6.3). */
+export function fieldRatios(field: FieldModel, site: Record<string, number>): Ratio[] {
+  const listed = field.widgetOptions?.ratios;
+  const names = Array.isArray(listed)
+    ? listed.filter((name): name is string => typeof name === 'string' && name in site)
+    : Object.keys(site);
+  return names.map((name) => ({ name, ratio: site[name] ?? 1 }));
 }
 
 /** Problems with alt text worth a gentle word, never a block (spec §6.6.2). */
@@ -81,6 +97,17 @@ export function ImageWidget({
   const decorative = record.decorative === true;
   const alt = typeof record.alt === 'string' ? record.alt : '';
   const advice = altAdvice(alt);
+  const childNamed = (name: string) =>
+    objectShape && (field.children ?? []).some((c) => c.path.at(-1) === name);
+  const hasFocus = childNamed('focus');
+  const hasCrops = childNamed('crops');
+  const [size, setSize] = useState<ImageSize | null>(null);
+  const [sizeOf, setSizeOf] = useState(srcText);
+  if (sizeOf !== srcText) {
+    // A new image: its size, and so its crops, are measured again.
+    setSizeOf(srcText);
+    setSize(null);
+  }
 
   const setSrc = (path: string) => {
     const reference = mediaReference(path, editor.entryPath);
@@ -199,6 +226,51 @@ export function ImageWidget({
         >
           Decorative image (it adds nothing a reader needs)
         </Checkbox>
+      )}
+
+      {sitePath && (hasFocus || hasCrops) && (
+        <Disclosure title="Focal point & crops">
+          <div className="flex flex-col gap-6">
+            {hasFocus && (
+              <FocalPointControl
+                id={id}
+                src={api.fileUrl(sitePath)}
+                focus={imageValueOf(record).focus}
+                disabled={disabled}
+                onImageSize={setSize}
+                onChange={(focus) => {
+                  const { focus: _old, ...rest } = record;
+                  setRecord(focus ? { ...rest, focus } : rest);
+                }}
+              />
+            )}
+            {hasCrops && (
+              <CropPreviews
+                id={id}
+                src={api.fileUrl(sitePath)}
+                size={size}
+                value={imageValueOf(record)}
+                ratios={fieldRatios(field, siteRatios(manifest.site.images?.ratios))}
+                disabled={disabled}
+                onChange={(crops) => {
+                  const { crops: _old, ...rest } = record;
+                  setRecord(Object.keys(crops).length > 0 ? { ...rest, crops } : rest);
+                }}
+              />
+            )}
+            {hasCrops && !hasFocus && (
+              <img
+                src={api.fileUrl(sitePath)}
+                alt=""
+                hidden
+                onLoad={(event) => {
+                  const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+                  if (width > 0 && height > 0) setSize({ width, height });
+                }}
+              />
+            )}
+          </div>
+        </Disclosure>
       )}
 
       <MediaPicker
