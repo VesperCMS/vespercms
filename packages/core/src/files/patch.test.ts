@@ -43,10 +43,28 @@ describe('diffValues', () => {
     ]);
   });
 
-  it('replaces a sequence on reorder or insertion in the middle', () => {
-    expect(diffValues({ t: ['a', 'b'] }, { t: ['b', 'a', 'c'] })).toEqual([
-      { op: 'set', path: ['t'], value: ['b', 'a', 'c'] },
+  it('compares maps by position when a list is edited and grows', () => {
+    expect(diffValues({ t: [{ a: 1 }, { a: 2 }] }, { t: [{ a: 9 }, { a: 2 }, { a: 3 }] })).toEqual([
+      { op: 'set', path: ['t', 0, 'a'], value: 9 },
+      { op: 'push', path: ['t'], value: { a: 3 } },
     ]);
+  });
+
+  it('changes plain values item by item when a list is reordered and resized', () => {
+    expect(diffValues({ t: ['a', 'b'] }, { t: ['b', 'a', 'c'] })).toEqual([
+      { op: 'set', path: ['t', 0], value: 'b' },
+      { op: 'set', path: ['t', 1], value: 'a' },
+      { op: 'push', path: ['t'], value: 'c' },
+    ]);
+    expect(diffValues(['a', 'b', 'c', 'd'], ['d', 'a'])).toEqual([
+      { op: 'set', path: [0], value: 'd' },
+      { op: 'set', path: [1], value: 'a' },
+      { op: 'delete', path: [3] },
+      { op: 'delete', path: [2] },
+    ]);
+    const before = ['a', 'b', 'c', 'd'];
+    const after = ['c', 'a', 'x', 'b', 'd'];
+    expect(applyPatches(before, diffValues(before, after))).toEqual(after);
   });
 
   it('replaces the value when its type changes', () => {

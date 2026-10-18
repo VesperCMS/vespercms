@@ -10,6 +10,7 @@ import {
   type Manifest,
   type MarkdocConfigLike,
   type MdxComponentCheck,
+  type UrlEntry,
   type Validator,
 } from '@vesper/core';
 import { loadSite, packageVersion, type LoadSiteOptions } from './load-site.ts';
@@ -25,6 +26,8 @@ export type SiteModel = {
   mdxProps: Map<string, unknown>;
   /** Names of the custom widgets vesper.config.ts registers. */
   widgetNames: string[];
+  /** Function-form URL patterns from vesper.config.ts (spec §6.15.1), by collection. */
+  urlFunctions?: Record<string, (entry: UrlEntry) => unknown>;
 };
 
 /** Reads a site's configs and builds its manifest (spec §6.2). */
@@ -44,6 +47,11 @@ export async function loadSiteModel(options: LoadSiteOptions): Promise<SiteModel
     schemas: new Map(input.collections.map((c) => [c.name, c.schema])),
     ...(input.markdoc ? { markdocConfig: input.markdoc.config } : {}),
     widgetNames: Object.keys(input.config?.widgets ?? {}),
+    urlFunctions: Object.fromEntries(
+      Object.entries(input.config?.collections ?? {}).flatMap(([name, collection]) =>
+        typeof collection.url === 'function' ? [[name, collection.url]] : [],
+      ),
+    ),
     mdxProps: new Map(
       Object.entries(components).flatMap(([name, component]) =>
         component.props === undefined ? [] : [[name, component.props] as const],

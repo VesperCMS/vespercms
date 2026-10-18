@@ -58,10 +58,28 @@ export type BodyValidator = (input: {
   path: string;
 }) => Promise<BodyIssue[]>;
 
+/**
+ * Where a new page goes in a tree collection, and what else changes with it
+ * (a leaf parent becoming a section, the parent's `_order.yaml`). Provided by
+ * `PageService`, which knows the tree; a refusal is a `SaveResponse`.
+ */
+export type TreeHooks = {
+  placeNew: (
+    collection: CollectionManifest,
+    request: { parent: string; slug: string; data: DataObject },
+  ) => Promise<
+    { ok: true; relative: string; changes: FileChange[] } | { ok: false; response: SaveResponse }
+  >;
+  /** Changes that go with deleting an entry (its line in `_order.yaml`). */
+  deleteChanges: (collection: CollectionManifest, entry: StoredEntry) => Promise<FileChange[]>;
+};
+
 export type ContentServiceOptions = {
   validate?: Validator;
   validateBody?: BodyValidator;
   now?: () => Date;
+  /** Tree collections' placement and order rules (spec §6.15). Without them, trees are plain folders. */
+  tree?: () => TreeHooks | undefined;
 };
 
 const CONTENT_EXTENSIONS = new Set(['md', 'markdown', 'mdx', 'mdoc']);
@@ -70,6 +88,8 @@ type GlobSource = Extract<CollectionManifest['source'], { loader: 'glob' }>;
 type FileSource = Extract<CollectionManifest['source'], { loader: 'file' }>;
 
 /** An entry found in storage, with everything a read or a save needs. */
+export type StoredEntry = Located;
+
 type Located = {
   id: string;
   path: string;
@@ -91,6 +111,7 @@ export class ContentService {
   private readonly validateBody: BodyValidator | undefined;
   private readonly srcDir: string;
   private readonly now: () => Date;
+  private readonly tree: () => TreeHooks | undefined;
 
   constructor(storage: StorageAdapter, manifest: Manifest, options: ContentServiceOptions = {}) {
     this.storage = storage;
@@ -99,6 +120,22 @@ export class ContentService {
     this.validateBody = options.validateBody;
     this.srcDir = manifest.site.srcDir;
     this.now = options.now ?? (() => new Date());
+    this.tree = options.tree ?? (() => undefined);
+  }
+
+  /** Every entry of a collection as stored: file, version, values and body. */
+  async entriesOf(name: string): Promise<StoredEntry[]> {
+    return this.locateAll(this.require(name));
+  }
+
+  /** One entry as stored, or null. */
+  async entryOf(name: string, id: string): Promise<StoredEntry | null> {
+    return this.locate(this.require(name), id);
+  }
+
+  /** Checks values with the collection's real schema, as a save would. */
+  async check(collection: string, data: DataObject): Promise<FieldIssue[]> {
+    return this.validate ? this.validate(collection, data) : [];
   }
 
   async summary(): Promise<CollectionSummary[]> {
@@ -240,8 +277,10 @@ export class ContentService {
     } else {
       change = { op: 'delete', path: entry.path, expectedVersion: entry.file.version };
     }
+    const hooks = collection.presentation.tree ? this.tree() : undefined;
+    const extra = hooks ? await hooks.deleteChanges(collection, entry) : [];
     return this.commit(
-      [change],
+      [change, ...extra],
       `Delete "${titleOf(collection, entry.data, id)}" from ${collection.label}`,
       { id, path: entry.path, version: '', reformatted: false },
     );
@@ -338,7 +377,19 @@ export class ContentService {
     }
 
     if (source.loader !== 'glob') return failure(readOnlyMessage(collection));
-    const relative = `${expandNewEntryPath(collection.presentation.newEntryPath, slug, this.now())}.${newEntryExtension(source)}`;
+    let relative = `${expandNewEntryPath(collection.presentation.newEntryPath, slug, this.now())}.${newEntryExtension(source)}`;
+    let placement: FileChange[] = [];
+    const hooks = collection.presentation.tree ? this.tree() : undefined;
+    if (hooks) {
+      const placed = await hooks.placeNew(collection, {
+        parent: request.parent ?? '',
+        slug,
+        data: values,
+      });
+      if (!placed.ok) return placed.response;
+      relative = placed.relative;
+      placement = placed.changes;
+    }
     if (!globMatcher(source.pattern)(relative)) {
       return failure(
         `New entries would be saved as ${relative}, which this collection's pattern (${String(source.pattern)}) doesn't include. Set newEntryPath in vesper.config.ts.`,
@@ -360,7 +411,7 @@ export class ContentService {
     }
     const bytes = newFileBytes(relative, values, request.body);
     const response = await this.commit(
-      [{ op: 'put', path, bytes, expectedVersion: null }],
+      [...placement, { op: 'put', path, bytes, expectedVersion: null }],
       `Add "${titleOf(collection, values, id)}" to ${collection.label}`,
       { id, path, version: await gitBlobSha(bytes), reformatted: false },
     );
@@ -381,14 +432,17 @@ export class ContentService {
     return { ok: false, reason: 'invalid', issues: [], bodyIssues };
   }
 
-  private async commit(
+  /** Commits a change set, answering in the studio's terms. */
+  async commit(
     changes: FileChange[],
     summary: string,
     success: { id: string; path: string; version: string; reformatted: boolean },
   ): Promise<SaveResponse> {
     const result = await this.storage.commit({ changes, message: { summary } });
     if (result.ok) {
-      const put = changes.find((c) => c.op === 'put');
+      const put = changes.find(
+        (c): c is Extract<FileChange, { op: 'put' }> => c.op === 'put' && c.path === success.path,
+      );
       const version = success.version || (put ? await gitBlobSha(put.bytes) : '');
       return { ok: true, ...success, version };
     }
@@ -671,7 +725,12 @@ function candidatePaths(id: string, formats: readonly string[]): string[] {
   return extensions.flatMap((ext) => [`${id}.${ext}`, `${id}/index.${ext}`]);
 }
 
-function newFileBytes(relative: string, data: DataObject, body: string | undefined): Uint8Array {
+/** A new entry file's bytes: frontmatter (or a data file) in the house style, plus an optional body. */
+export function newFileBytes(
+  relative: string,
+  data: DataObject,
+  body: string | undefined,
+): Uint8Array {
   const extension = relative.slice(relative.lastIndexOf('.') + 1).toLowerCase();
   if (CONTENT_EXTENSIONS.has(extension)) {
     const text =

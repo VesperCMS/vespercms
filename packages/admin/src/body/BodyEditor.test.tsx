@@ -64,3 +64,78 @@ describe('the body editor', () => {
     expect(api.saveEntry.mock.calls[0]?.[0]).not.toHaveProperty('body');
   });
 });
+
+describe('the link picker (spec §6.15.6)', () => {
+  it('finds a page by title and links to its current address', async () => {
+    const api = fakeApi({
+      documents: { 'pages/campus-life': campusLife },
+      pages: [
+        {
+          collection: 'pages',
+          id: 'academics/nursing',
+          title: 'Nursing',
+          url: '/academics/nursing/',
+        },
+        { collection: 'pages', id: 'about', title: 'About the college', url: '/about/' },
+      ],
+    });
+    renderStudio('#/c/pages/e/campus-life', { api });
+    const user = userEvent.setup();
+    const body = await screen.findByRole('textbox', { name: 'Body' });
+    const word = within(body).getByText(/Clubs meet/);
+    // Select "Clubs" in the paragraph, then add a link to it.
+    act(() => {
+      const range = document.createRange();
+      const text = word.firstChild as Text;
+      range.setStart(text, 0);
+      range.setEnd(text, 5);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      body.focus();
+    });
+    await user.click(screen.getByRole('button', { name: 'Link' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a link' });
+    const field = within(dialog).getByRole('combobox', { name: 'Page or web address' });
+    await user.type(field, 'nurs');
+    await user.click(await screen.findByRole('option', { name: /Nursing/ }));
+    expect(field).toHaveValue('/academics/nursing/');
+    await expectNoViolations();
+    expect(api.listPages).toHaveBeenCalled();
+  });
+
+  it('offers pages for URL fields that take a path', async () => {
+    const event = {
+      collection: 'events',
+      id: 'summer-orientation',
+      path: 'src/content/events/summer-orientation.md',
+      version: 'v1',
+      format: 'md' as const,
+      status: 'editable' as const,
+      data: {
+        title: 'Summer orientation',
+        summary: 'Before the first semester.',
+        startsAt: { $date: '2026-07-15T13:00:00.000Z' },
+        unpublishRedirect: '/admissions/apply/',
+      },
+      body: '\nAlready expired.\n',
+    };
+    const api = fakeApi({
+      documents: { 'events/summer-orientation': event },
+      pages: [{ collection: 'pages', id: 'about', title: 'About the college', url: '/about/' }],
+    });
+    renderStudio('#/c/events/e/summer-orientation', { api });
+    const user = userEvent.setup();
+    await screen.findByRole('textbox', { name: 'Body' });
+    await user.click(screen.getByRole('button', { name: 'Details' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Choose a page for Unpublish redirect' }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Choose a page' });
+    await user.click(within(dialog).getByRole('combobox', { name: 'Page' }));
+    await user.click(await screen.findByRole('option', { name: 'About the college (/about/)' }));
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /Unpublish redirect/ })).toHaveValue('/about/');
+    });
+  });
+});

@@ -4,6 +4,9 @@ import type {
   EntrySummary,
   Manifest,
   MediaItem,
+  PageLink,
+  PageTree,
+  RedirectsDocument,
 } from '@vesper/core';
 import { render } from '@testing-library/react';
 import axe from 'axe-core';
@@ -37,6 +40,9 @@ export type FakeData = {
   documents?: Record<string, EntryDocument>;
   media?: MediaItem[];
   partials?: string[];
+  pages?: PageLink[];
+  trees?: Record<string, PageTree>;
+  redirects?: RedirectsDocument;
 };
 
 /** An in-memory StudioApi. Every method is a `vi.fn`, so tests can assert on calls. */
@@ -70,6 +76,23 @@ export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<Stu
     ),
     listPartials: vi.fn(() => Promise.resolve(data.partials ?? [])),
     fileUrl: vi.fn((path: string) => `/_vesper/api/file?path=${encodeURIComponent(path)}`),
+    listPages: vi.fn(() => Promise.resolve(data.pages ?? [])),
+    pageTree: vi.fn((collection: string) =>
+      Promise.resolve(data.trees?.[collection] ?? { collection, nodes: [] }),
+    ),
+    movePage: vi.fn(() =>
+      Promise.resolve({ ok: false, reason: 'error', message: 'Not set up in this test.' }),
+    ),
+    reorderPage: vi.fn(() => Promise.resolve({ ok: true, position: { index: 1, of: 1 } })),
+    createSection: vi.fn(() =>
+      Promise.resolve({ ok: true, id: 'x', path: 'x', version: 'v1', reformatted: false }),
+    ),
+    readRedirects: vi.fn(() =>
+      Promise.resolve(data.redirects ?? { version: null, redirects: [], warnings: [] }),
+    ),
+    saveRedirects: vi.fn((request: { redirects: unknown[] }) =>
+      Promise.resolve({ ok: true, version: 'v2', redirects: request.redirects, warnings: [] }),
+    ),
   } as never;
 }
 

@@ -1,6 +1,6 @@
-# Redirects for the playground (spec §6.15.5). Data only until Phase 2.6, when
-# the integration merges this file into Astro's redirects and collapses chains.
-# The first two entries form a chain on purpose: /programs/nursing → /academics/nursing.
+# Redirects for the playground (spec §6.15.5). The build cleans them and hands
+# them to Astro. The first two entries form a chain on purpose, which the build
+# collapses: /programs/nursing → /academics/nursing-old → /academics/nursing.
 - { from: /programs/nursing, to: /academics/nursing-old, status: 301, reason: move, at: 2026-09-02 }
 - { from: /academics/nursing-old, to: /academics/nursing, status: 301, reason: move, at: 2026-10-01 }
 - { from: /apply-now, to: /admissions/apply, status: 302, reason: manual, at: 2026-10-01 }

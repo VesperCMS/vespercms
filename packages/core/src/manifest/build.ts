@@ -10,6 +10,9 @@ import type {
   MdxManifest,
 } from '../markdoc/types.ts';
 import { humanize } from '../schema/humanize.ts';
+import { globMatcher } from '../collections/entries.ts';
+import type { NativeTarget } from '../urls/hosts.ts';
+import { DEFAULT_URL_SETTINGS, type UrlSettings } from '../urls/pattern.ts';
 import { walkSchema } from '../schema/walk.ts';
 import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
 import { manifestHash } from './hash.ts';
@@ -49,15 +52,24 @@ export type CollectionConfig = {
   search?: boolean;
   /** Editor placement per top-level field key, overriding `.meta({ placement })`. */
   placement?: Record<string, 'main' | 'details'>;
+  /** For tree collections: the deepest a page may be (spec §6.15.4). No default. */
+  maxDepth?: number;
 };
 
 export type ManifestInput = {
-  site: { srcDir: string; contentConfig?: string };
+  site: {
+    srcDir: string;
+    contentConfig?: string;
+    /** Astro's URL settings, when the manifest is built inside Astro. */
+    urls?: Partial<Omit<UrlSettings, 'timeZone'>>;
+  };
   collections: CollectionInput[];
   config?: {
     collections?: Record<string, CollectionConfig>;
     widgets?: Record<string, WidgetDefinition>;
     timeZone?: string;
+    /** Native redirect rules (spec §6.15.5). */
+    redirects?: { native?: NativeTarget[] };
     /** UI hints for Markdoc tags (spec §6.5.1). */
     markdoc?: { tags?: Record<string, MarkdocTagHint> };
     /** Declared MDX components (spec §6.5.2). */
@@ -122,6 +134,10 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
       srcDir: input.site.srcDir,
       ...(input.site.contentConfig ? { contentConfig: input.site.contentConfig } : {}),
       ...(input.config?.timeZone ? { timeZone: input.config.timeZone } : {}),
+      ...(input.site.urls ? { urls: urlSettingsOf(input.site.urls, input.config?.timeZone) } : {}),
+      ...(input.config?.redirects?.native?.length
+        ? { redirects: { native: [...input.config.redirects.native] } }
+        : {}),
     },
     collections,
     forms,
@@ -236,6 +252,8 @@ function buildCollection(
     extraKeys = walk.extraKeys;
   }
 
+  diagnostics.push(...urlDiagnostics(input.name, source, config));
+
   return {
     name: input.name,
     label: config.label ?? humanize(input.name),
@@ -247,6 +265,50 @@ function buildCollection(
     ...(extraKeys ? { extraKeys } : {}),
     presentation: presentationOf(config),
   };
+}
+
+function urlSettingsOf(
+  urls: NonNullable<ManifestInput['site']['urls']>,
+  timeZone: string | undefined,
+): UrlSettings {
+  const base = urls.base ?? DEFAULT_URL_SETTINGS.base;
+  return {
+    base: `/${base.replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/'),
+    trailingSlash: urls.trailingSlash ?? DEFAULT_URL_SETTINGS.trailingSlash,
+    buildFormat: urls.buildFormat ?? DEFAULT_URL_SETTINGS.buildFormat,
+    ...(urls.site ? { site: urls.site } : {}),
+    ...(timeZone ? { timeZone } : {}),
+  };
+}
+
+/** Problems with a collection's URL and tree settings that Vesper can explain (spec §6.15). */
+function urlDiagnostics(
+  name: string,
+  source: CollectionSource,
+  config: CollectionConfig,
+): Diagnostic[] {
+  const found: Diagnostic[] = [];
+  if (config.tree && source.loader !== 'glob') {
+    found.push({
+      level: 'warning',
+      code: 'tree-not-glob',
+      message: `"${name}" sets tree: true, but only collections loaded with glob() can be shown as a tree of folders.`,
+      collection: name,
+    });
+  }
+  // Order files sit among pages; a collection of data files has none to pick up.
+  if (source.loader === 'glob' && (config.tree || entryKindOf(source.formats) === 'content')) {
+    const matches = globMatcher(source.pattern);
+    if (matches('_order.yaml') || matches('section/_order.yaml')) {
+      found.push({
+        level: 'warning',
+        code: 'order-file-matched',
+        message: `"${name}"'s glob pattern also picks up _order.yaml files, which hold page order, not entries. Use a pattern that skips files starting with _, such as '**/[^_]*.md'.`,
+        collection: name,
+      });
+    }
+  }
+  return found;
 }
 
 function withPlacement(
@@ -291,6 +353,7 @@ function presentationOf(config: CollectionConfig): CollectionPresentation {
   if (config.newEntryPath !== undefined) presentation.newEntryPath = config.newEntryPath;
   if (config.schedule) presentation.schedule = scheduleOf(config.schedule);
   if (config.search !== undefined) presentation.search = config.search;
+  if (config.maxDepth !== undefined) presentation.maxDepth = config.maxDepth;
   return presentation;
 }
 

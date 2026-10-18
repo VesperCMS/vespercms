@@ -86,3 +86,34 @@ describe('markdoc and mdx', () => {
     ]);
   });
 });
+
+describe('URLs, trees and redirects', () => {
+  it('accepts maxDepth and native redirect hosts', () => {
+    expect(
+      checkConfig({
+        collections: { pages: { url: '/:path', tree: true, maxDepth: 4 } },
+        redirects: { native: ['apache', 'netlify'] },
+      }),
+    ).toEqual([]);
+  });
+
+  it('explains a bad maxDepth or an unknown host', () => {
+    expect(
+      checkConfig({
+        collections: { pages: { tree: true, maxDepth: 0 } },
+        redirects: { native: ['iis'], nativ: true },
+      }),
+    ).toEqual([
+      {
+        level: 'error',
+        message: 'collections.pages.maxDepth must be a whole number of levels, 1 or more.',
+      },
+      { level: 'warning', message: 'Unknown setting "redirects.nativ" is ignored.' },
+      {
+        level: 'error',
+        message:
+          'redirects.native: "iis" isn\'t a host Vesper writes rules for. Use netlify, cloudflare, vercel, apache, nginx.',
+      },
+    ]);
+  });
+});

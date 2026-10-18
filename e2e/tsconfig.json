@@ -9,5 +9,5 @@
     "noEmit": true
   },
   "include": ["**/*.ts"],
-  "exclude": [".studio-site"]
+  "exclude": [".studio-site", ".move-site"]
 }

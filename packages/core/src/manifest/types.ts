@@ -1,5 +1,7 @@
 import type { Diagnostic, FieldModel } from '../field-model.ts';
 import type { MarkdocManifest, MdxManifest } from '../markdoc/types.ts';
+import type { NativeTarget } from '../urls/hosts.ts';
+import type { UrlSettings } from '../urls/pattern.ts';
 
 /**
  * The manifest (spec §6.2): everything the studio and the cloud need to know
@@ -21,6 +23,15 @@ export type Manifest = {
     contentConfig?: string;
     /** IANA time zone for showing and entering times (spec §6.17), from vesper.config.ts. */
     timeZone?: string;
+    /**
+     * How the site's URLs are written (spec §6.15.1): Astro's `base`,
+     * `trailingSlash` and `build.format`, its `site`, and the time zone
+     * for date tokens. Absent in manifests built outside Astro (the CLI),
+     * where Astro's defaults apply.
+     */
+    urls?: UrlSettings;
+    /** Native redirect rules the site asks for in vesper.config.ts (spec §6.15.5). */
+    redirects?: { native: NativeTarget[] };
   };
   collections: CollectionManifest[];
   forms: FormManifest[];
@@ -69,6 +80,8 @@ export type CollectionPresentation = {
   newEntryPath?: string;
   schedule?: SchedulePresentation;
   search?: boolean;
+  /** For tree collections: how many folders deep pages may go (spec §6.15.4). No limit when absent. */
+  maxDepth?: number;
 };
 
 export type CollectionManifest = {
@@ -82,6 +95,12 @@ export type CollectionManifest = {
   fields: FieldModel[] | null;
   extraKeys?: FieldModel['extraKeys'];
   presentation: CollectionPresentation;
+  /**
+   * The route in src/pages that renders this collection's entries, from
+   * Astro's resolved routes (spec §6.15.1). Set by the integration in dev
+   * and at build; absent when no route was found.
+   */
+  route?: { pattern: string; entrypoint: string };
 };
 
 export type FormManifest = {

@@ -23,7 +23,8 @@ const present = (value: DataValue) => value !== undefined;
  * Diffs two parsed values. Objects are compared key by key. Sequences of the
  * same length are compared item by item. Appending items or removing some (in
  * place) becomes `push`/`delete`. Any other sequence change (inserting in the
- * middle, reordering) replaces the whole sequence.
+ * middle, reordering) compares the items both share by position, then pushes
+ * or deletes the rest.
  */
 export function diffValues(before: DataValue, after: DataValue, path: Path = []): Patch[] {
   if (deepEqual(before, after)) return [];
@@ -58,6 +59,19 @@ export function diffValues(before: DataValue, after: DataValue, path: Path = [])
       // Highest index first, so earlier indices stay valid while applying.
       return removed.reverse().map((i) => ({ op: 'delete', path: [...path, i] }) as const);
     }
+    // Anything else (reordered, edited and resized at once, like an
+    // `_order.yaml` or a redirects list): item by item, then push or delete
+    // at the end. Replacing the list whole would re-render it, and at a
+    // file's root that loses its comments and its one-line flow maps.
+    const shared = Math.min(before.length, after.length);
+    const sets = after
+      .slice(0, shared)
+      .flatMap((item, i) => diffValues(before[i], item, [...path, i]));
+    const pushes = after.slice(shared).map((value) => ({ op: 'push', path, value }) as const);
+    const deletes = before
+      .slice(shared)
+      .map((_, i) => ({ op: 'delete', path: [...path, before.length - 1 - i] }) as const);
+    return [...sets, ...deletes, ...pushes];
   }
 
   return [{ op: 'set', path, value: after }];

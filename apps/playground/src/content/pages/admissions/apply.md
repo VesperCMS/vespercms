@@ -9,3 +9,5 @@ This folder has no `index.md` on purpose: the studio should flag it and offer to
 2. Send your transcripts.
 3. Apply for financial aid.
 4. Register for orientation.
+
+Nursing applicants also choose a region for their [clinical placements](/academics/nursing/clinical-placements/).

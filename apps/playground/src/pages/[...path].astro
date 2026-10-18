@@ -1,9 +1,11 @@
 ---
-import { getCollection, render } from 'vesper:content';
+import { getBreadcrumbs, getChildren, getCollection, render } from 'vesper:content';
 import Callout from '../components/Callout.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { breadcrumbs } from '../lib/pages';
 
+// The folder is the hierarchy (spec §6.15): a page's URL comes from its
+// collection's url pattern, its breadcrumbs and children from Vesper's site
+// helpers, ordered by each folder's _order.yaml.
 export async function getStaticPaths() {
   const pages = await getCollection('pages');
   // The root index.md is the home page's content, rendered by index.astro.
@@ -14,18 +16,22 @@ export async function getStaticPaths() {
 
 const { page } = Astro.props;
 const { Content } = await render(page);
-const crumbs = await breadcrumbs(page);
+const crumbs = await getBreadcrumbs('pages', page);
+const children = await getChildren('pages', page);
 ---
 
 <BaseLayout title={page.data.title} description={page.data.summary}>
   <nav aria-label="Breadcrumb" class="breadcrumbs">
     <ol>
-      {crumbs.map((crumb) => (
-        <li>{crumb.url ? <a href={crumb.url}>{crumb.title}</a> : <span>{crumb.title}</span>}</li>
-      ))}
-      <li>
-        <span aria-current="page">{page.data.title}</span>
-      </li>
+      {crumbs.map((crumb, i) =>
+        i === crumbs.length - 1 ? (
+          <li>
+            <span aria-current="page">{crumb.title}</span>
+          </li>
+        ) : (
+          <li>{crumb.url ? <a href={crumb.url}>{crumb.title}</a> : <span>{crumb.title}</span>}</li>
+        ),
+      )}
     </ol>
   </nav>
   <h1>{page.data.title}</h1>
@@ -37,4 +43,14 @@ const crumbs = await breadcrumbs(page);
       <p>{section.body}</p>
     </section>
   ))}
+  {children.length > 0 && (
+    <section aria-labelledby="in-this-section">
+      <h2 id="in-this-section">In this section</h2>
+      <ul>
+        {children.map((child) => (
+          <li>{child.url ? <a href={child.url}>{child.title}</a> : child.title}</li>
+        ))}
+      </ul>
+    </section>
+  )}
 </BaseLayout>

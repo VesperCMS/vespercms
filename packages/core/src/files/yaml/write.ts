@@ -417,7 +417,15 @@ class Splicer {
     const position = rangeOf(seq)[2];
     const atLineStart = position === 0 || this.raw[position - 1] === '\n';
     if (!atLineStart && position !== this.raw.length) throw new NeedsFallback();
-    const line = `${' '.repeat(dashColumn)}- ${this.itemText(value, dashColumn + 2)}`;
+    // Items written as one-line flow maps (`- { from: /a, to: /b }`) get a new one in kind.
+    const last = items.at(-1);
+    const oneLineFlow =
+      (isMap(last) || isSeq(last)) &&
+      last.flow === true &&
+      !this.raw.slice(rangeOf(last)[0], rangeOf(last)[1]).includes('\n') &&
+      (isMap(last) ? isPlainObject(value) : Array.isArray(value));
+    const text = oneLineFlow ? `${this.flowText(value)}\n` : this.itemText(value, dashColumn + 2);
+    const line = `${' '.repeat(dashColumn)}- ${text}`;
     this.splice(position, position, atLineStart ? line : `\n${line.replace(/\n$/, '')}`);
   }
 

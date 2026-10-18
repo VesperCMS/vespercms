@@ -8,7 +8,9 @@ export {
   IconButton,
   Icon,
   Link,
+  FileButton,
   type ButtonProps,
+  type FileButtonProps,
   type ButtonVariant,
   type IconButtonProps,
   type IconName,
@@ -24,6 +26,7 @@ export {
   Select,
   Combobox,
   MultiCombobox,
+  SuggestField,
   Checkbox,
   Switch,
   RadioGroup,
@@ -31,6 +34,8 @@ export {
   type SelectProps,
   type ComboboxProps,
   type MultiComboboxProps,
+  type Suggestion,
+  type SuggestFieldProps,
   type CheckboxProps,
   type SwitchProps,
   type RadioGroupProps,
@@ -72,3 +77,11 @@ export {
   type ToggleButtonProps,
   type ToolButtonProps,
 } from './components/Toolbar.tsx';
+export {
+  Tree,
+  useDragAndDrop,
+  type Key,
+  type TreeNode,
+  type TreeProps,
+  type TreeRowState,
+} from './components/Tree.tsx';

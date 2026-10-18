@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
@@ -25,10 +25,14 @@ const AXE_EXCLUDED: Record<string, string> = {
 
 const WCAG21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
+/** Astro's static redirect pages: a meta refresh and nothing else (tested on their own below). */
+const isRedirectPage = (file: string) =>
+  readFileSync(`${dist}${file}`, 'utf8').includes('http-equiv="refresh"');
+
 function builtPages(): string[] {
   const files = readdirSync(dist, { recursive: true, encoding: 'utf8' })
     .map((file) => file.replaceAll('\\', '/'))
-    .filter((file) => file.endsWith('.html') && file !== '404.html');
+    .filter((file) => file.endsWith('.html') && file !== '404.html' && !isRedirectPage(file));
   return files.map((file) => `/${file.replace(/(^|\/)index\.html$/, '$1')}`).sort();
 }
 
@@ -121,4 +125,64 @@ test('the build publishes the manifest for the cloud', async ({ request }) => {
   };
   expect(manifest.manifestVersion).toBe(1);
   expect(manifest.collections.map((c) => c.name)).toContain('blog');
+});
+
+/*
+ * Redirects on a plain host (spec §6.15.5, §6.16): Astro's HTML redirect
+ * pages, written from vesper.redirects.yaml after the build collapsed its
+ * chain. Each old URL must land on a real page in one hop.
+ */
+type BuiltRedirect = { key: string; from: string; to: string; status: number };
+const redirects = JSON.parse(
+  readFileSync(`${dist}_vesper/redirects.json`, 'utf8'),
+) as BuiltRedirect[];
+
+const META_REFRESH = /<meta http-equiv="refresh" content="\d+;url=([^"]+)">/;
+const refreshTarget = (html: string) => META_REFRESH.exec(html)?.[1] ?? null;
+
+test('the build lists the cleaned redirects, with the chain collapsed', () => {
+  expect(redirects.map((r) => [r.key, r.to])).toEqual([
+    ['/programs/nursing', '/academics/nursing/'],
+    ['/academics/nursing-old', '/academics/nursing/'],
+    ['/apply-now', '/admissions/apply/'],
+  ]);
+});
+
+for (const redirect of redirects) {
+  test(`${redirect.key} redirects to ${redirect.to} in one hop`, async ({ request, page }) => {
+    // The plain host adds the slash for a folder, then serves the redirect page.
+    const response = await request.get(`${redirect.key}/`, { maxRedirects: 0 });
+    expect(response.status()).toBe(200);
+    expect(refreshTarget(await response.text())).toBe(redirect.to);
+    const landing = await request.get(redirect.to, { maxRedirects: 0 });
+    expect(landing.status()).toBe(200);
+    expect(refreshTarget(await landing.text())).toBeNull();
+
+    await page.goto(redirect.key);
+    await page.waitForURL((url) => url.pathname === redirect.to);
+    await expect(page.locator('h1')).toHaveCount(1);
+  });
+}
+
+test('breadcrumbs and section lists come from the site helpers, in _order.yaml order', async ({
+  page,
+}) => {
+  await page.goto('/academics/nursing/clinical-placements/partner-hospitals/');
+  const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('listitem');
+  await expect(crumbs).toHaveText([
+    'Vesper playground',
+    'Academics',
+    'Nursing',
+    'Clinical placements',
+    'Partner hospitals',
+  ]);
+  await expect(
+    page.getByRole('navigation', { name: 'Breadcrumb' }).locator('[aria-current="page"]'),
+  ).toHaveText('Partner hospitals');
+  await page.goto('/academics/');
+  await expect(page.getByRole('region', { name: 'In this section' }).getByRole('link')).toHaveText([
+    'Nursing',
+    'Business',
+    'General studies',
+  ]);
 });

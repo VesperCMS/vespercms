@@ -101,6 +101,12 @@ export type SaveRequest = {
   rawFrontmatter?: string;
   /** New entries only: the file name or path pattern inside the collection, without extension. */
   slug?: string;
+  /**
+   * New entries in a tree collection only: the parent page's path in the
+   * tree ('' for the top level, spec §6.15.2). The entry goes in that
+   * page's folder.
+   */
+  parent?: string;
 };
 
 export type FieldIssue = { path: (string | number)[]; message: string };

@@ -1,7 +1,6 @@
 ---
-import { getCollection, getEntry, render } from 'vesper:content';
+import { getChildren, getCollection, getEntry, render } from 'vesper:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { pageUrl } from '../lib/pages';
 
 // The home page's words live in the pages collection (src/content/pages/index.md),
 // so editors can change them like any other page.
@@ -10,9 +9,8 @@ if (!home) throw new Error('src/content/pages/index.md is missing');
 const { Content } = await render(home);
 const posts = await getCollection('blog');
 const authors = await getCollection('authors');
-const topLevel = (await getCollection('pages')).filter(
-  (page) => page.id !== 'index' && !page.id.includes('/'),
-);
+// The top-level pages, in the order of src/content/pages/_order.yaml (spec §6.15.3).
+const topLevel = (await getChildren('pages', home)).filter((page) => page.url);
 ---
 
 <BaseLayout title={home.data.title} description={home.data.summary}>
@@ -26,7 +24,7 @@ const topLevel = (await getCollection('pages')).filter(
       {topLevel.map((page, i) => (
         <>
           {i > 0 && ', '}
-          <a href={pageUrl(page)}>{page.data.title}</a>
+          <a href={page.url ?? undefined}>{page.title}</a>
         </>
       ))}
       , plus sections nested up to four folders deep.

@@ -288,6 +288,26 @@ Rejected: one generic container node type with the allowed children checked by a
 
 **The partial card's file picker lists `.mdoc` files whose name starts with `_` or that sit in a `partials` folder, ordered by how far they are from the entry, and stores the path relative to the entry, as @astrojs/markdoc resolves it. A new partial starts out pointing at the nearest one.** Astro's glob loader skips `_` files, so they're the usual place for partials; but `_` alone also marks drafts (the playground's `_unpublished-idea.md`), hence `.mdoc` only. Existence is checked against every Markdown and Markdoc file under the source folder, so a partial elsewhere is still valid.
 
+### 2026-10-18: The page outline is a treegrid, and its expand toggle is an icon
+
+**Tree collections open as an outline built on React Aria's `Tree`, a single-column `treegrid`, not WAI-ARIA's plain `tree` (spec §6.15.2 names `tree`/`treeitem`).** Each row holds buttons (its "…" menu, its drag handle), and WAI-ARIA's guidance is a treegrid when rows hold interactive content; a `treeitem` can't. The keyboard model is the tree pattern's: Up/Down move, Right expands then reaches the row's buttons, Left collapses or goes to the parent, Home/End jump, typing finds a row, Enter opens the page. Rows carry `aria-level` and `aria-expanded`.
+
+Two additions on top:
+- Alt+↑/↓ move the focused page among its siblings, as blocks move in the body editor, and Shift+F10 (or the menu key) opens its menu.
+- Drag and drop is React Aria's, with its keyboard mode (Enter on the handle, arrows to "Insert between…" or "Drop on…", Enter). A drop between pages reorders; a drop onto a page opens the same move dialog as "Move to…", so its effects are confirmed.
+
+Every change is announced in a polite live region: "Nursing moved under Academics, position 1 of 3." React Aria's key handling keeps row key events to itself, so the outline reads them in the capture phase from whichever row has focus.
+
+**Budget note (spec §10.4, icon-only buttons):** the expand toggle is a "▸" button with no visible text. It's React Aria's chevron: named "Expand" or "Collapse", outside the Tab order, and only a mouse affordance, since the arrow keys expand and collapse. It's the one icon-only control beyond close, overflow and drag handles, and it's the convention every outline uses.
+
+### 2026-10-18: The Redirects screen lives behind the Site menu
+
+**Redirects are a site setting (spec §6.15.5: "a small Redirects screen in site settings"), so the screen is the top bar's Site menu's second item, beside Media.** One primary action, "Add redirect". Edit and delete sit in each row's "…" menu. "Import from CSV…" is a secondary button that opens a preview: what's added, what replaces an existing redirect, and each skipped row with its reason (pattern redirects, `?query` addresses a static site can't tell apart, status codes that aren't redirects, rows turned off in a WordPress export). Nothing is saved until the import is confirmed. Every save goes through the same cleanup as the build, so the screen also lists what needs a look. Kinds are words: Permanent (301, 308) and Temporary.
+
+### 2026-10-18: The link picker writes the page's address
+
+**The body editor's link dialog is a text field that suggests pages by title (React Aria's ComboBox with custom values), and choosing one writes the page's current address, base and trailing slash included.** The content stays plain and portable, and a later move rewrites it. URL fields get a "Choose a page…" button beside the native URL input, since the widget contract has the editor own the field's label. A field whose schema takes only full URLs (`z.url()`, as `fields.url()` makes) gets the site's address in front when Astro's `site` is set, and no picker when it isn't: a path would fail its own validation.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas
@@ -413,6 +433,10 @@ Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a f
 
 **A Markdoc block's range stops at its last non-whitespace character. Trailing spaces on its last line, and the blank line Markdoc counts into a list, belong to the gap after it, which a save keeps.** Rewriting a block used to drop them (the serializer trims), an unrelated diff the jazzy corpus suite found in seven files. mdast already ended blocks there.
 
+### 2026-10-18: Lists that are edited and resized change item by item
+
+**When a list is reordered, or edited and resized at once, the writer now compares the items both versions share by position, then pushes or deletes at the end. It used to replace the whole list.** Replacing re-renders it, and at a file's root that dropped `_order.yaml`'s comment and turned `vesper.redirects.yaml`'s one-line flow maps into block maps. A new item after one-line flow maps is written as one too (`- { from: /a, to: /b, status: 301 }`), as JSON arrays already shaped new items like their neighbours. The corpus suites pass unchanged: every changed byte still lies within the lines of the values that changed.
+
 ## URLs, hierarchy and redirects
 
 ### 2026-10-18: The redirects file lives at the site root
@@ -422,3 +446,82 @@ Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a f
 ### 2026-10-18: Page trees have no default depth limit
 
 **`maxDepth` is an optional per-collection setting in `vesper.config.ts` (`pages: { tree: true, maxDepth: 4 }`), with no default.** A built-in limit would refuse legitimate moves on sites nested deeper than we guessed: the playground is four levels deep, and university sites often go further. When a site sets it, a move or new page beyond it is refused before anything is written, with a plain message ("Pages can be at most 4 levels deep here"). Confirmed with Jeremy.
+
+### 2026-10-18: One URL module, keys inside, Astro's URLs outside
+
+**Every URL-aware feature goes through `@vesper/core/urls`: "View on site", the link picker, moves, redirects, breadcrumbs and the `vesper:content` helpers, in the studio, the dev server and the build alike.** Inside, a page's address is a *key*: a site path with no base, query, hash or trailing slash (`/academics/nursing`, and `/` for the home page). The redirects file stores keys. Outside, `formatUrl` writes what a browser asks for: Astro's `base` in front, and a trailing slash when `trailingSlash` is `always`, or `ignore` with `build.format: 'directory'` (Astro's defaults).
+- `:path` drops a trailing `/index`, and a top-level `index` is the root. Astro's glob loader already gives `foo/index.md` the ID `foo` but keeps a top-level `index.md` as `index`, so both spellings land on the same page (spec §6.15.1, "Index IDs").
+- Date tokens read a date at midnight UTC (YAML's `2026-10-17`) as that calendar day everywhere, and other times in the site's `timeZone`, else UTC, so the studio and the build can't disagree about a post's year.
+- A function-form `url` runs where `vesper.config.ts` is loaded (the dev API, the build, `vesper:content`). The studio's own bundle doesn't run it, so those entries have no "View on site" there.
+
+### 2026-10-18: Redirects point at the page's exact URL
+
+**A redirect's target is written in the page's canonical form, `/academics/nursing/`, never the bare key.** Measured on `scripts/static-server.mjs`, the plain host: `/programs/nursing` first gets the host's own slash redirect to `/programs/nursing/`, then Astro's meta refresh. If the refresh pointed at `/academics/nursing`, the host would add a third hop. Astro passes a string destination through untouched (it adds no base), so Vesper adds the base itself.
+
+### 2026-10-18: Cleaning the redirects file
+
+**`cleanRedirects` runs every time the file is written and at every build:**
+- an entry that isn't a redirect is kept in the file untouched but not used, with a warning, so a hand edit is never silently lost;
+- a repeated `from` keeps the later entry;
+- a redirect whose `from` is a real page again is dropped, with a warning: the page wins;
+- a cycle is removed whole, including a redirect to itself;
+- chains collapse onto their final address, and the result is temporary (302, or 307 after a 308) if any hop was, because the final address isn't permanent then;
+- a target on the site that's neither a page nor a redirect is flagged, never removed: it may be a file or a route Vesper can't see.
+
+The build cleans against every content URL and every static route in `src/pages`. Routes aren't resolved yet when Astro's config is set up, so at that point the static routes are read from the files in `src/pages` (no `[params]`, no `_` names, as Astro does). The dev API uses Astro's resolved list.
+
+### 2026-10-18: Host rules, and when HTML redirect pages are skipped
+
+**Astro's HTML redirect pages are the universal default (D16). Native rules are added when the host is detected (`NETLIFY`, `CF_PAGES`, `VERCEL`) or named in `redirects.native` (`apache`, `nginx`), and URLs a native rule covers get no HTML page.**
+- Netlify's `_redirects` uses the forced form (`301!`), and Vesper's block goes first, since the first matching rule wins.
+- Cloudflare Pages has no forced form, so each old URL gets a rule with and without the slash.
+- Apache gets `RedirectMatch` (mod_alias, so no mod_rewrite), matching with or without a slash, between `# BEGIN vesper` and `# END vesper` in `dist/.htaccess`, after whatever `public/.htaccess` held.
+- nginx gets `location =` blocks in `dist/_vesper/nginx-redirects.conf`.
+
+Vercel is the exception. It reads `vercel.json` before the build runs, so rules written during the build never apply (reported in Vercel's community forum and a Vercel-hosted write-up; Vercel's own docs don't say). So the studio keeps the site's `vercel.json` in step whenever it writes the redirects file, in the same change set, replacing only the entries whose `source` is one of Vesper's old or new addresses. At build, only redirects already in `vercel.json` count as covered; the rest keep their HTML page.
+
+`dist/_vesper/redirects.json` lists the cleaned redirects: the input for the S3 deploy template (Phase 9, spec §6.16), which sets each redirect page's website-redirect metadata.
+
+Rejected: serving redirects in `astro dev`. Merging them into Astro's config there means watching the redirects file, and Astro restarts the dev server when a watched file changes, which would reload the studio after every move.
+
+### 2026-10-18: A move is one change set, validated first
+
+**Moving or renaming a page moves its whole folder (or its one file) with every file in it, in one change set: the moves, both parents' `_order.yaml`, the redirects file with a redirect for every page that moved, every file whose links changed, and `vercel.json` when the site has one.** In local mode that's one set of renames; in GitHub mode it will be one tree.
+
+Before anything is written, a move is refused in plain words for:
+- a bad address segment;
+- a move into its own subtree;
+- an address another page in any collection has;
+- an address a static route in `src/pages` owns ("/contact/ is already a page on this site that isn't edited here (src/pages/contact.astro).");
+- `/admin` or `/_vesper`;
+- `maxDepth`;
+- a page whose frontmatter sets its own `slug` (its ID doesn't follow its file, so moving the file wouldn't move the page).
+
+A page with no folder that gains a child becomes `page/index.md` in the same change set, at the same URL. New pages in a tree go through the same address checks. A new or moved page goes at the end of its new parent's `_order.yaml` when the folder has one; folders without one keep sorting by title.
+
+### 2026-10-18: Which links a move rewrites
+
+**A move rewrites links to the old addresses in every content file on the site, entries and non-entries (partials, drafts) alike:**
+- Markdown links, images and reference definitions;
+- `href` and `src` in raw HTML;
+- Markdoc and MDX attributes whose string value is an old page URL;
+- frontmatter fields shown with the URL widget, at any depth.
+
+Each change replaces only that address's bytes and keeps its shape: base or not, trailing slash or not, `?query` and `#hash`, angle brackets. Links relative to the page's URL (`nursing/`, `../apply/`) become root-relative when either end moves, the one form that can't be misread from the new place. References relative to the *file* keep pointing at the same files when the file moves or its target does: images, MDX `import` paths, Markdoc `{% partial file %}`, and frontmatter values starting with `./` or `../`. Links inside code are left alone, and a destination with escapes or entities is skipped (it would need decoding to compare). The confirmation counts links on other pages only. Attributes are matched by value, not by declared type: a tag attribute holding exactly an old page URL is a link in all but name.
+
+Not built: §6.15.6's optional build check for internal links that resolve to nothing. It overlaps "weekly broken-link checks" on the do-not-build list, so it waits for Jeremy.
+
+### 2026-10-18: `vesper:content` embeds each folder's order
+
+**The site helpers (`getTree`, `getChildren`, `getBreadcrumbs`, `getUrl`) run the same code as the studio over Astro's entries. The virtual module embeds the URL settings, each collection's pattern and title keys, and its parsed `_order.yaml` files as JSON. It imports `vesper.config.ts` only when a collection uses a function-form `url`.**
+- Embedding keeps the helpers free of `node:fs`, so they'll run unchanged where previews render on Workers (Phase 7).
+- In `astro dev`, a changed `_order.yaml` invalidates the module and reloads the site's pages, with no `triggeredBy`, so the studio ignores it.
+- Titles come from the collection's title-like string field, then `title` and `name`.
+- Unlisted children sort with `Intl.Collator('en', { numeric: true })`, fixed so a build server and an editor's browser order alike ("Step 2" before "Step 10").
+- Breadcrumbs run from the home page to the entry, both included. A folder with no section page is a crumb with `url: null`.
+
+Parity between dev and build is tested by comparing `/site-tree.json` from both.
+
+### 2026-10-18: Route checks come from Astro's resolved routes
+
+**`astro:routes:resolved` (Astro 5 and later, so 6 and 7) gives each route's pattern, regex, parameters, type and origin. Static routes are the project's own pages and endpoints with no parameters; Vesper's injected `/admin` and redirect routes don't count.** In dev the check runs alongside startup rather than holding it up, and logs each message once. At build it records in the manifest, for each collection, the route that renders most of its URLs (`collections[].route`, for previews), and warns about URLs no route can produce. A flat collection kept in folders gets a hint, in dev only, to set `tree: true` (spec §6.15.2, "the editor suggests").

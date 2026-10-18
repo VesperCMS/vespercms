@@ -18,6 +18,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100); outcome in `PLAN.md` |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810); outcome and open questions in `PLAN.md` |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652); outcome and open questions in `PLAN.md` |
+| 2.6 URLs, hierarchy and redirects | Built (2026-10-18), on its branch; every check passes locally. Waiting to be merged and for CI. Outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -106,6 +107,16 @@ Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/c
 
 **Change a tag through `editMarkdocTag` or `editJsxTag`, and never run `Markdoc.format()` over content.** They change one attribute's bytes and keep the rest of the tag; `format` normalizes everything it touches.
 
+### URLs, hierarchy and redirects
+
+**Compute an entry's URL with `entryUrlKey` and `formatUrl` from `@vesper/core/urls`, never by replacing tokens in a pattern yourself.** The studio, the dev API, the build and `vesper:content` must agree on every address (spec §6.15.1).
+
+**Change a tree's structure through `PageService` (moves, order, child and section pages), never by renaming files or editing `_order.yaml` yourself.** A move is one change set: its files, both order files, a redirect per page and every rewritten link (spec §6.15.4).
+
+**Write a redirect's target as the page's exact URL (`formatUrl`: base and trailing slash), never a bare key.** On a plain host a bare path gets the host's own slash redirect first, so every redirect becomes a chain.
+
+**Redirects that need the host's rules before the build runs go into the repository when the studio writes them, not into `dist`.** Vercel reads `vercel.json` before building; everything else is written into `dist` at build.
+
 ### Static output, any host
 
 **No feature may depend on a host's rewrites, headers, functions or image service.** The built site and the studio must work when `dist/` is copied to an FTP host (D4, D16). Host-specific extras are optional and always have a universal fallback.
@@ -137,7 +148,7 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - At most one primary (accent-filled) button per screen.
 - At most two levels of navigation visible at once.
 - No colored status badges. Status is text.
-- No icon-only buttons except close, overflow ("…") and drag handles, all with accessible names.
+- No icon-only buttons except close, overflow ("…"), drag handles and the outline's expand toggle (DECISIONS.md, 2026-10-18), all with accessible names.
 - At most five color tokens beyond neutrals on any screen: accent, accent-subtle, danger, focus, plus optional warning.
 - No tabs inside the editor.
 - Body text 15–16px, line-height ≥ 1.5, two font weights.
