@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   Button as RACButton,
+  FileTrigger,
   Link as RACLink,
   type ButtonProps as RACButtonProps,
   type LinkProps as RACLinkProps,
@@ -118,5 +119,28 @@ export function Link({ className, ...props }: LinkProps) {
         className,
       )}
     />
+  );
+}
+
+export type FileButtonProps = {
+  /** File types the picker offers, e.g. `['.csv', 'text/csv']`. */
+  accept: string[];
+  onSelect: (file: File) => void;
+  children: ReactNode;
+  variant?: ButtonVariant;
+};
+
+/** A button that opens the system file picker (React Aria's FileTrigger): one file, of the given types. */
+export function FileButton({ accept, onSelect, children, variant = 'secondary' }: FileButtonProps) {
+  return (
+    <FileTrigger
+      acceptedFileTypes={accept}
+      onSelect={(files) => {
+        const file = files?.[0];
+        if (file) onSelect(file);
+      }}
+    >
+      <Button variant={variant}>{children}</Button>
+    </FileTrigger>
   );
 }

@@ -423,3 +423,83 @@ export function RadioGroup({
     </RACRadioGroup>
   );
 }
+
+export type Suggestion = {
+  /** What choosing it puts in the field (a page's address). */
+  value: string;
+  /** What it's listed and found by (the page's title). */
+  label: string;
+  /** A second, muted line (the address itself). */
+  detail?: string;
+};
+
+export type SuggestFieldProps = FieldTextProps & {
+  value: string;
+  onChange: (value: string) => void;
+  suggestions: Suggestion[];
+  placeholder?: string;
+  isInvalid?: boolean;
+  isDisabled?: boolean;
+  className?: string;
+  id?: string;
+  'aria-describedby'?: string;
+  inputMode?: 'url' | 'text';
+};
+
+/**
+ * A text field that suggests values as you type (React Aria's ComboBox with
+ * custom values): the link picker (spec §6.15.6). Typing anything is fine;
+ * choosing a suggestion puts its value in the field.
+ */
+export function SuggestField({
+  label,
+  description,
+  errorMessage,
+  value,
+  onChange,
+  suggestions,
+  placeholder,
+  className,
+  inputMode = 'text',
+  ...props
+}: SuggestFieldProps) {
+  const needle = value.trim().toLowerCase();
+  const shown = useMemo(
+    () =>
+      (needle === ''
+        ? suggestions
+        : suggestions.filter(
+            (s) => s.label.toLowerCase().includes(needle) || s.value.toLowerCase().includes(needle),
+          )
+      ).slice(0, 50),
+    [needle, suggestions],
+  );
+  return (
+    <RACComboBox
+      {...props}
+      allowsCustomValue
+      allowsEmptyCollection
+      items={shown}
+      inputValue={value}
+      onInputChange={onChange}
+      menuTrigger="input"
+      className={cx('flex flex-col gap-1', className)}
+    >
+      <FieldLabel label={label} isRequired={false} />
+      <Input placeholder={placeholder} inputMode={inputMode} className={fieldControl} />
+      <FieldHelp description={description} errorMessage={errorMessage} />
+      <Popover className={popover}>
+        <ListBox className="max-h-72 overflow-auto outline-none">
+          {(item: Suggestion) => (
+            <ListBoxItem id={item.value} textValue={item.value} className={listBoxItem}>
+              <span className="block">{item.label}</span>
+              {item.detail && (
+                <span className="block text-sm text-content-muted">{item.detail}</span>
+              )}
+            </ListBoxItem>
+          )}
+        </ListBox>
+      </Popover>
+    </RACComboBox>
+  );
+}
