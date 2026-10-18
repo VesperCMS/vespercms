@@ -5,11 +5,13 @@
  */
 export {
   Button,
+  ButtonLink,
   IconButton,
   Icon,
   Link,
   FileButton,
   type ButtonProps,
+  type ButtonLinkProps,
   type FileButtonProps,
   type ButtonVariant,
   type IconButtonProps,

@@ -38,7 +38,7 @@ const PLACES: [string, RegExp, string[]][] = [
   [
     'glow-selected: the current item',
     /\bshadow-glow-selected\b/,
-    ['packages/ui/src/components/choices.tsx'],
+    ['packages/ui/src/components/choices.tsx', 'packages/ui/src/components/Tree.tsx'],
   ],
   [
     'glass-edge and glass-bar: the top bar',

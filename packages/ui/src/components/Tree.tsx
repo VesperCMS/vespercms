@@ -9,7 +9,8 @@ import {
   type Key,
 } from 'react-aria-components';
 import { Icon } from './Button.tsx';
-import { cx, focusRing } from './shared.tsx';
+import { Chevron } from './overlays.tsx';
+import { colorTransition, cx, focusRing } from './shared.tsx';
 
 /*
  * An outline (spec §6.15.2): React Aria's Tree, a single-column treegrid.
@@ -85,22 +86,24 @@ export function Tree<T extends TreeNode>({
           }
         : {})}
       className={cx(
-        'group border-b border-border text-body outline-none data-[hovered]:bg-surface-sunken',
+        'group rounded-md text-body outline-none data-[hovered]:bg-surface-sunken',
         'data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
-        'data-[drop-target]:bg-accent-subtle data-[dragging]:opacity-50',
+        // Where a dragged page would land is the current item: accent-subtle and its halo.
+        'data-[drop-target]:bg-accent-subtle data-[drop-target]:shadow-glow-selected data-[dragging]:opacity-50',
+        colorTransition,
       )}
     >
       <TreeItemContent>
         {({ isExpanded, hasChildItems, level, allowsDragging }) => (
           <div
-            className="flex min-h-12 items-center gap-2 py-1 pr-2"
+            className="flex min-h-12 items-center gap-1 py-1 pr-1"
             style={{ paddingInlineStart: `calc(var(--spacing) * ${String(6 * (level - 1) + 1)})` }}
           >
             {allowsDragging && (
               <RACButton
                 slot="drag"
                 className={cx(
-                  'inline-flex size-8 items-center justify-center rounded-md text-content-muted',
+                  'inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md text-content-muted data-[hovered]:text-content',
                   focusRing,
                 )}
               >
@@ -115,9 +118,12 @@ export function Tree<T extends TreeNode>({
                   focusRing,
                 )}
               >
-                <span aria-hidden="true" className={isExpanded ? 'rotate-90' : ''}>
-                  ▸
-                </span>
+                <Chevron
+                  className={cx(
+                    'transition-transform duration-180 ease-out',
+                    isExpanded ? 'rotate-0' : '-rotate-90',
+                  )}
+                />
               </RACButton>
             ) : (
               <span aria-hidden="true" className="inline-block size-8 shrink-0" />
@@ -139,7 +145,7 @@ export function Tree<T extends TreeNode>({
         {...(onExpandedChange ? { onExpandedChange } : {})}
         {...(dragAndDropHooks ? { dragAndDropHooks } : {})}
         renderEmptyState={() => <p className="px-3 py-6 text-content-muted">{emptyState}</p>}
-        className="w-full border-t border-border"
+        className="flex w-full flex-col gap-0.5"
       >
         {renderItem}
       </RACTree>

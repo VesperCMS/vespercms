@@ -1,5 +1,5 @@
 import { decodeValue, humanize, type CollectionManifest, type EntrySummary } from '@vesper/core';
-import { Select, Table, TextField, type TableColumn } from '@vesper/ui';
+import { ButtonLink, Select, Table, TextField, type TableColumn } from '@vesper/ui';
 import { useEffect, useMemo, useState } from 'react';
 import type { SortDescriptor } from 'react-aria-components';
 import { useStudio } from '../app/context.tsx';
@@ -63,7 +63,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
   }, [entries, query, filter, sort]);
 
   return (
-    <Screen title={collection.label}>
+    <Screen title={collection.label} afterglow={load.state === 'ready' && entries.length === 0}>
       {!collection.editable && (
         <p className="mb-6 max-w-2xl text-content-muted">
           {collection.label} can be read here but not edited.
@@ -98,17 +98,18 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
           />
         )}
         {collection.editable && !singleton && (
-          // The screen's one primary action: a link styled as the primary button.
-          <a
+          // The screen's one primary action.
+          <ButtonLink
+            variant="primary"
             href={hrefFor({ screen: 'new', collection: collection.name })}
-            className="ml-auto inline-flex min-h-10 items-center rounded-md bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="ml-auto"
           >
             New entry
-          </a>
+          </ButtonLink>
         )}
       </div>
       {load.state === 'loading' ? (
-        <p className="text-content-muted">Loading entries…</p>
+        <p className="text-small text-content-muted">Loading entries…</p>
       ) : (
         <Table
           label={collection.label}
@@ -140,7 +141,9 @@ function Cell({ entry, column }: { entry: EntrySummary; column: string }) {
       <span className="font-semibold text-content">
         {entry.title}
         {entry.title !== entry.id && (
-          <span className="block text-small font-normal text-content-muted">{entry.id}</span>
+          <span className="block font-mono text-caption font-normal text-content-muted">
+            {entry.id}
+          </span>
         )}
       </span>
     );

@@ -1,6 +1,7 @@
 import type { CollectionManifest, MoveResult, PageTreeNode, Position } from '@vesper/core';
 import {
   Button,
+  ButtonLink,
   Combobox,
   Dialog,
   Menu,
@@ -163,7 +164,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
   });
 
   return (
-    <Screen title={collection.label}>
+    <Screen title={collection.label} afterglow={load.state === 'ready' && rows.length === 0}>
       {!editable && (
         <p className="mb-6 max-w-2xl text-content-muted">
           {collection.label} can be read here but not edited.
@@ -181,13 +182,14 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
           and Alt+↑ and Alt+↓ move it.
         </p>
         {editable && (
-          // The screen's one primary action: a link styled as the primary button.
-          <a
+          // The screen's one primary action.
+          <ButtonLink
+            variant="primary"
             href={hrefFor({ screen: 'new', collection: collection.name })}
-            className="ml-auto inline-flex min-h-10 items-center rounded-md bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="ml-auto"
           >
             New page
-          </a>
+          </ButtonLink>
         )}
       </div>
       {problem && (
@@ -196,7 +198,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
         </p>
       )}
       {load.state === 'loading' ? (
-        <p className="text-content-muted">Loading pages…</p>
+        <p className="text-small text-content-muted">Loading pages…</p>
       ) : (
         <Tree<Row>
           label={collection.label}
@@ -212,9 +214,9 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
           emptyState="No pages yet."
           renderRow={(row) => (
             <>
-              <span className="min-w-0 flex-1">
+              <span className="min-w-0 flex-1 px-1">
                 <span className="block truncate font-semibold text-content">{row.title}</span>
-                <span className="block truncate text-small text-content-muted">
+                <span className="block truncate font-mono text-caption text-content-muted">
                   {row.url ?? `${row.path}/`}
                 </span>
               </span>
@@ -343,7 +345,7 @@ function MoveDialog({
       {plan ? (
         <>
           <p>{planText(plan)}</p>
-          <div className="flex flex-wrap justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               onPress={() => {
                 setPlan(null);
@@ -384,7 +386,7 @@ function MoveDialog({
               {problem}
             </p>
           )}
-          <div className="flex flex-wrap justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button onPress={onClose}>Cancel</Button>
             <Button type="submit" variant="primary" isPending={busy}>
               Review move
@@ -436,7 +438,7 @@ function DeleteDialog({
           {problem}
         </p>
       )}
-      <div className="flex flex-wrap justify-end gap-3">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button onPress={onClose}>Cancel</Button>
         <Button variant="danger" onPress={() => void remove()}>
           Delete

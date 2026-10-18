@@ -66,7 +66,9 @@ export function CropPreviews({
   const [open, setOpen] = useState<Ratio | null>(null);
   const [announcement, setAnnouncement] = useState('');
   if (!size) {
-    return <p className="text-small text-content-muted">Loading the image for the crop previews…</p>;
+    return (
+      <p className="text-small text-content-muted">Loading the image for the crop previews…</p>
+    );
   }
   const buttonId = (name: string) => `${id}-crop-${name}`;
   const afterDialog = (name: string) => {

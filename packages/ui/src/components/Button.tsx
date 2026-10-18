@@ -38,6 +38,12 @@ export type ButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
   pulse?: number;
 };
 
+const buttonBase = cx(
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 text-label',
+  'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[pending]:cursor-progress',
+  focusRing,
+);
+
 export function Button({
   variant = 'secondary',
   className,
@@ -63,19 +69,33 @@ export function Button({
     };
   }, [pulse]);
   return (
-    <RACButton
-      {...props}
-      ref={ref}
-      className={cx(
-        'inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 text-label',
-        'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[pending]:cursor-progress',
-        focusRing,
-        VARIANTS[variant],
-        className,
-      )}
-    >
+    <RACButton {...props} ref={ref} className={cx(buttonBase, VARIANTS[variant], className)}>
       {children}
     </RACButton>
+  );
+}
+
+export type ButtonLinkProps = Omit<RACLinkProps, 'className' | 'children'> & {
+  variant?: ButtonVariant;
+  className?: string;
+  children: ReactNode;
+};
+
+/**
+ * A link that looks like a button: a screen's main action when it goes
+ * somewhere ("New entry" opens the new entry's screen). It stays a link, so
+ * it can open in a new tab and reads as one.
+ */
+export function ButtonLink({
+  variant = 'secondary',
+  className,
+  children,
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <RACLink {...props} className={cx(buttonBase, 'no-underline', VARIANTS[variant], className)}>
+      {children}
+    </RACLink>
   );
 }
 

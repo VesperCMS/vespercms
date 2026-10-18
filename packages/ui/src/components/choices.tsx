@@ -113,7 +113,12 @@ export function Select({
       <RACButton
         className={cx(fieldControl, 'flex items-center justify-between text-left', focusRing)}
       >
-        <SelectValue className="truncate data-[placeholder]:text-content-muted" />
+        {/* The chosen option's words only: its tick belongs to the open list. */}
+        <SelectValue className="truncate data-[placeholder]:text-content-muted">
+          {({ isPlaceholder, selectedText, defaultChildren }) =>
+            isPlaceholder ? defaultChildren : selectedText
+          }
+        </SelectValue>
         <Chevron />
       </RACButton>
       <FieldHelp description={description} errorMessage={errorMessage} />
