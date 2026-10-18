@@ -10,7 +10,7 @@
     "git"
   ],
   "type": "module",
-  "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/. \".\" is the integration (astro add); ./node is Node-only (config loading, manifest, local storage).",
+  "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/. \".\" is the integration (astro add); ./node is Node-only (config loading, manifest, local storage). ./image-service is the crop step around Astro's Sharp image service, registered by the integration (spec §6.6.5).",
   "exports": {
     ".": {
       "@vesper/source": "./src/integration/index.ts",
@@ -31,6 +31,11 @@
       "@vesper/source": "./src/node/index.ts",
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
+    },
+    "./image-service": {
+      "@vesper/source": "./src/images/service.ts",
+      "types": "./dist/images/service.d.ts",
+      "default": "./dist/images/service.js"
     }
   },
   "//files": "pages/ holds the injected /admin page; src/ and dist/ both resolve it at ../../pages.",
@@ -48,11 +53,12 @@
     "@vesper/admin": "0.0.0",
     "@vesper/core": "0.0.0"
   },
-  "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3). React is the studio's, shared with the site's custom widgets (spec §6.3.3).",
+  "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3). React is the studio's, shared with the site's custom widgets (spec §6.3.3). sharp is the copy Astro's own image service already loads; the crop step needs it too, and optional because a site without Astro's Sharp service never loads the crop step.",
   "peerDependencies": {
     "astro": "^6.0.0 || ^7.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sharp": ">=0.34.0"
   },
   "//devDependencies": "Tailwind compiles the studio stylesheet from source in this workspace only; published sites get dist/studio.css.",
   "devDependencies": {
@@ -60,5 +66,10 @@
   },
   "bin": {
     "vesper": "./dist/node/cli.js"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    }
   }
 }

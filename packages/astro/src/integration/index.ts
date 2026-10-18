@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { humanize } from '@vesper/core';
 import type { AstroIntegration } from 'astro';
 import type { PluginOption } from 'vite';
+import { withCropStep } from '../images/register.ts';
 import { siteConfigFiles } from '../node/load-site.ts';
 import { writeManifest } from '../node/manifest.ts';
 import { buildRedirects, urlSettings, writeHostRules, type BuildRedirects } from './redirects.ts';
@@ -25,6 +26,14 @@ export type VesperOptions = {
   };
   /** The site's name in the studio. Defaults to the host of Astro's `site`, then the package name. */
   siteName?: string;
+  /**
+   * The crop step (spec §6.6.5). When the site uses Astro's own Sharp image
+   * service, Vesper wraps it to cut each image's stored crop before Astro
+   * resizes it. `false` leaves Astro's service alone: `<Img>` then uses
+   * Astro's own server crop for each ratio, with the focal point as
+   * `object-position`, and manual crops aren't applied.
+   */
+  imageService?: boolean;
 };
 
 /** A file in ../runtime: TypeScript in this workspace, JavaScript once built. */
@@ -138,6 +147,17 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
           plugins.push(tailwindcss());
         }
         updateConfig({ vite: { plugins } });
+
+        const images = options.imageService === false ? null : withCropStep(config.image.service);
+        if (images) {
+          updateConfig({ image: { service: images } });
+          // A visible config change (spec §6.6.5): say so where builds are read.
+          if (command === 'build') {
+            logger.info(
+              'Crops from fields.image() are cut by Vesper’s step inside Astro’s Sharp image service. vesper({ imageService: false }) turns it off.',
+            );
+          }
+        }
 
         if (command === 'build') {
           // Redirects reach the built site through Astro (spec §6.15.5), cleaned
