@@ -1,4 +1,5 @@
 ---
+import { Img } from '@vesper/astro/components';
 import { getCollection } from 'astro:content';
 const posts = await getCollection('blog');
 ---
@@ -13,7 +14,14 @@ const posts = await getCollection('blog');
       <h1>Astro 6 fixture</h1>
       <ul>
         {posts.map((post) => (
-          <li>{post.data.title}</li>
+          <li>
+            {post.data.title}
+            {/* og is built in, so this zero-config site has a named ratio with a manual crop. */}
+            {post.data.hero && <Img image={post.data.hero} ratio="og" width={382} data-test="og" />}
+            {post.data.hero && (
+              <Img image={post.data.hero} ratio={1} width={200} data-test="square" />
+            )}
+          </li>
         ))}
       </ul>
     </main>

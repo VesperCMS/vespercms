@@ -12,6 +12,8 @@ blob-report/
 e2e/.studio-site/
 # The redirects integration test's copy of the playground, moved and built.
 e2e/.move-site/
+# The images integration test's copy of the playground, built without the crop step.
+e2e/.images-site/
 
 # Secrets: local Worker vars and env files.
 .dev.vars
