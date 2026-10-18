@@ -663,3 +663,29 @@ Without the shim, jsdom's page-level rules (`landmark-one-main`, `page-has-headi
 ### 2026-10-18: The report lives in `.vesper/`, never in `dist/`
 
 **The report is `.vesper/a11y-report.json` in the project root, and the integration writes `.vesper/.gitignore` (`*`) beside it, so it's never deployed and never committed by accident. If the output folder would contain `.vesper/` (an `outDir` of the project root), nothing is written and the build log says why.** It has no timestamp, so the same build writes the same bytes; a cloud upload (Phase 8.5) adds the time. `failBuildOn` throws after the report is written, so its reasons are there to read. CI checks that the report exists beside `dist/` and that nothing in `dist/` looks like one, and passes it to the e2e job as its own artifact.
+
+## Studio design
+
+### 2026-10-18: The design pass comes before 2.9, from Jeremy's own design system
+
+**Jeremy moved the studio design pass ahead of Phase 2.9 (site search) and Phase 3 (GitHub mode), so GitHub mode and the Phase 4 dashboard build on its result instead of being restyled later. The direction is Vesper's design system, a claude.ai artifact Jeremy made (the Pine direction: warm sand neutrals, a pine-teal accent, Figtree, glass and glow). It stands in for the direction review the roadmap asked for.** It keeps the repo's fourteen colour token names and roles from `tokens.css`, so the pass changes values, not names. It's design input, not a spec: where it disagrees with the spec, the entries below record what Jeremy decided. Features it shows that the studio doesn't have (the ⌘K palette, a Preview toggle, history) aren't built in this pass; PLAN.md lists them.
+
+### 2026-10-18: The accent is Pine, and fixed
+
+**Every studio uses the Pine accent. The design system's eight accent presets and its hue formula may live in the token code for later, but nothing lets anyone choose one: no picker, no setting, no config key.** Choosing an accent is white-label, which spec §2 puts in the higher paid tier, and it belongs to Phase 9. Neutrals, `danger`, `focus` and `warning` don't move with the accent in any case.
+
+### 2026-10-18: Four named glows, and glass on what floats (an exception to spec §10.2)
+
+**Spec §10.2 allows shadows only on overlays. The studio also uses exactly four named effects, each only in its named place:**
+- `glow-accent`: the primary button on hover and focus, and one pulse after a successful save, dropped under `prefers-reduced-motion`. Never at rest, never on two elements at once.
+- `glow-selected`: the current item in the outline, a menu or a list, on top of `accent-subtle`.
+- `glow-focus`: a halo outside the solid 2px focus ring, never in its place. The ring carries the 3:1 contrast; the halo only adds warmth.
+- `glass-edge`: the lit edge of the sticky top bar, and the rim of glass overlays beside `shadow-overlay`.
+
+**Glass (a translucent fill over a blurred backdrop) is only for surfaces that float: the top bar, menus, popovers, the Details drawer, dialogs and the modal scrim.** The fill is at least 88% of the solid surface, which keeps every text pair at 4.5:1 even over a solid `content`-coloured backdrop; the contrast check computes those pairs. Without `backdrop-filter`, under `prefers-reduced-transparency` and in forced colours, the surfaces are solid. The glows are mixed from the accent with `color-mix(in oklch, var(--color-accent) N%, transparent)`, so they follow it, and raw hex and rgba stay out of class names. `packages/admin/src/budget.test.ts` allows these tokens and no other shadow.
+
+Why: Jeremy chose glass and glow as part of the direction. Vesper is named for the evening star, so its depth is light. Each effect is a reward or a locator, never the only way something is shown, and the text carries every meaning.
+
+### 2026-10-18: The studio self-hosts Figtree (a departure from spec §10.5)
+
+**The studio is set in Figtree at 400 and 600, from the `@fontsource/figtree` npm package (OFL-1.1), latin subset, compiled into `@vesper/admin`'s `dist/studio.css`. `/admin` never requests anything from Google or any CDN. Code, slugs and URLs use the system monospace stack, and the system UI stack stays the fallback.** Spec §10.5 says "the system UI stack by default". Jeremy chose Figtree for the direction's warmth. Self-hosting means no third-party request and a studio that works offline, and two weights keep to the §10.4 budget. The design system also names JetBrains Mono for code; it isn't added, because the system monospace stack does the job without another download. The first-load cost is measured in PLAN.md, "Studio design pass: outcome".

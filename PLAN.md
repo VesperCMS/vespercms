@@ -13,6 +13,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284). See "Phase 2.6: outcome" below. |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
+| Studio design pass | In progress (2026-10-18), ahead of 2.9. See "Studio design pass (plan)" below. |
 | 2.9 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -294,6 +295,27 @@ The spec's four "Done when" criteria, with evidence:
 - A collection with no `url` can't be traced to its pages in the report (`entry: null`); the docs should say so.
 - Notes can't be dismissed; there's nowhere to keep that in local mode. Cloud drafts (Phase 4) could hold it.
 - Layer 3 (report uploads, history, rendered scans with contrast, exports) is Phase 8.5.
+
+## Studio design pass (plan)
+
+Jeremy moved this pass ahead of 2.9 on 2026-10-18 and made the direction himself: Vesper's design system (a claude.ai artifact, the Pine direction). His decisions on where it departs from the spec are in DECISIONS.md, "Studio design": the accent is Pine and fixed, four named glows and glass on what floats, and Figtree self-hosted.
+
+**Scope:** one visual pass over every studio screen, light and dark, inside the §10.4 budget. Token names stay; values change.
+- `tokens.css`: Pine's colours, radii 6/10/16/full, the type scale (title, heading 1–3, body 16/24, label, small, caption), the spacing steps, the glows, glass and the scrim. `npm run a11y:contrast` covers both themes, plus new pairs such as text on glass.
+- Figtree 400 and 600 from `@fontsource/figtree`, latin subset, in `dist/studio.css`.
+- The top bar (glass, sticky), Home and empty states (the afterglow wash), the entry list, the page outline, the editor column (720px) and Details, every widget, the body editor (protected blocks, toolbar), the map, the media browser and picker, the dialogs (link, crop, leave), the notes drawer, Redirects, NotFound and Unavailable.
+- The 2.8 follow-up: headings inside the body editor join the studio page's heading outline.
+- `budget.test.ts` allows the four named effects and no other shadow.
+
+**Order:** tokens, fonts, the top bar, Home and the entry editor first, then a checkpoint with Jeremy (before and after, light and dark), then the remaining screens.
+
+**Not built in this pass** (the design system shows them; the studio doesn't have them yet):
+- the ⌘K search and command palette, the site switcher and the user menu in the top bar (spec §10.3);
+- the Preview toggle (Phase 7), and history, duplicate and copy link in the editor's "…" menu;
+- a light/dark override for the studio (it follows the system);
+- the home screen's greeting and "drafts waiting" line, and a sign-in screen (cloud, Phase 4);
+- keyboard shortcuts shown in menus;
+- choosing an accent (white-label, Phase 9) and the Vesper logo in the studio (no mark is chosen for it).
 
 ## Phase 2.8: Accessibility checks (design)
 
@@ -855,8 +877,8 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | 2.6 URLs/tree/redirects | Confirmed 2026-10-18: the redirects file at the site root; no default `maxDepth` (DECISIONS.md) | URL patterns, route check, tree, `_order.yaml`, subtree moves as one ChangeSet, redirect cleanup and per-host output, link rewriting, site helpers |
 | 2.7 Images | Start by verifying how Astro forwards `position`/`fit` | `fields.image`, focal point and crops, `<Img>`, Sharp wrapper |
 | **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
+| **Studio design pass** (added 2026-10-18; in progress, moved ahead of 2.9) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
-| **Studio design pass** (added 2026-10-18) | Jeremy reviews the visual direction first (screens, references, what feels off) | One visual pass over every studio screen once local mode is complete, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | 3 GitHub mode | whether a free cloud relay exists (needs the §13.1 domain) | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13, D15, §13.1 domain, §13.3 license (decides whether `apps/cloud-*` can live in this MIT repo) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
 | **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |

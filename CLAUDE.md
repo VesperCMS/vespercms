@@ -21,6 +21,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284); outcome and open questions in `PLAN.md` |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527); outcome and open questions in `PLAN.md` |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394); outcome and open questions in `PLAN.md` |
+| Studio design pass | In progress (2026-10-18), ahead of 2.9; see `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -155,6 +156,10 @@ Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/c
 
 **Cloud-only features are absent, not disabled, when the studio isn't connected.** No upsell banners (spec §6.9).
 
+**The accent is Pine, and fixed: no picker, setting or config key chooses another.** Choosing an accent is white-label, the higher paid tier, in Phase 9 (DECISIONS.md, 2026-10-18).
+
+**The studio's font is Figtree 400 and 600, self-hosted in `@vesper/admin`; `/admin` never requests anything from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree").
+
 **A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
 
 ## Accessibility is an acceptance criterion
@@ -177,6 +182,8 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - No tabs inside the editor.
 - Body text 15–16px, line-height ≥ 1.5, two font weights.
 - Spacing only from the token scale. Hairline borders only.
+- Shadows only on overlays (`shadow-overlay`), plus four named glows in their named places: `glow-accent` (the primary button), `glow-selected` (the current item), `glow-focus` (outside the focus ring) and `glass-edge` (DECISIONS.md, 2026-10-18).
+- Glass only on what floats (the top bar, menus, popovers, drawers, dialogs, the scrim), at least 88% fill, with solid fallbacks.
 
 **If a new feature has no obvious quiet place in the interface, stop and propose one instead of adding a panel.** Every feature PR states where it lives in the UI and what it hides behind.
 
