@@ -123,6 +123,10 @@ describe('the report', () => {
   });
 
   it('is summed up in one line for the log', () => {
+    const one = { ...report(0, 0), checked: { ...report(0, 0).checked, pages: 1 } };
+    expect(summaryLine({ report: one, written: '.vesper/a11y-report.json', failed: null })).toBe(
+      'Accessibility: checked 1 page, no issues. Report: .vesper/a11y-report.json',
+    );
     expect(
       summaryLine({ report: report(0, 0), written: '.vesper/a11y-report.json', failed: null }),
     ).toBe('Accessibility: checked 3 pages, no issues. Report: .vesper/a11y-report.json');

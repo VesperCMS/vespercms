@@ -302,5 +302,6 @@ export function summaryLine(result: CheckBuildResult): string {
   const where = written
     ? `Report: ${written}`
     : 'No report written: the output folder contains .vesper/.';
-  return `Accessibility: checked ${String(report.checked.pages)} pages, ${found}. ${where}`;
+  const checked = report.checked.pages;
+  return `Accessibility: checked ${String(checked)} ${checked === 1 ? 'page' : 'pages'}, ${found}. ${where}`;
 }
