@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
@@ -13,6 +13,9 @@ import { jpegFacts } from '../../packages/admin/src/media/formats.ts';
 const site = fileURLToPath(new URL('../.studio-site/', import.meta.url));
 const fixtures = fileURLToPath(new URL('../../apps/playground/fixtures/uploads/', import.meta.url));
 const read = (path: string) => readFileSync(`${site}${path}`, 'utf8');
+const write = (path: string, text: string) => {
+  writeFileSync(`${site}${path}`, text);
+};
 const WCAG21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
 async function expectAccessible(page: Page) {
@@ -90,22 +93,30 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
 });
 
 test('the writing view rewrites only the paragraph that was edited', async ({ page }) => {
-  const before = read('src/content/blog/harbor-at-dawn.md');
-  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-  const body = page.getByRole('textbox', { name: 'Body' });
-  await body.getByText(/^Park by the old customs house/).click();
-  await page.keyboard.press('End');
-  await page.keyboard.type(' Bring a thermos.');
-  await page.keyboard.press('Control+s');
-  await expect(page.getByText('Saved just now')).toBeVisible();
+  const path = 'src/content/blog/harbor-at-dawn.md';
+  const before = read(path);
+  try {
+    await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+    const body = page.getByRole('textbox', { name: 'Body' });
+    await expect(body.getByText(/^Park by the old customs house/)).toBeVisible();
+    // The paragraph is the body's last block. End would reach only the end
+    // of the visual line a click landed on, which depends on how it wraps.
+    await body.focus();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type(' Bring a thermos.');
+    await page.keyboard.press('Control+s');
+    await expect(page.getByText('Saved just now')).toBeVisible();
 
-  const after = read('src/content/blog/harbor-at-dawn.md');
-  expect(after).toBe(
-    before.replace(
-      'takes twenty minutes at an easy pace.',
-      'takes twenty minutes at an easy pace. Bring a thermos.',
-    ),
-  );
+    expect(read(path)).toBe(
+      before.replace(
+        'takes twenty minutes at an easy pace.',
+        'takes twenty minutes at an easy pace. Bring a thermos.',
+      ),
+    );
+  } finally {
+    // A retry starts from the same text.
+    write(path, before);
+  }
 });
 
 test('a sideways phone photo is uploaded upright, without its location', async ({ page }) => {
