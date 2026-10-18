@@ -213,6 +213,8 @@ export {
   slugify,
   expandNewEntryPath,
   type ContentServiceOptions,
+  type StoredEntry,
+  type TreeHooks,
   type Validator,
   type BodyValidator,
 } from './studio/service.ts';
@@ -242,3 +244,29 @@ export type { WidgetProps } from './studio/widget.ts';
 
 // URLs, page trees and redirects (spec §6.15). Also `@vesper/core/urls`, without the parsers.
 export * from './urls/index.ts';
+export {
+  PageService,
+  REDIRECTS_FILE,
+  ORDER_FILE,
+  newRedirectsFile,
+  type PageServiceOptions,
+  type StaticRoutes,
+  type PageLink,
+  type PageTree,
+  type PageTreeNode,
+  type MoveRequest,
+  type MoveResult,
+  type Position,
+  type ReorderRequest,
+  type ReorderResult,
+  type RedirectsDocument,
+  type SaveRedirectsRequest,
+  type SaveRedirectsResult,
+} from './studio/pages.ts';
+export {
+  rewriteBody,
+  rewriteValues,
+  type LinkContext,
+  type FilePlace,
+  type RewriteCount,
+} from './studio/links.ts';
