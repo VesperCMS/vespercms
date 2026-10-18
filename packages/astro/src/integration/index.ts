@@ -5,6 +5,7 @@ import { humanize } from '@vesper/core';
 import type { AstroIntegration } from 'astro';
 import type { PluginOption } from 'vite';
 import { withCropStep } from '../images/register.ts';
+import { checkBuild, summaryLine, type A11yBuildOptions } from './a11y.ts';
 import { siteConfigFiles } from '../node/load-site.ts';
 import { writeManifest } from '../node/manifest.ts';
 import { buildRedirects, urlSettings, writeHostRules, type BuildRedirects } from './redirects.ts';
@@ -34,6 +35,15 @@ export type VesperOptions = {
    * `object-position`, and manual crops aren't applied.
    */
   imageService?: boolean;
+  /**
+   * Accessibility checks at build (spec §6.18, layer 2). After every build,
+   * each page is checked with axe-core's structure rules (no colour or
+   * layout) and the issues, traced to the entries that produced them, go to
+   * `.vesper/a11y-report.json`, never into `dist/`. `failBuildOn: 'error'`
+   * (or `'warning'`) fails the build when there's an issue at that level;
+   * by default the build never fails. `false` turns the check off.
+   */
+  a11y?: false | A11yBuildOptions;
 };
 
 /** A file in ../runtime: TypeScript in this workspace, JavaScript once built. */
@@ -225,6 +235,20 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         if (redirects && redirects.redirects.length > 0) {
           const written = writeHostRules(fileURLToPath(dir), redirects, urlSettings(model));
           logger.info(`Wrote ${written.join(', ')}`);
+        }
+        if (options.a11y !== false) {
+          const result = await checkBuild({
+            root,
+            dist: fileURLToPath(dir),
+            model,
+            settings: urlSettings(model),
+            routes: staticRoutes,
+            a11y: options.a11y ?? {},
+          });
+          if (result.written) logger.info(summaryLine(result));
+          else logger.warn(summaryLine(result));
+          // Thrown after the report is written, so the reasons are there to read.
+          if (result.failed) throw new Error(result.failed);
         }
       },
     },

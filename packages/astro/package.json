@@ -59,9 +59,12 @@
     "build": "tsc -b tsconfig.build.json",
     "prepack": "tsc -b tsconfig.build.json"
   },
+  "//dependencies": "axe-core runs the build's accessibility checks (spec §6.18, layer 2), the same engine as the e2e suite; jsdom is the DOM it runs in without a browser, matched against Chromium (DECISIONS.md). Both load only in astro:build:done.",
   "dependencies": {
     "@vesper/admin": "0.0.0",
-    "@vesper/core": "0.0.0"
+    "@vesper/core": "0.0.0",
+    "axe-core": "^4.14.0",
+    "jsdom": "^30.1.3"
   },
   "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3). React is the studio's, shared with the site's custom widgets (spec §6.3.3). sharp is the copy Astro's own image service already loads; the crop step needs it too, and optional because a site without Astro's Sharp service never loads the crop step.",
   "peerDependencies": {

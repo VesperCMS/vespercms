@@ -232,7 +232,20 @@ export class PageService {
 
   /** Every entry with a URL, in every collection, for the link picker. */
   async pages(): Promise<PageLink[]> {
-    const found: PageLink[] = [];
+    return (await this.pageEntries()).map(({ collection, id, title, url }) => ({
+      collection,
+      id,
+      title,
+      url,
+    }));
+  }
+
+  /**
+   * The same, with each entry's URL key and file: how a built page is traced
+   * back to the entry that produced it (spec §6.18, layer 2).
+   */
+  async pageEntries(): Promise<(PageLink & { key: string; path: string })[]> {
+    const found: (PageLink & { key: string; path: string })[] = [];
     for (const collection of this.manifest.collections) {
       const pattern = this.patternOf(collection);
       if (pattern === undefined) continue;
@@ -244,6 +257,8 @@ export class PageService {
           id: entry.id,
           title: titleOf(collection, entry.data, entry.id),
           url: formatUrl(key, this.settings),
+          key,
+          path: entry.path,
         });
       }
     }
