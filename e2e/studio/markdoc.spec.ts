@@ -58,13 +58,37 @@ async function openOnNewLine(page: Page) {
   await expect(body).toBeVisible();
   // Focus the text, as Tab would; from here on, keys only.
   await body.focus();
-  await page.keyboard.press('Control+End');
+  await moveCaret(page, 'Control+End');
   await page.keyboard.press('Enter');
 }
 
 async function save(page: Page, expected: string) {
   await page.keyboard.press('Control+s');
   await expect.poll(() => read(DOC)).toBe(expected);
+}
+
+/** Waits until the live region says which block is selected, so the next key acts on it. */
+async function selected(page: Page, label: string) {
+  await expect(page.locator('p.sr-only[role="status"]')).toHaveText(
+    `${label} selected. Press Enter for its settings.`,
+  );
+}
+
+/**
+ * Presses a key the browser handles itself (Home, End) and waits for its
+ * selectionchange. ProseMirror learns of native caret moves from that event,
+ * and a paste or arrow key sent before it lands would act on the old caret.
+ */
+async function moveCaret(page: Page, key: string) {
+  await page.evaluate(() => {
+    const scope = window as { caretMoved?: Promise<void> };
+    scope.caretMoved = new Promise((resolve) => {
+      document.addEventListener('selectionchange', () => setTimeout(resolve, 0), { once: true });
+      setTimeout(resolve, 2000);
+    });
+  });
+  await page.keyboard.press(key);
+  await page.evaluate(() => (window as { caretMoved?: Promise<void> }).caretMoved);
 }
 
 /** The guide with `block` moved above its last line. */
@@ -99,10 +123,12 @@ test('a callout: inserted with "/", configured, moved and removed by keyboard al
   await save(page, `${before}\n${callout}\n`);
 
   // Still selected: Alt+Up moves it above the last line.
+  await selected(page, 'Callout');
   await page.keyboard.press('Alt+ArrowUp');
   await save(page, aboveLastLine(before, callout));
 
   // Delete removes it, and the file is as it was.
+  await selected(page, 'Callout');
   await page.keyboard.press('Delete');
   await save(page, before);
 });
@@ -130,26 +156,33 @@ test('a YouTube video: inserted from the toolbar, configured by Enter, moved and
   await page.keyboard.press('Tab');
   await page.keyboard.type('Installing in two minutes');
   await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   const video = '{% youtube id="VsprDemo009" title="Installing in two minutes" /%}';
   await save(page, `${before}\n${video}\n`);
 
   // Selected after its settings close: Enter opens them again.
+  await selected(page, 'YouTube video');
   await page.keyboard.press('Enter');
-  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('textbox', { name: /Video ID/ })).toBeFocused();
   await page.keyboard.press('Tab');
   await page.keyboard.press('End');
   await page.keyboard.type(', with captions');
   await page.keyboard.press('Tab');
   await page.keyboard.press('Space');
+  await expect(dialog.getByRole('switch', { name: 'The video has captions' })).toBeChecked();
   await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   const configured =
     '{% youtube id="VsprDemo009" title="Installing in two minutes, with captions" captions=true /%}';
   await save(page, `${before}\n${configured}\n`);
 
+  await selected(page, 'YouTube video');
   await page.keyboard.press('Alt+ArrowUp');
   await save(page, aboveLastLine(before, configured));
+  await selected(page, 'YouTube video');
   await page.keyboard.press('Alt+ArrowDown');
   await save(page, `${before}\n${configured}\n`);
+  await selected(page, 'YouTube video');
   await page.keyboard.press('Delete');
   await save(page, before);
 });
@@ -172,18 +205,24 @@ test('an abbreviation: inserted inline, configured, moved with cut and paste, an
   await page.keyboard.press('Tab');
   await page.keyboard.type('CMS');
   await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   const abbr = '{% abbr title="content management system" %}CMS{% /abbr %}';
   await save(page, `${before}\nUse it in the ${abbr}\n`);
 
-  // Moved by keyboard: the chip is selected; cut it, go to the line's start, paste.
+  // Moved by keyboard: from the line's end, the left arrow selects the chip;
+  // cut it, go to the line's start, paste.
+  await moveCaret(page, 'End');
+  await page.keyboard.press('ArrowLeft');
+  await selected(page, 'Abbreviation');
   await page.keyboard.press('Control+x');
-  await page.keyboard.press('Home');
+  await moveCaret(page, 'Home');
   await page.keyboard.press('Control+v');
   await save(page, `${before}\n${abbr}Use it in the\n`);
 
-  // Removed: select it with Shift+Right from the line's start, then Delete.
-  await page.keyboard.press('Home');
-  await page.keyboard.press('Shift+ArrowRight');
+  // Removed: from the line's start, the right arrow selects it; Delete removes it.
+  await moveCaret(page, 'Home');
+  await page.keyboard.press('ArrowRight');
+  await selected(page, 'Abbreviation');
   await page.keyboard.press('Delete');
   await save(page, `${before}\nUse it in the\n`);
 });
@@ -203,9 +242,12 @@ test('a partial: inserted pointing at the nearest partial file, moved and remove
   );
   await expectAccessible(page);
   await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   await save(page, `${before}\n${PARTIAL}\n`);
+  await selected(page, 'Partial');
   await page.keyboard.press('Alt+ArrowUp');
   await save(page, aboveLastLine(before, PARTIAL));
+  await selected(page, 'Partial');
   await page.keyboard.press('Delete');
   await save(page, before);
 });
