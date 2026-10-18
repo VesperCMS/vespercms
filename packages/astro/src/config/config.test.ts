@@ -119,6 +119,28 @@ describe('URLs, trees and redirects', () => {
   });
 });
 
+describe('collection icons', () => {
+  it('accepts a Lucide icon name', () => {
+    expect(checkConfig({ collections: { events: { icon: 'calendar-days' } } })).toEqual([]);
+  });
+
+  it('explains a name that isn’t written as Lucide lists them', () => {
+    const problem = (name: string) => ({
+      level: 'error',
+      message: `collections.${name}.icon must be a Lucide icon name as lucide.dev/icons lists it, such as "newspaper" or "calendar-days".`,
+    });
+    expect(
+      checkConfig({
+        collections: {
+          blog: { icon: 'CalendarDays' },
+          docs: { icon: 'book open' },
+          faq: { icon: 3 },
+        },
+      }),
+    ).toEqual([problem('blog'), problem('docs'), problem('faq')]);
+  });
+});
+
 describe('images', () => {
   it('accepts ratios and an upload limit', () => {
     expect(

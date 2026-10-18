@@ -1,9 +1,10 @@
 import type { CollectionManifest, CollectionSummary } from '@vesper/core';
-import { InlineStatus, Link } from '@vesper/ui';
+import { Icon, InlineStatus, Link } from '@vesper/ui';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor } from '../app/router.ts';
+import { collectionIcon } from '../app/collection-icon.ts';
 import { Screen } from '../app/Screen.tsx';
 
 /**
@@ -78,9 +79,12 @@ function CollectionList({
             key={collection.name}
             className="flex min-h-12 flex-wrap items-center justify-between gap-x-6 gap-y-1 py-3"
           >
-            <Link variant="title" href={hrefFor({ screen: 'list', collection: collection.name })}>
-              {collection.label}
-            </Link>
+            <span className="flex min-w-0 items-center gap-3">
+              <Icon {...collectionIcon(collection)} className="text-content-muted" />
+              <Link variant="title" href={hrefFor({ screen: 'list', collection: collection.name })}>
+                {collection.label}
+              </Link>
+            </span>
             <CollectionFacts
               collection={collection}
               summary={summaries.get(collection.name)}

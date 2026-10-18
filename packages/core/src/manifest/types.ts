@@ -84,6 +84,9 @@ export type ReadOnlyCollectionReason =
 
 export type SchedulePresentation = { unpublish: boolean; publishAt: string; unpublishAt: string };
 
+/** One icon's drawing: Lucide's `[tag, attributes][]` on a 24-unit grid. */
+export type IconNode = [tag: string, attributes: Record<string, string | number>][];
+
 export type CollectionPresentation = {
   singleton?: boolean;
   tree?: boolean;
@@ -97,6 +100,8 @@ export type CollectionPresentation = {
   maxDepth?: number;
   /** The level the body's top headings should have (spec §6.18). 2 when absent: the title is the page's h1. */
   headingStart?: number;
+  /** The Lucide icon vesper.config.ts names for it, with its drawing (DECISIONS.md). */
+  icon?: { name: string; node: IconNode };
 };
 
 export type CollectionManifest = {

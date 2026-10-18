@@ -21,6 +21,7 @@ import { walkSchema } from '../schema/walk.ts';
 import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
 import { manifestHash } from './hash.ts';
 import type {
+  IconNode,
   CollectionManifest,
   CollectionPresentation,
   CollectionSource,
@@ -60,6 +61,8 @@ export type CollectionConfig = {
   maxDepth?: number;
   /** The level the body's top headings should have (spec §6.18). 2 by default. */
   headingStart?: number;
+  /** A Lucide icon name, in kebab case as lucide.dev lists them ("newspaper"). */
+  icon?: string;
 };
 
 export type ManifestInput = {
@@ -94,6 +97,11 @@ export type ManifestInput = {
     options: { allowHTML?: boolean; ignoreIndentation?: boolean };
   };
   forms?: { name: string; schema: unknown; options?: Record<string, unknown> }[];
+  /**
+   * The drawings of the icons collections name, by name, resolved by whoever
+   * loaded the config (core imports no icon set). A name missing here gets no icon.
+   */
+  icons?: Record<string, IconNode>;
   /** Problems found while loading the site's configs. */
   diagnostics?: Diagnostic[];
   generator?: { name: string; version: string };
@@ -116,8 +124,9 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
     }
   }
 
+  const icons = input.icons ?? {};
   const collections = input.collections.map((collection) =>
-    buildCollection(collection, configured[collection.name] ?? {}, widgets, diagnostics),
+    buildCollection(collection, configured[collection.name] ?? {}, widgets, diagnostics, icons),
   );
 
   const forms: FormManifest[] = (input.forms ?? []).map((form) => {
@@ -315,6 +324,7 @@ function buildCollection(
   config: CollectionConfig,
   widgets: Record<string, WidgetDefinition>,
   diagnostics: Diagnostic[],
+  icons: Record<string, IconNode>,
 ): CollectionManifest {
   const source = sourceOf(input.loader);
   const formats =
@@ -372,7 +382,7 @@ function buildCollection(
     entryKind: source.loader === 'file' ? 'data' : entryKindOf(formats),
     fields,
     ...(extraKeys ? { extraKeys } : {}),
-    presentation: presentationOf(config),
+    presentation: presentationOf(config, icons),
   };
 }
 
@@ -452,7 +462,10 @@ function sourceOf(loader: LoaderInfo): CollectionSource {
   return loader.name ? { loader: 'other', name: loader.name } : { loader: 'other' };
 }
 
-function presentationOf(config: CollectionConfig): CollectionPresentation {
+function presentationOf(
+  config: CollectionConfig,
+  icons: Record<string, IconNode>,
+): CollectionPresentation {
   const presentation: CollectionPresentation = {};
   if (config.singleton !== undefined) presentation.singleton = config.singleton;
   if (config.tree !== undefined) presentation.tree = config.tree;
@@ -466,6 +479,17 @@ function presentationOf(config: CollectionConfig): CollectionPresentation {
   const start = config.headingStart;
   if (typeof start === 'number' && Number.isInteger(start) && start >= 1 && start <= 6)
     presentation.headingStart = start;
+  // Own keys only: a name such as "constructor" mustn't reach Object.prototype.
+  const node =
+    typeof config.icon === 'string' && Object.hasOwn(icons, config.icon)
+      ? icons[config.icon]
+      : undefined;
+  if (config.icon && node) {
+    presentation.icon = {
+      name: config.icon,
+      node: node.map(([tag, attributes]) => [tag, { ...attributes }]),
+    };
+  }
   return presentation;
 }
 

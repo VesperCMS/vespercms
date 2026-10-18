@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { EntryDocument, EntrySummary, SaveRequest } from '@vesper/core';
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { Icon } from '@vesper/ui';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WIDE_EDITOR } from '../app/media.ts';
@@ -72,6 +73,37 @@ function setup(hash: string) {
   const result = renderStudio(hash, { api });
   return { ...result, api, user: userEvent.setup() };
 }
+
+describe('collection icons', () => {
+  const drawing = (element: Element | null | undefined) => element?.querySelector('svg')?.innerHTML;
+  const defaultIcon = (name: 'tree' | 'collection') => {
+    const { container, unmount } = render(<Icon name={name} />);
+    const html = drawing(container);
+    unmount();
+    return html;
+  };
+
+  it('draws the icon vesper.config.ts names, or a default by kind', async () => {
+    const { user } = setup('#/');
+    const blog = await screen.findByRole('link', { name: 'Blog posts' });
+    const newspaper = drawing(blog.closest('li'));
+    expect(newspaper).toContain('d="M15 18h-5"');
+    expect(drawing(screen.getByRole('link', { name: 'Pages' }).closest('li'))).toBe(
+      defaultIcon('tree'),
+    );
+    expect(newspaper).not.toBe(defaultIcon('collection'));
+
+    await user.click(screen.getByRole('button', { name: 'Content' }));
+    expect(drawing(await screen.findByRole('menuitem', { name: 'Blog posts' }))).toBe(newspaper);
+  });
+
+  it('puts the icon before a collection’s heading, hidden from screen readers', async () => {
+    setup('#/c/blog');
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Blog posts' });
+    expect(heading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(drawing(heading)).toContain('d="M15 18h-5"');
+  });
+});
 
 describe('the entry list', () => {
   it('shows each entry’s title, list fields and status in words, newest first', async () => {

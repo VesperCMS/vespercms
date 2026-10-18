@@ -1,7 +1,8 @@
-import { cx, Menu, VesperMark } from '@vesper/ui';
+import { cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useStudio } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
+import { collectionIcon } from './collection-icon.ts';
 import { hrefFor, navigate, parseRoute } from './router.ts';
 
 export type ScreenProps = {
@@ -15,6 +16,8 @@ export type ScreenProps = {
   afterglow?: boolean;
   /** Line the heading up with the editor's 720px column. */
   column?: boolean;
+  /** An icon before the heading: a collection's. */
+  icon?: { node: IconNode } | { name: IconName };
   children: ReactNode;
 };
 
@@ -30,6 +33,7 @@ export function Screen({
   bar,
   afterglow = false,
   column = false,
+  icon,
   children,
 }: ScreenProps) {
   const { siteName } = useStudio();
@@ -92,10 +96,12 @@ export function Screen({
               ? 'sr-only'
               : cx(
                   'mb-8 text-heading-1 text-content outline-none',
+                  icon && 'flex items-center gap-3',
                   column && 'mx-auto max-w-editor',
                 )
           }
         >
+          {icon && !hideTitle && <Icon {...icon} size={24} className="text-content-muted" />}
           {title}
         </h1>
         {children}
@@ -109,11 +115,15 @@ function DefaultBar() {
   const { manifest, siteUrl } = useStudio();
   const route = parseRoute(window.location.hash);
   const here = 'collection' in route ? route.collection : null;
-  const items = manifest.collections.map((collection) => ({
-    id: collection.name,
-    label: collection.label,
-    isCurrent: collection.name === here,
-  }));
+  const items = manifest.collections.map((collection) => {
+    const icon = collectionIcon(collection);
+    return {
+      id: collection.name,
+      label: collection.label,
+      isCurrent: collection.name === here,
+      icon: 'node' in icon ? icon.node : icon.name,
+    };
+  });
   return (
     <nav aria-label="Studio" className="ml-auto flex items-center gap-2">
       <Menu

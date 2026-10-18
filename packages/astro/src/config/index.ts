@@ -105,6 +105,9 @@ const KNOWN_TOP_LEVEL = new Set([
   'redirects',
   'a11y',
 ]);
+/** A Lucide icon name: lower-case words and numbers joined by hyphens. */
+const ICON_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const KNOWN_COLLECTION = new Set([
   'label',
   'singleton',
@@ -117,6 +120,7 @@ const KNOWN_COLLECTION = new Set([
   'placement',
   'maxDepth',
   'headingStart',
+  'icon',
 ]);
 
 /**
@@ -164,11 +168,18 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
             });
           }
         }
-        const { url, maxDepth, headingStart } = value as {
+        const { url, maxDepth, headingStart, icon } = value as {
           url?: unknown;
           maxDepth?: unknown;
           headingStart?: unknown;
+          icon?: unknown;
         };
+        if (icon !== undefined && !(typeof icon === 'string' && ICON_NAME.test(icon))) {
+          problems.push({
+            level: 'error',
+            message: `collections.${name}.icon must be a Lucide icon name as lucide.dev/icons lists it, such as "newspaper" or "calendar-days".`,
+          });
+        }
         if (url !== undefined && typeof url !== 'string' && typeof url !== 'function') {
           problems.push({
             level: 'error',

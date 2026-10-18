@@ -16,6 +16,7 @@ import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
+import { collectionIcon } from '../app/collection-icon.ts';
 import { Screen } from '../app/Screen.tsx';
 
 /*
@@ -174,7 +175,11 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
   });
 
   return (
-    <Screen title={collection.label} afterglow={load.state === 'ready' && rows.length === 0}>
+    <Screen
+      title={collection.label}
+      icon={collectionIcon(collection)}
+      afterglow={load.state === 'ready' && rows.length === 0}
+    >
       {!editable && (
         <p className="mb-6 max-w-2xl text-content-muted">
           {collection.label} can be read here but not edited.

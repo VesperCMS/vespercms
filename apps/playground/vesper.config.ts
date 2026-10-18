@@ -71,26 +71,35 @@ export default defineConfig({
   a11y: {
     backgrounds: { 'Page, light': '#ffffff', 'Page, dark': '#12151f' },
   },
+  // Icons are Lucide's names (lucide.dev/icons), resolved at build; the studio
+  // shows each beside its collection's name.
   collections: {
     blog: {
       label: 'Blog posts',
+      icon: 'newspaper',
       url: '/blog/:id',
       listFields: ['title', 'publishedAt'],
       newEntryPath: ':slug',
     },
-    authors: { label: 'People' },
+    authors: { label: 'People', icon: 'users' },
     pages: { label: 'Pages', url: '/:path', tree: true },
-    docs: { label: 'Docs', url: '/docs/:id' },
-    settings: { label: 'Site settings', singleton: true },
-    locations: { label: 'Locations' },
+    docs: { label: 'Docs', url: '/docs/:id', icon: 'book-open' },
+    settings: { label: 'Site settings', singleton: true, icon: 'settings' },
+    locations: { label: 'Locations', icon: 'map-pin' },
     events: {
       label: 'Events',
+      icon: 'calendar-days',
       url: '/events/:id',
       schedule: true,
       // Dates go to Details by default; an event's own times belong up front.
       placement: { startsAt: 'main', endsAt: 'main' },
     },
     // The URL lets the build's accessibility report trace the page to its entry.
-    fixtures: { label: 'Accessibility fixtures', url: '/fixtures/:id', search: false },
+    fixtures: {
+      label: 'Accessibility fixtures',
+      url: '/fixtures/:id',
+      search: false,
+      icon: 'flask-conical',
+    },
   },
 });

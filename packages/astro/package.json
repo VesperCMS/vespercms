@@ -66,12 +66,13 @@
     "axe-core": "^4.14.0",
     "jsdom": "^30.1.3"
   },
-  "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3). React is the studio's, shared with the site's custom widgets (spec §6.3.3). sharp is the copy Astro's own image service already loads; the crop step needs it too, and optional because a site without Astro's Sharp service never loads the crop step.",
+  "//peerDependencies": "The site's own Astro: schemas, loaders and Zod must come from the same copy the site builds with (spec §6.3). React is the studio's, shared with the site's custom widgets (spec §6.3.3). sharp is the copy Astro's own image service already loads; the crop step needs it too, and optional because a site without Astro's Sharp service never loads the crop step. lucide resolves the icons collections name in vesper.config.ts, at build; optional because a site that names none needn't install it.",
   "peerDependencies": {
     "astro": "^6.0.0 || ^7.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "sharp": ">=0.34.0"
+    "sharp": ">=0.34.0",
+    "lucide": ">=1.0.0"
   },
   "//devDependencies": "Tailwind compiles the studio stylesheet from source in this workspace only; published sites get dist/studio.css.",
   "devDependencies": {
@@ -82,6 +83,9 @@
   },
   "peerDependenciesMeta": {
     "sharp": {
+      "optional": true
+    },
+    "lucide": {
       "optional": true
     }
   }

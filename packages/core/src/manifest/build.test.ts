@@ -299,3 +299,42 @@ describe('buildManifest: accessibility (spec §6.18)', () => {
     ]);
   });
 });
+
+describe('buildManifest: collection icons', () => {
+  const blog = {
+    name: 'blog',
+    loader: { kind: 'glob', base: './src/content/blog', pattern: '**/*.md', customId: false },
+    schema: z.object({ title: z.string() }),
+  };
+  const newspaper: NonNullable<ManifestInput['icons']>[string] = [
+    ['path', { d: 'M15 18h-5' }],
+    ['rect', { width: 8, height: 4, x: 10, y: 6, rx: 1 }],
+  ];
+
+  it('carries the drawing of the icon the config names', async () => {
+    const icons = { newspaper };
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [blog] as ManifestInput['collections'],
+      config: { collections: { blog: { icon: 'newspaper' } } },
+      icons,
+    });
+    expect(manifest.collections[0]?.presentation.icon).toEqual({
+      name: 'newspaper',
+      node: newspaper,
+    });
+    expect(manifest.collections[0]?.presentation.icon?.node).not.toBe(newspaper);
+  });
+
+  it('leaves the icon out when its drawing wasn’t loaded, so the studio shows the default', async () => {
+    for (const icon of ['calendar-days', 'constructor', '__proto__']) {
+      const manifest = await buildManifest({
+        site: { srcDir: 'src' },
+        collections: [blog] as ManifestInput['collections'],
+        config: { collections: { blog: { icon } } },
+        icons: { newspaper },
+      });
+      expect(manifest.collections[0]?.presentation.icon).toBeUndefined();
+    }
+  });
+});

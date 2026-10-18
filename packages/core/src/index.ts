@@ -123,6 +123,7 @@ export type {
   CollectionManifest,
   CollectionSource,
   CollectionPresentation,
+  IconNode,
   FormManifest,
   ReadOnlyCollectionReason,
   SchedulePresentation,

@@ -6,6 +6,7 @@ import { useStudio } from '../app/context.tsx';
 import { formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
+import { collectionIcon } from '../app/collection-icon.ts';
 import { Screen } from '../app/Screen.tsx';
 
 type Filter = 'all' | 'drafts' | 'attention';
@@ -63,7 +64,11 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
   }, [entries, query, filter, sort]);
 
   return (
-    <Screen title={collection.label} afterglow={load.state === 'ready' && entries.length === 0}>
+    <Screen
+      title={collection.label}
+      icon={collectionIcon(collection)}
+      afterglow={load.state === 'ready' && entries.length === 0}
+    >
       {!collection.editable && (
         <p className="mb-6 max-w-2xl text-content-muted">
           {collection.label} can be read here but not edited.

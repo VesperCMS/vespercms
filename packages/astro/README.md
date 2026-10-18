@@ -120,6 +120,18 @@ export default defineConfig({
 
 It holds presentation, URLs, widgets and permissions, never field definitions (D2). Unknown keys warn rather than fail.
 
+### Collection icons
+
+```ts
+collections: {
+  blog: { icon: 'newspaper' },
+  events: { icon: 'calendar-days' },
+},
+```
+
+- **`icon`** names a [Lucide](https://lucide.dev/icons) icon as that page lists it, in kebab case. The studio shows it beside the collection's name on Home, in the Content menu and before the collection's heading. Without one, a collection gets a page, a tree collection an outline and a singleton sliders.
+- The drawing is looked up when the manifest is built, from the site's own `lucide` package, so the studio never carries the whole icon set. `lucide` is an optional peer dependency: install it (`npm install lucide`) only if you name an icon. Without it, or for a name Lucide doesn't have, the build warns and the collection keeps its default.
+
 ### URLs, trees and redirects (spec §6.15)
 
 ```ts

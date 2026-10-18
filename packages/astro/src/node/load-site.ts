@@ -7,6 +7,7 @@ import {
   VESPER_META_KEY,
   type CollectionInput,
   type Diagnostic,
+  type IconNode,
   patternExtensions,
   type LoaderInfo,
   type ManifestInput,
@@ -187,6 +188,8 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
       }
     }
 
+    const icons = await loadIcons(server, config, diagnostics);
+
     const usesMarkdoc = collections.some(
       (c) => c.loader.kind === 'glob' && patternExtensions(c.loader.pattern).includes('mdoc'),
     );
@@ -218,12 +221,78 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
           }
         : {}),
       ...(markdoc ? { markdoc } : {}),
+      ...(Object.keys(icons).length > 0 ? { icons } : {}),
       forms,
       diagnostics,
     };
   } finally {
     await server.close();
   }
+}
+
+/**
+ * The drawings of the Lucide icons collections name (DECISIONS.md, "A
+ * collection's icon is named in vesper.config.ts"), from the site's own
+ * `lucide`, an optional peer: a site that names no icon needn't install it.
+ * A name that can't be resolved warns, and its collection keeps its default.
+ */
+async function loadIcons(
+  server: ViteDevServer,
+  config: VesperConfig | undefined,
+  diagnostics: Diagnostic[],
+): Promise<Record<string, IconNode>> {
+  const wanted = Object.entries(config?.collections ?? {}).flatMap(([collection, settings]) =>
+    typeof settings.icon === 'string' ? [{ collection, name: settings.icon }] : [],
+  );
+  if (wanted.length === 0) return {};
+  let icons: Record<string, unknown>;
+  try {
+    ({ icons } = (await server.ssrLoadModule('lucide')) as { icons: Record<string, unknown> });
+  } catch {
+    diagnostics.push({
+      level: 'warning',
+      code: 'vesper-config',
+      message:
+        'Collection icons need the lucide package: run "npm install lucide". Until then each collection shows its default icon.',
+    });
+    return {};
+  }
+  const found: Record<string, IconNode> = {};
+  for (const { collection, name } of wanted) {
+    const node = icons[pascalCase(name)];
+    if (isIconNode(node)) {
+      found[name] = node;
+    } else {
+      diagnostics.push({
+        level: 'warning',
+        code: 'vesper-config',
+        message: `collections.${collection}.icon: "${name}" isn't a Lucide icon name, so the collection shows its default icon. Names are as lucide.dev/icons lists them, such as "newspaper".`,
+        collection,
+      });
+    }
+  }
+  return found;
+}
+
+/** "calendar-days" → "CalendarDays", as lucide names its exports. */
+function pascalCase(name: string): string {
+  return name
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+}
+
+function isIconNode(value: unknown): value is IconNode {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (part) =>
+        Array.isArray(part) &&
+        typeof part[0] === 'string' &&
+        typeof part[1] === 'object' &&
+        part[1] !== null,
+    )
+  );
 }
 
 type MarkdocOptions = { allowHTML?: boolean; ignoreIndentation?: boolean };

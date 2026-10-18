@@ -12,10 +12,11 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@vesper/astro": "0.0.0",
     "@astrojs/markdoc": "^2.1.0",
     "@astrojs/mdx": "^8.1.0",
-    "astro": "^7.4.0"
+    "@vesper/astro": "0.0.0",
+    "astro": "^7.4.0",
+    "lucide": "^1.59.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10"
