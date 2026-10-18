@@ -11,7 +11,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18), merged into main (4e311a7); every check passes on the merge. See "Phase 2.6: outcome" below. |
-| 2.7 Focal points, crops and `<Img>` | Done (2026-10-18) on main, not yet pushed; every local check passes. See "Phase 2.7: outcome" below. |
+| 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 onward | Roadmap below |
 
 ## Phase 0: Scaffold
