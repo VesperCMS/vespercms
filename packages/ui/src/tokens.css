@@ -303,7 +303,12 @@
     ::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+      /*
+       * None at all, not a near-zero duration: React Aria waits for running
+       * transitions before it moves focus, and very short ones could leave it
+       * waiting for good.
+       */
+      transition-property: none !important;
       scroll-behavior: auto !important;
     }
   }

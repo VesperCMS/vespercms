@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   Button as RACButton,
   Dialog as RACDialog,
@@ -11,7 +11,6 @@ import {
   Modal,
   ModalOverlay,
   Popover,
-  Separator,
   type Key,
 } from 'react-aria-components';
 import { IconButton } from './Button.tsx';
@@ -162,7 +161,7 @@ export function Menu({ label, items, onAction, triggerText }: MenuProps) {
       {triggerText ? (
         <RACButton
           className={cx(
-            'inline-flex min-h-10 items-center gap-1 rounded-md px-3 text-body text-content data-[hovered]:bg-surface-sunken',
+            'inline-flex min-h-10 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
             colorTransition,
             focusRing,
           )}
@@ -179,15 +178,20 @@ export function Menu({ label, items, onAction, triggerText }: MenuProps) {
           onAction={(key: Key) => {
             onAction(String(key));
           }}
+          items={items}
           disabledKeys={items.filter((item) => item.isDisabled).map((item) => item.id)}
           className="outline-none"
         >
-          {items.map((item, index) => (
-            <Fragment key={item.id}>
-              {/* Destructive items go last, after a hairline. */}
-              {item.isDanger && index > 0 && !items[index - 1]?.isDanger && (
-                <Separator className="mx-2 my-1 border-t border-border" />
-              )}
+          {/*
+           * Rendered from `items`, not as static children: opened from the
+           * keyboard, React Aria then focuses the first item itself.
+           */}
+          {(item) => {
+            const index = items.indexOf(item);
+            // Destructive items go last, after a hairline (drawn, so it isn't a stop).
+            const afterHairline =
+              item.isDanger === true && index > 0 && !items[index - 1]?.isDanger;
+            return (
               <RACMenuItem
                 id={item.id}
                 textValue={item.label}
@@ -196,12 +200,14 @@ export function Menu({ label, items, onAction, triggerText }: MenuProps) {
                   'data-[focused]:bg-accent-subtle data-[disabled]:opacity-50',
                   item.isDanger ? 'text-danger' : 'text-content',
                   item.isCurrent && 'bg-accent-subtle shadow-glow-selected',
+                  afterHairline &&
+                    "relative mt-2 before:pointer-events-none before:absolute before:inset-x-2 before:-top-1 before:border-t before:border-border before:content-['']",
                 )}
               >
                 {item.label}
               </RACMenuItem>
-            </Fragment>
-          ))}
+            );
+          }}
         </RACMenu>
       </Popover>
     </MenuTrigger>
@@ -236,7 +242,8 @@ export function Disclosure({ title, children, level = 2, ...props }: DisclosureP
             focusRing,
           )}
         >
-          <Chevron className="-rotate-90 transition-transform duration-180 ease-out group-data-[expanded]:rotate-0" />
+          {/* Turned at once: a transition here would hold back React Aria's focus moves. */}
+          <Chevron className="-rotate-90 group-data-[expanded]:rotate-0" />
           {title}
         </RACButton>
       </Heading>

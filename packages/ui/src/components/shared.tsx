@@ -20,8 +20,15 @@ export const focusRing = cx(
   focusHalo,
 );
 
-/** Colour changes ease in over 120ms; reduced motion removes it (tokens.css). */
-export const colorTransition = 'transition-colors duration-120 ease-out';
+/**
+ * Hover colours ease in over 120ms; reduced motion removes it (tokens.css).
+ * Never the focus ring's colour, nor anything that changes as focus moves:
+ * when a screen reader (or code) clicks, React Aria waits for every running
+ * transition to end before it moves focus, so a transition there leaves focus
+ * on the page in the meantime (DECISIONS.md, "Transitions never touch focus").
+ */
+export const colorTransition =
+  'transition-[color,background-color,border-color] duration-120 ease-out';
 
 /** The shared look of a single-line input or a select trigger: a hairline, a sunken fill. */
 export const fieldControl = cx(

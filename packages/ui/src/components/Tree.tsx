@@ -118,12 +118,8 @@ export function Tree<T extends TreeNode>({
                   focusRing,
                 )}
               >
-                <Chevron
-                  className={cx(
-                    'transition-transform duration-180 ease-out',
-                    isExpanded ? 'rotate-0' : '-rotate-90',
-                  )}
-                />
+                {/* Turned at once: a transition here would hold back React Aria's focus moves. */}
+                <Chevron className={isExpanded ? 'rotate-0' : '-rotate-90'} />
               </RACButton>
             ) : (
               <span aria-hidden="true" className="inline-block size-8 shrink-0" />
