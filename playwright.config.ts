@@ -31,8 +31,12 @@ export default defineConfig({
     {
       name: 'studio',
       testMatch: 'studio/*.spec.ts',
-      // The tests share one site on disk, so they run one at a time.
+      // The tests share one site on disk, so they run one at a time, in one
+      // worker. `fullyParallel: false` alone only orders a file's own tests:
+      // the two spec files, and each --repeat-each copy, would still run side
+      // by side and overwrite each other's files.
       fullyParallel: false,
+      workers: 1,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${String(STUDIO_PORT)}` },
     },
   ],

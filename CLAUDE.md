@@ -39,6 +39,8 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 
 **Never serve `scripts/studio-site.mjs` yourself while `npm run e2e` runs.** Both use the one copy in `e2e/.studio-site`, and two dev servers over the same files make the tests' saves fail.
 
+**Don't edit `packages/` or the playground's config while `npm run e2e` runs in the same checkout, from this session or another.** The studio tests run `astro dev` from source, so Vite reloads `/admin` mid-test and the test's unsaved edits are lost. `markdoc.spec.ts` fails such a test with "The studio reloaded mid-test".
+
 **On Windows, stopping a background `npm run dev` leaves `astro dev` running, and it locks native modules so `npm ci` fails with EPERM.** Find the tree's root shell and stop it with `taskkill /PID <pid> /T /F`. Never kill Node processes that belong to other projects.
 
 | Command | What it does |

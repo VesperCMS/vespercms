@@ -46,9 +46,16 @@ test.beforeEach(async ({ context, baseURL }) => {
   write(DOC, `${original.get(DOC) ?? ''}\nLast line.\n`);
 });
 
+/** Pages that reloaded after the test opened the guide. */
+const reloaded = new WeakSet<Page>();
+
 // Every test leaves the playground's text as it found it.
-test.afterEach(() => {
+test.afterEach(({ page }) => {
   for (const [path, text] of original) write(path, text);
+  // astro dev reloads /admin when a file the studio is built from changes,
+  // say an edit to packages/ while the tests run. The unsaved edits go with
+  // the page, and the next save then looks lost; this names the real cause.
+  expect(reloaded.has(page), 'The studio reloaded mid-test and lost its edits').toBe(false);
 });
 
 /** Opens the writing-callouts guide on a new, empty line at the end of its body. */
@@ -60,6 +67,7 @@ async function openOnNewLine(page: Page) {
   await body.focus();
   await moveCaret(page, 'Control+End');
   await page.keyboard.press('Enter');
+  page.on('load', () => reloaded.add(page));
 }
 
 async function save(page: Page, expected: string) {

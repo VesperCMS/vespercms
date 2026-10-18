@@ -107,6 +107,14 @@ Rejected:
 
 `serve` and `sirv` were rejected because their clean-URL and single-page-app modes would hide exactly the bugs D16 forbids. The same server becomes the spec §6.16 test-matrix host: later phases add `/admin` deep links, redirects, forms and search to the suite. The e2e run also blocks every request that isn't to the local site, so a page that only renders correctly with network access fails the test.
 
+### 2026-10-18: The studio e2e tests run in one worker, and fail loudly when the studio reloads
+
+**The `studio` Playwright project sets `workers: 1` as well as `fullyParallel: false`. `markdoc.spec.ts` fails a test whose page reloaded after it opened the guide, with "The studio reloaded mid-test".** Every studio test shares one copy of the playground (`e2e/.studio-site`) and one `astro dev`. `fullyParallel: false` only keeps a file's own tests in order. `studio.spec.ts` and `markdoc.spec.ts` still ran side by side in two workers, and `--repeat-each 6` ran its six copies in six workers, each one appending "Last line." to the same guide and restoring it. The YouTube test failed 6 of 6 that way. With one worker it passes 10 of 10.
+
+The other cause came from outside the tests. `astro dev` serves the studio from `packages/*/src`, so an edit there during a run makes Vite reload `/admin`, which throws the editor's unsaved edits away. In the one full-run failure captured, another session had edited `BodyEditor.tsx` 30 ms before the reload. The test then failed on whatever it checked next, a save that never landed or a block no longer selected, so the new check names the real cause instead.
+
+Longer timeouts were rejected because slowness wasn't the cause. With nothing edited during the run, the full suite passed ten times in a row before this change. The YouTube test also passed 5 of 5 with Chromium's CPU slowed sixfold, as long as it ran in one worker.
+
 ### 2026-10-17: axe gates on WCAG 2.1 A/AA and reports 2.2
 
 **Every built page must have zero axe violations for `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa`. `wcag22aa` findings are attached to the test as annotations but don't fail it.** D11 makes 2.1 AA the floor and 2.2 AA a goal "where it's cheap." Pages that are deliberately broken test fixtures are listed, with the reason, in `AXE_EXCLUDED` in `e2e/static-site.spec.ts`. They still have to load.
