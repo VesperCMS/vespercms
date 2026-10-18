@@ -341,8 +341,24 @@ Every studio screen now follows Vesper's design system (Pine) in both themes. Je
 **Not built** (the design system shows them; listed in "Studio design pass (plan)"): the ⌘K palette, site switcher and user menu; the Preview toggle; history, duplicate and copy link; a studio light/dark switch; the home greeting and sign-in; shortcuts in menus; choosing an accent. Also not done: the toolbar's "More" menu for overflow (it wraps instead), a spinner on a pending button, tags inside the combobox's field, and the 180ms chevron rotation (dropped, see above).
 
 **Follow-ups noted, not blocking:**
-- In `astro dev` (React's development build) the first Tab on a fresh load starts after the screen's heading: StrictMode runs the navigation effect twice, so the heading takes focus on load. Production builds don't. Worth a small fix in the router.
+- ~~In `astro dev` (React's development build) the first Tab on a fresh load starts after the screen's heading.~~ Fixed (de40775): the navigation count ignores StrictMode's second run, with a test in StrictMode.
 - The overlays' 93% fill makes the glass subtler than the design system's previews; if Jeremy wants it lighter, the contrast check shows exactly what fails below 93%.
+
+### Icons (after the design pass, 2026-10-18)
+
+Jeremy asked for icons, the body editor's toolbar first. His calls are in DECISIONS.md: Lucide's icons beside words; the body's formatting tools as icons alone, with tooltips (an exception to spec §10.4); and an icon per collection, named in `vesper.config.ts`.
+
+- **Kit:** `Icon` draws the kit's 41 Lucide icons by name, or a drawing from the manifest, at 1.75px at every size and always `aria-hidden`. `Button`, `ButtonLink`, `Link`, `FileButton`, `TextField` and `Menu` items take an `icon`. `Tooltip` is React Aria's. A toolbar tool given `icon`, `label` and `shortcut` is icon-only: the label is its name, the tooltip shows the label and shortcut on hover and keyboard focus, and `aria-keyshortcuts` carries the shortcut (Mac-aware).
+- **Studio:** the body's and the Markdown widget's formatting tools are icons; primary and secondary actions, menu items, back links, search fields, the Insert menu and the notes' warning mark carry an icon beside their words; non-image files in Media and the picker show a file-type icon.
+- **Collection icons:** `collections.<name>.icon` (`'newspaper'`) is resolved at build from the site's own `lucide`, an optional peer of `@vesper/astro`, and only that drawing goes into the manifest (`presentation.icon`). Home, the Content menu and the collection's heading show it; without one, a collection shows a page, a tree an outline and a singleton sliders. A missing `lucide` or an unknown name warns, and the default stays.
+- **Checks:** typecheck, lint, format and Vitest (4,090 tests) pass; new tests cover the drawing whitelist, the tooltip and `aria-keyshortcuts` by keyboard, the manifest's icon and its own-key lookup, the config's name check, and the icons on Home, in the Content menu and in a collection's heading. The playground manifest snapshot gained the seven icons. `npm run e2e`: 90 passed, static and studio. `check:dist` passes, with `lucide` bundled into the studio, not imported. Contrast adds the warning mark on the notes drawer's glass (3.20:1 light, 6.88:1 dark). Screens checked at 1280px and 320px, light and dark.
+- **Size:** the kit's 41 drawings are 6,839 bytes of data, in the studio's shared chunk. `studio.js` goes from 74,254 to 75,761 bytes.
+
+**Found while building:**
+- **Shift+F10 in the outline could leave focus on the menu, not its first item.** The outline opened the row's menu with a click from code. React Aria treats that like a screen reader's: it moves focus a frame later, both to the menu and then to the first item, and the second move is dropped when the first has already landed. The icons shifted the timing, and two e2e tests failed on this machine (the same tests passed on a checkout of HEAD). The outline now presses Enter on the button, as the keyboard does, so focus moves at once. Earlier the same path waited on transitions (above); now it doesn't depend on timing at all.
+- **React Aria closes a tooltip when the page scrolls,** so a tooltip shown as focus scrolls a toolbar into view can vanish at once. That's React Aria's behaviour, kept; the screenshot script settles the scroll first.
+
+**Commits:** the decisions (6acbf46), the kit (13e20f3), the formatting tools (057f787), icons beside words (95a9978), the Shift+F10 fix (1c21e3f), collection icons (b09ddb9) and this note. The first-Tab fix (de40775) came just before.
 
 ## Studio design pass (plan)
 
