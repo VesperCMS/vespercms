@@ -13,7 +13,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284). See "Phase 2.6: outcome" below. |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
-| Studio design pass | Done locally (2026-10-18), ahead of 2.9; not pushed, CI not run yet. See "Studio design pass: outcome" below. |
+| Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -309,6 +309,7 @@ Every studio screen now follows Vesper's design system (Pine) in both themes. Je
 | `npm run e2e`, axe on every screen | 90 passed, static and studio (88 before this pass). New: axe over Home, the list, the outline, the editor, Media and Redirects in the dark theme; Details as a drawer by keyboard (axe with it open, Escape returns focus) and, at 800px, as the closing disclosure. No selectors changed: the markup kept its roles and names. |
 | `check:dist`, with the font in `dist/studio.css` | 11 entry points load from `dist/`. `dist/studio.css` holds both Figtree files as `data:font/woff2` URLs; the only address in it is Tailwind's licence comment, so `/admin` requests nothing from Google or a CDN. |
 | `astro check` | The playground: 0 errors, 0 warnings, 0 hints. |
+| CI | Green on GitHub (run 39169607328): every job, the Windows tests and the Astro 6 fixture included. |
 | 200% zoom, 320px, forced colours, keyboard | See below. |
 
 **Manual checks**, in Chromium (Playwright) against the 4402 preview, over eleven screens:
@@ -924,7 +925,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | 2.6 URLs/tree/redirects | Confirmed 2026-10-18: the redirects file at the site root; no default `maxDepth` (DECISIONS.md) | URL patterns, route check, tree, `_order.yaml`, subtree moves as one ChangeSet, redirect cleanup and per-host output, link rewriting, site helpers |
 | 2.7 Images | Start by verifying how Astro forwards `position`/`fit` | `fields.image`, focal point and crops, `<Img>`, Sharp wrapper |
 | **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
-| **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done locally 2026-10-18) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
+| **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done 2026-10-18, CI green in run 39169607328) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | 3 GitHub mode | whether a free cloud relay exists (needs the §13.1 domain) | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13, D15, §13.1 domain, §13.3 license (decides whether `apps/cloud-*` can live in this MIT repo) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
