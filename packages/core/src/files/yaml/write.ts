@@ -336,7 +336,15 @@ class Splicer {
     const position = map ? rangeOf(map)[2] : this.raw.length;
     const atLineStart = position === 0 || this.raw[position - 1] === '\n';
     if (!atLineStart && position !== this.raw.length) throw new NeedsFallback();
-    const line = `${' '.repeat(indent)}${this.keyText(key, false)}:${this.valueSuffix(value, indent)}`;
+    // Values written as one-line flow maps (`square: { x: 0.4, … }`) get a new one in kind.
+    const last = map?.items.at(-1)?.value;
+    const oneLineFlow =
+      (isMap(last) || isSeq(last)) &&
+      last.flow === true &&
+      !this.raw.slice(rangeOf(last)[0], rangeOf(last)[1]).includes('\n') &&
+      (isMap(last) ? isPlainObject(value) : Array.isArray(value));
+    const suffix = oneLineFlow ? ` ${this.flowText(value)}\n` : this.valueSuffix(value, indent);
+    const line = `${' '.repeat(indent)}${this.keyText(key, false)}:${suffix}`;
     this.splice(position, position, atLineStart ? line : `\n${line.replace(/\n$/, '')}`);
   }
 

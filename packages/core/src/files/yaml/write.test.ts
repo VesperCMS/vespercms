@@ -226,6 +226,23 @@ describe('writeYaml: block sequences', () => {
     ).toBe(`${raw}- { from: /e, to: /f, status: 302 }\n`);
   });
 
+  it('adds a key as a one-line flow map beside values written that way (an image’s crops)', () => {
+    const raw =
+      '\nhero:\n  crops:\n    square: { x: 0.40, y: 0.10, w: 0.45, h: 0.675 }\ntitle: x\n';
+    expect(
+      text(raw, (v) => {
+        const hero = v.hero as { crops: Record<string, DataValue> };
+        hero.crops.wide = { x: 0.07, y: 0.0703, w: 0.9, h: 0.7594 };
+      }),
+    ).toBe(
+      '\nhero:\n  crops:\n    square: { x: 0.40, y: 0.10, w: 0.45, h: 0.675 }\n    wide: { x: 0.07, y: 0.0703, w: 0.9, h: 0.7594 }\ntitle: x\n',
+    );
+    // Beside block maps, a new one stays a block map.
+    expect(
+      text('\na:\n  b:\n    c: 1\n', (v) => ((v.a as Record<string, DataValue>).d = { e: 2 })),
+    ).toBe('\na:\n  b:\n    c: 1\n  d:\n    e: 2\n');
+  });
+
   it('writes [] when every item is removed', () => {
     expect(text('\ntags:\n  - a\nz: 1\n', (v) => (v.tags = []))).toBe('\ntags: []\nz: 1\n');
   });
