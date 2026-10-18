@@ -236,6 +236,8 @@ function bodyShortcuts(options: {
 
 /** A name for the selected block, read out when the arrow keys land on it. */
 function selectionAnnouncement(editor: Editor, ui: Pick<BodyUi, 'catalog' | 'containers'>): string {
+  // Only for someone in the text: the editor opens with its last block selected.
+  if (!editor.isFocused) return '';
   const selected = selectedNode(editor, ui.containers);
   if (!selected) return '';
   const node = editor.state.doc.nodeAt(selected.pos);
