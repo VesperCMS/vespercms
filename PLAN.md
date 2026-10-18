@@ -328,7 +328,7 @@ Every studio screen now follows Vesper's design system (Pine) in both themes. Je
 
 **The 2.8 follow-up (body headings in the page's outline):** they stay real headings, and the body is now a landmark named "Body", so screen readers say where a heading belongs (DECISIONS.md, with the rejected alternatives).
 
-**Commits:** nineteen, from the decisions (5398cf6) to Vesper's mark and its record. The checkpoint's batch came first (tokens and kit, the font, the screens, the budget test), then the drawer, each remaining group of screens, the fixes above and the tests.
+**Commits:** twenty-one, from the decisions (5398cf6) to Vesper's mark, its record and its narrow-screen fix. The checkpoint's batch came first (tokens and kit, the font, the screens, the budget test), then the drawer, each remaining group of screens, the fixes above and the tests.
 
 **Open, for Jeremy:**
 - **The lowercase site name.** Built as asked, with CSS, so screen readers read the name as written. It also lowercases a site that names itself ("Highlands College" shows as "highlands college"). Keep, or lowercase only Vesper's own wordmark?
