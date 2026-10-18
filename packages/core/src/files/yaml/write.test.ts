@@ -213,6 +213,19 @@ describe('writeYaml: block sequences', () => {
     );
   });
 
+  it('pushes a one-line flow map after items written that way (vesper.redirects.yaml)', () => {
+    const raw = '# Redirects\n- { from: /a, to: /b, status: 301 }\n- {from: /c, to: /d}\n';
+    expect(
+      edit(
+        raw,
+        (v) => {
+          (v as unknown as DataValue[]).push({ from: '/e', to: '/f', status: 302 });
+        },
+        'any',
+      ).text,
+    ).toBe(`${raw}- { from: /e, to: /f, status: 302 }\n`);
+  });
+
   it('writes [] when every item is removed', () => {
     expect(text('\ntags:\n  - a\nz: 1\n', (v) => (v.tags = []))).toBe('\ntags: []\nz: 1\n');
   });

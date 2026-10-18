@@ -43,9 +43,10 @@ describe('diffValues', () => {
     ]);
   });
 
-  it('replaces a sequence of maps on reorder or insertion in the middle', () => {
-    expect(diffValues({ t: [{ a: 1 }, { b: 2 }] }, { t: [{ b: 2 }, { a: 1 }, { c: 3 }] })).toEqual([
-      { op: 'set', path: ['t'], value: [{ b: 2 }, { a: 1 }, { c: 3 }] },
+  it('compares maps by position when a list is edited and grows', () => {
+    expect(diffValues({ t: [{ a: 1 }, { a: 2 }] }, { t: [{ a: 9 }, { a: 2 }, { a: 3 }] })).toEqual([
+      { op: 'set', path: ['t', 0, 'a'], value: 9 },
+      { op: 'push', path: ['t'], value: { a: 3 } },
     ]);
   });
 
