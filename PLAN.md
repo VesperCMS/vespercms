@@ -11,7 +11,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18), merged into main (4e311a7); every check passes on the merge. See "Phase 2.6: outcome" below. |
-| 2.7 Focal points, crops and `<Img>` | In progress on main. See "Phase 2.7 (design)" below. |
+| 2.7 Focal points, crops and `<Img>` | Done (2026-10-18) on main, not yet pushed; every local check passes. See "Phase 2.7: outcome" below. |
 | 2.8 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -205,6 +205,46 @@ The spec's five "Done when" criteria, with evidence:
 - A function-form `url` has no "View on site" in the studio (the studio's bundle doesn't run it); the link picker still lists those pages, from the dev API.
 - In dev the playground logs a hint to set `tree: true` for `docs`, whose guides sit in a folder. It's the spec's suggestion working as meant.
 - The S3 deploy template's redirect metadata is Phase 9; `_vesper/redirects.json` is its input.
+
+## Phase 2.7: outcome
+
+The spec's five "Done when" criteria, with evidence:
+
+| Criterion | Evidence |
+|---|---|
+| The playground hero renders correct crops at every declared ratio. A manual crop overrides the focal point only for its own ratio. | `e2e/static-images.spec.ts`, on the plain static host. On `/images/`, both heroes at wide, square, portrait and og: every served file has its ratio's exact size and is compared pixel by pixel with the rectangle cut from the original by Sharp in the test. The expected rectangles are worked out in the spec, not with Vesper's geometry. All are within a mean difference of 2 in 255. Harbor's square matches its stored crop and is far from its focal square (over 10); every other ratio is the focal crop, and the winter market's (no focal point) the centre's. The og image and the blog list's thumbnails are checked the same way. Unit: `images/geometry.test.ts` (`cropForRatio`), `images/plan.test.ts`. |
+| Art direction outputs a valid `<picture>` with per-breakpoint sources, and each source is correctly cropped. | The same spec on the post page: `<source media="(min-width: 48rem)" type="image/webp">` at 2400×1350, then the base `<source>` at 1080×1080, then the `<img>` with its alt text. Every `srcset` entry's file has its stated width and its source's ratio, and matches that source's crop pixel by pixel. At 375 pixels wide Chromium loads a square file, at 1280 a wide one (`currentSrc` and the natural size). `plan.test.ts` covers the order, the formats and the fallback format. |
+| The focal point and crop box can be set fully by keyboard, with values announced to screen readers. | `e2e/studio/images.spec.ts` in Chromium, keys only: Enter opens the disclosure; Tab reaches the focal point; arrows and Shift+arrows move it, announced ("Focal point 65% across, 45% down."); Tab to "Adjust crop for Wide", Enter; the box has focus; Shift+← ten times and → twice, announced ("Crop 7% from the left, 7% from the top, 90% of the width."); Enter applies and focus returns to the button; Ctrl+S; Tab to "Adjust crop for Square", Enter, Tab to "Reset to focal point", Enter; Ctrl+S. axe passes with the disclosure open and with the dialog open. jsdom: `focal-point.test.tsx` and `crops.test.tsx` cover every key, the number fields, clicks and corner drags, Escape, an untouched Apply, and axe. **Not done: a pass with a real screen reader** (below). |
+| Original image files are byte-identical before and after any focal-point or crop edit. | The studio spec hashes every file under the site copy's `src/` before, and again after a focal-point move, a crop applied, a crop reset and two saves: only the entry differs, and it differs by exactly the expected bytes (two focal values, one added crop line, then the square crop's line gone). `images.integration.test.ts` hashes the playground copy's `src/` before and after a build with the crop step and one without. |
+| Disabling the service wrapper leaves the site building, with crops falling back to Astro's own server crop plus focal `object-position`. | `images.integration.test.ts` builds a copy of the playground with `vesper({ imageService: false })`. It builds; every ratio's file is exactly what Sharp makes on its own for that size and anchor (top, right, right, top for wide, square, portrait, og); every `<img>` carries `object-position`; no `crop` reaches the page; and the manual square isn't applied. With the step back on, the same copy cuts the manual square. `register.test.ts`: the step replaces only Astro's Sharp service (the one service or either Astro 7.4 target), keeps its `config`, and leaves other services alone. |
+
+**Standing criteria:**
+- `npm run dev` serves the playground; the hero's "Focal point & crops" is in the blog editor, and `/images/` shows every crop.
+- Lint, the format check, typecheck and the contrast check pass. Vitest: 3,942 tests in 83 files (unit, corpus and integration). The integration project includes the fallback build and the Astro 6 fixture's crop build, with the fixture installed locally.
+- `npm run e2e`: 84 passed, static and studio (66 before this phase).
+- `check:dist` loads all 11 entry points from `dist/`; the new ones are `@vesper/core/images`, `@vesper/astro/images` and `@vesper/astro/image-service`. `@vesper/astro/components` ships as source and is covered by the playground and fixture builds.
+- `astro check` on the playground: 0 errors, 0 warnings, 0 hints. The Astro 6 fixture builds with the crop step and `<Img>`, and cuts its manual og crop and its focal square.
+- READMEs, `DECISIONS.md` and `CLAUDE.md` are current.
+- Keyboard pass: the flows above were driven by key presses in Chromium (Playwright). In the app's browser pane, by hand: arrows and Shift+arrows on the focal point (fields and announcement followed), Enter on "Adjust crop for Wide", focus on the box, Shift+← and arrows, Enter, focus back on the button and "Custom crop" on the preview. That pass found two bugs, both fixed before their commit: the previews took the figure's width instead of their ratio, and the box didn't have focus when the dialog opened.
+
+**Changes from the design:**
+- Commits: the design's twelve became fourteen. The finding was recorded in its own commit first, as the spec asked. `maxUploadEdge` for uploads got its own commit, and the focal point, the previews and the dialog landed together, since they share one disclosure. Found by the studio spec: a new crop beside one-line flow maps was written as a five-line block map, fixed in the YAML writer in its own commit (DECISIONS.md).
+- `fields.image()` labels the focal point "Focal point"; otherwise the manifest is the same as the raw schema it replaced.
+- Every dialog now scrolls inside itself on a short screen, not only the wide one.
+- The Astro 6 fixture has no `vesper.config.ts` (it's the zero-config site), so its manual crop is on the built-in `og` ratio.
+
+**Open, for Jeremy:**
+- **A screen reader pass.** The focal point and the crop dialog were driven by keys and checked with axe, not heard. Worth ten minutes with NVDA in Chrome: the focal point's description and announcements, the number fields, the crop box (`role="application"`, so NVDA should switch to focus mode on it) and its announcements.
+- **`role="application"` on the crop box** (DECISIONS.md) needs a lint exception. Confirm, or prefer number fields for the crop as well.
+- **`sharp` as an optional peer dependency of `@vesper/astro`** (DECISIONS.md). Confirm before the first publish.
+- **`<Img>` from an npm install** isn't tested: like the `/admin` page it ships as source, and only workspace builds load it. Check at the first publish, with the `npx astro add` timing.
+- Still open from earlier phases: the 2.6 items (screen reader pass, Vercel redirects in `vercel.json`, the treegrid's icon-only toggle, the skipped internal-link build check), HEIC licensing, React 18 sites, and unknown Markdoc tags.
+
+**Follow-ups noted, not blocking:**
+- Body images keep Astro's own processing with no focal point or crops (§6.6.5: not in v1).
+- R2 media (§6.6.1) is cloud work; `<Img>` treats a remote `src` as Astro does, with `object-position` only.
+- In this workspace the Astro 6 fixture's crop step loads the root's Astro 7 Sharp service (DECISIONS.md). A published install loads the site's own.
+- The redirects integration test still builds with Vitest's environment; the image tests don't (DECISIONS.md).
 
 ## Phase 2.7: Focal points, crops and `<Img>` (design)
 

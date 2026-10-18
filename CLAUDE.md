@@ -19,6 +19,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810); outcome and open questions in `PLAN.md` |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652); outcome and open questions in `PLAN.md` |
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18), merged into main; outcome and open questions in `PLAN.md` |
+| 2.7 Focal points, crops and `<Img>` | Done (2026-10-18) on main, not yet pushed; outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -63,8 +64,8 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 ## Layout
 
 ```
-packages/core      Schema introspection, manifest, serializers, storage interface. No framework imports.
-packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling.
+packages/core      Schema introspection, manifest, serializers, storage interface, URL and image geometry. No framework imports.
+packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling, <Img> and the crop step.
 packages/ui        Design tokens and the accessible component kit. Tokens enforce the §10.4 budget.
 packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene. Precompiled for sites.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
@@ -116,6 +117,16 @@ Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/c
 **Write a redirect's target as the page's exact URL (`formatUrl`: base and trailing slash), never a bare key.** On a plain host a bare path gets the host's own slash redirect first, so every redirect becomes a chain.
 
 **Redirects that need the host's rules before the build runs go into the repository when the studio writes them, not into `dist`.** Vercel reads `vercel.json` before building; everything else is written into `dist` at build.
+
+### Images
+
+**Compute crops with `@vesper/core/images` (`cropForRatio`, `pixelRect`), never by hand.** The studio's previews, `<Img>` and the crop step must cut the same rectangle.
+
+**Never pass a focal point as Astro's `position`; it goes into `style` as `object-position`.** Sharp takes only its own keywords, and a percentage fails the build (DECISIONS.md, "Astro hands `position` to Sharp unchanged").
+
+**A new option for the crop step goes into its `propertiesToHash`, its `/_image` URL and its HTML filter.** Astro hashes only the properties a service names and passes the rest to the page as attributes.
+
+**A focal-point or crop edit writes only the entry, never the image file.** Edits are non-destructive (spec §6.6); the studio e2e test hashes every file under `src/` to prove it.
 
 ### Static output, any host
 

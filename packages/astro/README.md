@@ -2,7 +2,7 @@
 
 The Vesper integration for Astro.
 
-**Status:** Phases 2, 2.5 and 2.6 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, and handles URLs, page trees and redirects.
+**Status:** Phases 2 to 2.7 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, and renders images with their focal points and crops.
 
 ## The integration
 
@@ -19,12 +19,14 @@ Zero config. It:
 - reads `markdoc.config.*` the way @astrojs/markdoc does (merged by its own `setupConfig`) and learns its `allowHTML` and `ignoreIndentation` options from `astro.config`, so the studio parses Markdoc exactly as the site does. The manifest's `markdoc` section keeps only the schema parts: tags, attributes, `children`, `selfClosing`, `inline`, partials, function names and variable keys (never values).
 - learns the site's routes from `astro:routes:resolved`: a page can't take an address a file in `src/pages` owns, each collection's rendering route is recorded in the manifest, and a collection whose URLs no route can produce gets a warning.
 - at build, cleans `vesper.redirects.yaml` and hands it to Astro, and writes the host's own redirect rules when it has them (see below).
+- when the site uses Astro's own Sharp image service, wraps it so each image's stored crop is cut before Astro resizes it (see "Images" below). The build log says so.
 - writes `dist/_vesper/manifest.json` after `astro build`, which is how the cloud learns the schema.
 
 | Option | Default | |
 |---|---|---|
 | `studio.deploy` | `true` | `false` leaves `/admin` out of production builds, for sites edited only locally. |
 | `siteName` | the host of Astro's `site`, then the package name | Shown in the studio's top bar and page titles. |
+| `imageService` | `true` | `false` leaves Astro's image service alone. `<Img>` then uses Astro's own server crop for each ratio, with the focal point as `object-position`, and manual crops aren't applied. |
 
 The studio comes precompiled from `@vesper/admin`. React and React DOM are peer dependencies, shared with any custom widgets.
 
@@ -80,7 +82,15 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | Markdown string |
 | `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | relative path |
 
-A test checks that each helper equals its raw equivalent, so this table can't drift. `fields.image()` (focal point and crops) arrives in Phase 2.7.
+A test checks that each helper equals its raw equivalent, so this table can't drift.
+
+`fields.image(image, { ratios? })` takes Astro's `image` helper from the schema function, so `src` still resolves to `ImageMetadata` (spec §6.6.2):
+
+```ts
+schema: ({ image }) => z.object({ hero: fields.image(image, { ratios: ['wide', 'square'] }) }),
+```
+
+It stores `{ src, alt, decorative?, focus?: { x, y }, crops?: { [ratio]: { x, y, w, h } } }`, every number 0–1 from the top left. `alt` is required unless the image is decorative (`alt: ""`, `decorative: true`); focal points and crops must lie inside the image. Its raw Zod is in the helper's doc comment, and a test keeps the two equal. `ratios` names the crops the studio previews; without it, every ratio the site declares.
 
 ```ts
 import { defineCollection } from 'astro:content';
@@ -137,6 +147,17 @@ At build, the cleaned redirects go to Astro's `redirects`, so static output gets
 
 URLs a native rule covers get no HTML page. `dist/_vesper/redirects.json` lists the cleaned redirects (the S3 deploy template's input, Phase 9). Redirects aren't served by `astro dev`.
 
+### Images (spec §6.6.3)
+
+```ts
+images: {
+  ratios: { wide: 16 / 9, square: 1, portrait: 4 / 5 }, // width / height; og (1.91) is built in
+  maxUploadEdge: 3000, // uploads with a longer edge are scaled down in the browser
+},
+```
+
+The ratios drive the studio's crop previews and `<Img ratio>`, so editors see exactly the crops the site renders.
+
 ### Markdoc hints and MDX components (spec §6.5.1, §6.5.2)
 
 Markdoc tags already declare their attributes in `markdoc.config.mjs`; the studio builds each tag's settings form from them. Optional UI hints live here, never in Markdoc's config:
@@ -168,3 +189,30 @@ mdx: {
 ```
 
 `children: true` makes a frame whose content stays editable; `inline: true` inserts the component inside a line of text. The studio loads `vesper.config.ts`, props schemas included, the first time an MDX body needs them, so it checks props exactly as the site does.
+
+## Images (`@vesper/astro/components`)
+
+`<Img>` renders an image field (spec §6.6.5) through Astro's own `<Image>`, `<Picture>` and `getImage()`:
+
+```astro
+---
+import { Img, getImg } from '@vesper/astro/components';
+const og = await getImg({ image: post.data.hero, ratio: 'og', width: 1200 }); // for <meta property="og:image">
+---
+<Img image={post.data.hero} ratio="wide" widths={[480, 960, 1440]} sizes="100vw" />
+<Img image={post.data.hero} art={{ base: 'square', '(min-width: 48rem)': 'wide' }} />
+<Img image={post.data.hero} layout="full-width" />
+```
+
+| Prop | What it does |
+|---|---|
+| `ratio` | A name from `images.ratios`, or a number. Uses the editor's own crop for that ratio if there is one, otherwise the crop the focal point gives, at that exact ratio. A fixed `width` and `height` without `ratio` count as a ratio too (with the focal point's crop). |
+| `art` | Art direction: a `<picture>` with a `<source media>` per query, each with its own crop and size, then `base` for everything else. `formats` (default WebP) and `fallbackFormat` work as in Astro's `<Picture>`. |
+| neither | Fluid: the whole image, no server crop; the focal point becomes `object-position` (`62% 35%`), so CSS cropping keeps the subject in frame. |
+| always | `alt` from the field, `alt=""` when decorative. Every other Astro image prop passes through. `srcset` widths never go past the crop's own width. |
+
+**How crops are cut.** With Astro's default Sharp service, the integration wraps it (`@vesper/astro/image-service`): the stored rectangle is cut from the upright image, then Astro resizes and encodes it as usual. The crops are ordinary files in `dist/`, so they work on every host (D16). `sharp` is an optional peer dependency: the copy Astro's own service already uses.
+
+**With the wrapper off** (`vesper({ imageService: false })`) or **with a host's image service** (Cloudflare, Netlify, Vercel), `<Img>` still works: it asks for the ratio's size, which is Astro's own server crop (at the nearest of Sharp's anchors on Astro's Sharp service), and keeps the focal point as `object-position`. Manual crop rectangles are only applied with the wrapper, on Astro's default build-time Sharp service.
+
+Never pass a focal point as Astro's `position`: Sharp accepts only its own keywords there, and `"62% 35%"` fails the build (DECISIONS.md).

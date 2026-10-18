@@ -2,7 +2,7 @@
 
 The framework-free heart of Vesper. It runs unchanged in Node, in Cloudflare Workers and in the browser, so it imports nothing from Node, Astro, React, Vite or Zod.
 
-**Status:** Phases 1, 2, 2.5 and 2.6 complete.
+**Status:** Phases 1 to 2.7 complete.
 
 | Area | Exports |
 |---|---|
@@ -14,6 +14,7 @@ The framework-free heart of Vesper. It runs unchanged in Node, in Cloudflare Wor
 | **Manifest** | `buildManifest`, deterministic and hashed. Its optional `markdoc` section (from `extractMarkdocSchema`, structural, never importing Markdoc's config code) and `mdx` section carry tags, attributes, settings fields and declared components. `markdocConfigFromManifest` rebuilds a config `Markdoc.validate()` accepts in the browser. |
 | **Collections** | `globMatcher` and `defaultEntryId`, identical to Astro's glob loader. `folderKey` slugs a folder path the same way. |
 | **URLs** (spec §6.15, also `@vesper/core/urls`) | `entryUrlKey` expands a collection's `url` pattern (`:id`, `:path`, `:slug`, `:<field>`, `:<date>\|yyyy`) or runs its function form; `formatUrl` adds Astro's `base` and trailing slash; `urlKey` / `parseSiteUrl` read a link back. `buildTree`, `childrenOf` and `breadcrumbsOf` nest a tree collection by folder and order it by `_order.yaml`. `cleanRedirects` collapses chains, removes loops and drops redirects onto real pages; `hostRedirects` and the rule writers produce `_redirects`, `.htaccess`, nginx and Vercel rules; `parseRedirectsCsv` reads plain, WordPress and Drupal exports. `@vesper/core/urls` is the same without the parsers, for a site's own pages. |
+| **Images** (spec §6.6, also `@vesper/core/images`) | `siteRatios` (the site's ratios plus the built-in `og`) and `ratioLabel` ("16:9"). `cropForRatio` gives a ratio's crop: the stored one, fitted to its ratio, or the largest rectangle centred on the focal point (`focalCrop`). `pixelRect` rounds a crop to pixels; `moveRect`, `resizeRect` and `dragCorner` are the crop dialog's moves; `focusWithin` and `objectPosition` place the focal point in CSS; `sharpAnchor` is where Astro's own server crop lands. Shared by the studio, `<Img>` and the crop step, so all three cut the same rectangle. |
 | **Studio services** | `ContentService` lists, reads, creates, saves and deletes entries over any storage adapter. `MediaService` lists and uploads media. `PageService` serves a tree's outline, moves a page and everything under it as one change set (its files, both `_order.yaml` files, a redirect per page, every rewritten link), reorders, creates section pages and edits the redirects file. `rewriteBody` / `rewriteValues` change links to moved pages and keep relative paths pointing at the same files. |
 | **Storage** | The `StorageAdapter` interface, `MemoryStorage`, `gitBlobSha`, and the contract suite at `@vesper/core/testing`. |
 

@@ -2,7 +2,7 @@
 
 The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
 
-**Status:** Phases 2, 2.5 and 2.6 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages.
+**Status:** Phases 2 to 2.7 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages. A `fields.image()` field sets its focal point and crops behind a "Focal point & crops" disclosure.
 
 ## How it's built
 
@@ -74,7 +74,13 @@ Keys in the writing view: arrow onto a block to select it, Enter opens its setti
 ## Media
 
 - `media/formats.ts` reads JPEG, PNG and WebP structure (size, EXIF orientation, location) and strips metadata without decoding. `media/hygiene.ts` decides what each upload needs: a lossless strip, a canvas re-encode (to turn a photo upright or scale it down), HEIC conversion where the browser can decode it, or SVG sanitizing with DOMPurify.
-- `media/upload.ts` checks for a duplicate by SHA-256 before uploading. The picker and the media browser share it.
+- `media/upload.ts` checks for a duplicate by SHA-256 before uploading. The picker and the media browser share it, and both scale uploads to the site's `images.maxUploadEdge`.
+
+## Focal point and crops (spec §6.6.4)
+
+- `widgets/focal-point.tsx`: the image is one button. A click or tap sets the focal point and the marker drags; with focus on it, the arrow keys move the point 1% (Shift, 10%). "Across (%)" and "Down (%)" number fields set it without seeing or pointing, and each move is announced politely.
+- `widgets/crops.tsx`: a preview per ratio the field lists (or every site ratio), cropped by CSS from the same `cropForRatio` the site's `<Img>` uses, captioned "Wide · 16:9" and "Custom crop" when overridden. "Adjust crop" opens a wide dialog with a fixed-ratio box (`role="application"`): drag it or a corner, or use the arrow keys (Shift resizes); Enter applies, Escape cancels, "Reset to focal point" removes the override. Each change is announced.
+- Both only change the entry. Focal points are stored with two decimals, crops with four; the image file is never written.
 
 ## Accessibility
 

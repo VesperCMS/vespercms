@@ -115,6 +115,10 @@ The other cause came from outside the tests. `astro dev` serves the studio from 
 
 Longer timeouts were rejected because slowness wasn't the cause. With nothing edited during the run, the full suite passed ten times in a row before this change. The YouTube test also passed 5 of 5 with Chromium's CPU slowed sixfold, as long as it ran in one worker.
 
+### 2026-10-18: Builds started from Vitest drop Vitest's environment
+
+**The image integration tests run `astro build` without `NODE_ENV`, `DEV`, `PROD`, `MODE`, `SSR`, `BASE_URL`, `TEST` and `VITEST*` in the child's environment.** Vitest sets them, and Astro 6 read them as a development build: its `<Image>` wrote the dev-only `data-image-component` into the fixture's HTML. Without them the build is the one a site runs.
+
 ### 2026-10-17: axe gates on WCAG 2.1 A/AA and reports 2.2
 
 **Every built page must have zero axe violations for `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa`. `wcag22aa` findings are attached to the test as annotations but don't fail it.** D11 makes 2.1 AA the floor and 2.2 AA a goal "where it's cheap." Pages that are deliberately broken test fixtures are listed, with the reason, in `AXE_EXCLUDED` in `e2e/static-site.spec.ts`. They still have to load.
@@ -308,6 +312,14 @@ Every change is announced in a polite live region: "Nursing moved under Academic
 
 **The body editor's link dialog is a text field that suggests pages by title (React Aria's ComboBox with custom values), and choosing one writes the page's current address, base and trailing slash included.** The content stays plain and portable, and a later move rewrites it. URL fields get a "Choose a page…" button beside the native URL input, since the widget contract has the editor own the field's label. A field whose schema takes only full URLs (`z.url()`, as `fields.url()` makes) gets the site's address in front when Astro's `site` is set, and no picker when it isn't: a path would fail its own validation.
 
+### 2026-10-18: The focal point is the image as a button; the crop box is an application
+
+**The image field's focal point is one native button holding the image: a click or tap sets the point, the marker drags, and the arrow keys move it 1% (Shift, 10%). "Across (%)" and "Down (%)" number fields beside it are the way in without seeing or pointing, as the geo field's latitude and longitude are (spec §6.3.2). Every move made with the keys or the pointer is announced politely: "Focal point 62% across, 35% down."** A screen reader in browse mode keeps the arrow keys for itself on a button, which is why the number fields exist; the button is still one Tab stop, with its position in its description.
+
+**The crop dialog's box is one focusable element with `role="application"`, named "Crop box for Wide (16:9)" and described by its position and its keys.** A two-way box has no ARIA widget role, and `application` is the role that makes screen readers pass the arrow keys through to it. jsx-a11y counts it as non-interactive, so that one element carries a lint exception with the reason. The box takes focus as the dialog opens, in a layout effect: React's `autoFocus` works only on form controls, and React Aria's dialog focuses itself unless focus is already inside. Arrows move it 1%, Shift+→ and Shift+↓ grow it and Shift+← and Shift+↑ shrink it around its centre, Enter applies and Escape cancels; each change is announced. The corner handles are for the pointer and hidden from assistive technology.
+
+**Where it lives (spec §10.4):** inside the image field, behind one "Focal point & crops" disclosure, and only for fields that store a focal point or crops. The crop tools are behind each preview's "Adjust crop" button, in a dialog in a new wide size whose one primary action is "Apply crop". No icon-only buttons, no tabs, hairline borders; the image outside the crop is dimmed with the `content` token at half strength.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas
@@ -437,6 +449,10 @@ Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a f
 
 **When a list is reordered, or edited and resized at once, the writer now compares the items both versions share by position, then pushes or deletes at the end. It used to replace the whole list.** Replacing re-renders it, and at a file's root that dropped `_order.yaml`'s comment and turned `vesper.redirects.yaml`'s one-line flow maps into block maps. A new item after one-line flow maps is written as one too (`- { from: /a, to: /b, status: 301 }`), as JSON arrays already shaped new items like their neighbours. The corpus suites pass unchanged: every changed byte still lies within the lines of the values that changed.
 
+### 2026-10-18: A new key beside one-line flow maps is one too
+
+**When a key is added to a block map whose last value is a one-line flow map (or flow list), the new value is written the same way.** Adding a wide crop beside `square: { x: 0.40, y: 0.10, w: 0.45, h: 0.675 }` used to write a five-line block map. It's the map counterpart of Phase 2.6's rule for list items after one-line flow maps. Beside block maps nothing changes, and the corpus suites pass unchanged.
+
 ## URLs, hierarchy and redirects
 
 ### 2026-10-18: The redirects file lives at the site root
@@ -543,3 +559,36 @@ What follows for Phase 2.7:
 - With the crop wrapper, `<Img>` sends a normalized `crop` rectangle; the wrapper adds `crop` to the hashed properties, to `/_image` URLs and their parsing, and keeps it out of the HTML attributes.
 - Without the wrapper (turned off, or a host's image service), `<Img>` asks for the ratio's exact width and height, which is Astro's own server crop. With Astro's Sharp service it also picks the anchor keyword nearest the crop Vesper would have made. The focal point, relative to whatever was cut, goes into `style` as `object-position`.
 - A fluid image (no ratio) gets no server crop, only the `object-position` style.
+
+### 2026-10-18: Crops are cut by a step inside Astro's Sharp service
+
+**`@vesper/astro/image-service` is Astro's own Sharp service plus one transform option, `crop`. It cuts the rectangle out of the upright image (`rotate()` then `extract()`), passes the result as a lossless PNG to Astro's own `transform`, and leaves everything else to it: formats, quality, `srcset`, the build's cache. Images without a crop go straight to Astro's transform, byte for byte.**
+- Astro hashes only the properties a service names (above), so `propertiesToHash` is Astro's list plus `crop`. `getURL` adds `crop=x,y,w,h` to `/_image` and `parseURL` reads it back, so dev crops too. `getHTMLAttributes` drops it, or it would reach the page as `crop="[object Object]"`.
+- The rectangle is measured on the image as browsers show it, which is what the studio's previews and dialog measure. An EXIF-rotated photo is turned upright before the cut (tested with the playground's orientation-6 sample).
+- SVG and animated images are never cropped: Astro passes them through or animates them, and Sharp's `extract` would break an animation.
+- Cutting into Astro's input rather than reimplementing its transform means a new Astro option or encoder setting keeps working. The cost is one extra decode and a PNG encode (level 0) per cropped size, at build time only.
+
+**The integration installs it only where the site uses Astro's own Sharp service**: the one service, or either target of Astro 7.4's `{ build, runtime }`, keeping the service's `config`. A host's service (Cloudflare, Netlify, Vercel) or a site's own is left alone. The build log says the step is on and how to turn it off, and `vesper({ imageService: false })` turns it off. It's an integration option, not a `vesper.config.ts` key, because it changes Astro's own config in `astro:config:setup`, beside `image.service`, before Vesper reads `vesper.config.ts` at all.
+
+`sharp` is an optional peer dependency of `@vesper/astro`: the step loads the copy Astro's own service loads (Astro lists it as an optional dependency), and a strict installer such as pnpm only lets a package import what it declares.
+
+In this workspace the Astro 6 fixture's crop step loads the root's Astro 7 Sharp service, because `@vesper/astro` resolves `astro` from its own folder; a published install resolves the site's own Astro. The fixture test still proves what differs between majors: the service swap, Astro 6's hashing and build step calling `transform` with `crop`, and `<Img>` compiled by Astro 6.
+
+### 2026-10-18: `<Img>` asks Astro for the crop, never for a percentage
+
+**`<Img>` and `getImg()` (`@vesper/astro/components`) hand Astro's own `<Image>`, `<Picture>` and `getImage()` what each mode needs, worked out by `planImg` and `planArt` (`@vesper/astro/images`), which run in Node without Astro and are unit-tested:**
+- A ratio comes from `ratio` (a name from `images.ratios`, or a number) or from a fixed `width` and `height`. Only a named ratio can have a manual crop.
+- With the crop step: the ratio's exact width and height, and `crop`. Without it, on Astro's Sharp service: the same size (Astro's own server crop) and `position` set to the nearest of Sharp's anchors, which `sharpAnchor` picks from the crop Vesper would have cut. On any other service: the size alone. Which service renders the page comes from `imageConfig.service.entrypoint` in `astro:assets`, per environment on Astro 7.4.
+- The focal point always goes into `style` as `object-position`, measured within whatever was actually cut, so a stylesheet that boxes the image differently still keeps the subject in frame. The site's own `style` wins.
+- `srcset` widths stop at the crop's own width, as Astro stops at the original's: a 1080-pixel square is never offered as 1440w. With a `layout` and no `widths`, the widths follow Astro's own rule from its breakpoints, against the crop's width.
+- Art direction is a `<picture>` built with `getImage()`: a `<source media>` per breakpoint in the order given (one per format), each with its own crop and its own `width` and `height`; then the base ratio's sources and the `<img>` in the fallback format Astro's `<Picture>` would choose.
+- A ratio name the site doesn't declare fails the build, naming the ones it does.
+
+The component ships as source (`components/Img.astro`, like the `/admin` page) for the site's own Astro to compile, and `virtual:vesper/images` gives it the site's ratios. `check:dist` can't import an `.astro` file, so its published path is covered only by the fixtures' builds.
+
+### 2026-10-18: Ratios and stored values
+
+**Ratios are declared once in `vesper.config.ts` (`images.ratios`, width / height) and reach the studio and `<Img>` through the manifest's `site.images`, which also lists the built-in `og` (1.91:1) unless the site redefines it.** An image field that lists a ratio the site doesn't declare gets a warning. `images.maxUploadEdge` now reaches the studio's upload hygiene; it was fixed at 3000 pixels.
+- A focal point is stored with two decimals, the 1% steps the control moves in; a crop with four, a tenth of a pixel on a 1,000-pixel image. Both are one-line flow maps, as in the spec.
+- A stored crop whose shape no longer matches its ratio (the image was replaced by one of another shape) is trimmed to the ratio around its own centre, never grown.
+- Applying the crop dialog untouched over a ratio with no manual crop writes nothing, so the focal point's crop isn't frozen by accident. "Reset to focal point" removes the ratio's crop, and removing the last one removes `crops`.
