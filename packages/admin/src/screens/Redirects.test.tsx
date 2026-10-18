@@ -48,7 +48,8 @@ describe('the Redirects screen (spec §6.15.5)', () => {
   it('lists redirects with their kind in words, and what needs a look', async () => {
     setup();
     const table = await screen.findByRole('grid', { name: 'Redirects' });
-    const row = within(table).getByRole('row', { name: /\/apply-now/ });
+    // React Aria renders the rows a moment after the grid itself.
+    const row = await within(table).findByRole('row', { name: /\/apply-now/ });
     expect(row).toHaveTextContent('/admissions/apply');
     expect(row).toHaveTextContent('Temporary');
     expect(row).toHaveTextContent('Added here');
