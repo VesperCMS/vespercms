@@ -387,12 +387,13 @@ export function Switch({ children, className, ...props }: SwitchProps) {
           aria-hidden="true"
           className={cx(
             'flex h-6 w-10 shrink-0 items-center rounded-full border border-border-strong bg-surface-sunken p-0.5',
-            'transition-colors duration-120 ease-out',
+            'transition-[background-color,border-color] duration-120 ease-out',
             'group-data-[selected]:border-accent group-data-[selected]:bg-accent',
             groupFocus,
           )}
         >
-          <span className="size-4 rounded-full bg-content-muted transition-transform duration-180 ease-out group-data-[selected]:translate-x-4 group-data-[selected]:bg-on-accent" />
+          {/* Forced colours remove fills, so the thumb and the dot take a system colour there. */}
+          <span className="size-4 rounded-full bg-content-muted transition-transform duration-180 ease-out group-data-[selected]:translate-x-4 group-data-[selected]:bg-on-accent forced-colors:bg-[CanvasText]" />
         </span>
         {children}
         <span aria-hidden="true" className="text-small text-content-muted">
@@ -457,7 +458,7 @@ export function RadioGroup({
                   groupFocus,
                 )}
               >
-                <span className="hidden size-2.5 rounded-full bg-accent group-data-[selected]:block" />
+                <span className="hidden size-2.5 rounded-full bg-accent group-data-[selected]:block forced-colors:bg-[CanvasText]" />
               </span>
               {option.prefix && <span aria-hidden="true">{option.prefix}</span>}
               {option.label}

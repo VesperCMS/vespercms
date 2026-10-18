@@ -17,10 +17,11 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary: cx(
     'bg-accent text-on-accent data-[hovered]:bg-accent-hover',
     'data-[hovered]:shadow-glow-accent data-[focus-visible]:shadow-glow-accent',
-    'transition-[background-color,box-shadow] duration-180 ease-out',
+    // The glow fades in on hover only; on focus it's there at once (see colorTransition).
+    'data-[hovered]:transition-[background-color,box-shadow] duration-180 ease-out',
   ),
   secondary: cx(
-    'border border-border-strong bg-surface text-content data-[hovered]:bg-surface-sunken',
+    'border-border-strong bg-surface text-content data-[hovered]:bg-surface-sunken',
     colorTransition,
   ),
   quiet: cx('text-accent data-[hovered]:bg-accent-subtle', colorTransition),
@@ -38,8 +39,10 @@ export type ButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
   pulse?: number;
 };
 
+// A transparent hairline on every button: forced colours draw it, so a button
+// whose fill they remove still shows its edge.
 const buttonBase = cx(
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 text-label',
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-transparent px-4 text-label',
   'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[pending]:cursor-progress',
   focusRing,
 );
@@ -154,7 +157,7 @@ export function IconButton({ icon, label, className, ...props }: IconButtonProps
       {...props}
       aria-label={label}
       className={cx(
-        'inline-flex size-10 shrink-0 items-center justify-center rounded-md text-content-muted',
+        'inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-transparent text-content-muted',
         'data-[hovered]:bg-surface-sunken data-[hovered]:text-content data-[disabled]:opacity-50',
         colorTransition,
         focusRing,

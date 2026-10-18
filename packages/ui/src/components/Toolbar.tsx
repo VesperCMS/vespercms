@@ -30,7 +30,7 @@ export function Toolbar({ label, children, className }: ToolbarProps) {
 }
 
 const toolClass = cx(
-  'inline-flex min-h-8 min-w-8 items-center justify-center rounded-sm px-2 text-small font-semibold text-content',
+  'inline-flex min-h-8 min-w-8 items-center justify-center rounded-sm border border-transparent px-2 text-small font-semibold text-content',
   'data-[hovered]:bg-surface-sunken data-[disabled]:opacity-50',
   colorTransition,
   focusRing,

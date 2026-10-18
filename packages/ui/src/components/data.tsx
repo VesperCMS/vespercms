@@ -8,7 +8,7 @@ import {
   TableHeader,
   type SortDescriptor,
 } from 'react-aria-components';
-import { cx, focusRing } from './shared.tsx';
+import { colorTransition, cx, focusRing } from './shared.tsx';
 
 export type TableColumn = {
   id: string;
@@ -45,66 +45,71 @@ export function Table<T extends { id: string }>({
   rowHref,
 }: TableProps<T>) {
   return (
-    <RACTable
-      aria-label={label}
-      {...(sort ? { sortDescriptor: sort } : {})}
-      {...(onSortChange ? { onSortChange } : {})}
-      className="w-full border-separate border-spacing-0 text-left text-body"
-    >
-      <TableHeader>
-        {columns.map((column) => (
-          <Column
-            key={column.id}
-            id={column.id}
-            isRowHeader={column.isRowHeader ?? false}
-            allowsSorting={column.allowsSorting ?? false}
-            className={cx(
-              'bg-surface-sunken px-3 py-2 text-label text-content-muted first:rounded-l-md last:rounded-r-md',
-              'data-[allows-sorting]:cursor-pointer',
-              focusRing,
-            )}
-          >
-            {({ sortDirection }) => (
-              <span className="inline-flex items-center gap-1">
-                {column.label}
-                {sortDirection && (
-                  <span aria-hidden="true">{sortDirection === 'ascending' ? '↑' : '↓'}</span>
-                )}
-              </span>
-            )}
-          </Column>
-        ))}
-      </TableHeader>
-      <TableBody
-        items={rows}
-        renderEmptyState={() => (
-          <p className="px-3 py-6 text-content-muted">{emptyState ?? 'Nothing here yet.'}</p>
-        )}
+    // A table wider than a narrow screen scrolls inside itself, never the page
+    // (WCAG 1.4.10 lets a data table keep its two dimensions).
+    <div className="overflow-x-auto">
+      <RACTable
+        aria-label={label}
+        {...(sort ? { sortDescriptor: sort } : {})}
+        {...(onSortChange ? { onSortChange } : {})}
+        className="w-full border-separate border-spacing-0 text-left text-body"
       >
-        {(row) => (
-          <Row
-            id={row.id}
-            {...(rowHref ? { href: rowHref(row) } : {})}
-            className={cx(
-              'transition-colors duration-120 ease-out data-[hovered]:bg-accent-subtle data-[href]:cursor-pointer',
-              'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
-            )}
-          >
-            {columns.map((column) => (
-              <Cell
-                key={column.id}
-                className={cx(
-                  'border-b border-border px-3 py-3 align-top',
-                  'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
-                )}
-              >
-                {renderCell(row, column.id)}
-              </Cell>
-            ))}
-          </Row>
-        )}
-      </TableBody>
-    </RACTable>
+        <TableHeader>
+          {columns.map((column) => (
+            <Column
+              key={column.id}
+              id={column.id}
+              isRowHeader={column.isRowHeader ?? false}
+              allowsSorting={column.allowsSorting ?? false}
+              className={cx(
+                'bg-surface-sunken px-3 py-2 text-label text-content-muted first:rounded-l-md last:rounded-r-md',
+                'data-[allows-sorting]:cursor-pointer',
+                focusRing,
+              )}
+            >
+              {({ sortDirection }) => (
+                <span className="inline-flex items-center gap-1">
+                  {column.label}
+                  {sortDirection && (
+                    <span aria-hidden="true">{sortDirection === 'ascending' ? '↑' : '↓'}</span>
+                  )}
+                </span>
+              )}
+            </Column>
+          ))}
+        </TableHeader>
+        <TableBody
+          items={rows}
+          renderEmptyState={() => (
+            <p className="px-3 py-6 text-content-muted">{emptyState ?? 'Nothing here yet.'}</p>
+          )}
+        >
+          {(row) => (
+            <Row
+              id={row.id}
+              {...(rowHref ? { href: rowHref(row) } : {})}
+              className={cx(
+                'data-[hovered]:bg-accent-subtle data-[href]:cursor-pointer',
+                colorTransition,
+                'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
+              )}
+            >
+              {columns.map((column) => (
+                <Cell
+                  key={column.id}
+                  className={cx(
+                    'border-b border-border px-3 py-3 align-top',
+                    'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
+                  )}
+                >
+                  {renderCell(row, column.id)}
+                </Cell>
+              ))}
+            </Row>
+          )}
+        </TableBody>
+      </RACTable>
+    </div>
   );
 }
 
