@@ -566,7 +566,7 @@ function WritingView({
         <div
           className={cx(
             'rounded-md border border-border-strong bg-surface-raised',
-            'has-[#entry-body:focus-visible]:outline-2 has-[#entry-body:focus-visible]:outline-offset-2 has-[#entry-body:focus-visible]:outline-focus',
+            'has-[#entry-body:focus-visible]:outline-2 has-[#entry-body:focus-visible]:outline-solid has-[#entry-body:focus-visible]:outline-offset-2 has-[#entry-body:focus-visible]:outline-focus',
             'has-[#entry-body:focus-visible]:ring-6 has-[#entry-body:focus-visible]:ring-(color:--glow-focus)',
           )}
         >

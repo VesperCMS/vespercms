@@ -27,7 +27,7 @@ import { summaryOf, useBlockIssues, useBodyUi } from './ui.ts';
 
 /** A selected block shows a focus outline, but only while the text has focus. */
 const SELECTED = cx(
-  'in-[.ProseMirror-focused]:outline-2 in-[.ProseMirror-focused]:outline-offset-2 in-[.ProseMirror-focused]:outline-focus',
+  'in-[.ProseMirror-focused]:outline-2 in-[.ProseMirror-focused]:outline-solid in-[.ProseMirror-focused]:outline-offset-2 in-[.ProseMirror-focused]:outline-focus',
   'in-[.ProseMirror-focused]:ring-6 in-[.ProseMirror-focused]:ring-(color:--glow-focus)',
 );
 

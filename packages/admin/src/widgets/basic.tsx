@@ -18,7 +18,7 @@ import type { WidgetProps } from '../types.ts';
 /** Native inputs share the ui kit's control look. */
 export const inputClass = cx(
   'min-h-10 w-full rounded-md border border-border-strong bg-surface-sunken px-3 py-2 text-body text-content',
-  'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+  'outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus',
   'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
   'aria-[invalid=true]:border-danger disabled:opacity-60',
 );

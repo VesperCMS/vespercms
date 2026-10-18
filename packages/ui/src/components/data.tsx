@@ -91,7 +91,7 @@ export function Table<T extends { id: string }>({
               className={cx(
                 'data-[hovered]:bg-accent-subtle data-[href]:cursor-pointer',
                 colorTransition,
-                'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
+                'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
               )}
             >
               {columns.map((column) => (
@@ -99,7 +99,7 @@ export function Table<T extends { id: string }>({
                   key={column.id}
                   className={cx(
                     'border-b border-border px-3 py-3 align-top',
-                    'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
+                    'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
                   )}
                 >
                   {renderCell(row, column.id)}
@@ -201,7 +201,7 @@ export function ErrorSummary({
       tabIndex={-1}
       role="alert"
       aria-labelledby="vesper-error-summary-title"
-      className="rounded-md border border-danger bg-surface p-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="rounded-md border border-danger bg-surface p-4 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       <h2 id="vesper-error-summary-title" className="text-heading-3 text-content">
         {title}

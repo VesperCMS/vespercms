@@ -183,7 +183,7 @@ function MediaChoice({ item, onChoose }: { item: MediaItem; onChoose: (path: str
       onClick={() => {
         onChoose(item.path);
       }}
-      className="flex w-full items-center gap-3 rounded-md border border-border p-2 text-left hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
+      className="flex w-full items-center gap-3 rounded-md border border-border p-2 text-left hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
     >
       {isImagePath(item.path) ? (
         <img

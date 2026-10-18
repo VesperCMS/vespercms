@@ -48,6 +48,7 @@ export type Option = {
 const listBoxItem = cx(
   'group flex min-h-9 cursor-default items-center gap-2 rounded-md px-3 py-1 text-body text-content outline-none',
   'data-[focused]:bg-accent-subtle data-[selected]:bg-accent-subtle data-[selected]:shadow-glow-selected',
+  'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
 );
 const popover = cx('min-w-[var(--trigger-width)]', popoverClass);
 
@@ -335,7 +336,7 @@ export function MultiCombobox({
 
 /** The focus ring and halo on a checkbox's, switch's or radio's drawn box, from its focused group. */
 const groupFocus = cx(
-  'group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-focus',
+  'group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-solid group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-focus',
   // Written out in full: Tailwind finds class names by reading the source.
   'group-data-[focus-visible]:ring-6 group-data-[focus-visible]:ring-(color:--glow-focus)',
 );

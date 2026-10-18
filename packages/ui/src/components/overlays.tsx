@@ -198,6 +198,8 @@ export function Menu({ label, items, onAction, triggerText }: MenuProps) {
                 className={cx(
                   'flex min-h-9 cursor-default items-center rounded-md px-3 text-body outline-none',
                   'data-[focused]:bg-accent-subtle data-[disabled]:opacity-50',
+                  // The ring too, inside the item, so keyboard focus never rests on a fill alone.
+                  'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
                   item.isDanger ? 'text-danger' : 'text-content',
                   item.isCurrent && 'bg-accent-subtle shadow-glow-selected',
                   afterHairline &&

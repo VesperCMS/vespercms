@@ -90,7 +90,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
               id={`${id}-item-${String(index)}`}
               tabIndex={-1}
               aria-label={name}
-              className="flex flex-col gap-2 rounded-md outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
+              className="flex flex-col gap-2 rounded-md outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-focus"
             >
               {item && (
                 <Field

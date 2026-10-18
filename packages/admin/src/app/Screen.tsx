@@ -64,7 +64,7 @@ export function Screen({
             href={hrefFor({ screen: 'home' })}
             className={cx(
               'rounded-sm text-heading-3 tracking-tight text-content lowercase no-underline',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+              'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus',
               'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
             )}
           >

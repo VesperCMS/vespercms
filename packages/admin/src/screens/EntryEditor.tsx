@@ -819,7 +819,7 @@ function TitleField({ field }: { field: FieldModel }) {
         aria-describedby={errors.length > 0 ? `${id}-error` : undefined}
         disabled={editor.disabled || field.readOnly === true}
         placeholder={field.placeholder ?? 'Untitled'}
-        className="w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-title text-content outline-none placeholder:text-content-muted focus-visible:border-border-strong focus-visible:px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus) aria-[invalid=true]:border-danger aria-[invalid=true]:px-2"
+        className="w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-title text-content outline-none placeholder:text-content-muted focus-visible:border-border-strong focus-visible:px-2 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus) aria-[invalid=true]:border-danger aria-[invalid=true]:px-2"
       />
       {errors.length > 0 && (
         <p id={`${id}-error`} className="text-small text-danger">

@@ -110,6 +110,20 @@ describe('the design budget (spec §10.4)', () => {
     expect(elsewhere).toEqual([]);
   });
 
+  it('draws every focus outline solid', () => {
+    // Tailwind 4's `outline-none` sets the style through --tw-outline-style,
+    // which `outline-2` then reuses: without `outline-solid` beside it, the
+    // ring has a width and no style, and nothing is drawn.
+    const missing = files.flatMap((file) => {
+      const text = readFileSync(file, 'utf8');
+      return [...text.matchAll(/(?<![\w\-[\]#.:=])([\w\-[\]#.:=]+):outline-2\b/g)]
+        .map((m) => m[1] ?? '')
+        .filter((variant) => !text.includes(`${variant}:outline-solid`))
+        .map((variant) => `${name(file)}: ${variant}:outline-2`);
+    });
+    expect(missing).toEqual([]);
+  });
+
   it('tokens.css declares exactly the named shadows', () => {
     const tokens = readFileSync(join(root, 'packages/ui/src/tokens.css'), 'utf8');
     const declared = [...tokens.matchAll(/^\s*--shadow-([a-z0-9-]+)\s*:/gm)].map((m) => m[1]);

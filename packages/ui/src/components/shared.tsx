@@ -16,7 +16,7 @@ export const focusHalo =
 
 /** One focus style everywhere: a 2px ring in the focus token, offset from the control (spec §10.2), with its halo. */
 export const focusRing = cx(
-  'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-focus',
+  'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-focus',
   focusHalo,
 );
 
@@ -33,7 +33,7 @@ export const colorTransition =
 /** The shared look of a single-line input or a select trigger: a hairline, a sunken fill. */
 export const fieldControl = cx(
   'min-h-10 w-full rounded-md border border-border-strong bg-surface-sunken px-3 py-2 text-body text-content',
-  'outline-none data-[focused]:outline-2 data-[focused]:outline-offset-2 data-[focused]:outline-focus',
+  'outline-none data-[focused]:outline-2 data-[focused]:outline-solid data-[focused]:outline-offset-2 data-[focused]:outline-focus',
   'data-[focused]:ring-6 data-[focused]:ring-(color:--glow-focus)',
   'data-[invalid]:border-danger data-[disabled]:opacity-60',
 );

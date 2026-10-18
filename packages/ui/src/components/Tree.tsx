@@ -87,7 +87,7 @@ export function Tree<T extends TreeNode>({
         : {})}
       className={cx(
         'group rounded-md text-body outline-none data-[hovered]:bg-surface-sunken',
-        'data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
+        'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
         // Where a dragged page would land is the current item: accent-subtle and its halo.
         'data-[drop-target]:bg-accent-subtle data-[drop-target]:shadow-glow-selected data-[dragging]:opacity-50',
         colorTransition,

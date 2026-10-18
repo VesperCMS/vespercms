@@ -100,7 +100,7 @@ export function ColorWidget({
             onChange(event.target.value);
           }}
           disabled={disabled}
-          className="size-10 cursor-pointer rounded-md border border-border-strong bg-surface p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
+          className="size-10 cursor-pointer rounded-md border border-border-strong bg-surface p-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
         />
       )}
     </div>
@@ -205,7 +205,7 @@ export function UrlWidget({
           href={current}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 rounded-sm text-accent underline underline-offset-2 hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
+          className="shrink-0 rounded-sm text-accent underline underline-offset-2 hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
         >
           Open <span className="sr-only">{current} in a new tab</span>
         </a>

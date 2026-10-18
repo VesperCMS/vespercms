@@ -168,7 +168,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
           'rounded-md border border-border-strong bg-surface-raised',
           invalid && 'border-danger',
           disabled && 'opacity-60',
-          'has-[.ProseMirror-focused]:outline-2 has-[.ProseMirror-focused]:outline-offset-2 has-[.ProseMirror-focused]:outline-focus',
+          'has-[.ProseMirror-focused]:outline-2 has-[.ProseMirror-focused]:outline-solid has-[.ProseMirror-focused]:outline-offset-2 has-[.ProseMirror-focused]:outline-focus',
           'has-[.ProseMirror-focused]:ring-6 has-[.ProseMirror-focused]:ring-(color:--glow-focus)',
         )}
       >
