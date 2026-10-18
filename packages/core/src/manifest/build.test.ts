@@ -185,3 +185,56 @@ describe('buildManifest: URLs and trees (spec §6.15)', () => {
     ]);
   });
 });
+
+describe('buildManifest: images (spec §6.6.3)', () => {
+  const blog = (ratios: unknown) => ({
+    name: 'blog',
+    loader: { kind: 'glob', base: './src/content/blog', pattern: '**/*.md', customId: false },
+    schema: z.object({
+      hero: z
+        .object({ src: image(), alt: z.string() })
+        .meta({ widget: 'image', widgetOptions: { ratios } }),
+    }),
+  });
+
+  it('lists the site’s ratios with the built-in og, and the upload limit', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [],
+      config: { images: { ratios: { wide: 16 / 9, square: 1 }, maxUploadEdge: 2400 } },
+    });
+    expect(manifest.site.images).toEqual({
+      ratios: { wide: 16 / 9, square: 1, og: 1.91 },
+      maxUploadEdge: 2400,
+    });
+    const plain = await buildManifest({ site: { srcDir: 'src' }, collections: [] });
+    expect(plain.site.images).toEqual({ ratios: { og: 1.91 } });
+  });
+
+  it('leaves out ratios the config gets wrong (loading the config reports them)', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [],
+      config: { images: { ratios: { wide: 16 / 9, '4x3': 4 / 3, flat: 0 }, maxUploadEdge: 0 } },
+    });
+    expect(manifest.site.images).toEqual({ ratios: { wide: 16 / 9, og: 1.91 } });
+  });
+
+  it('warns about an image field that lists a ratio the site doesn’t declare', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [blog(['wide', 'wdie', 'og'])] as ManifestInput['collections'],
+      config: { images: { ratios: { wide: 16 / 9 } } },
+    });
+    expect(manifest.diagnostics.filter((d) => d.code === 'unknown-ratio')).toEqual([
+      {
+        level: 'warning',
+        code: 'unknown-ratio',
+        message:
+          'hero lists the ratio "wdie", which vesper.config.ts doesn\'t declare. Declared: wide, og.',
+        collection: 'blog',
+        path: ['hero'],
+      },
+    ]);
+  });
+});

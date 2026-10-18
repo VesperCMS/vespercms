@@ -3,7 +3,15 @@
   "site": {
     "srcDir": "src",
     "contentConfig": "src/content.config.ts",
-    "timeZone": "America/New_York"
+    "timeZone": "America/New_York",
+    "images": {
+      "ratios": {
+        "wide": 1.7777777777777777,
+        "square": 1,
+        "portrait": 0.8,
+        "og": 1.91
+      }
+    }
   },
   "collections": [
     {
@@ -1529,5 +1537,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "538f3c8f58c88c9be721848829f379f4030d2eb6bc206b85e029d539579bd77d"
+  "hash": "78fd6536a948ad9250fe29ecb85a03fd2afdfa41ec47bafc16e6d34cc279d62f"
 }

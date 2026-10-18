@@ -32,6 +32,12 @@ export type Manifest = {
     urls?: UrlSettings;
     /** Native redirect rules the site asks for in vesper.config.ts (spec §6.15.5). */
     redirects?: { native: NativeTarget[] };
+    /**
+     * Aspect ratios for crops (spec §6.6.3): the site's own from vesper.config.ts,
+     * then the built-in `og`. `maxUploadEdge` when the site sets one (spec §6.6.6).
+     * Absent in manifests from before Phase 2.7.
+     */
+    images?: { ratios: Record<string, number>; maxUploadEdge?: number };
   };
   collections: CollectionManifest[];
   forms: FormManifest[];

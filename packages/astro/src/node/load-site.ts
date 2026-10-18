@@ -212,6 +212,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
               ...(config.markdoc ? { markdoc: config.markdoc } : {}),
               ...(config.mdx ? { mdx: config.mdx } : {}),
               ...(config.redirects ? { redirects: config.redirects } : {}),
+              ...(config.images ? { images: config.images } : {}),
             },
           }
         : {}),

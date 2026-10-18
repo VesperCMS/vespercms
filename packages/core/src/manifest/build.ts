@@ -9,6 +9,7 @@ import type {
   MdxComponentConfig,
   MdxManifest,
 } from '../markdoc/types.ts';
+import { RATIO_NAME, isRatio, siteRatios } from '../images/ratios.ts';
 import { humanize } from '../schema/humanize.ts';
 import { globMatcher } from '../collections/entries.ts';
 import type { NativeTarget } from '../urls/hosts.ts';
@@ -74,6 +75,8 @@ export type ManifestInput = {
     markdoc?: { tags?: Record<string, MarkdocTagHint> };
     /** Declared MDX components (spec §6.5.2). */
     mdx?: { components?: Record<string, MdxComponentConfig> };
+    /** Aspect ratios and the upload size limit (spec §6.6.3, §6.6.6). */
+    images?: { ratios?: Record<string, number>; maxUploadEdge?: number };
   };
   /**
    * The site's Markdoc config, merged the way @astrojs/markdoc merges it, and
@@ -125,6 +128,9 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
     };
   });
 
+  const images = imagesOf(input.config?.images);
+  diagnostics.push(...ratioDiagnostics(collections, images.ratios));
+
   const markdoc = input.markdoc ? markdocOf(input, widgets, diagnostics) : undefined;
   const mdx = mdxOf(input.config?.mdx?.components, widgets, diagnostics);
 
@@ -138,6 +144,7 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
       ...(input.config?.redirects?.native?.length
         ? { redirects: { native: [...input.config.redirects.native] } }
         : {}),
+      images,
     },
     collections,
     forms,
@@ -199,6 +206,55 @@ function mdxOf(
       };
     }),
   };
+}
+
+/**
+ * The site's aspect ratios (with the built-in `og`) and upload limit. Values
+ * vesper.config.ts gets wrong are left out here; loading the config reports them.
+ */
+function imagesOf(
+  config: { ratios?: Record<string, number>; maxUploadEdge?: number } | undefined,
+): { ratios: Record<string, number>; maxUploadEdge?: number } {
+  const declared = Object.fromEntries(
+    Object.entries(config?.ratios ?? {}).filter(
+      ([name, ratio]) => RATIO_NAME.test(name) && isRatio(ratio),
+    ),
+  );
+  const edge = config?.maxUploadEdge;
+  return {
+    ratios: siteRatios(declared),
+    ...(typeof edge === 'number' && Number.isInteger(edge) && edge > 0
+      ? { maxUploadEdge: edge }
+      : {}),
+  };
+}
+
+/** Image fields that list a ratio the site doesn't declare (spec §6.6.3): their previews would be missing. */
+function ratioDiagnostics(
+  collections: CollectionManifest[],
+  ratios: Record<string, number>,
+): Diagnostic[] {
+  const found: Diagnostic[] = [];
+  const visit = (collection: string, fields: FieldModel[]) => {
+    for (const field of fields) {
+      const listed = field.widget === 'image' ? field.widgetOptions?.ratios : undefined;
+      if (Array.isArray(listed)) {
+        for (const name of listed as unknown[]) {
+          if (typeof name === 'string' && name in ratios) continue;
+          found.push({
+            level: 'warning',
+            code: 'unknown-ratio',
+            message: `${field.path.join('.')} lists the ratio ${JSON.stringify(name)}, which vesper.config.ts doesn't declare. Declared: ${Object.keys(ratios).join(', ')}.`,
+            collection,
+            path: field.path.map(String),
+          });
+        }
+      }
+      if (field.children) visit(collection, field.children);
+    }
+  };
+  for (const collection of collections) visit(collection.name, collection.fields ?? []);
+  return found;
 }
 
 function buildCollection(

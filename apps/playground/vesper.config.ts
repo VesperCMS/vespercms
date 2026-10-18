@@ -60,6 +60,11 @@ export default defineConfig({
   },
   // The fictional college is on the US East Coast; event times are entered in Eastern time.
   timeZone: 'America/New_York',
+  // Crops the site renders (spec §6.6.3). The studio previews these, and
+  // <Img ratio="…"> uses them; `og` (1.91:1) is built in.
+  images: {
+    ratios: { wide: 16 / 9, square: 1, portrait: 4 / 5 },
+  },
   collections: {
     blog: {
       label: 'Blog posts',
