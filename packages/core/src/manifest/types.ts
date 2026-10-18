@@ -1,3 +1,4 @@
+import type { A11ySettings } from '../a11y/types.ts';
 import type { Diagnostic, FieldModel } from '../field-model.ts';
 import type { MarkdocManifest, MdxManifest } from '../markdoc/types.ts';
 import type { NativeTarget } from '../urls/hosts.ts';
@@ -38,6 +39,12 @@ export type Manifest = {
      * Absent in manifests from before Phase 2.7.
      */
     images?: { ratios: Record<string, number>; maxUploadEdge?: number };
+    /**
+     * Accessibility settings from vesper.config.ts (spec §6.18): the rules that
+     * refuse a save, and the backgrounds text colours are checked against.
+     * Absent when the site sets neither.
+     */
+    a11y?: A11ySettings;
   };
   collections: CollectionManifest[];
   forms: FormManifest[];
@@ -88,6 +95,8 @@ export type CollectionPresentation = {
   search?: boolean;
   /** For tree collections: how many folders deep pages may go (spec §6.15.4). No limit when absent. */
   maxDepth?: number;
+  /** The level the body's top headings should have (spec §6.18). 2 when absent: the title is the page's h1. */
+  headingStart?: number;
 };
 
 export type CollectionManifest = {

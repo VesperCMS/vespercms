@@ -51,3 +51,5 @@ export {
   vagueLinkText,
 } from './text.ts';
 export { decodeEntities, htmlElements, htmlTags, plainText } from './html.ts';
+export { blockingNotes, entryChecker, type EntryCheck, type EntryCheckInput } from './entry.ts';
+export { BUILD_RULES, BUILD_RULE_IDS, type BuildRule } from './build.ts';

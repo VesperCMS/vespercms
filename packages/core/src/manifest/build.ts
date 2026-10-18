@@ -1,3 +1,6 @@
+import { isContrastUse, parseHexColor } from '../a11y/contrast.ts';
+import { isA11yRuleId } from '../a11y/rules.ts';
+import type { A11ySettings } from '../a11y/types.ts';
 import { dataFormatOf } from '../files/data-file.ts';
 import { entryKindOf, patternExtensions } from '../collections/entries.ts';
 import type { Diagnostic, FieldModel } from '../field-model.ts';
@@ -55,6 +58,8 @@ export type CollectionConfig = {
   placement?: Record<string, 'main' | 'details'>;
   /** For tree collections: the deepest a page may be (spec §6.15.4). No default. */
   maxDepth?: number;
+  /** The level the body's top headings should have (spec §6.18). 2 by default. */
+  headingStart?: number;
 };
 
 export type ManifestInput = {
@@ -77,6 +82,8 @@ export type ManifestInput = {
     mdx?: { components?: Record<string, MdxComponentConfig> };
     /** Aspect ratios and the upload size limit (spec §6.6.3, §6.6.6). */
     images?: { ratios?: Record<string, number>; maxUploadEdge?: number };
+    /** Accessibility settings (spec §6.18): the publish gate and the declared backgrounds. */
+    a11y?: { blockPublishOn?: string[]; backgrounds?: Record<string, string> };
   };
   /**
    * The site's Markdoc config, merged the way @astrojs/markdoc merges it, and
@@ -130,6 +137,8 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
 
   const images = imagesOf(input.config?.images);
   diagnostics.push(...ratioDiagnostics(collections, images.ratios));
+  const a11y = a11yOf(input.config?.a11y);
+  diagnostics.push(...contrastDiagnostics(collections, a11y));
 
   const markdoc = input.markdoc ? markdocOf(input, widgets, diagnostics) : undefined;
   const mdx = mdxOf(input.config?.mdx?.components, widgets, diagnostics);
@@ -145,6 +154,7 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
         ? { redirects: { native: [...input.config.redirects.native] } }
         : {}),
       images,
+      ...(a11y ? { a11y } : {}),
     },
     collections,
     forms,
@@ -249,6 +259,49 @@ function ratioDiagnostics(
             path: field.path.map(String),
           });
         }
+      }
+      if (field.children) visit(collection, field.children);
+    }
+  };
+  for (const collection of collections) visit(collection.name, collection.fields ?? []);
+  return found;
+}
+
+/**
+ * The site's accessibility settings (spec §6.18). Unknown rule IDs and colours
+ * that aren't hex are left out here; loading the config reports them.
+ */
+function a11yOf(
+  config: { blockPublishOn?: string[]; backgrounds?: Record<string, string> } | undefined,
+): A11ySettings | undefined {
+  const blockPublishOn = [...new Set((config?.blockPublishOn ?? []).filter(isA11yRuleId))];
+  const backgrounds = Object.entries(config?.backgrounds ?? {})
+    .filter(([, color]) => typeof color === 'string' && parseHexColor(color) !== null)
+    .map(([name, color]) => ({ name, color }));
+  if (blockPublishOn.length === 0 && backgrounds.length === 0) return undefined;
+  return {
+    ...(blockPublishOn.length > 0 ? { blockPublishOn } : {}),
+    ...(backgrounds.length > 0 ? { backgrounds } : {}),
+  };
+}
+
+/** Colour fields that ask for a contrast check on a site with no declared backgrounds: nothing to check against. */
+function contrastDiagnostics(
+  collections: CollectionManifest[],
+  a11y: A11ySettings | undefined,
+): Diagnostic[] {
+  if (a11y?.backgrounds?.length) return [];
+  const found: Diagnostic[] = [];
+  const visit = (collection: string, fields: FieldModel[]) => {
+    for (const field of fields) {
+      if (field.widget === 'color' && isContrastUse(field.widgetOptions?.contrast)) {
+        found.push({
+          level: 'warning',
+          code: 'contrast-no-backgrounds',
+          message: `${field.path.join('.')} asks for a contrast check, but vesper.config.ts declares no a11y.backgrounds to check it against.`,
+          collection,
+          path: field.path.map(String),
+        });
       }
       if (field.children) visit(collection, field.children);
     }
@@ -410,6 +463,9 @@ function presentationOf(config: CollectionConfig): CollectionPresentation {
   if (config.schedule) presentation.schedule = scheduleOf(config.schedule);
   if (config.search !== undefined) presentation.search = config.search;
   if (config.maxDepth !== undefined) presentation.maxDepth = config.maxDepth;
+  const start = config.headingStart;
+  if (typeof start === 'number' && Number.isInteger(start) && start >= 1 && start <= 6)
+    presentation.headingStart = start;
   return presentation;
 }
 

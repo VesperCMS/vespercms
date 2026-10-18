@@ -238,3 +238,64 @@ describe('buildManifest: images (spec §6.6.3)', () => {
     ]);
   });
 });
+
+describe('buildManifest: accessibility (spec §6.18)', () => {
+  const fixtures = (contrast?: string) => ({
+    name: 'fixtures',
+    loader: { kind: 'glob', base: './src/content/fixtures', pattern: '**/*.mdoc', customId: false },
+    schema: z.object({
+      textColor: z
+        .string()
+        .meta({ widget: 'color', ...(contrast ? { widgetOptions: { contrast } } : {}) }),
+    }),
+  });
+
+  it('records the publish gate, the backgrounds and each collection’s heading start', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [fixtures('text')] as ManifestInput['collections'],
+      config: {
+        a11y: {
+          blockPublishOn: ['missing-alt', 'missing-alt', 'pdf-untagged'],
+          backgrounds: { 'Page, light': '#ffffff', 'Page, dark': '#12151f' },
+        },
+        collections: { fixtures: { headingStart: 1 } },
+      },
+    });
+    expect(manifest.site.a11y).toEqual({
+      blockPublishOn: ['missing-alt', 'pdf-untagged'],
+      backgrounds: [
+        { name: 'Page, light', color: '#ffffff' },
+        { name: 'Page, dark', color: '#12151f' },
+      ],
+    });
+    expect(manifest.collections[0]?.presentation.headingStart).toBe(1);
+    expect(manifest.diagnostics).toEqual([]);
+  });
+
+  it('leaves out what the config gets wrong, and omits empty settings', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [fixtures()] as ManifestInput['collections'],
+      config: {
+        a11y: { blockPublishOn: ['missing-alts'], backgrounds: { Page: 'white' } },
+        collections: { fixtures: { headingStart: 7 } },
+      },
+    });
+    expect(manifest.site.a11y).toBeUndefined();
+    expect(manifest.collections[0]?.presentation.headingStart).toBeUndefined();
+  });
+
+  it('warns when a colour asks for a contrast check and there are no backgrounds', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [fixtures('text')] as ManifestInput['collections'],
+    });
+    expect(manifest.diagnostics.map((d) => [d.code, d.message])).toEqual([
+      [
+        'contrast-no-backgrounds',
+        'textColor asks for a contrast check, but vesper.config.ts declares no a11y.backgrounds to check it against.',
+      ],
+    ]);
+  });
+});
