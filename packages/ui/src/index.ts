@@ -45,6 +45,9 @@ export {
   Drawer,
   Menu,
   Disclosure,
+  Chevron,
+  glassOverlay,
+  popoverClass,
   type DialogProps,
   type DrawerProps,
   type MenuProps,
@@ -64,6 +67,8 @@ export {
 export {
   cx,
   focusRing,
+  focusHalo,
+  colorTransition,
   fieldControl,
   FieldLabel,
   FieldHelp,
@@ -71,6 +76,7 @@ export {
 } from './components/shared.tsx';
 export {
   Toolbar,
+  ToolbarSeparator,
   ToggleButton,
   ToolButton,
   type ToolbarProps,

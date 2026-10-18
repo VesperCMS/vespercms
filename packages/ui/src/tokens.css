@@ -1,19 +1,21 @@
 /*
- * Vesper design tokens (spec §10).
+ * Vesper design tokens (spec §10), in the Pine direction of Vesper's design
+ * system (DECISIONS.md, "Studio design").
  *
  * Use after Tailwind: `@import 'tailwindcss'; @import '@vesper/ui/tokens.css';`
  *
  * The design budget (spec §10.4) is enforced here, not by reviewers:
  *
- * - Tailwind's default palette, font weights and shadows are reset to
- *   `initial`, so `bg-red-500`, `font-black` or `shadow-lg` simply don't
- *   exist. A screen can only use what is declared below.
+ * - Tailwind's default palette, type scale, font weights, radii and shadows
+ *   are reset to `initial`, so `bg-red-500`, `text-xl`, `font-black` or
+ *   `shadow-lg` simply don't exist. A screen can only use what is declared
+ *   below.
  * - Beyond neutrals there are exactly five colour roles: accent (with its
  *   hover state), accent-subtle, danger, focus and warning. No status hues:
  *   status is text.
  * - scripts/a11y-contrast.mjs parses this file and fails CI if a colour is
  *   added outside the allowlist, or if any pair it lists misses its WCAG
- *   threshold in either theme.
+ *   threshold in either theme, on solid surfaces or on glass.
  *
  * Every colour is a `light-dark()` pair, so `color-scheme` alone selects the
  * palette (the same mechanism as Taproot). Values must stay plain
@@ -21,40 +23,252 @@
  */
 @theme {
   --color-*: initial;
+  --text-*: initial;
   --font-weight-*: initial;
+  --radius-*: initial;
   --shadow-*: initial;
+  --animate-*: initial;
 
-  /* Neutrals. Faintly tinted toward the accent hue so greys don't read as dead. */
-  --color-surface: light-dark(oklch(99% 0 0), oklch(20% 0.012 265));
-  --color-surface-raised: light-dark(oklch(100% 0 0), oklch(24% 0.013 265));
-  --color-surface-sunken: light-dark(oklch(97% 0.003 265), oklch(16% 0.01 265));
-  --color-border: light-dark(oklch(90% 0.006 265), oklch(33% 0.012 265));
-  --color-border-strong: light-dark(oklch(60% 0.01 265), oklch(58% 0.014 265));
-  --color-content: light-dark(oklch(24% 0.012 265), oklch(95% 0.005 265));
-  --color-content-muted: light-dark(oklch(48% 0.014 265), oklch(76% 0.012 265));
-  --color-on-accent: light-dark(oklch(99% 0 0), oklch(16% 0.03 270));
+  /* Neutrals: warm sand in light, warm charcoal in dark (hue 60 to 70). */
+  --color-surface: light-dark(oklch(98.5% 0.008 70), oklch(21% 0.01 60));
+  --color-surface-raised: light-dark(oklch(100% 0 0), oklch(25% 0.011 60));
+  --color-surface-sunken: light-dark(oklch(96% 0.012 70), oklch(17.5% 0.009 60));
+  --color-border: light-dark(oklch(90.5% 0.016 70), oklch(33% 0.013 60));
+  --color-border-strong: light-dark(oklch(61% 0.022 70), oklch(58% 0.016 60));
+  --color-content: light-dark(oklch(25% 0.018 60), oklch(95% 0.01 70));
+  --color-content-muted: light-dark(oklch(48% 0.022 60), oklch(76% 0.016 70));
+  --color-on-accent: light-dark(oklch(99% 0.004 185), oklch(19% 0.03 185));
 
   /*
-   * The one accent: primary action, links, current location. Indigo, for an
-   * evening star. Hover is a state of the accent, not a sixth role.
+   * The one accent: the primary action, links, quiet buttons, the current
+   * location. Pine, and fixed: choosing another is white-label (DECISIONS.md).
+   * Hover is a state of the accent, not a sixth role.
    */
-  --color-accent: light-dark(oklch(50% 0.16 270), oklch(76% 0.12 270));
-  --color-accent-hover: light-dark(oklch(44% 0.16 270), oklch(82% 0.08 270));
-  --color-accent-subtle: light-dark(oklch(95% 0.02 270), oklch(30% 0.06 270));
+  --color-accent: light-dark(oklch(48% 0.072 185), oklch(78% 0.1 185));
+  --color-accent-hover: light-dark(oklch(42% 0.072 185), oklch(84% 0.075 185));
+  --color-accent-subtle: light-dark(oklch(95% 0.025 185), oklch(31% 0.045 185));
 
-  --color-danger: light-dark(oklch(52% 0.19 25), oklch(70% 0.16 25));
-  --color-focus: light-dark(oklch(52% 0.13 245), oklch(74% 0.13 245));
-  --color-warning: light-dark(oklch(60% 0.13 70), oklch(78% 0.13 75));
+  --color-danger: light-dark(oklch(51% 0.18 27), oklch(72% 0.15 27));
+  --color-focus: light-dark(oklch(52% 0.14 250), oklch(75% 0.12 250));
+  --color-warning: light-dark(oklch(62% 0.13 70), oklch(80% 0.13 78));
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* Figtree is self-hosted by @vesper/admin; the system stack is the fallback. */
+  --font-sans: Figtree, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
   /* Two weights (spec §10.4). */
   --font-weight-normal: 400;
   --font-weight-semibold: 600;
 
-  /* Shadows only on overlays (spec §10.2). */
-  --shadow-overlay: 0 8px 24px oklch(0% 0 0 / 0.18), 0 2px 6px oklch(0% 0 0 / 0.12);
+  /*
+   * The type scale. `title` is the editor's title field; `heading-1` a
+   * screen's heading; `heading-2` sections and dialog titles; `heading-3`
+   * disclosures. `body` is all reading and writing; `label` field and column
+   * labels; `small` secondary text (never running copy); `caption` file facts.
+   */
+  --text-title: 1.875rem;
+  --text-title--line-height: 2.25rem;
+  --text-title--letter-spacing: -0.015em;
+  --text-title--font-weight: 600;
+  --text-heading-1: 1.5rem;
+  --text-heading-1--line-height: 2rem;
+  --text-heading-1--letter-spacing: -0.01em;
+  --text-heading-1--font-weight: 600;
+  --text-heading-2: 1.25rem;
+  --text-heading-2--line-height: 1.75rem;
+  --text-heading-2--font-weight: 600;
+  --text-heading-3: 1.125rem;
+  --text-heading-3--line-height: 1.75rem;
+  --text-heading-3--font-weight: 600;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-label: 0.9375rem;
+  --text-label--line-height: 1.375rem;
+  --text-label--font-weight: 600;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.25rem;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.125rem;
+
+  /* Soft corners: checkboxes and tags, controls, overlays. `rounded-full` stays. */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+
+  /* Fixed measures: the editor's column and the Details drawer. */
+  --container-editor: 45rem;
+  --container-drawer: 25rem;
+
+  /* Motion: 120ms for colour, 180ms for movement; reduced motion removes both. */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /*
+   * Depth (spec §10.2, plus the dated exception in DECISIONS.md): overlays
+   * cast `shadow-overlay`, and four named effects may glow, each in its named
+   * place only. Glows are mixed from the accent so they follow it; each one is
+   * written so `light-dark()` alone switches it, like the colours.
+   */
+  --shadow-overlay:
+    0 12px 32px light-dark(oklch(30% 0.03 55 / 0.14), oklch(0% 0 0 / 0.5)),
+    0 2px 6px light-dark(oklch(30% 0.03 55 / 0.1), oklch(0% 0 0 / 0.35));
+  /* The primary button on hover and focus, and its one pulse after a save. */
+  --shadow-glow-accent:
+    0 0 0 1px
+      light-dark(
+        color-mix(in oklch, var(--color-accent) 10%, transparent),
+        color-mix(in oklch, var(--color-accent) 30%, transparent)
+      ),
+    0 6px 20px -6px
+      light-dark(color-mix(in oklch, var(--color-accent) 55%, transparent), transparent),
+    0 0 28px -4px light-dark(transparent, color-mix(in oklch, var(--color-accent) 55%, transparent));
+  /* The current item, on top of accent-subtle: a halo, not a border. */
+  --shadow-glow-selected:
+    0 0 0 3px light-dark(color-mix(in oklch, var(--color-accent) 10%, transparent), transparent),
+    0 0 0 1px light-dark(transparent, color-mix(in oklch, var(--color-accent) 18%, transparent)),
+    0 0 16px -4px light-dark(transparent, color-mix(in oklch, var(--color-accent) 35%, transparent));
+  /* The lit top edge and hairline rim of glass. */
+  --shadow-glass-edge:
+    inset 0 1px 0 light-dark(oklch(100% 0 0 / 0.7), oklch(100% 0 0 / 0.07)),
+    0 0 0 1px light-dark(oklch(30% 0.03 55 / 0.08), oklch(100% 0 0 / 0.07));
+  /* Glass overlays: the rim and the overlay shadow together. */
+  --shadow-glass-overlay:
+    inset 0 1px 0 light-dark(oklch(100% 0 0 / 0.7), oklch(100% 0 0 / 0.07)),
+    0 0 0 1px light-dark(oklch(30% 0.03 55 / 0.08), oklch(100% 0 0 / 0.07)),
+    0 12px 32px light-dark(oklch(30% 0.03 55 / 0.14), oklch(0% 0 0 / 0.5)),
+    0 2px 6px light-dark(oklch(30% 0.03 55 / 0.1), oklch(0% 0 0 / 0.35));
+
+  /* The primary button's one pulse after a successful save; never on a loop. */
+  --animate-glow-pulse: glow-pulse 1.2s var(--ease-out) 1;
+}
+
+/* Outside @theme, so scripts/a11y-contrast.mjs can read the block above. */
+@keyframes glow-pulse {
+  0% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  30% {
+    box-shadow: var(--shadow-glow-accent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/*
+ * glow-focus: a halo outside the solid focus ring, never in its place. It's
+ * drawn as Tailwind's ring (`ring-6 ring-(color:--glow-focus)`) so it adds
+ * to whatever shadow the element already has.
+ *
+ * Glass: what floats is frosted, so the page stays present beneath it. The
+ * design system's floor is 88% of the surface. The contrast check composites
+ * every text pair over black and over white, the extremes of any backdrop:
+ * the top bar passes at 88%, but overlays need 93% for dark-theme errors and
+ * input boundaries, so they're filled more.
+ */
+:root {
+  --glow-focus: light-dark(
+    color-mix(in oklch, var(--color-focus) 16%, transparent),
+    color-mix(in oklch, var(--color-focus) 22%, transparent)
+  );
+  --glass-fill: 88%;
+  --glass-fill-raised: 93%;
+  --glass-blur: 20px;
+  --glass-saturate: 160%;
+  --scrim-fill: 45%;
+  --scrim-blur: 6px;
+}
+
+/* Floating overlays: menus, popovers, dialogs, drawers. */
+@utility glass-raised {
+  background-color: color-mix(
+    in oklch,
+    var(--color-surface-raised) var(--glass-fill-raised),
+    transparent
+  );
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background-color: var(--color-surface-raised);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  @media (forced-colors: active) {
+    background-color: Canvas;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: 1px solid CanvasText;
+  }
+}
+
+/* The sticky top bar: the page's own surface, frosted. */
+@utility glass-bar {
+  background-color: color-mix(in oklch, var(--color-surface) var(--glass-fill), transparent);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background-color: var(--color-surface);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+  @media (forced-colors: active) {
+    background-color: Canvas;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-bottom: 1px solid CanvasText;
+  }
+}
+
+/* The modal scrim behind a dialog or drawer. It holds no text. */
+@utility scrim {
+  background-color: color-mix(in oklch, var(--color-surface) var(--scrim-fill), transparent);
+  -webkit-backdrop-filter: blur(var(--scrim-blur));
+  backdrop-filter: blur(var(--scrim-blur));
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background-color: color-mix(in oklch, var(--color-surface) 80%, transparent);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: color-mix(in oklch, var(--color-surface) 85%, transparent);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/*
+ * The afterglow: a wash of the accent at the top of welcoming screens (home
+ * and empty states). Decorative: no text relies on it, and the contrast
+ * check covers text on its brightest point. Never behind the editor, tables
+ * or forms.
+ */
+@utility afterglow {
+  position: relative;
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 20rem;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      60% 100% at 50% 0%,
+      light-dark(
+        var(--color-accent-subtle),
+        color-mix(in oklch, var(--color-accent) 22%, transparent)
+      ),
+      transparent 70%
+    );
+  }
 }
 
 @layer base {

@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import {
   Button as RACButton,
+  Separator,
   ToggleButton as RACToggleButton,
   Toolbar as RACToolbar,
   type ButtonProps as RACButtonProps,
   type ToggleButtonProps as RACToggleButtonProps,
 } from 'react-aria-components';
-import { cx, focusRing } from './shared.tsx';
+import { colorTransition, cx, focusRing } from './shared.tsx';
 
 export type ToolbarProps = {
   /** Accessible name, e.g. "Formatting". */
@@ -29,10 +30,18 @@ export function Toolbar({ label, children, className }: ToolbarProps) {
 }
 
 const toolClass = cx(
-  'inline-flex min-h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-content',
+  'inline-flex min-h-8 min-w-8 items-center justify-center rounded-sm px-2 text-small font-semibold text-content',
   'data-[hovered]:bg-surface-sunken data-[disabled]:opacity-50',
+  colorTransition,
   focusRing,
 );
+
+/** A hairline between groups of tools. */
+export function ToolbarSeparator() {
+  return (
+    <Separator orientation="vertical" className="mx-1 h-5 self-center border-l border-border" />
+  );
+}
 
 export type ToggleButtonProps = Omit<RACToggleButtonProps, 'className' | 'children'> & {
   children: ReactNode;
@@ -46,7 +55,7 @@ export function ToggleButton({ children, className, ...props }: ToggleButtonProp
       {...props}
       className={cx(
         toolClass,
-        'data-[selected]:bg-accent-subtle data-[selected]:font-semibold',
+        'data-[selected]:bg-accent-subtle data-[selected]:text-accent',
         className,
       )}
     >

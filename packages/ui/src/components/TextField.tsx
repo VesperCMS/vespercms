@@ -28,7 +28,7 @@ export function TextField({
   ...props
 }: TextFieldProps) {
   return (
-    <RACTextField {...props} className={cx('flex flex-col gap-1', className)}>
+    <RACTextField {...props} className={cx('flex flex-col gap-2', className)}>
       <FieldLabel label={label} isRequired={props.isRequired} />
       <Input placeholder={placeholder} className={cx(fieldControl, inputClassName)} />
       <FieldHelp description={description} errorMessage={errorMessage} />
@@ -49,13 +49,14 @@ export function TextArea({
   ...props
 }: TextAreaProps) {
   return (
-    <RACTextField {...props} className={cx('flex flex-col gap-1', className)}>
+    <RACTextField {...props} className={cx('flex flex-col gap-2', className)}>
       <FieldLabel label={label} isRequired={props.isRequired} />
       <RACTextArea
         rows={rows}
         placeholder={placeholder}
-        className={cx(fieldControl, 'min-h-24 resize-y leading-normal', inputClassName)}
+        className={cx(fieldControl, 'min-h-24 resize-y', inputClassName)}
       />
+
       <FieldHelp description={description} errorMessage={errorMessage} />
     </RACTextField>
   );

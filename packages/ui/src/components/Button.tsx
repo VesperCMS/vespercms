@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
   Button as RACButton,
   FileTrigger,
@@ -6,30 +6,68 @@ import {
   type ButtonProps as RACButtonProps,
   type LinkProps as RACLinkProps,
 } from 'react-aria-components';
-import { cx, focusRing } from './shared.tsx';
+import { colorTransition, cx, focusRing } from './shared.tsx';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger';
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  // At most one primary (accent-filled) button per screen (spec §10.4).
-  primary: 'bg-accent text-on-accent data-[hovered]:bg-accent-hover',
-  secondary: 'border border-border-strong bg-surface text-content data-[hovered]:bg-surface-sunken',
-  quiet: 'text-accent data-[hovered]:bg-accent-subtle',
-  danger: 'bg-danger text-on-accent data-[hovered]:opacity-90',
+  // At most one primary (accent-filled) button per screen (spec §10.4), and
+  // the only thing that glows with the accent: on hover and focus, never at
+  // rest (DECISIONS.md, "Four named glows").
+  primary: cx(
+    'bg-accent text-on-accent data-[hovered]:bg-accent-hover',
+    'data-[hovered]:shadow-glow-accent data-[focus-visible]:shadow-glow-accent',
+    'transition-[background-color,box-shadow] duration-180 ease-out',
+  ),
+  secondary: cx(
+    'border border-border-strong bg-surface text-content data-[hovered]:bg-surface-sunken',
+    colorTransition,
+  ),
+  quiet: cx('text-accent data-[hovered]:bg-accent-subtle', colorTransition),
+  danger: cx('bg-danger text-on-accent data-[hovered]:opacity-90', colorTransition),
 };
 
 export type ButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
   variant?: ButtonVariant;
   className?: string;
   children: ReactNode;
+  /**
+   * The primary button's one glow pulse after its action succeeded (a save).
+   * Each new value plays it once; reduced motion drops it.
+   */
+  pulse?: number;
 };
 
-export function Button({ variant = 'secondary', className, children, ...props }: ButtonProps) {
+export function Button({
+  variant = 'secondary',
+  className,
+  children,
+  pulse = 0,
+  ...props
+}: ButtonProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const button = ref.current;
+    if (pulse === 0 || !button) return;
+    // Restart the animation, then take it off so hover and focus glow as usual.
+    button.classList.remove('animate-glow-pulse');
+    // Reading layout in between makes the browser start the animation afresh.
+    button.getBoundingClientRect();
+    button.classList.add('animate-glow-pulse');
+    const done = () => {
+      button.classList.remove('animate-glow-pulse');
+    };
+    button.addEventListener('animationend', done, { once: true });
+    return () => {
+      button.removeEventListener('animationend', done);
+    };
+  }, [pulse]);
   return (
     <RACButton
       {...props}
+      ref={ref}
       className={cx(
-        'inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold',
+        'inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 text-label',
         'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[pending]:cursor-progress',
         focusRing,
         VARIANTS[variant],
@@ -96,8 +134,9 @@ export function IconButton({ icon, label, className, ...props }: IconButtonProps
       {...props}
       aria-label={label}
       className={cx(
-        'inline-flex size-10 items-center justify-center rounded-md text-content-muted data-[hovered]:bg-surface-sunken',
-        'data-[disabled]:opacity-50',
+        'inline-flex size-10 shrink-0 items-center justify-center rounded-md text-content-muted',
+        'data-[hovered]:bg-surface-sunken data-[hovered]:text-content data-[disabled]:opacity-50',
+        colorTransition,
         focusRing,
         className,
       )}
@@ -107,14 +146,27 @@ export function IconButton({ icon, label, className, ...props }: IconButtonProps
   );
 }
 
-export type LinkProps = Omit<RACLinkProps, 'className'> & { className?: string };
+export type LinkProps = Omit<RACLinkProps, 'className'> & {
+  className?: string;
+  /**
+   * `inline` (the default): accent and always underlined, so colour is never
+   * the only cue. `title`: the name of a row in a list or table, which opens
+   * it; it stands alone, so it's set in content colour and semibold, and
+   * underlined in the accent on hover.
+   */
+  variant?: 'inline' | 'title';
+};
 
-export function Link({ className, ...props }: LinkProps) {
+export function Link({ className, variant = 'inline', ...props }: LinkProps) {
   return (
     <RACLink
       {...props}
       className={cx(
-        'cursor-pointer rounded-sm text-accent underline underline-offset-2 data-[hovered]:text-accent-hover',
+        'cursor-pointer rounded-sm underline-offset-2',
+        variant === 'inline'
+          ? 'text-accent underline data-[hovered]:text-accent-hover'
+          : 'font-semibold text-content no-underline data-[hovered]:text-accent data-[hovered]:underline',
+        colorTransition,
         focusRing,
         className,
       )}

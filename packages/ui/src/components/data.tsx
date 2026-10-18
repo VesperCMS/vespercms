@@ -49,16 +49,20 @@ export function Table<T extends { id: string }>({
       aria-label={label}
       {...(sort ? { sortDescriptor: sort } : {})}
       {...(onSortChange ? { onSortChange } : {})}
-      className="w-full border-collapse text-left text-base"
+      className="w-full border-separate border-spacing-0 text-left text-body"
     >
-      <TableHeader className="border-b border-border-strong">
+      <TableHeader>
         {columns.map((column) => (
           <Column
             key={column.id}
             id={column.id}
             isRowHeader={column.isRowHeader ?? false}
             allowsSorting={column.allowsSorting ?? false}
-            className={cx('px-3 py-2 text-sm font-semibold text-content-muted', focusRing)}
+            className={cx(
+              'bg-surface-sunken px-3 py-2 text-label text-content-muted first:rounded-l-md last:rounded-r-md',
+              'data-[allows-sorting]:cursor-pointer',
+              focusRing,
+            )}
           >
             {({ sortDirection }) => (
               <span className="inline-flex items-center gap-1">
@@ -82,12 +86,18 @@ export function Table<T extends { id: string }>({
             id={row.id}
             {...(rowHref ? { href: rowHref(row) } : {})}
             className={cx(
-              'border-b border-border data-[hovered]:bg-surface-sunken data-[href]:cursor-pointer',
-              focusRing,
+              'transition-colors duration-120 ease-out data-[hovered]:bg-accent-subtle data-[href]:cursor-pointer',
+              'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
             )}
           >
             {columns.map((column) => (
-              <Cell key={column.id} className={cx('px-3 py-3 align-top', focusRing)}>
+              <Cell
+                key={column.id}
+                className={cx(
+                  'border-b border-border px-3 py-3 align-top',
+                  'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
+                )}
+              >
                 {renderCell(row, column.id)}
               </Cell>
             ))}
@@ -104,17 +114,37 @@ export type InlineStatusProps = {
   dot?: boolean;
   /** Announce changes politely to screen readers (autosave status, spec §10.2 principle 6). */
   live?: boolean;
+  /** `error` turns the words and the dot `danger`; the words still say what happened. */
+  tone?: 'neutral' | 'error';
   className?: string;
 };
 
 /** Status as words: "Draft · saved just now". */
-export function InlineStatus({ children, dot = false, live = true, className }: InlineStatusProps) {
+export function InlineStatus({
+  children,
+  dot = false,
+  live = true,
+  tone = 'neutral',
+  className,
+}: InlineStatusProps) {
   return (
     <p
       role={live ? 'status' : undefined}
-      className={cx('inline-flex items-center gap-2 text-sm text-content-muted', className)}
+      className={cx(
+        'inline-flex items-center gap-2 text-small',
+        tone === 'error' ? 'text-danger' : 'text-content-muted',
+        className,
+      )}
     >
-      {dot && <span aria-hidden="true" className="size-1.5 rounded-full bg-content-muted" />}
+      {dot && (
+        <span
+          aria-hidden="true"
+          className={cx(
+            'size-2 shrink-0 rounded-full',
+            tone === 'error' ? 'bg-danger' : 'bg-content-muted',
+          )}
+        />
+      )}
       {children}
     </p>
   );
@@ -160,12 +190,12 @@ export function ErrorSummary({
       tabIndex={-1}
       role="alert"
       aria-labelledby="vesper-error-summary-title"
-      className="rounded-md border border-danger bg-surface-raised p-4 outline-none focus-visible:outline-2 focus-visible:outline-focus"
+      className="rounded-md border border-danger bg-surface p-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
-      <h2 id="vesper-error-summary-title" className="text-base font-semibold text-content">
+      <h2 id="vesper-error-summary-title" className="text-heading-3 text-content">
         {title}
       </h2>
-      <ul className="mt-2 list-none space-y-1 p-0">
+      <ul className="mt-2 list-disc space-y-1 pl-6 text-danger">
         {errors.map((error, index) => (
           <li key={`${error.fieldId}:${String(index)}`}>
             <a

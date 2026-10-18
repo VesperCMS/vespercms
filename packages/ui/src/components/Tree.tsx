@@ -85,7 +85,7 @@ export function Tree<T extends TreeNode>({
           }
         : {})}
       className={cx(
-        'group border-b border-border text-base outline-none data-[hovered]:bg-surface-sunken',
+        'group border-b border-border text-body outline-none data-[hovered]:bg-surface-sunken',
         'data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
         'data-[drop-target]:bg-accent-subtle data-[dragging]:opacity-50',
       )}

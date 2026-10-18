@@ -6,14 +6,28 @@ export function cx(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-/** One focus style everywhere: a 2px ring in the focus token, offset from the control (spec §10.2). */
-export const focusRing =
-  'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-focus';
+/**
+ * The focus halo (glow-focus): a soft ring outside the solid focus outline,
+ * never in its place. It's Tailwind's ring, so it adds to any shadow the
+ * element already has, and forced colours drop it while keeping the outline.
+ */
+export const focusHalo =
+  'data-[focus-visible]:ring-6 data-[focus-visible]:ring-(color:--glow-focus)';
+
+/** One focus style everywhere: a 2px ring in the focus token, offset from the control (spec §10.2), with its halo. */
+export const focusRing = cx(
+  'outline-none data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-focus',
+  focusHalo,
+);
+
+/** Colour changes ease in over 120ms; reduced motion removes it (tokens.css). */
+export const colorTransition = 'transition-colors duration-120 ease-out';
 
 /** The shared look of a single-line input or a select trigger: a hairline, a sunken fill. */
 export const fieldControl = cx(
-  'w-full rounded-md border border-border-strong bg-surface-sunken px-3 py-2 text-base text-content',
+  'min-h-10 w-full rounded-md border border-border-strong bg-surface-sunken px-3 py-2 text-body text-content',
   'outline-none data-[focused]:outline-2 data-[focused]:outline-offset-2 data-[focused]:outline-focus',
+  'data-[focused]:ring-6 data-[focused]:ring-(color:--glow-focus)',
   'data-[invalid]:border-danger data-[disabled]:opacity-60',
 );
 
@@ -32,7 +46,7 @@ export type FieldTextProps = {
 export function FieldLabel({ label, isRequired }: Pick<FieldTextProps, 'label' | 'isRequired'>) {
   if (!label) return null;
   return (
-    <Label className="block text-sm font-semibold text-content">
+    <Label className="block text-label text-content">
       {label}
       {isRequired && (
         <>
@@ -51,11 +65,11 @@ export function FieldHelp({
   return (
     <>
       {description && (
-        <Text slot="description" className="block text-sm text-content-muted">
+        <Text slot="description" className="block text-small text-content-muted">
           {description}
         </Text>
       )}
-      <FieldError className="block text-sm text-danger">{errorMessage}</FieldError>
+      <FieldError className="block text-small text-danger">{errorMessage}</FieldError>
     </>
   );
 }

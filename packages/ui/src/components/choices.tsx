@@ -24,6 +24,7 @@ import {
   type SwitchFieldProps,
 } from 'react-aria-components';
 import { Icon } from './Button.tsx';
+import { Chevron, popoverClass } from './overlays.tsx';
 import {
   cx,
   fieldControl,
@@ -40,12 +41,36 @@ export type Option = {
   prefix?: ReactNode;
 };
 
+/**
+ * An option in an open list. The chosen one is the current item: a tick,
+ * accent-subtle and its halo (glow-selected); aria-selected says it in words.
+ */
 const listBoxItem = cx(
-  'cursor-default rounded-sm px-3 py-2 text-base text-content outline-none',
-  'data-[focused]:bg-accent-subtle data-[selected]:font-semibold',
+  'group flex min-h-9 cursor-default items-center gap-2 rounded-md px-3 py-1.5 text-body text-content outline-none',
+  'data-[focused]:bg-accent-subtle data-[selected]:bg-accent-subtle data-[selected]:shadow-glow-selected',
 );
-const popover =
-  'min-w-[var(--trigger-width)] rounded-md border border-border bg-surface-raised p-1 shadow-overlay';
+const popover = cx('min-w-[var(--trigger-width)]', popoverClass);
+
+/** The chosen option's tick; hidden from assistive tech, which hears "selected". */
+function Tick() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      focusable="false"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="invisible ml-auto shrink-0 text-accent group-data-[selected]:visible"
+    >
+      <path d="M3 8.5l3 3 7-7" />
+    </svg>
+  );
+}
 
 type ChoiceProps = FieldTextProps & {
   options: Option[];
@@ -82,21 +107,22 @@ export function Select({
         onChange(key === null ? null : String(key));
       }}
       placeholder={placeholder ?? 'Choose…'}
-      className={cx('flex flex-col gap-1', className)}
+      className={cx('flex flex-col gap-2', className)}
     >
       <FieldLabel label={label} isRequired={props.isRequired} />
       <RACButton
         className={cx(fieldControl, 'flex items-center justify-between text-left', focusRing)}
       >
         <SelectValue className="truncate data-[placeholder]:text-content-muted" />
-        <span aria-hidden="true">▾</span>
+        <Chevron />
       </RACButton>
       <FieldHelp description={description} errorMessage={errorMessage} />
       <Popover className={popover}>
-        <ListBox className="outline-none" items={options}>
+        <ListBox className="max-h-72 overflow-auto outline-none" items={options}>
           {(option) => (
             <ListBoxItem id={option.value} textValue={option.label} className={listBoxItem}>
               {option.label}
+              <Tick />
             </ListBoxItem>
           )}
         </ListBox>
@@ -132,16 +158,19 @@ export function Combobox({
         onChange(key === null ? null : String(key));
       }}
       menuTrigger="focus"
-      className={cx('flex flex-col gap-1', className)}
+      className={cx('flex flex-col gap-2', className)}
     >
       <FieldLabel label={label} isRequired={props.isRequired} />
       <div className="relative">
         <Input placeholder={placeholder} className={cx(fieldControl, 'pr-10')} />
         <RACButton
           aria-label="Show options"
-          className={cx('absolute inset-y-0 right-0 px-3 text-content-muted', focusRing)}
+          className={cx(
+            'absolute inset-y-0 right-0 flex items-center rounded-md px-3 text-content-muted',
+            focusRing,
+          )}
         >
-          <span aria-hidden="true">▾</span>
+          <Chevron />
         </RACButton>
       </div>
       <FieldHelp description={description} errorMessage={errorMessage} />
@@ -150,6 +179,7 @@ export function Combobox({
           {(option: Option) => (
             <ListBoxItem id={option.value} textValue={option.label} className={listBoxItem}>
               {option.label}
+              <Tick />
             </ListBoxItem>
           )}
         </ListBox>
@@ -201,7 +231,7 @@ export function MultiCombobox({
 
   return (
     <div
-      className={cx('flex flex-col gap-1', className)}
+      className={cx('flex flex-col gap-2', className)}
       // React Aria owns the input's key handling, so free-text entry and
       // Backspace-to-remove are caught on the way down. An option highlighted
       // in the list (aria-activedescendant) is left for React Aria to choose.
@@ -246,7 +276,7 @@ export function MultiCombobox({
           <ListBox
             className="max-h-72 overflow-auto outline-none"
             renderEmptyState={() => (
-              <p className="px-3 py-2 text-content-muted">
+              <p className="px-3 py-2 text-small text-content-muted">
                 {allowsCustomValue ? 'Press Enter to add it' : 'No matches'}
               </p>
             )}
@@ -273,7 +303,7 @@ export function MultiCombobox({
                 id={value}
                 textValue={labelOf(value)}
                 className={cx(
-                  'inline-flex items-center gap-1 rounded-md border border-border bg-surface-sunken py-1 pl-2 pr-1 text-sm',
+                  'inline-flex items-center gap-1 rounded-sm border border-border bg-surface py-0.5 pr-0.5 pl-2 text-small text-content',
                   focusRing,
                 )}
               >
@@ -282,7 +312,10 @@ export function MultiCombobox({
                 <RACButton
                   slot="remove"
                   aria-label={`Remove ${itemName}`}
-                  className={cx('rounded-sm text-content-muted', focusRing)}
+                  className={cx(
+                    'inline-flex size-6 items-center justify-center rounded-sm text-content-muted data-[hovered]:bg-surface-sunken data-[hovered]:text-content',
+                    focusRing,
+                  )}
                 >
                   <Icon name="close" />
                 </RACButton>
@@ -295,6 +328,13 @@ export function MultiCombobox({
   );
 }
 
+/** The focus ring and halo on a checkbox's, switch's or radio's drawn box, from its focused group. */
+const groupFocus = cx(
+  'group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-focus',
+  // Written out in full: Tailwind finds class names by reading the source.
+  'group-data-[focus-visible]:ring-6 group-data-[focus-visible]:ring-(color:--glow-focus)',
+);
+
 export type CheckboxProps = Omit<CheckboxFieldProps, 'className' | 'children'> & {
   children: ReactNode;
   className?: string;
@@ -303,13 +343,13 @@ export type CheckboxProps = Omit<CheckboxFieldProps, 'className' | 'children'> &
 export function Checkbox({ children, className, ...props }: CheckboxProps) {
   return (
     <CheckboxField {...props} className={className}>
-      <CheckboxButton className="group inline-flex items-center gap-2 text-base text-content">
+      <CheckboxButton className="group inline-flex items-start gap-2 text-body text-content">
         <span
           aria-hidden="true"
           className={cx(
-            'flex size-5 items-center justify-center rounded-sm border border-border-strong bg-surface',
+            'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm border border-border-strong bg-surface',
             'group-data-[selected]:border-accent group-data-[selected]:bg-accent group-data-[selected]:text-on-accent',
-            'group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-focus',
+            groupFocus,
           )}
         >
           <svg
@@ -337,19 +377,20 @@ export type SwitchProps = Omit<SwitchFieldProps, 'className' | 'children'> & {
 export function Switch({ children, className, ...props }: SwitchProps) {
   return (
     <SwitchField {...props} className={className}>
-      <SwitchButton className="group inline-flex items-center gap-3 text-base text-content">
+      <SwitchButton className="group inline-flex items-center gap-3 text-body text-content">
         <span
           aria-hidden="true"
           className={cx(
-            'flex h-6 w-10 items-center rounded-full border border-border-strong bg-surface-sunken p-0.5',
+            'flex h-6 w-10 shrink-0 items-center rounded-full border border-border-strong bg-surface-sunken p-0.5',
+            'transition-colors duration-120 ease-out',
             'group-data-[selected]:border-accent group-data-[selected]:bg-accent',
-            'group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-focus',
+            groupFocus,
           )}
         >
-          <span className="size-4 rounded-full bg-border-strong transition-transform group-data-[selected]:translate-x-4 group-data-[selected]:bg-on-accent" />
+          <span className="size-4 rounded-full bg-content-muted transition-transform duration-180 ease-out group-data-[selected]:translate-x-4 group-data-[selected]:bg-on-accent" />
         </span>
         {children}
-        <span aria-hidden="true" className="text-sm text-content-muted">
+        <span aria-hidden="true" className="text-small text-content-muted">
           <span className="group-data-[selected]:hidden">Off</span>
           <span className="hidden group-data-[selected]:inline">On</span>
         </span>
@@ -384,7 +425,7 @@ export function RadioGroup({
       className={cx('flex flex-col gap-2', className)}
     >
       {label && (
-        <Label className="text-sm font-semibold text-content">
+        <Label className="text-label text-content">
           {label}
           {props.isRequired && (
             <>
@@ -402,13 +443,13 @@ export function RadioGroup({
       >
         {options.map((option) => (
           <RadioField key={option.value} value={option.value}>
-            <RadioButton className="group inline-flex items-center gap-2 text-base text-content">
+            <RadioButton className="group inline-flex items-center gap-2 text-body text-content">
               <span
                 aria-hidden="true"
                 className={cx(
-                  'flex size-5 items-center justify-center rounded-full border border-border-strong bg-surface',
+                  'flex size-5 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface',
                   'group-data-[selected]:border-accent',
-                  'group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-focus',
+                  groupFocus,
                 )}
               >
                 <span className="hidden size-2.5 rounded-full bg-accent group-data-[selected]:block" />
@@ -483,7 +524,7 @@ export function SuggestField({
       inputValue={value}
       onInputChange={onChange}
       menuTrigger="input"
-      className={cx('flex flex-col gap-1', className)}
+      className={cx('flex flex-col gap-2', className)}
     >
       <FieldLabel label={label} isRequired={false} />
       <Input placeholder={placeholder} inputMode={inputMode} className={fieldControl} />
@@ -491,10 +532,14 @@ export function SuggestField({
       <Popover className={popover}>
         <ListBox className="max-h-72 overflow-auto outline-none">
           {(item: Suggestion) => (
-            <ListBoxItem id={item.value} textValue={item.value} className={listBoxItem}>
+            <ListBoxItem
+              id={item.value}
+              textValue={item.value}
+              className={cx(listBoxItem, 'flex-col items-start gap-0')}
+            >
               <span className="block">{item.label}</span>
               {item.detail && (
-                <span className="block text-sm text-content-muted">{item.detail}</span>
+                <span className="block text-small text-content-muted">{item.detail}</span>
               )}
             </ListBoxItem>
           )}

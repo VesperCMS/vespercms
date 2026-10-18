@@ -5,7 +5,8 @@
  * the check and the CSS could drift apart. It fails when:
  *
  * - a colour pair that occurs in the UI misses its WCAG 2.1 threshold in either theme: 4.5:1
- *   for text (SC 1.4.3), 3:1 for UI components and focus indicators (SC 1.4.11);
+ *   for text (SC 1.4.3), 3:1 for UI components and focus indicators (SC 1.4.11). Text on glass
+ *   and on the afterglow is checked as the browser composites it (see COMPOSITES);
  * - a colour token is outside the spec §10.4 budget allowlist;
  * - a colour token is neither in a checked pair nor explicitly marked decorative;
  * - a colour isn't a plain `light-dark(oklch(…), oklch(…))` pair, or is declared outside `@theme`.
@@ -67,7 +68,42 @@ export const PAIRS = [
   ['focus', 'accent-subtle', 3, 'focus ring on the selected row'],
   ['warning', 'surface', 3, 'warning marker beside a field'],
   ['warning', 'surface-raised', 3, 'warning marker in overlays'],
+  ['content-muted', 'accent-subtle', 4.5, 'secondary text on the current item'],
+  ['accent', 'accent-subtle', 4.5, 'a link or quiet button on the current item'],
+  ['content', 'glass-bar', 4.5, 'the top bar, over whatever scrolls beneath'],
+  ['content-muted', 'glass-bar', 4.5, 'status text in the top bar'],
+  ['accent', 'glass-bar', 4.5, 'links and quiet buttons in the top bar'],
+  ['focus', 'glass-bar', 3, 'focus ring in the top bar'],
+  ['content', 'glass-raised', 4.5, 'text in menus, dialogs and drawers, over any backdrop'],
+  ['content-muted', 'glass-raised', 4.5, 'secondary text in overlays'],
+  ['accent', 'glass-raised', 4.5, 'links and quiet buttons in overlays'],
+  ['danger', 'glass-raised', 4.5, 'errors and delete items in overlays'],
+  ['border-strong', 'glass-raised', 3, 'input boundaries in dialogs'],
+  ['focus', 'glass-raised', 3, 'focus ring in overlays'],
+  ['content', 'afterglow', 4.5, 'headings on the home screen and empty states'],
+  ['content-muted', 'afterglow', 4.5, 'secondary text on the afterglow'],
+  ['accent', 'afterglow', 4.5, 'links on the afterglow'],
 ];
+
+const BLACK = [0, 0, 0];
+const WHITE = [100, 0, 0];
+
+/**
+ * Backgrounds that aren't a token: a fill at some opacity over what lies beneath, composited the
+ * way browsers do it (in gamma-encoded sRGB). Glass is checked over black and over white, the
+ * extremes of whatever can scroll beneath it, so a pair that passes holds over any backdrop; its
+ * opacity is `--glass-fill` (the top bar) or `--glass-fill-raised` (overlays) from the token file.
+ * The afterglow is checked at its brightest point. `over` lists tokens or `BLACK`/`WHITE`;
+ * `alpha` is a number or the name of one of those two properties.
+ */
+export const COMPOSITES = {
+  'glass-bar': { fill: 'surface', alpha: 'glass-fill', over: [BLACK, WHITE] },
+  'glass-raised': { fill: 'surface-raised', alpha: 'glass-fill-raised', over: [BLACK, WHITE] },
+  afterglow: {
+    light: { fill: 'accent-subtle', alpha: 1, over: ['surface'] },
+    dark: { fill: 'accent', alpha: 0.22, over: ['surface'] },
+  },
+};
 
 const OKLCH = String.raw`oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)\s*\)`;
 const LIGHT_DARK = new RegExp(String.raw`^light-dark\(\s*${OKLCH}\s*,\s*${OKLCH}\s*\)$`);
@@ -116,7 +152,12 @@ export function parseTokens(css) {
     );
   }
 
-  return { light, dark, errors };
+  // Glass opacities, read so the check follows the CSS.
+  const fills = {};
+  for (const [, name, percent] of source.matchAll(/--(glass-fill[a-z-]*)\s*:\s*([\d.]+)%/g)) {
+    fills[name] = Number(percent) / 100;
+  }
+  return { light, dark, errors, fills };
 }
 
 /** oklch → linear-light sRGB (Björn Ottosson's OKLab matrices). */
@@ -141,17 +182,51 @@ export function isInGamut(color, epsilon = 0.002) {
   return oklchToLinearSrgb(...color).every((v) => v >= -epsilon && v <= 1 + epsilon);
 }
 
+const clamp = (v) => Math.min(1, Math.max(0, v));
+
 /** WCAG relative luminance. Linear-light sRGB is what the formula wants. */
 function luminance([r, g, b]) {
-  const clamp = (v) => Math.min(1, Math.max(0, v));
   return 0.2126 * clamp(r) + 0.7152 * clamp(g) + 0.0722 * clamp(b);
 }
 
-export function contrastRatio(colorA, colorB) {
-  const a = luminance(oklchToLinearSrgb(...colorA));
-  const b = luminance(oklchToLinearSrgb(...colorB));
+function ratioOfLuminances(a, b) {
   const [hi, lo] = a > b ? [a, b] : [b, a];
   return (hi + 0.05) / (lo + 0.05);
+}
+
+export function contrastRatio(colorA, colorB) {
+  return ratioOfLuminances(
+    luminance(oklchToLinearSrgb(...colorA)),
+    luminance(oklchToLinearSrgb(...colorB)),
+  );
+}
+
+const encode = (v) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
+const decode = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+
+/** `fill` at `alpha` over `under` (both oklch), blended in gamma-encoded sRGB, as browsers do. */
+export function compositeLuminance(fill, alpha, under) {
+  const top = oklchToLinearSrgb(...fill).map((v) => encode(clamp(v)));
+  const bottom = oklchToLinearSrgb(...under).map((v) => encode(clamp(v)));
+  return luminance(top.map((v, i) => decode(alpha * v + (1 - alpha) * bottom[i])));
+}
+
+/**
+ * The luminances a background can have: one for a token, one per backdrop for a composite.
+ * Returns null when it names something the token file doesn't declare.
+ */
+function backgroundLuminances(tokens, theme, name, composites) {
+  const composite = composites[name];
+  if (!composite) {
+    const color = tokens[theme][name];
+    return color ? [luminance(oklchToLinearSrgb(...color))] : null;
+  }
+  const spec = composite[theme] ?? composite;
+  const fill = tokens[theme][spec.fill];
+  const alpha = typeof spec.alpha === 'string' ? tokens.fills?.[spec.alpha] : spec.alpha;
+  const under = spec.over.map((u) => (typeof u === 'string' ? tokens[theme][u] : u));
+  if (!fill || alpha === undefined || under.some((u) => !u)) return null;
+  return under.map((u) => compositeLuminance(fill, alpha, u));
 }
 
 /**
@@ -160,13 +235,23 @@ export function contrastRatio(colorA, colorB) {
  */
 export function checkTokens(
   tokens,
-  { pairs = PAIRS, allowed = ALLOWED_TOKENS, decorative = DECORATIVE } = {},
+  {
+    pairs = PAIRS,
+    allowed = ALLOWED_TOKENS,
+    decorative = DECORATIVE,
+    composites = COMPOSITES,
+  } = {},
 ) {
   const errors = [...tokens.errors];
   const warnings = [];
   const allowedNames = new Set([...allowed.neutral, ...allowed.role]);
   const declared = Object.keys(tokens.light);
   const inPairs = new Set(pairs.flatMap(([fg, bg]) => [fg, bg]));
+  for (const composite of Object.values(composites)) {
+    for (const spec of [composite.light ?? composite, composite.dark ?? composite]) {
+      inPairs.add(spec.fill);
+    }
+  }
 
   for (const name of declared) {
     if (!allowedNames.has(name)) {
@@ -192,12 +277,14 @@ export function checkTokens(
   for (const theme of ['light', 'dark']) {
     for (const [fg, bg, threshold, where] of pairs) {
       const a = tokens[theme][fg];
-      const b = tokens[theme][bg];
-      if (!a || !b) {
+      const backgrounds = backgroundLuminances(tokens, theme, bg, composites);
+      if (!a || !backgrounds) {
         errors.push(`Pair ${fg} on ${bg} names a token that tokens.css doesn't declare.`);
         continue;
       }
-      const ratio = contrastRatio(a, b);
+      const fgLuminance = luminance(oklchToLinearSrgb(...a));
+      // A composite passes only if it passes over every backdrop.
+      const ratio = Math.min(...backgrounds.map((b) => ratioOfLuminances(fgLuminance, b)));
       results.push({ theme, fg, bg, threshold, where, ratio, pass: ratio >= threshold });
     }
   }

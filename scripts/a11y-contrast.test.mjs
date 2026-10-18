@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { checkTokens, contrastRatio, parseTokens } from './a11y-contrast.mjs';
+import { checkTokens, compositeLuminance, contrastRatio, parseTokens } from './a11y-contrast.mjs';
 
 const tokensCss = readFileSync(new URL('../packages/ui/src/tokens.css', import.meta.url), 'utf8');
 
@@ -95,6 +95,58 @@ describe('checkTokens', () => {
       pairs: [['content', 'surface-raised', 4.5, 'cards']],
       allowed,
       decorative: {},
+    });
+    expect(report.errors.join()).toMatch(/doesn't declare/);
+  });
+});
+
+describe('composite backgrounds (glass)', () => {
+  const pairs = [['content', 'glass', 4.5, 'text on glass']];
+  const allowed = { neutral: ['content', 'surface'], role: [] };
+  const composites = {
+    glass: {
+      fill: 'surface',
+      alpha: 'glass-fill',
+      over: [
+        [0, 0, 0],
+        [100, 0, 0],
+      ],
+    },
+  };
+  const css = (fill) =>
+    `${theme(
+      [
+        '  --color-surface: light-dark(oklch(99% 0 0), oklch(20% 0 0));',
+        '  --color-content: light-dark(oklch(24% 0 0), oklch(95% 0 0));',
+      ].join('\n'),
+    )}:root { --glass-fill: ${String(fill)}%; }\n`;
+  const check = (fill) =>
+    checkTokens(parseTokens(css(fill)), { pairs, allowed, decorative: {}, composites });
+
+  it('composites like a browser: opaque is the fill, transparent is the backdrop', () => {
+    expect(compositeLuminance([100, 0, 0], 1, [0, 0, 0])).toBeCloseTo(1, 5);
+    expect(compositeLuminance([100, 0, 0], 0, [0, 0, 0])).toBeCloseTo(0, 5);
+    // Half white over black is mid grey in gamma-encoded sRGB, not in linear light.
+    expect(compositeLuminance([100, 0, 0], 0.5, [0, 0, 0])).toBeCloseTo(0.214, 3);
+  });
+
+  it('reads the fill from the token file and passes a pair that holds over black and white', () => {
+    expect(parseTokens(css(90)).fills).toEqual({ 'glass-fill': 0.9 });
+    expect(check(90).ok).toBe(true);
+  });
+
+  it('fails a fill too thin for the worse backdrop', () => {
+    const report = check(40);
+    expect(report.ok).toBe(false);
+    expect(report.results.find((r) => r.theme === 'light' && !r.pass)?.bg).toBe('glass');
+  });
+
+  it('fails when the token file sets no fill', () => {
+    const report = checkTokens(parseTokens(css(90).replace(/:root.*\n/, '')), {
+      pairs,
+      allowed,
+      decorative: {},
+      composites,
     });
     expect(report.errors.join()).toMatch(/doesn't declare/);
   });
