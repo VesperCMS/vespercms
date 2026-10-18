@@ -82,6 +82,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             // The body editor, and SVG sanitizing for uploads.
             ...[
               '@tiptap/core',
+              '@tiptap/pm/model',
               '@tiptap/pm/state',
               '@tiptap/react',
               '@tiptap/starter-kit',
