@@ -136,7 +136,14 @@ export type MoveResult =
     }
   | { ok: false; reason: 'invalid' | 'conflict' | 'error'; message: string };
 
-export type ReorderRequest = { collection: string; path: string; direction: 'up' | 'down' };
+export type ReorderRequest = {
+  collection: string;
+  path: string;
+} & (
+  | { direction: 'up' | 'down' }
+  /** Where the page ends up among its siblings, from 0 (a drag and drop). */
+  | { index: number }
+);
 export type ReorderResult =
   | { ok: true; position: Position }
   | { ok: false; reason: 'invalid' | 'conflict' | 'error'; message: string };
@@ -523,11 +530,17 @@ export class PageService {
       parent === '' ? data.tree : (findNode(data.tree, parent)?.children ?? [])
     ).filter((n) => n.path !== '');
     const index = siblings.findIndex((n) => n.path === node.path);
-    const target = request.direction === 'up' ? index - 1 : index + 1;
+    const target =
+      'index' in request
+        ? Math.max(0, Math.min(siblings.length - 1, request.index))
+        : request.direction === 'up'
+          ? index - 1
+          : index + 1;
     if (target < 0) return refuse(`“${node.title}” is already first.`);
     if (target >= siblings.length) return refuse(`“${node.title}” is already last.`);
-    const names = siblings.map((n) => n.slug);
-    [names[index], names[target]] = [names[target] ?? '', names[index] ?? ''];
+    if (target === index) return { ok: true, position: { index: index + 1, of: siblings.length } };
+    const names = siblings.map((n) => n.slug).filter((n) => n !== node.slug);
+    names.splice(target, 0, node.slug);
 
     const existing = data.orders.get(parent);
     if (existing && !existing.readable) {
@@ -541,7 +554,7 @@ export class PageService {
     const order: OrderFile = existing ?? { path, names: [], file: null, readable: true };
     const response = await this.content.commit(
       [orderPut(order, names)],
-      `Move “${node.title}” ${request.direction} in ${data.collection.label}`,
+      `Move “${node.title}” ${'index' in request ? 'to a new place' : request.direction} in ${data.collection.label}`,
       { id: node.id ?? '', path: order.path, version: '', reformatted: false },
     );
     if (!response.ok)

@@ -63,19 +63,20 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
   };
 
   const reorder = useCallback(
-    async (row: Row, direction: 'up' | 'down') => {
+    async (row: Row, move: { direction: 'up' | 'down' } | { index: number }) => {
       setProblem(null);
       const result = await api.reorderPage({
         collection: collection.name,
         path: row.path,
-        direction,
+        ...move,
       });
       if (!result.ok) {
         setProblem(result.message);
         announce(result.message);
         return;
       }
-      announce(`${row.title} moved ${direction}, position ${positionText(result.position)}.`);
+      const how = 'direction' in move ? ` ${move.direction}` : '';
+      announce(`${row.title} moved${how}, position ${positionText(result.position)}.`);
       reload();
     },
     [api, collection.name, reload],
@@ -96,7 +97,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
     } else if (action === 'move') {
       setMoving({ row, parent: parentOf(row.path) });
     } else if (action === 'up' || action === 'down') {
-      void reorder(row, action);
+      void reorder(row, { direction: action });
     } else if (action === 'section') {
       void createSection(row);
     } else if (action === 'delete') {
@@ -120,7 +121,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault();
       event.stopPropagation();
-      void reorder(row, event.key === 'ArrowUp' ? 'up' : 'down');
+      void reorder(row, { direction: event.key === 'ArrowUp' ? 'up' : 'down' });
     }
   };
 
@@ -129,6 +130,8 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
   const { dragAndDropHooks } = useDragAndDrop<Row>({
     getItems: (keys) => [...keys].map((key) => ({ 'text/plain': String(key) })),
     onMove: (event) => {
+      // A drop onto a page is onItemDrop's: it moves the page under that one.
+      if (event.target.dropPosition === 'on') return;
       const row = byKey.get(String([...event.keys][0]));
       const target = byKey.get(String(event.target.key));
       if (!row || !target) return;
@@ -143,9 +146,10 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
       }
       const siblings = siblingsOf(row, rows, byPath);
       const from = siblings.indexOf(row);
-      const to = siblings.indexOf(target) + (event.target.dropPosition === 'after' ? 1 : 0);
-      if (from === -1 || to === from || to === from + 1) return;
-      void reorder(row, to < from ? 'up' : 'down');
+      const slot = siblings.indexOf(target) + (event.target.dropPosition === 'after' ? 1 : 0);
+      const to = slot > from ? slot - 1 : slot;
+      if (from === -1 || to === from) return;
+      void reorder(row, { index: to });
     },
     onItemDrop: (event) => {
       const target = byKey.get(String(event.target.key));

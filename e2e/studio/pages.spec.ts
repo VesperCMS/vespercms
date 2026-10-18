@@ -329,3 +329,39 @@ test('the site helpers return the same in astro dev as in the static build', asy
   ]);
   expect(await dev.json()).toEqual(tree);
 });
+
+test('drag and drop is offered on top, with React Aria’s keyboard mode', async ({ page }) => {
+  touches(`${P}_order.yaml`);
+  const before = read(`${P}_order.yaml`) ?? '';
+  const grid = await openOutline(page);
+  await enterOutline(page, grid);
+  await page.keyboard.press('ArrowDown'); // About the college
+  await page.keyboard.press('ArrowRight'); // its drag handle
+  await expect(grid.getByRole('button', { name: 'Drag About the college' })).toBeFocused();
+  await page.keyboard.press('Enter'); // start dragging
+  await page.keyboard.press('ArrowDown'); // Drop on Academics
+  await page.keyboard.press('ArrowDown'); // Insert between Academics and Admissions
+  await expect(page.locator(':focus')).toHaveAttribute(
+    'aria-label',
+    'Insert between Academics and Admissions',
+  );
+  await page.keyboard.press('Enter');
+  await expect(announcement(page)).toHaveText('About the college moved, position 2 of 4.');
+  expect(read(`${P}_order.yaml`)).toBe(
+    before.replace('- about\n- academics\n', '- academics\n- about\n'),
+  );
+
+  // Dropping onto a page moves under it, through the same confirmation as Move to….
+  await grid.getByRole('row', { name: 'Campus life' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 8; i++) {
+    const label = await page.locator(':focus').getAttribute('aria-label');
+    if (label === 'Drop on Academics') break;
+    await page.keyboard.press('ArrowUp');
+  }
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Move “Campus life”' });
+  await expect(dialog.getByRole('combobox', { name: 'Put it under' })).toHaveValue('Academics');
+  await page.keyboard.press('Escape');
+});

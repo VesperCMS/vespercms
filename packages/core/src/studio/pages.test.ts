@@ -340,6 +340,17 @@ describe('PageService.reorder', () => {
     );
   });
 
+  it('puts a page at a given position (a drag and drop)', async () => {
+    const { pages, text } = await setup();
+    expect(await pages.reorder({ collection: 'pages', path: 'about', index: 2 })).toEqual({
+      ok: true,
+      position: { index: 3, of: 4 },
+    });
+    expect(await text(`${P}_order.yaml`)).toBe(
+      '# Top-level page order (spec §6.15.3). Unlisted pages sort by title after these.\n- academics\n- admissions\n- about\n- campus-life\n',
+    );
+  });
+
   it('keeps the top-level file’s comment', async () => {
     const { pages, text } = await setup();
     await pages.reorder({ collection: 'pages', path: 'campus-life', direction: 'up' });
