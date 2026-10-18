@@ -8,8 +8,8 @@ export type Studio = {
   api: StudioApi;
   /** Custom widgets, as lazy components: each loads the first time a field uses it. */
   widgets: Record<string, WidgetComponent>;
-  /** Declared MDX components' Zod props schemas, from vesper.config.ts (spec §6.5.2). */
-  mdxProps: Readonly<Record<string, unknown>>;
+  /** Loads declared MDX components' Zod props schemas, from vesper.config.ts (spec §6.5.2). */
+  loadMdxProps: () => Promise<Readonly<Record<string, unknown>>>;
   siteName: string;
   siteUrl: string | undefined;
   collection: (name: string) => CollectionManifest | undefined;

@@ -95,7 +95,8 @@ beforeAll(async () => {
   const api = createDevApi({
     root,
     base: '/_vesper/api/',
-    model: () => Promise.resolve({ manifest, schemas, markdocConfig, mdxProps: new Map() }),
+    model: () =>
+      Promise.resolve({ manifest, schemas, markdocConfig, mdxProps: new Map(), widgetNames: [] }),
   });
   server = createServer((req, res) => {
     api(req, res, () => {

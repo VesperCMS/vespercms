@@ -23,10 +23,11 @@ export type StudioOptions = {
   /** Custom widgets by name (spec §6.3.3). */
   widgets?: Record<string, WidgetLoader>;
   /**
-   * Declared MDX components' Zod props schemas, from vesper.config.ts, so
-   * props are checked exactly as the site checks them (spec §6.5.2).
+   * Loads declared MDX components' Zod props schemas from vesper.config.ts,
+   * so props are checked exactly as the site checks them (spec §6.5.2). On
+   * first use: Zod stays out of the studio's first load.
    */
-  mdxProps?: Record<string, unknown>;
+  loadMdxProps?: () => Promise<Record<string, unknown>>;
   /** Shown in the top bar and the page title. */
   siteName?: string;
   /** The site's home page, for "View site". */

@@ -43,7 +43,7 @@ import {
   type ValuePath,
 } from '../editor/values.ts';
 import { builtinWidget } from '../widgets/registry.ts';
-import { bodyChecks } from '../body/ui.ts';
+import type { BodyChecks } from '../body/checks.ts';
 
 // Tiptap and the Markdown tooling are most of the studio's weight, and only
 // entries with a body need them: they load the first time one is opened.
@@ -110,7 +110,7 @@ function EntryForm({
   doc: EntryDocument | null;
   onReload: () => void;
 }) {
-  const { api, siteUrl, manifest, mdxProps } = useStudio();
+  const { api, siteUrl, manifest, loadMdxProps } = useStudio();
   const isNew = doc === null;
   const status = doc?.status ?? 'editable';
   const editable = collection.editable && status !== 'read-only';
@@ -173,10 +173,18 @@ function EntryForm({
       live = false;
     };
   }, [api, isContent, format]);
-  const checks = useMemo(
-    () => bodyChecks({ manifest, format, mdxProps, partials, entryPath }),
-    [manifest, format, mdxProps, partials, entryPath],
-  );
+  // Markdoc, micromark and Zod load with the checks, on first use, like the body editor.
+  const checks = useMemo(() => {
+    let loaded: Promise<BodyChecks> | null = null;
+    return {
+      validate: async (text: string) => {
+        loaded ??= import('../body/checks.ts').then((module) =>
+          module.bodyChecks({ manifest, format, loadMdxProps, partials, entryPath }),
+        );
+        return (await loaded).validate(text);
+      },
+    };
+  }, [manifest, format, loadMdxProps, partials, entryPath]);
   const [bodyIssues, setBodyIssues] = useState<BodyIssue[]>([]);
   const [refusals, setRefusals] = useState(0);
   useEffect(() => {

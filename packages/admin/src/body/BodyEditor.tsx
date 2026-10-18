@@ -51,7 +51,8 @@ import {
   type ContainerTypes,
 } from './nodes.ts';
 import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
-import { BodyUiContext, bodyChecks, type BodyUi } from './ui.ts';
+import { bodyChecks } from './checks.ts';
+import { BodyUiContext, type BodyUi } from './ui.ts';
 import { CardView, ContainerView, InlineView, SourceView } from './views.tsx';
 
 export type BodyEditorProps = {
@@ -267,7 +268,7 @@ function WritingView({
   imageFolder,
   partials = null,
 }: BodyEditorProps) {
-  const { api, manifest, mdxProps } = useStudio();
+  const { api, manifest, loadMdxProps } = useStudio();
   const model = useRef<{ built: BodyDocument; initial: Map<string, string> } | null>(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => {
@@ -404,8 +405,8 @@ function WritingView({
   });
 
   const checks = useMemo(
-    () => bodyChecks({ manifest, format, mdxProps, partials, entryPath }),
-    [manifest, format, mdxProps, partials, entryPath],
+    () => bodyChecks({ manifest, format, loadMdxProps, partials, entryPath }),
+    [manifest, format, loadMdxProps, partials, entryPath],
   );
   const ui = useMemo<BodyUi>(
     () => ({

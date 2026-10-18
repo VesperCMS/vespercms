@@ -23,6 +23,8 @@ export type SiteModel = {
   markdocConfig?: MarkdocConfigLike;
   /** Each declared MDX component's Zod props schema. */
   mdxProps: Map<string, unknown>;
+  /** Names of the custom widgets vesper.config.ts registers. */
+  widgetNames: string[];
 };
 
 /** Reads a site's configs and builds its manifest (spec §6.2). */
@@ -41,6 +43,7 @@ export async function loadSiteModel(options: LoadSiteOptions): Promise<SiteModel
     manifest,
     schemas: new Map(input.collections.map((c) => [c.name, c.schema])),
     ...(input.markdoc ? { markdocConfig: input.markdoc.config } : {}),
+    widgetNames: Object.keys(input.config?.widgets ?? {}),
     mdxProps: new Map(
       Object.entries(components).flatMap(([name, component]) =>
         component.props === undefined ? [] : [[name, component.props] as const],

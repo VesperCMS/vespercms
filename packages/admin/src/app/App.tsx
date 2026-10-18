@@ -13,13 +13,13 @@ import { NavigationContext } from './navigation.ts';
 import { useRouter, type Route } from './router.ts';
 
 const NO_WIDGETS: Record<string, WidgetLoader> = {};
-const NO_PROPS: Record<string, unknown> = {};
+const NO_PROPS = (): Promise<Record<string, unknown>> => Promise.resolve({});
 
 export function App({
   manifest,
   api,
   widgets = NO_WIDGETS,
-  mdxProps = NO_PROPS,
+  loadMdxProps = NO_PROPS,
   siteName = 'Vesper',
   siteUrl,
 }: StudioOptions) {
@@ -35,12 +35,12 @@ export function App({
       manifest,
       api,
       widgets: lazyWidgets(widgets),
-      mdxProps,
+      loadMdxProps,
       siteName,
       siteUrl,
       collection: (name) => byName.get(name),
     };
-  }, [manifest, api, widgets, mdxProps, siteName, siteUrl]);
+  }, [manifest, api, widgets, loadMdxProps, siteName, siteUrl]);
 
   if (!studio) return <Unavailable siteName={siteName} />;
 

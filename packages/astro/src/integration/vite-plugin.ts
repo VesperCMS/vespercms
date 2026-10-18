@@ -114,18 +114,25 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         return `export default ${JSON.stringify(manifest)};`;
       }
       if (name === WIDGETS) {
-        if (!options.vesperConfig) return 'export const widgets = {};\nexport const mdxProps = {};';
+        if (!options.vesperConfig) {
+          return 'export const widgets = {};\nexport const loadMdxProps = () => Promise.resolve({});';
+        }
+        const { widgetNames } = await options.cache.get();
         return [
-          `import config from ${JSON.stringify(toPosix(options.vesperConfig))};`,
-          'export const widgets = Object.fromEntries(',
-          '  Object.entries(config?.widgets ?? {}).map(([name, widget]) => [name, widget.component]),',
-          ');',
-          // Declared MDX components' real Zod props schemas, so the studio
-          // checks props exactly as the site does, in every mode (spec §6.5.2).
-          'export const mdxProps = Object.fromEntries(',
-          '  Object.entries(config?.mdx?.components ?? {}).flatMap(([name, component]) =>',
+          // vesper.config.ts loads on first use: when a field's custom widget
+          // renders, or when an MDX body needs its components' props schemas
+          // (spec §6.5.2), so it and Zod stay out of /admin's first load.
+          `const load = () => import(${JSON.stringify(toPosix(options.vesperConfig))}).then((module) => module.default ?? {});`,
+          'export const widgets = {',
+          ...widgetNames.map(
+            (widget) =>
+              `  ${JSON.stringify(widget)}: () => load().then((config) => config.widgets[${JSON.stringify(widget)}].component()),`,
+          ),
+          '};',
+          'export const loadMdxProps = () => load().then((config) => Object.fromEntries(',
+          '  Object.entries(config.mdx?.components ?? {}).flatMap(([name, component]) =>',
           '    component?.props ? [[name, component.props]] : []),',
-          ');',
+          '));',
         ].join('\n');
       }
       if (name === PAGE) {
@@ -139,13 +146,13 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           `import { createLocalApi, mountStudio } from ${JSON.stringify(toPosix(options.adminEntry))};`,
           `import ${JSON.stringify(toPosix(options.adminCss))};`,
           `import manifest from '${MANIFEST}';`,
-          `import { widgets, mdxProps } from '${WIDGETS}';`,
+          `import { widgets, loadMdxProps } from '${WIDGETS}';`,
           "const element = document.getElementById('vesper-studio');",
           'if (element) {',
           '  mountStudio(element, {',
           '    manifest,',
           '    widgets,',
-          '    mdxProps,',
+          '    loadMdxProps,',
           // Local mode only while astro dev runs; GitHub and cloud modes arrive in Phases 3 and 4.
           `    api: import.meta.env.DEV ? createLocalApi(${JSON.stringify(options.apiBase)}) : null,`,
           `    siteName: ${JSON.stringify(options.siteName)},`,
