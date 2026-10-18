@@ -41,7 +41,10 @@ beforeAll(() => {
 
 afterAll(async () => {
   await new Promise<void>((resolve) => {
-    if (server) server.close(() => resolve());
+    if (server)
+      server.close(() => {
+        resolve();
+      });
     else resolve();
   });
   rmSync(site, { recursive: true, force: true });
@@ -84,7 +87,13 @@ describe('moving a section, then building', () => {
 
     const build = spawnSync(
       process.execPath,
-      ['--conditions=@vesper/source', join(repo, 'node_modules/astro/bin/astro.mjs'), 'build', '--root', site],
+      [
+        '--conditions=@vesper/source',
+        join(repo, 'node_modules/astro/bin/astro.mjs'),
+        'build',
+        '--root',
+        site,
+      ],
       { cwd: repo, encoding: 'utf8' },
     );
     expect(build.status, build.stderr || build.stdout).toBe(0);
@@ -114,7 +123,10 @@ describe('moving a section, then building', () => {
       expect(refreshTarget(page.html), old).toBe(target);
       const landing = await visit(target);
       expect(landing.status, target).toBe(200);
-      expect(refreshTarget(landing.html), `${target} is a real page, not another redirect`).toBeNull();
+      expect(
+        refreshTarget(landing.html),
+        `${target} is a real page, not another redirect`,
+      ).toBeNull();
       expect(landing.url).toBe(target);
     }
 

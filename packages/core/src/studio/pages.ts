@@ -891,7 +891,12 @@ export class PageService {
       const file = await this.storage.read(listed.path);
       if (!file) continue;
       const names = readOrder(file);
-      orders.set(folderKey(folder), { path: listed.path, names: names ?? [], file, readable: names !== null });
+      orders.set(folderKey(folder), {
+        path: listed.path,
+        names: names ?? [],
+        file,
+        readable: names !== null,
+      });
     }
 
     const tree = buildTree(
