@@ -713,3 +713,12 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 ### 2026-10-18: Every focus outline is drawn solid
 
 **Each `X:outline-2` in the studio sits beside `X:outline-solid`, and the budget test fails any that doesn't.** Tailwind 4's `outline-none` sets `--tw-outline-style: none`, and `outline-2` draws `outline-style: var(--tw-outline-style)`. The kit's shared focus ring and field style paired the two, so from Phase 2 until this pass the solid focus outline on buttons, inputs, selects, menus, tree rows and table rows had a width and no style, and wasn't drawn. Keyboard focus was visible only where a native style applied. Found by this pass's keyboard walkthrough, which logs each focused element's computed outline; axe doesn't check focus visibility. Menu items and list options now also draw the ring inside themselves, so focus there never rests on a faint fill alone.
+
+### 2026-10-18: Vesper's mark is "Launch", as the favicon and before the site's name
+
+**Jeremy chose the refined "Launch" mark from the design system's Logo card: one rounded V stroke, a long fall and a short rise, with the evening star to the right on the rise's line. Its earlier shortlist sketch, with a shorter rise, was the other candidate. At 24px and below it uses the small cut (a heavier stroke and a bigger star with no halo); larger, the star has a 20% halo. It appears in two places only: as `/admin`'s favicon, and at 20px before the site's name in the top bar, inside the home link.**
+- In the top bar the mark is decorative (`aria-hidden`). The link's accessible name stays the site's name, which is the visible text (WCAG 2.5.3) and says where the link goes. Announcing "Vesper logo" on every screen would add nothing.
+- It's drawn inline from the tokens (`VesperMark` in `@vesper/ui`): the stroke is `currentColor` (`content`), the star `accent`, and both follow the theme. In forced colours the star takes `CanvasText`.
+- The favicon is an inline `data:image/svg+xml` in the injected `/admin` page, so it costs no request and needs no file in the site. A favicon can't read CSS variables, so it carries Pine's `content` and `accent` values for each theme and switches with `prefers-color-scheme` inside the SVG.
+- The site's own pages keep their own favicon; only `/admin` gets this one.
+- White-label (the higher paid tier, Phase 9) replaces both. Keeping the mark in one component and one favicon makes that a single swap.

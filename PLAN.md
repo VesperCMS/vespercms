@@ -305,7 +305,7 @@ Every studio screen now follows Vesper's design system (Pine) in both themes. Je
 | Every studio screen follows the design system, light and dark | Before and after screenshots at 1280px, light and dark, on the 4402 preview: Home, the entry list, the page outline, the blog editor, a Markdoc body with blocks, the accessibility fixture, a location (map, colour, switch, custom widget), an event (date-times, link picker), site settings (palette, repeater), the media browser, Redirects, NotFound, the Content menu, the delete, leave, link and crop dialogs, the media picker, the notes drawer and the Details drawer; Home and the editor at 360px too. The checkpoint comparison is a private Artifact for Jeremy. Tokens, the kit and every screen use the type scale, radii, glass, glows and afterglow; Unavailable gets the afterglow without the top bar. |
 | Contrast, both themes | `npm run a11y:contrast`: 39 pairs in each theme. New pairs cover text on the top bar's glass and on overlays' glass, composited over black and over white, and on the afterglow at its brightest. The overlays' fill went from 88% to 93% for that (DECISIONS.md). Script tests cover the compositing. |
 | The budget test, with the new allowances only | `budget.test.ts`: shadows are `overlay`, `glow-accent`, `glow-selected`, `glass-edge` and `glass-overlay`, each only in its named file; `tokens.css` declares exactly those; rings only as the focus halo; no arbitrary colours, sizes or radii; spacing only from the scale; every `outline-2` drawn solid. |
-| Typecheck, lint, format, unit tests | All pass. Vitest: 4,079 tests in 93 files (unit, corpus and integration). New unit tests: the Details drawer on a wide screen (opens from the bar, axe, focus back on Escape; the problem count; a summary link opens it at the field). |
+| Typecheck, lint, format, unit tests | All pass. Vitest: 4,081 tests in 93 files (unit, corpus and integration). New unit tests: the Details drawer on a wide screen (opens from the bar, axe, focus back on Escape; the problem count; a summary link opens it at the field). |
 | `npm run e2e`, axe on every screen | 90 passed, static and studio (88 before this pass). New: axe over Home, the list, the outline, the editor, Media and Redirects in the dark theme; Details as a drawer by keyboard (axe with it open, Escape returns focus) and, at 800px, as the closing disclosure. No selectors changed: the markup kept its roles and names. |
 | `check:dist`, with the font in `dist/studio.css` | 11 entry points load from `dist/`. `dist/studio.css` holds both Figtree files as `data:font/woff2` URLs; the only address in it is Tailwind's licence comment, so `/admin` requests nothing from Google or a CDN. |
 | `astro check` | The playground: 0 errors, 0 warnings, 0 hints. |
@@ -324,19 +324,20 @@ Every studio screen now follows Vesper's design system (Pine) in both themes. Je
 
 **Size.** For a site installing `@vesper/admin` from npm, `dist/studio.css` goes from 30,484 to 83,096 bytes (6,665 to 32,518 gzipped): the two latin Figtree files, 22,928 bytes as woff2, are inlined as base64, and the rest is the new styles. In this workspace's playground build the fonts are separate files (11,384 and 11,544 bytes, fetched once, from the site), and the admin CSS goes from 29,470 to 49,115 bytes (6,601 to 8,866 gzipped). The studio's JavaScript grows only by the drawer, the media query and the save pulse: `studio.js` from 71,548 to 74,254 bytes.
 
+**Vesper's mark.** After the checkpoint Jeremy chose the refined "Launch" mark (DECISIONS.md): it's `/admin`'s favicon, an inline SVG with a dark variant, and sits at 20px before the site's name in the top bar, hidden from screen readers so the home link keeps the site's name. Tests: the kit draws the small cut at 24px and below, the home link's name is the site's alone, and the static build's `/admin` carries the inline favicon.
+
 **The 2.8 follow-up (body headings in the page's outline):** they stay real headings, and the body is now a landmark named "Body", so screen readers say where a heading belongs (DECISIONS.md, with the rejected alternatives).
 
-**Commits:** seventeen, from the decisions (5398cf6) to the docs. The checkpoint's batch came first (tokens and kit, the font, the screens, the budget test), then the drawer, each remaining group of screens, the fixes above and the tests.
+**Commits:** nineteen, from the decisions (5398cf6) to Vesper's mark and its record. The checkpoint's batch came first (tokens and kit, the font, the screens, the budget test), then the drawer, each remaining group of screens, the fixes above and the tests.
 
 **Open, for Jeremy:**
 - **The lowercase site name.** Built as asked, with CSS, so screen readers read the name as written. It also lowercases a site that names itself ("Highlands College" shows as "highlands college"). Keep, or lowercase only Vesper's own wordmark?
-- **The logo.** The design system's last change note says the "Launch" mark was chosen; the brief said no logo yet, so the studio shows none.
 - **93% glass on overlays** instead of the design system's 88% (above).
 - **Body headings:** confirm keeping them as headings in a "Body" region, or prefer isolating the editor (an iframe; not cheap).
 - **A screen reader pass** of the Details drawer, the menus' inset focus and the "Body" region, with the earlier phases' items.
 - The 2.8 product calls are untouched and still open, including the publish gate's "Save anyway"; the editor's bar has room for it beside Save.
 
-**Not built** (the design system shows them; listed in "Studio design pass (plan)"): the ⌘K palette, site switcher and user menu; the Preview toggle; history, duplicate and copy link; a studio light/dark switch; the home greeting and sign-in; shortcuts in menus; choosing an accent; the logo. Also not done: the toolbar's "More" menu for overflow (it wraps instead), a spinner on a pending button, tags inside the combobox's field, and the 180ms chevron rotation (dropped, see above).
+**Not built** (the design system shows them; listed in "Studio design pass (plan)"): the ⌘K palette, site switcher and user menu; the Preview toggle; history, duplicate and copy link; a studio light/dark switch; the home greeting and sign-in; shortcuts in menus; choosing an accent. Also not done: the toolbar's "More" menu for overflow (it wraps instead), a spinner on a pending button, tags inside the combobox's field, and the 180ms chevron rotation (dropped, see above).
 
 **Follow-ups noted, not blocking:**
 - In `astro dev` (React's development build) the first Tab on a fresh load starts after the screen's heading: StrictMode runs the navigation effect twice, so the heading takes focus on load. Production builds don't. Worth a small fix in the router.
@@ -361,7 +362,7 @@ Jeremy moved this pass ahead of 2.9 on 2026-10-18 and made the direction himself
 - a light/dark override for the studio (it follows the system);
 - the home screen's greeting and "drafts waiting" line, and a sign-in screen (cloud, Phase 4);
 - keyboard shortcuts shown in menus;
-- choosing an accent (white-label, Phase 9) and the Vesper logo in the studio (no mark is chosen for it).
+- choosing an accent (white-label, Phase 9).
 
 ## Phase 2.8: Accessibility checks (design)
 
