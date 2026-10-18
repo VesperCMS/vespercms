@@ -10,7 +10,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
-| 2.6 URLs, hierarchy and redirects | Built (2026-10-18) on its branch; every check passes locally. Waiting to be merged and for CI. See "Phase 2.6: outcome" below. |
+| 2.6 URLs, hierarchy and redirects | Done (2026-10-18), merged into main (4e311a7); every check passes on the merge. See "Phase 2.6: outcome" below. |
 | 2.7 onward | Roadmap below |
 
 ## Phase 0: Scaffold
