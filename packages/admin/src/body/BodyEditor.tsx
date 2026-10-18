@@ -60,6 +60,7 @@ import {
   type ContainerTypes,
 } from './nodes.ts';
 import { revealInEditor, revealInSource } from './reveal.ts';
+import { shortcut } from './shortcuts.ts';
 import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
 import { bodyChecks } from './checks.ts';
 import { BodyUiContext, type BodyUi } from './ui.ts';
@@ -709,71 +710,80 @@ function FormatToolbar({
   return (
     <Toolbar label="Formatting">
       <ToggleButton
+        icon="bold"
+        label="Bold"
+        shortcut={shortcut('Mod', 'B')}
         isDisabled={disabled}
         isSelected={state.bold}
         onChange={() => chain().toggleBold().run()}
-      >
-        Bold
-      </ToggleButton>
+      />
       <ToggleButton
+        icon="italic"
+        label="Italic"
+        shortcut={shortcut('Mod', 'I')}
         isDisabled={disabled}
         isSelected={state.italic}
         onChange={() => chain().toggleItalic().run()}
-      >
-        Italic
-      </ToggleButton>
+      />
       <ToolbarSeparator />
       <ToggleButton
+        icon="heading"
+        label="Heading"
+        shortcut={shortcut('Mod', 'Alt', '2')}
         isDisabled={disabled}
         isSelected={state.heading2}
         onChange={() => chain().toggleHeading({ level: 2 }).run()}
-      >
-        Heading
-      </ToggleButton>
+      />
       <ToggleButton
+        icon="subheading"
+        label="Subheading"
+        shortcut={shortcut('Mod', 'Alt', '3')}
         isDisabled={disabled}
         isSelected={state.heading3}
         onChange={() => chain().toggleHeading({ level: 3 }).run()}
-      >
-        Subheading
-      </ToggleButton>
+      />
       <ToolbarSeparator />
       <ToggleButton
+        icon="bullets"
+        label="Bullets"
+        shortcut={shortcut('Mod', 'Shift', '8')}
         isDisabled={disabled}
         isSelected={state.bullets}
         onChange={() => chain().toggleBulletList().run()}
-      >
-        Bullets
-      </ToggleButton>
+      />
       <ToggleButton
+        icon="numbers"
+        label="Numbers"
+        shortcut={shortcut('Mod', 'Shift', '7')}
         isDisabled={disabled}
         isSelected={state.numbers}
         onChange={() => chain().toggleOrderedList().run()}
-      >
-        Numbers
-      </ToggleButton>
+      />
       <ToggleButton
+        icon="quote"
+        label="Quote"
+        shortcut={shortcut('Mod', 'Shift', 'B')}
         isDisabled={disabled}
         isSelected={state.quote}
         onChange={() => chain().toggleBlockquote().run()}
-      >
-        Quote
-      </ToggleButton>
+      />
       <ToggleButton
+        icon="code"
+        label="Code"
+        shortcut={shortcut('Mod', 'E')}
         isDisabled={disabled}
         isSelected={state.code}
         onChange={() => chain().toggleCode().run()}
-      >
-        Code
-      </ToggleButton>
+      />
       <ToolbarSeparator />
-
-      <ToolButton isDisabled={disabled} onPress={onLink}>
-        {state.link ? 'Edit link' : 'Link'}
-      </ToolButton>
-      <ToolButton isDisabled={disabled} onPress={onImage}>
-        Image
-      </ToolButton>
+      <ToolButton
+        icon="link"
+        label={state.link ? 'Edit link' : 'Link'}
+        shortcut={shortcut('Mod', 'K')}
+        isDisabled={disabled}
+        onPress={onLink}
+      />
+      <ToolButton icon="image" label="Image" isDisabled={disabled} onPress={onImage} />
       {insert}
     </Toolbar>
   );

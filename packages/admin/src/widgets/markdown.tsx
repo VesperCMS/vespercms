@@ -5,6 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { ToggleButton, ToolButton, Toolbar, cx } from '@vesper/ui';
 import { useEffect, useRef, useState } from 'react';
 import { LinkDialog } from '../body/BodyEditor.tsx';
+import { shortcut } from '../body/shortcuts.ts';
 import type { WidgetProps } from '../types.ts';
 import { inputClass } from './basic.tsx';
 
@@ -175,27 +176,30 @@ export function MarkdownWidget(props: WidgetProps<string>) {
         <div ref={toolbar} className="border-b border-border p-1">
           <Toolbar label={`Formatting for ${field.label}`}>
             <ToggleButton
+              icon="bold"
+              label="Bold"
+              shortcut={shortcut('Mod', 'B')}
               isDisabled={disabled}
               isSelected={state.bold}
               onChange={() => editor.chain().focus().toggleBold().run()}
-            >
-              Bold
-            </ToggleButton>
+            />
             <ToggleButton
+              icon="italic"
+              label="Italic"
+              shortcut={shortcut('Mod', 'I')}
               isDisabled={disabled}
               isSelected={state.italic}
               onChange={() => editor.chain().focus().toggleItalic().run()}
-            >
-              Italic
-            </ToggleButton>
+            />
             <ToolButton
+              icon="link"
+              label={state.link ? 'Edit link' : 'Link'}
+              shortcut={shortcut('Mod', 'K')}
               isDisabled={disabled}
               onPress={() => {
                 setLinkOpen(true);
               }}
-            >
-              {state.link ? 'Edit link' : 'Link'}
-            </ToolButton>
+            />
           </Toolbar>
         </div>
         <EditorContent editor={editor} />
