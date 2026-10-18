@@ -111,11 +111,21 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
     if ((event.key === 'F10' && event.shiftKey) || event.key === 'ContextMenu') {
       event.preventDefault();
       event.stopPropagation();
-      (event.target as HTMLElement)
-        .querySelector<HTMLButtonElement>(
-          `button[aria-label="More actions for ${CSS.escape(row.title)}"]`,
-        )
-        ?.click();
+      const button = (event.target as HTMLElement).querySelector<HTMLButtonElement>(
+        `button[aria-label="More actions for ${CSS.escape(row.title)}"]`,
+      );
+      if (button) {
+        // Enter on the button, not a click: React Aria takes a script's click
+        // for a screen reader's and waits a frame to move focus, which can then
+        // stay on the menu instead of its first item. (Down Arrow would be the
+        // outline's: the row handles arrow keys before the button sees them.)
+        button.focus();
+        for (const type of ['keydown', 'keyup']) {
+          button.dispatchEvent(
+            new KeyboardEvent(type, { key: 'Enter', bubbles: true, cancelable: true }),
+          );
+        }
+      }
       return;
     }
     if (!editable || !event.altKey || row.path === '') return;
