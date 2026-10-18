@@ -36,7 +36,7 @@ npm run check -w @vesper/playground    # astro check
 |---|---|---|
 | `blog` | `glob('**/[^_]*.md')` | `image()` inside the §6.6.2 hero object (focal point, one manual crop, decorative), `reference()` single and multi, tags, enum, `z.coerce.date()` and `z.date()`, date-only and datetime values, an unmappable union, a nested `index.md` (ID `2026/winter-market`), a CRLF file, and an `_`-prefixed file the pattern skips |
 | `authors` | `file('src/data/authors.json')` | JSON data collection; `z.email()`, `z.url()` |
-| `pages` | `glob('**/[^_]*.{md,mdx}')` | The folder hierarchy (spec §6.15): section `index.md` pages, four levels deep at `academics/nursing/clinical-placements/`, `_order.yaml` files, a folder with no index (`admissions/`), an `_`-prefixed draft the pattern skips, a field group, a repeater with an inline-markdown widget, and an MDX page with a declared (`Callout`) and an undeclared, imported (`Gallery`) component. The root `index.md` is the home page's content. |
+| `pages` | `glob('**/[^_]*.{md,mdx}')` | The folder hierarchy (spec §6.15): section `index.md` pages, four levels deep at `academics/nursing/clinical-placements/`, `_order.yaml` files, a folder with no index (`admissions/`), an `_`-prefixed draft the pattern skips, internal links into the nursing section (Markdown, MDX, a Markdoc partial and an event's URL field) for moves to rewrite, a field group, a repeater with an inline-markdown widget, and an MDX page with a declared (`Callout`) and an undeclared, imported (`Gallery`) component. The root `index.md` is the home page's content. |
 | `docs` | `glob('**/[^_]*.mdoc')` | Markdoc (spec §6.5.1): a block tag with children (`callout`), a self-closing tag (`youtube`), an inline tag (`abbr`), a partial (`_support-hours.mdoc`, included from two folder depths), `$product` variables, `{% if %}`/`{% else /%}`, functions (`equals`, `and`) and a class annotation (`{% .lead %}`). Tags are defined in `markdoc.config.mjs`. |
 | `settings` | `glob('site.yaml')` | A singleton (one entry, ID `site`) read by the layout: a folded `>-` string, a commented-out key, a colour with a named palette, `z.url()`, the site time zone (spec §6.17), and a repeater mixing block and flow maps. |
 | `locations` | `file('src/data/locations.yaml')` | One YAML file holding many entries. `geo` (a lat/lng object) and `color` (a hex string), tagged with `.meta({ widget })` exactly as `fields.geo()` and `fields.color()` will produce them. Flow and block maps, single and double quotes. |
@@ -45,8 +45,9 @@ npm run check -w @vesper/playground    # astro check
 
 ## Other fixtures
 
-- `vesper.redirects.yaml`: a two-hop redirect chain and a manual 302 (spec §6.15.5). Data only until Phase 2.6.
-- `src/pages/contact.astro`: a static route that Phase 2.6's move validation must refuse to collide with.
+- `vesper.redirects.yaml`: a two-hop redirect chain and a manual 302 (spec §6.15.5). The build collapses the chain and writes an HTML redirect page at each old URL.
+- `src/pages/contact.astro`: a static route the studio refuses to move or create a page onto (spec §6.15.4).
+- Page routes use Vesper's site helpers from `vesper:content`: breadcrumbs from `getBreadcrumbs`, section lists from `getChildren`, the home page's list of sections in `_order.yaml` order. `src/pages/site-tree.json.ts` prints everything the helpers return, and the e2e suite compares it between `astro dev` and the build.
 - `src/forms.config.ts`: the contact form (department select for routing, an upload field, a confirmation email). `<Form>` renders it from Phase 6.
 - The header reserves the spot for `<Search />` (Phase 2.9).
 

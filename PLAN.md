@@ -10,7 +10,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
-| 2.6 URLs, hierarchy and redirects | In progress. See "Phase 2.6 (design)" below. |
+| 2.6 URLs, hierarchy and redirects | Built (2026-10-18) on its branch; every check passes locally. Waiting to be merged and for CI. See "Phase 2.6: outcome" below. |
 | 2.7 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -161,6 +161,49 @@ The spec's five "Done when" criteria, with evidence:
 **Follow-ups noted, not blocking:**
 - Tables stay protected source blocks, edited as text.
 - Vite warns about three lazy chunks over 500 KB: the map (1,018 KB), the body checks (513 KB) and the body editor (512 KB). None is in the first load.
+
+## Phase 2.6: outcome
+
+The spec's five "Done when" criteria, with evidence:
+
+| Criterion | Evidence |
+|---|---|
+| Moving a playground section with descendants produces one commit (or one set of disk renames), with the moved files, the updated `_order.yaml` files, a redirect for every old URL and every internal link updated | `packages/core/src/studio/pages.test.ts` moves Nursing (four pages) over a memory copy of the playground and asserts exactly one change set and its contents: five file moves, both `_order.yaml` files (comment kept), the redirects file byte for byte (four new redirects, and the old chain now ending at `/nursing`), and eight rewritten links in Markdown, MDX, a Markdoc partial that isn't an entry, and an event's URL field. A second test checks each linking file changes only that address. `e2e/studio/pages.spec.ts` does the same move by keyboard in Chromium and checks every file on disk. `links.test.ts` covers every link form, relative paths included. |
+| The built site serves every old URL as a redirect to the new one, with no chains | `packages/astro/test/redirects.integration.test.ts` copies the playground, moves Nursing through `PageService` over `LocalStorage` exactly as the studio does, runs `astro build`, and serves `dist/` with `scripts/static-server.mjs`. All seven old URLs (the four moved pages and the file's own chain) land on a real page in one Vesper hop, and the moved section's links point at the new address. The static e2e suite checks the committed playground's redirects the same way, from `_vesper/redirects.json`, and in a real browser. |
+| The tree can be fully operated by keyboard and screen reader: expand, collapse, move, reorder, add a child | `e2e/studio/pages.spec.ts`, keys only: Tab into the outline, arrows to move and expand, Left back to the parent and to collapse, Alt+↑/↓ to reorder (announced, and checked in `_order.yaml`), Shift+F10 to the "…" menu, "Move to…" through the combobox and the confirmation, "Add child page" then Ctrl+S, "Create section page", and drag and drop in React Aria's keyboard mode. axe passes with the outline, the menu, both move dialogs, the Redirects screen and its dialogs on screen. `PageTree.test.tsx` covers the same in jsdom. The outline is a treegrid with `aria-level`, `aria-expanded`, named row buttons and a polite live region. **Not done: a pass with a real screen reader** (see below). |
+| A path colliding with a static route in `src/pages` is blocked with a plain-language message | Refused before anything is written, for moves, renames and new pages: "/contact/ is already a page on this site that isn't edited here (src/pages/contact.astro). Choose a different address." `pages.test.ts` (move, rename, create), `dev-api-pages.test.ts` (over HTTP, file untouched), `routes.test.ts` (static routes from `astro:routes:resolved` and from `src/pages`), and in Chromium (`pages.spec.ts`). |
+| `getTree()`, `getChildren()`, `getBreadcrumbs()` and `getUrl()` return identical results in dev and in a production build | `/site-tree.json` (the playground prints every helper's output there) is fetched from the static build and from `astro dev` in one e2e test and must be equal. `helpers.test.ts` unit-tests the runtime. The static suite checks the four-level breadcrumbs and the section list in `_order.yaml` order. Parity with live previews is Phase 7. |
+
+**Standing criteria:**
+- `npm run dev` serves the playground with `/admin`; Pages opens as the outline, and the Redirects screen is in the Site menu.
+- Lint, the format check, typecheck and the contrast check pass. Vitest: 3,845 tests in 75 files (unit, corpus and integration; the integration project's 29 include the Astro 6 contract test, with the fixture installed locally).
+- `npm run e2e`: 66 passed, static and studio. The new studio spec passed 24 of 24 in three repeated runs on one worker.
+- `check:dist` loads all eight entry points from `dist/`, `@vesper/core/urls` included. `astro check` on the playground: 0 errors, 0 warnings, 0 hints. The Astro 6 fixture builds with the new hooks.
+- READMEs, `DECISIONS.md` and `CLAUDE.md` are current.
+- Keyboard pass: every flow above was driven by key presses in Chromium (Playwright). In the app's browser pane, expanding a row with the arrow keys worked. The pane couldn't take key presses after that because the window was hidden, so no hand-driven pass was possible this session.
+
+**Changes from the design:**
+- `ReorderRequest` also takes a target index, so a drop several places away lands there, not one step along.
+- React Aria's rows keep their key events, so the outline reads Alt+arrows and Shift+F10 in the capture phase from the focused row.
+- The kit gained `SuggestField` (the link picker) and `FileButton` (CSV import) besides `Tree`.
+- The route check lives in `integration/site-check.ts`. The link picker for URL fields is a "Choose a page…" button, since the widget contract has the editor own the field's label.
+- The YAML writer fix grew: lists edited and resized at once now change item by item in general, and a new item after one-line flow maps is written as one. The corpus suites pass unchanged.
+- `src/lib/pages.ts` in the playground is gone; its pages use the helpers.
+- Commits: the design's sixteen became 23. One ordering slip: the outline's commit (477c05b) imports the Redirects screen, which lands in the next commit, so that one commit doesn't build on its own. The branch builds at every later commit.
+
+**Open, for Jeremy:**
+- **A screen reader pass.** The outline, the dialogs and the Redirects screen were checked with axe and driven by keyboard, but not heard. Worth ten minutes with NVDA in Chrome: reading rows (title, address, status), expanding, the menu, a move and its announcement.
+- **The internal-link build check** (spec §6.15.6, "optional build check") wasn't built. It overlaps "weekly broken-link checks" on the do-not-build list.
+- **Vercel's redirects** go into the site's `vercel.json` when the studio writes them, because Vercel reads it before the build (DECISIONS.md). Confirm that's acceptable, or prefer HTML redirect pages only on Vercel.
+- **The outline is a treegrid, and its expand toggle is an icon-only button** (DECISIONS.md, with the §10.4 budget note). Confirm the exception.
+- **Redirects aren't served by `astro dev`.** They work in every build.
+- **Edit grants on both ends of a move** (spec §6.15.4) wait for cloud roles in Phase 4.
+- Still open from earlier phases: HEIC conversion licensing, React 18 sites, and unknown Markdoc tags (warn or block).
+
+**Follow-ups noted, not blocking:**
+- A function-form `url` has no "View on site" in the studio (the studio's bundle doesn't run it); the link picker still lists those pages, from the dev API.
+- In dev the playground logs a hint to set `tree: true` for `docs`, whose guides sit in a folder. It's the spec's suggestion working as meant.
+- The S3 deploy template's redirect metadata is Phase 9; `_vesper/redirects.json` is its input.
 
 ## Phase 2.6: URLs, hierarchy and redirects (design)
 

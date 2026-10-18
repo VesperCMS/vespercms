@@ -2,7 +2,7 @@
 
 The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
 
-**Status:** Phases 2 and 2.5 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build.
+**Status:** Phases 2, 2.5 and 2.6 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages.
 
 ## How it's built
 
@@ -36,10 +36,19 @@ Hash routes, so deep links and reloads work on any static host without rewrite r
 | Route | Screen |
 |---|---|
 | `#/` | Home: collections and singletons, with entry counts and last edits |
-| `#/c/:collection` | Entry list |
+| `#/c/:collection` | Entry list, or the page outline for a `tree: true` collection |
 | `#/c/:collection/new` | New entry |
+| `#/c/:collection/new/:parent` | New page under a parent in the tree (the parent's path, one encoded segment) |
 | `#/c/:collection/e/:id` | Editor (the id is one encoded segment, even when it contains `/`) |
 | `#/media` | Media browser |
+| `#/redirects` | Redirects (from the top bar's Site menu) |
+
+## Pages, moves and redirects (spec §6.15)
+
+- **The outline** (`screens/PageTree.tsx`) replaces the entry list for `tree: true` collections. It's the kit's `Tree`, a treegrid: one row per page with its title, its address in muted text and its status in words ("No section page", "Draft"), collapsed beyond the first level. Enter opens a page. Each row's "…" menu (reached with the right arrow, or Shift+F10) adds a child page, moves it, moves it up or down, creates a missing section page, or deletes it. Alt+↑/↓ move the focused page. Drag and drop (React Aria's, keyboard mode included) is offered on top: a drop between pages reorders, a drop onto a page opens the move dialog. Every change is announced politely.
+- **Moving** asks the dev API for a dry run first, and confirms in words: "This moves “Nursing” and its 3 pages to the top level. Its address becomes /nursing/. 8 links on other pages will be updated. Visitors to the old addresses will be sent to the new ones." Refusals (a static route's address, a duplicate, `maxDepth`) show in the dialog.
+- **The Redirects screen** (`screens/Redirects.tsx`) lists every redirect with its kind in words, what needs a look (from the same cleanup as the build), one "Add redirect" button, edit and delete in each row's menu, and CSV import with a preview of what's added, replaced and skipped.
+- **The link picker** (`editor/PagePicker.tsx`): the body editor's link dialog searches pages by title and writes the page's address, and URL fields get "Choose a page…". A field whose schema takes only full URLs gets the site's address in front, or no picker when Astro's `site` isn't set.
 
 ## Widget contract
 
