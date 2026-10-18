@@ -76,6 +76,57 @@ test('every screen passes axe: home, list, editor, media', async ({ page }) => {
   await expectAccessible(page);
 });
 
+test('every screen passes axe in the dark theme too', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  const screens: [string, ReturnType<Page['getByRole']>][] = [
+    ['/admin/', page.getByRole('heading', { level: 1, name: 'Content' })],
+    ['/admin/#/c/blog', page.getByRole('grid', { name: 'Blog posts' })],
+    ['/admin/#/c/pages', page.getByRole('treegrid', { name: 'Pages' })],
+    ['/admin/#/c/blog/e/harbor-at-dawn', page.getByRole('textbox', { name: 'Body' })],
+    ['/admin/#/media', page.getByRole('heading', { level: 2, name: 'harbor-at-dawn.jpg' })],
+    ['/admin/#/redirects', page.getByRole('grid', { name: 'Redirects' })],
+  ];
+  for (const [path, ready] of screens) {
+    await page.goto(path);
+    await expect(ready).toBeVisible();
+    await expectAccessible(page);
+  }
+});
+
+test('by keyboard: Details is a drawer on a wide screen and the closing section on a narrow one', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toHaveValue(
+    'Harbor at dawn',
+  );
+  // Wide: a button in the top bar opens the drawer, focus goes in and comes back.
+  const button = page.getByRole('banner').getByRole('button', { name: 'Details', exact: true });
+  await button.focus();
+  await page.keyboard.press('Enter');
+  const drawer = page.getByRole('dialog', { name: 'Details' });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByLabel('Published at (required)')).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(drawer.locator(':focus')).toHaveCount(1);
+  await expectAccessible(page);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+  await expect(button).toBeFocused();
+
+  // Narrow (and at 200% zoom on a laptop): the same fields in a disclosure at the end.
+  await page.setViewportSize({ width: 800, height: 900 });
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Details' })).toHaveCount(0);
+  const section = page.getByRole('main').getByRole('button', { name: 'Details', exact: true });
+  await expect(section).toHaveAttribute('aria-expanded', 'false');
+  await section.focus();
+  await page.keyboard.press('Enter');
+  await expect(section).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByLabel('Published at (required)')).toBeVisible();
+  await expectAccessible(page);
+});
+
 test('a deep link survives a reload', async ({ page }) => {
   await page.goto('/admin/#/c/pages/e/academics%2Fnursing');
   await expect(page.getByRole('textbox', { name: 'Title (required)' })).toBeVisible();
