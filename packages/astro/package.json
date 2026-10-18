@@ -10,7 +10,7 @@
     "git"
   ],
   "type": "module",
-  "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/. \".\" is the integration (astro add); ./node is Node-only (config loading, manifest, local storage). ./image-service is the crop step around Astro's Sharp image service, registered by the integration (spec §6.6.5).",
+  "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/. \".\" is the integration (astro add); ./node is Node-only (config loading, manifest, local storage). ./components is <Img> and getImg(), shipped as source for the site's Astro to compile, like pages/; ./images is their planning. ./image-service is the crop step around Astro's Sharp image service, registered by the integration (spec §6.6.5).",
   "exports": {
     ".": {
       "@vesper/source": "./src/integration/index.ts",
@@ -27,6 +27,15 @@
       "types": "./dist/config/index.d.ts",
       "default": "./dist/config/index.js"
     },
+    "./components": {
+      "types": "./components/index.ts",
+      "default": "./components/index.ts"
+    },
+    "./images": {
+      "@vesper/source": "./src/images/index.ts",
+      "types": "./dist/images/index.d.ts",
+      "default": "./dist/images/index.js"
+    },
     "./node": {
       "@vesper/source": "./src/node/index.ts",
       "types": "./dist/node/index.d.ts",
@@ -38,11 +47,12 @@
       "default": "./dist/images/service.js"
     }
   },
-  "//files": "pages/ holds the injected /admin page; src/ and dist/ both resolve it at ../../pages.",
+  "//files": "pages/ holds the injected /admin page and components/ the <Img> component; src/ and dist/ both resolve pages at ../../pages.",
   "files": [
     "dist",
     "src",
     "pages",
+    "components",
     "!src/**/*.test.ts"
   ],
   "scripts": {

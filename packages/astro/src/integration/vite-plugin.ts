@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { DEFAULT_URL_SETTINGS, folderKey, readDataFile } from '@vesper/core';
+import { DEFAULT_URL_SETTINGS, folderKey, readDataFile, siteRatios } from '@vesper/core';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createDevApi } from './dev-api.ts';
 import type { StaticRoutes } from '@vesper/core';
@@ -18,6 +18,7 @@ import type { SiteModelCache } from './site-model.ts';
  *   `component` imports from vesper.config.ts (spec §6.3.3). They're bundled
  *   by the site's own Vite, so they run on the site's origin (D14).
  * - `virtual:vesper/page` gives the page its title.
+ * - `virtual:vesper/images` gives `<Img>` the site's aspect ratios (spec §6.6.3).
  */
 
 export type StudioPluginOptions = {
@@ -62,8 +63,9 @@ const STUDIO = 'virtual:vesper/studio';
 const MANIFEST = 'virtual:vesper/manifest';
 const WIDGETS = 'virtual:vesper/widgets';
 const PAGE = 'virtual:vesper/page';
+const IMAGES = 'virtual:vesper/images';
 const CONTENT = 'vesper:content';
-const IDS = new Set([STUDIO, MANIFEST, WIDGETS, PAGE, CONTENT]);
+const IDS = new Set([STUDIO, MANIFEST, WIDGETS, PAGE, IMAGES, CONTENT]);
 
 const toPosix = (path: string) => path.split('\\').join('/');
 
@@ -154,6 +156,10 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           '    component?.props ? [[name, component.props]] : []),',
           '));',
         ].join('\n');
+      }
+      if (name === IMAGES) {
+        const { manifest } = await options.cache.get();
+        return `export const ratios = ${JSON.stringify(manifest.site.images?.ratios ?? siteRatios())};`;
       }
       if (name === PAGE) {
         return [

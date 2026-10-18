@@ -1,0 +1,101 @@
+---
+/*
+ * <Img> (spec §6.6.5): Astro's own <Image>, <Picture> or getImage() for an
+ * image field, with the crop for a ratio, art direction, and the focal point
+ * as object-position. Every Astro image prop passes through; the planning
+ * (src/images/plan.ts) decides what Astro is asked for.
+ *
+ *   <Img image={post.data.hero} ratio="wide" widths={[480, 960, 1440]} sizes="100vw" />
+ *   <Img image={post.data.hero} art={{ base: 'square', '(min-width: 48rem)': 'wide' }} />
+ *   <Img image={post.data.hero} layout="full-width" />
+ */
+import type { GetImageResult } from 'astro';
+import { Image, Picture, getImage, imageConfig } from 'astro:assets';
+import { imageContext, mimeType, planArt, planImg, type ImgProps } from '@vesper/astro/images';
+import { ratios } from 'virtual:vesper/images';
+
+type Props = ImgProps;
+type Options = Parameters<typeof getImage>[0];
+
+const ctx = imageContext(imageConfig, ratios);
+const { art, formats, fallbackFormat, pictureAttributes } = Astro.props;
+
+/** `srcset` for a `<source>`: width descriptors alone, or the 1x image plus densities. */
+const srcsetOf = (image: GetImageResult) =>
+  image.srcSet.values.length === 0
+    ? image.src
+    : image.srcSet.values.some((value) => value.descriptor.endsWith('w'))
+      ? image.srcSet.attribute
+      : `${image.src}, ${image.srcSet.attribute}`;
+
+type Source = {
+  media: string | undefined;
+  srcset: string;
+  sizes: unknown;
+  type: string;
+  width: unknown;
+  height: unknown;
+};
+
+async function sourceOf(
+  options: Record<string, unknown>,
+  format: string,
+  media: string | undefined,
+): Promise<Source> {
+  const image = await getImage({ ...options, format } as Options);
+  return {
+    media,
+    srcset: srcsetOf(image),
+    sizes: image.attributes.sizes ?? options.sizes,
+    type: mimeType(image.options.format ?? format),
+    // Each breakpoint's own shape, so the browser reserves the right box.
+    width: image.attributes.width,
+    height: image.attributes.height,
+  };
+}
+
+let picture: { sources: Source[]; img: GetImageResult } | null = null;
+if (art) {
+  const plan = planArt(Astro.props, ctx);
+  const sources = await Promise.all([
+    ...plan.sources.flatMap((source) =>
+      plan.formats.map((format) => sourceOf(source.options, format, source.media)),
+    ),
+    ...plan.formats.map((format) => sourceOf(plan.base, format, undefined)),
+  ]);
+  const img = await getImage({ ...plan.base, format: plan.fallbackFormat } as Options);
+  picture = { sources, img };
+}
+const single = art ? null : planImg(Astro.props, ctx);
+const { class: imgClass, ...imgAttributes } = picture?.img.attributes ?? {};
+---
+
+{picture ? (
+  <picture {...pictureAttributes}>
+    {picture.sources.map((source) => (
+      <source
+        media={source.media}
+        srcset={source.srcset}
+        sizes={source.sizes}
+        type={source.type}
+        width={source.width}
+        height={source.height}
+      />
+    ))}
+    <img
+      src={picture.img.src}
+      srcset={picture.img.srcSet.values.length > 0 ? picture.img.srcSet.attribute : undefined}
+      {...imgAttributes}
+      class={imgClass}
+    />
+  </picture>
+) : formats ? (
+  <Picture
+    {...(single as Parameters<typeof Picture>[0])}
+    formats={formats as never}
+    fallbackFormat={fallbackFormat as never}
+    pictureAttributes={pictureAttributes}
+  />
+) : (
+  <Image {...(single as Parameters<typeof Image>[0])} />
+)}

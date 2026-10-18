@@ -134,7 +134,8 @@ describe('images', () => {
       { level: 'warning', message: 'Unknown setting "images.max" is ignored.' },
       {
         level: 'error',
-        message: "images.ratios: \"16x9\" can't be a ratio's name. Use a word, such as wide or square.",
+        message:
+          'images.ratios: "16x9" can\'t be a ratio\'s name. Use a word, such as wide or square.',
       },
       {
         level: 'error',
@@ -144,7 +145,10 @@ describe('images', () => {
         level: 'error',
         message: 'images.ratios.tall must be a number above zero, width / height, such as 16 / 9.',
       },
-      { level: 'error', message: 'images.maxUploadEdge must be a whole number of pixels, such as 3000.' },
+      {
+        level: 'error',
+        message: 'images.maxUploadEdge must be a whole number of pixels, such as 3000.',
+      },
     ]);
     expect(checkConfig({ images: { ratios: [1] } })).toEqual([
       {

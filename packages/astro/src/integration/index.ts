@@ -262,6 +262,10 @@ const VESPER_CONTENT_TYPES = `declare module 'vesper:content' {
   /** The entry's URL from its collection's url pattern, or undefined for a collection without one. */
   export function getUrl(entry: { collection: string; id: string; data?: unknown }): string | undefined;
 }
+/** Internal: the site's aspect ratios, for <Img> in @vesper/astro/components. */
+declare module 'virtual:vesper/images' {
+  export const ratios: Record<string, number>;
+}
 `;
 
 function siteNameOf(site: string | undefined, root: string): string {
