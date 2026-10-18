@@ -23,7 +23,7 @@ import {
   type Key,
   type SwitchFieldProps,
 } from 'react-aria-components';
-import { Icon } from './Button.tsx';
+import { Icon } from './Icon.tsx';
 import { Chevron, popoverClass } from './overlays.tsx';
 import {
   cx,
@@ -55,21 +55,11 @@ const popover = cx('min-w-[var(--trigger-width)]', popoverClass);
 /** The chosen option's tick; hidden from assistive tech, which hears "selected". */
 function Tick() {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      width="16"
-      height="16"
-      aria-hidden="true"
-      focusable="false"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="invisible ml-auto shrink-0 text-accent group-data-[selected]:visible"
-    >
-      <path d="M3 8.5l3 3 7-7" />
-    </svg>
+    <Icon
+      name="check"
+      size={16}
+      className="invisible ml-auto text-accent group-data-[selected]:visible"
+    />
   );
 }
 
@@ -323,7 +313,7 @@ export function MultiCombobox({
                     focusRing,
                   )}
                 >
-                  <Icon name="close" />
+                  <Icon name="close" size={16} />
                 </RACButton>
               </Tag>
             ))}

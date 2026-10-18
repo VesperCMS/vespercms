@@ -1,18 +1,21 @@
 # @vesper/ui
 
-Vesper's design tokens and, from Phase 2, its accessible component kit: Button, IconButton, Link, TextField, TextArea, Select, Combobox, Checkbox, Switch, RadioGroup, Dialog, Drawer, Menu, Disclosure, Table, InlineStatus, ErrorSummary, a Toolbar with ToggleButton and ToolButton for the body editor, and, from Phase 2.6, Tree, SuggestField and FileButton (spec §10.5). Screens compose these and nothing else.
+Vesper's design tokens and, from Phase 2, its accessible component kit: Button, IconButton, Link, TextField, TextArea, Select, Combobox, Checkbox, Switch, RadioGroup, Dialog, Drawer, Menu, Disclosure, Table, InlineStatus, ErrorSummary, a Toolbar with ToggleButton and ToolButton for the body editor, and, from Phase 2.6, Tree, SuggestField and FileButton (spec §10.5). Since the studio design pass, also Icon and Tooltip. Screens compose these and nothing else.
 
 **Status:** Phase 2, v1 of the kit. The kit is built on React Aria Components (DECISIONS.md). The package stays private: `@vesper/admin` compiles it into the studio bundle, and nothing else uses it yet.
 
 | Group | Components |
 |---|---|
-| Actions | `Button` (primary, secondary, quiet, danger), `IconButton` (close, more or drag only, always with a label), `Link`, `FileButton` (opens the system file picker) |
+| Actions | `Button` (primary, secondary, quiet, danger), `IconButton` (close, more or drag only, always with a label), `Link`, `FileButton` (opens the system file picker). `Button`, `ButtonLink`, `Link` and `FileButton` take an `icon`, drawn before the words |
 | Text inputs | `TextField`, `TextArea`: visible label, "(required)" in words, help and error text linked with aria-describedby |
 | Choices | `Select`, `Combobox`, `MultiCombobox` (tags and multi-references, with named remove buttons), `SuggestField` (a text field that suggests values: the link picker), `Checkbox`, `Switch` (state also in words), `RadioGroup` |
 | Overlays | `Dialog` (focus trap, Escape, focus returns to the trigger; `size="wide"` for work on an image; scrolls inside itself on a short screen), `Drawer`, `Menu` (the "…" menu), `Disclosure` |
 | Outlines | `Tree`: React Aria's single-column treegrid. Arrow keys move and expand, Home/End jump, typing finds a row, rows hold buttons, and `useDragAndDrop` adds drag and drop with its keyboard mode. The expand toggle is a named button outside the Tab order (DECISIONS.md). |
 | Data and feedback | `Table` (rows can be links), `InlineStatus` (status in words), `ErrorSummary` (takes focus, links to fields; `focusKey` moves focus only on a new failed save, never while errors update as people type) |
-| Toolbars | `Toolbar` (one Tab stop, arrow keys inside), `ToggleButton` (pressed shown as a fill and semibold text, and announced as pressed), `ToolButton` |
+| Toolbars | `Toolbar` (one Tab stop, arrow keys inside), `ToggleButton` (pressed shown as a fill and semibold text, and announced as pressed), `ToolButton`. A tool given `icon`, `label` and `shortcut` instead of children is icon-only: the label is its accessible name, and a `Tooltip` shows the label and shortcut on hover and keyboard focus, with the shortcut in `aria-keyshortcuts` |
+| Icons | `Icon`: a [Lucide](https://lucide.dev) icon by name from the kit's set (`ICONS`), or a drawing from the manifest (`node`, a collection's icon), always `aria-hidden`. A manifest drawing keeps only Lucide's shapes and geometry attributes. `TextField`'s `icon` and `Menu` items' `icon` use it too |
+| Tooltips | `Tooltip`: React Aria's, for icon-only tools. It closes when the page scrolls |
+
 
 Each component has axe and keyboard tests in `src/components/ui.test.tsx`. `@vesper/admin`'s `src/budget.test.ts` checks the kit's and the studio's source against the §10.4 design budget. Colour contrast is checked separately, on the tokens.
 

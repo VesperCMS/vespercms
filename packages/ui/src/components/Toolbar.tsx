@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
   Button as RACButton,
   Separator,
@@ -7,6 +7,8 @@ import {
   type ButtonProps as RACButtonProps,
   type ToggleButtonProps as RACToggleButtonProps,
 } from 'react-aria-components';
+import { Icon, type IconName } from './Icon.tsx';
+import { Tooltip } from './overlays.tsx';
 import { colorTransition, cx, focusRing } from './shared.tsx';
 
 export type ToolbarProps = {
@@ -43,37 +45,100 @@ export function ToolbarSeparator() {
   );
 }
 
-export type ToggleButtonProps = Omit<RACToggleButtonProps, 'className' | 'children'> & {
-  children: ReactNode;
-  className?: string;
-};
+/**
+ * A tool shows its words, or (the body's formatting tools, spec §10.4 as
+ * amended) an icon alone, named by `label`, with a tooltip that also shows
+ * its keyboard shortcut.
+ */
+export type ToolContent =
+  | { children: ReactNode; icon?: never; label?: never; shortcut?: never }
+  | {
+      icon: IconName;
+      /** The accessible name, and the tooltip's words. */
+      label: string;
+      /** The shortcut as people read it ("Ctrl+B") and as `aria-keyshortcuts` writes it ("Control+B"). */
+      shortcut?: { text: string; aria: string };
+      children?: never;
+    };
+
+/** The tool's insides and the props that name it. */
+function toolParts(content: ToolContent) {
+  if (!content.icon) return { inside: content.children, named: {}, tooltip: null };
+  return {
+    inside: <Icon name={content.icon} size={18} />,
+    named: { 'aria-label': content.label },
+    tooltip: content.shortcut ? `${content.label} · ${content.shortcut.text}` : content.label,
+  };
+}
+
+const iconTool = 'size-8 px-0';
+
+/** React Aria's buttons don't pass `aria-keyshortcuts` through, so it's set on the element. */
+function useKeyShortcuts(shortcut: ToolContent['shortcut']) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const keys = shortcut?.aria;
+  useEffect(() => {
+    if (keys) ref.current?.setAttribute('aria-keyshortcuts', keys);
+    else ref.current?.removeAttribute('aria-keyshortcuts');
+  }, [keys]);
+  return ref;
+}
+
+export type ToggleButtonProps = Omit<RACToggleButtonProps, 'className' | 'children'> &
+  ToolContent & { className?: string };
 
 /** On or off, announced as pressed or not; the pressed state is a fill, not colour alone. */
-export function ToggleButton({ children, className, ...props }: ToggleButtonProps) {
-  return (
+export function ToggleButton({
+  children,
+  icon,
+  label,
+  shortcut,
+  className,
+  ...props
+}: ToggleButtonProps) {
+  const { inside, named, tooltip } = toolParts({ children, icon, label, shortcut } as ToolContent);
+  const ref = useKeyShortcuts(shortcut);
+  const button = (
     <RACToggleButton
       {...props}
+      {...named}
+      ref={ref}
       className={cx(
         toolClass,
+        tooltip !== null && iconTool,
         'data-[selected]:bg-accent-subtle data-[selected]:text-accent',
         className,
       )}
     >
-      {children}
+      {inside}
     </RACToggleButton>
   );
+  return tooltip === null ? button : <Tooltip text={tooltip}>{button}</Tooltip>;
 }
 
-export type ToolButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
-  children: ReactNode;
-  className?: string;
-};
+export type ToolButtonProps = Omit<RACButtonProps, 'className' | 'children'> &
+  ToolContent & { className?: string };
 
 /** A plain action inside a toolbar ("Image", "Link"). */
-export function ToolButton({ children, className, ...props }: ToolButtonProps) {
-  return (
-    <RACButton {...props} className={cx(toolClass, className)}>
-      {children}
+export function ToolButton({
+  children,
+  icon,
+  label,
+  shortcut,
+  className,
+  ...props
+}: ToolButtonProps) {
+  const { inside, named, tooltip } = toolParts({ children, icon, label, shortcut } as ToolContent);
+  const ref = useKeyShortcuts(shortcut);
+  const button = (
+    <RACButton
+      {...props}
+      {...named}
+      ref={ref}
+      className={cx(toolClass, tooltip !== null && iconTool, className)}
+    >
+      {inside}
     </RACButton>
   );
+  return tooltip === null ? button : <Tooltip text={tooltip}>{button}</Tooltip>;
 }

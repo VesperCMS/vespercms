@@ -8,7 +8,7 @@ import {
   type DragAndDropHooks,
   type Key,
 } from 'react-aria-components';
-import { Icon } from './Button.tsx';
+import { Icon } from './Icon.tsx';
 import { Chevron } from './overlays.tsx';
 import { colorTransition, cx, focusRing } from './shared.tsx';
 

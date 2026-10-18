@@ -21,6 +21,10 @@ import {
   Table,
   TextArea,
   TextField,
+  Toolbar,
+  ToggleButton,
+  ToolButton,
+  Icon,
   VesperMark,
 } from '../index.ts';
 
@@ -191,6 +195,47 @@ describe('Checkbox, Switch and RadioGroup', () => {
     await user.tab();
     await user.keyboard('{ArrowDown}');
     expect(screen.getByRole('radio', { name: 'Guides' })).toBeChecked();
+    await expectNoViolations();
+  });
+});
+
+describe('Icon and the icon-only tools', () => {
+  it('draws only Lucide shapes and their geometry, hidden from assistive tech', () => {
+    const { container } = render(
+      <Icon
+        node={[
+          ['path', { d: 'M1 1L2 2', onclick: 'alert(1)' }],
+          ['script', { src: 'x.js' }],
+          ['foreignObject', { width: '10' }],
+          ['circle', { cx: 12, cy: 12, r: 3, style: 'fill:red' }],
+        ]}
+      />,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
+    expect([...(svg?.children ?? [])].map((el) => el.tagName)).toEqual(['path', 'circle']);
+    expect(svg?.querySelector('path')?.getAttributeNames().sort()).toEqual(['d']);
+    expect(svg?.querySelector('circle')?.getAttributeNames().sort()).toEqual(['cx', 'cy', 'r']);
+  });
+
+  it('names an icon-only tool, states its shortcut, and shows a tooltip on keyboard focus', async () => {
+    render(
+      <Toolbar label="Formatting">
+        <ToggleButton icon="bold" label="Bold" shortcut={{ text: 'Ctrl+B', aria: 'Control+B' }} />
+        <ToolButton icon="link" label="Link" />
+      </Toolbar>,
+    );
+    const user = userEvent.setup();
+    await user.tab();
+    const bold = screen.getByRole('button', { name: 'Bold' });
+    expect(bold).toHaveFocus();
+    expect(bold).toHaveAttribute('aria-keyshortcuts', 'Control+B');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Bold · Ctrl+B');
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('button', { name: 'Link' })).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Link');
+    });
     await expectNoViolations();
   });
 });

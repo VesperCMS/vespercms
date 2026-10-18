@@ -4,6 +4,7 @@ import {
   TextField as RACTextField,
   type TextFieldProps as RACTextFieldProps,
 } from 'react-aria-components';
+import { Icon, type IconName } from './Icon.tsx';
 import { cx, fieldControl, FieldHelp, FieldLabel, type FieldTextProps } from './shared.tsx';
 
 export type TextFieldProps = Omit<RACTextFieldProps, 'className' | 'children'> &
@@ -11,6 +12,8 @@ export type TextFieldProps = Omit<RACTextFieldProps, 'className' | 'children'> &
     placeholder?: string;
     className?: string;
     inputClassName?: string;
+    /** An icon inside the field, before the text: a search field's magnifier. */
+    icon?: IconName;
   };
 
 /**
@@ -25,12 +28,30 @@ export function TextField({
   placeholder,
   className,
   inputClassName,
+  icon,
   ...props
 }: TextFieldProps) {
+  const input = (
+    <Input
+      placeholder={placeholder}
+      className={cx(fieldControl, icon && 'pl-10', inputClassName)}
+    />
+  );
   return (
     <RACTextField {...props} className={cx('flex flex-col gap-2', className)}>
       <FieldLabel label={label} isRequired={props.isRequired} />
-      <Input placeholder={placeholder} className={cx(fieldControl, inputClassName)} />
+      {icon ? (
+        <div className="relative">
+          <Icon
+            name={icon}
+            size={18}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-content-muted"
+          />
+          {input}
+        </div>
+      ) : (
+        input
+      )}
       <FieldHelp description={description} errorMessage={errorMessage} />
     </RACTextField>
   );

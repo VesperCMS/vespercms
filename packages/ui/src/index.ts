@@ -7,7 +7,6 @@ export {
   Button,
   ButtonLink,
   IconButton,
-  Icon,
   Link,
   FileButton,
   type ButtonProps,
@@ -15,9 +14,9 @@ export {
   type FileButtonProps,
   type ButtonVariant,
   type IconButtonProps,
-  type IconName,
   type LinkProps,
 } from './components/Button.tsx';
+export { Icon, ICONS, type IconName, type IconNode, type IconProps } from './components/Icon.tsx';
 export {
   TextField,
   TextArea,
@@ -48,6 +47,7 @@ export {
   Menu,
   Disclosure,
   Chevron,
+  Tooltip,
   glassOverlay,
   popoverClass,
   type DialogProps,
@@ -82,6 +82,7 @@ export {
   ToolbarSeparator,
   ToggleButton,
   ToolButton,
+  type ToolContent,
   type ToolbarProps,
   type ToggleButtonProps,
   type ToolButtonProps,

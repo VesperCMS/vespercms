@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import {
   Button as RACButton,
   Dialog as RACDialog,
@@ -11,9 +11,12 @@ import {
   Modal,
   ModalOverlay,
   Popover,
+  Tooltip as RACTooltip,
+  TooltipTrigger,
   type Key,
 } from 'react-aria-components';
 import { IconButton } from './Button.tsx';
+import { Icon, type IconName, type IconNode } from './Icon.tsx';
 import { colorTransition, cx, focusRing } from './shared.tsx';
 
 /** The modal scrim: the page stays present, blurred, beneath a dialog or drawer. */
@@ -122,6 +125,8 @@ export type MenuItem = {
   isDisabled?: boolean;
   /** Where the person is now (the Content menu's open collection): accent-subtle and its halo. */
   isCurrent?: boolean;
+  /** An icon before the words: one of the studio's, or a drawing (a collection's icon). */
+  icon?: IconName | IconNode;
 };
 
 export type MenuProps = {
@@ -131,31 +136,36 @@ export type MenuProps = {
   onAction: (id: string) => void;
   /** A text trigger instead of the "…" icon. */
   triggerText?: string;
+  /** An icon before a text trigger's words ("+ Insert"). */
+  triggerIcon?: IconName;
 };
 
 /** The 16px chevron beside a text trigger. It points down; a disclosure turns it. */
 export function Chevron({ className }: { className?: string }) {
+  return <Icon name="chevron" size={16} className={cx('text-content-muted', className)} />;
+}
+
+/**
+ * A tooltip: the words of a control that shows only an icon (the body's
+ * formatting tools, spec §10.4 as amended). It appears on hover and on
+ * keyboard focus; the control's accessible name carries the same words.
+ */
+export function Tooltip({ text, children }: { text: string; children: ReactElement }) {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      width="16"
-      height="16"
-      aria-hidden="true"
-      focusable="false"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cx('shrink-0 text-content-muted', className)}
-    >
-      <path d="M4 6l4 4 4-4" />
-    </svg>
+    <TooltipTrigger delay={400} closeDelay={0}>
+      {children}
+      <RACTooltip
+        offset={6}
+        className={cx('rounded-md px-2 py-1 text-small text-content', glassOverlay)}
+      >
+        {text}
+      </RACTooltip>
+    </TooltipTrigger>
   );
 }
 
 /** The "…" menu (spec §10.3): everything that isn't the one primary action. */
-export function Menu({ label, items, onAction, triggerText }: MenuProps) {
+export function Menu({ label, items, onAction, triggerText, triggerIcon }: MenuProps) {
   return (
     <MenuTrigger>
       {triggerText ? (
@@ -166,6 +176,7 @@ export function Menu({ label, items, onAction, triggerText }: MenuProps) {
             focusRing,
           )}
         >
+          {triggerIcon && <Icon name={triggerIcon} size={18} />}
           {triggerText}
           <Chevron />
         </RACButton>
@@ -206,6 +217,13 @@ export function Menu({ label, items, onAction, triggerText }: MenuProps) {
                     "relative mt-2 before:pointer-events-none before:absolute before:inset-x-2 before:-top-1 before:border-t before:border-border before:content-['']",
                 )}
               >
+                {item.icon && (
+                  <Icon
+                    {...(typeof item.icon === 'string' ? { name: item.icon } : { node: item.icon })}
+                    size={18}
+                    className={cx('mr-2', !item.isDanger && 'text-content-muted')}
+                  />
+                )}
                 {item.label}
               </RACMenuItem>
             );

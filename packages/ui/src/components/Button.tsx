@@ -6,6 +6,7 @@ import {
   type ButtonProps as RACButtonProps,
   type LinkProps as RACLinkProps,
 } from 'react-aria-components';
+import { Icon, type IconName } from './Icon.tsx';
 import { colorTransition, cx, focusRing } from './shared.tsx';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger';
@@ -40,6 +41,8 @@ export type ButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
    * Each new value plays it once; reduced motion drops it.
    */
   pulse?: number;
+  /** An icon before the words; never instead of them (spec §10.4). */
+  icon?: IconName;
 };
 
 // A hairline on every button, transparent but for the secondary's: forced
@@ -47,7 +50,6 @@ export type ButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
 // Each variant sets the colour, so two colours never compete for it.
 const buttonBase = cx(
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-4 text-label',
-
   'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[pending]:cursor-progress',
   focusRing,
 );
@@ -57,6 +59,7 @@ export function Button({
   className,
   children,
   pulse = 0,
+  icon,
   ...props
 }: ButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
@@ -78,6 +81,7 @@ export function Button({
   }, [pulse]);
   return (
     <RACButton {...props} ref={ref} className={cx(buttonBase, VARIANTS[variant], className)}>
+      {icon && <Icon name={icon} size={18} />}
       {children}
     </RACButton>
   );
@@ -87,6 +91,8 @@ export type ButtonLinkProps = Omit<RACLinkProps, 'className' | 'children'> & {
   variant?: ButtonVariant;
   className?: string;
   children: ReactNode;
+  /** An icon before the words. */
+  icon?: IconName;
 };
 
 /**
@@ -98,57 +104,18 @@ export function ButtonLink({
   variant = 'secondary',
   className,
   children,
+  icon,
   ...props
 }: ButtonLinkProps) {
   return (
     <RACLink {...props} className={cx(buttonBase, 'no-underline', VARIANTS[variant], className)}>
+      {icon && <Icon name={icon} size={18} />}
       {children}
     </RACLink>
   );
 }
 
-/** The only icons that may stand alone (spec §10.4): close, overflow ("…") and drag handles. */
-export type IconName = 'close' | 'more' | 'drag';
-
-const ICONS: Record<IconName, ReactNode> = {
-  close: <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />,
-  more: (
-    <>
-      <circle cx="5" cy="10" r="1.5" />
-      <circle cx="10" cy="10" r="1.5" />
-      <circle cx="15" cy="10" r="1.5" />
-    </>
-  ),
-  drag: (
-    <>
-      <circle cx="7" cy="5" r="1.25" />
-      <circle cx="13" cy="5" r="1.25" />
-      <circle cx="7" cy="10" r="1.25" />
-      <circle cx="13" cy="10" r="1.25" />
-      <circle cx="7" cy="15" r="1.25" />
-      <circle cx="13" cy="15" r="1.25" />
-    </>
-  ),
-};
-
-export function Icon({ name }: { name: IconName }) {
-  const filled = name !== 'close';
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      width="20"
-      height="20"
-      aria-hidden="true"
-      focusable="false"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke={filled ? 'none' : 'currentColor'}
-      strokeWidth={filled ? undefined : 1.75}
-    >
-      {ICONS[name]}
-    </svg>
-  );
-}
-
+/** Only close, overflow ("…"), drag handles and the outline's toggle may stand alone (spec §10.4). */
 export type IconButtonProps = Omit<RACButtonProps, 'className' | 'children' | 'aria-label'> & {
   icon: IconName;
   /** The accessible name. Always required: an icon is never a name on its own. */
@@ -183,14 +150,17 @@ export type LinkProps = Omit<RACLinkProps, 'className'> & {
    * underlined in the accent on hover.
    */
   variant?: 'inline' | 'title';
+  /** An icon before the words: the back link's arrow. */
+  icon?: IconName;
 };
 
-export function Link({ className, variant = 'inline', ...props }: LinkProps) {
+export function Link({ className, variant = 'inline', icon, children, ...props }: LinkProps) {
   return (
     <RACLink
       {...props}
       className={cx(
         'cursor-pointer rounded-sm underline-offset-2',
+        icon && 'inline-flex items-center gap-1',
         variant === 'inline'
           ? 'text-accent underline data-[hovered]:text-accent-hover'
           : 'font-semibold text-content no-underline data-[hovered]:text-accent data-[hovered]:underline',
@@ -198,7 +168,14 @@ export function Link({ className, variant = 'inline', ...props }: LinkProps) {
         focusRing,
         className,
       )}
-    />
+    >
+      {(renderProps) => (
+        <>
+          {icon && <Icon name={icon} size={16} />}
+          {typeof children === 'function' ? children(renderProps) : children}
+        </>
+      )}
+    </RACLink>
   );
 }
 
@@ -208,10 +185,17 @@ export type FileButtonProps = {
   onSelect: (file: File) => void;
   children: ReactNode;
   variant?: ButtonVariant;
+  icon?: IconName;
 };
 
 /** A button that opens the system file picker (React Aria's FileTrigger): one file, of the given types. */
-export function FileButton({ accept, onSelect, children, variant = 'secondary' }: FileButtonProps) {
+export function FileButton({
+  accept,
+  onSelect,
+  children,
+  variant = 'secondary',
+  icon,
+}: FileButtonProps) {
   return (
     <FileTrigger
       acceptedFileTypes={accept}
@@ -220,7 +204,9 @@ export function FileButton({ accept, onSelect, children, variant = 'secondary' }
         if (file) onSelect(file);
       }}
     >
-      <Button variant={variant}>{children}</Button>
+      <Button variant={variant} {...(icon ? { icon } : {})}>
+        {children}
+      </Button>
     </FileTrigger>
   );
 }

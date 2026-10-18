@@ -8,6 +8,7 @@ import {
   TableHeader,
   type SortDescriptor,
 } from 'react-aria-components';
+import { Icon } from './Icon.tsx';
 import { colorTransition, cx, focusRing } from './shared.tsx';
 
 export type TableColumn = {
@@ -203,7 +204,11 @@ export function ErrorSummary({
       aria-labelledby="vesper-error-summary-title"
       className="rounded-md border border-danger bg-surface p-4 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
-      <h2 id="vesper-error-summary-title" className="text-heading-3 text-content">
+      <h2
+        id="vesper-error-summary-title"
+        className="flex items-center gap-2 text-heading-3 text-content"
+      >
+        <Icon name="error" className="text-danger" />
         {title}
       </h2>
       <ul className="mt-2 list-disc space-y-1 pl-6 text-danger">
