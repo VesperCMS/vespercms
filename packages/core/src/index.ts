@@ -274,3 +274,6 @@ export {
 
 // Aspect ratios, focal points and crops (spec §6.6). Also `@vesper/core/images`.
 export * from './images/index.ts';
+
+// Accessibility checks (spec §6.18): layer-1 content rules, shared by every mode.
+export * from './a11y/index.ts';
