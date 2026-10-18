@@ -130,3 +130,58 @@ describe('buildManifest', () => {
     );
   });
 });
+
+describe('buildManifest: URLs and trees (spec §6.15)', () => {
+  const pages = (pattern: string) => ({
+    name: 'pages',
+    loader: { kind: 'glob' as const, base: 'src/content/pages', pattern, customId: false },
+    schema: z.object({ title: z.string() }),
+  });
+
+  it('records Astro’s URL settings, the time zone, maxDepth and native redirect targets', async () => {
+    const manifest = await buildManifest({
+      site: {
+        srcDir: 'src',
+        urls: { base: 'college', trailingSlash: 'always', buildFormat: 'directory' },
+      },
+      collections: [pages('**/[^_]*.md')],
+      config: {
+        timeZone: 'America/New_York',
+        redirects: { native: ['apache'] },
+        collections: { pages: { url: '/:path', tree: true, maxDepth: 4 } },
+      },
+    });
+    expect(manifest.site.urls).toEqual({
+      base: '/college/',
+      trailingSlash: 'always',
+      buildFormat: 'directory',
+      timeZone: 'America/New_York',
+    });
+    expect(manifest.site.redirects).toEqual({ native: ['apache'] });
+    expect(manifest.collections[0]?.presentation).toEqual({
+      tree: true,
+      url: '/:path',
+      maxDepth: 4,
+    });
+    expect(manifest.diagnostics).toEqual([]);
+  });
+
+  it('warns when a pattern would pick up _order.yaml, or a tree isn’t made of folders', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [
+        pages('**/*'),
+        {
+          name: 'people',
+          loader: { kind: 'file', path: 'src/data/people.json', customParser: false },
+          schema: z.object({ name: z.string() }),
+        },
+      ],
+      config: { collections: { pages: { tree: true }, people: { tree: true } } },
+    });
+    expect(manifest.diagnostics.map((d) => [d.collection, d.code])).toEqual([
+      ['pages', 'order-file-matched'],
+      ['people', 'tree-not-glob'],
+    ]);
+  });
+});
