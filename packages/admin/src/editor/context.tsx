@@ -1,4 +1,4 @@
-import type { CollectionManifest, DataObject, DataValue } from '@vesper/core';
+import type { A11yNote, CollectionManifest, DataObject, DataValue } from '@vesper/core';
 import { createContext, useContext } from 'react';
 import type { ValuePath } from './values.ts';
 
@@ -9,6 +9,8 @@ export type EditorState = {
   setValue: (path: ValuePath, value: DataValue) => void;
   /** Validation messages by `pathKey`, from the last save. */
   issues: ReadonlyMap<string, readonly string[]>;
+  /** Accessibility notes by `pathKey` of the field they're shown under (spec §6.18). */
+  notes?: ReadonlyMap<string, readonly A11yNote[]>;
   disabled: boolean;
   /** The entry hasn't been saved yet. */
   isNew: boolean;

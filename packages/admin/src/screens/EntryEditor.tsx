@@ -1,5 +1,6 @@
 import {
   DEFAULT_URL_SETTINGS,
+  type A11yNote,
   decodeData,
   deepEqual,
   encodeValue,
@@ -38,6 +39,7 @@ import { Screen } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
+import { issueTarget } from '../editor/target.ts';
 import {
   fieldId,
   getIn,
@@ -47,8 +49,9 @@ import {
   setIn,
   type ValuePath,
 } from '../editor/values.ts';
-import { builtinWidget } from '../widgets/registry.ts';
 import type { BodyChecks } from '../body/checks.ts';
+import type { BodyApi } from '../body/BodyEditor.tsx';
+import { useEntryNotes } from '../a11y/useNotes.ts';
 
 // Tiptap and the Markdown tooling are most of the studio's weight, and only
 // entries with a body need them: they load the first time one is opened.
@@ -229,6 +232,28 @@ function EntryForm({
     return map;
   }, [targets]);
 
+  // Accessibility notes (spec §6.18): field notes go under their field, the
+  // body's under the body.
+  const found = useEntryNotes({
+    manifest,
+    collection,
+    values,
+    body: isContent && !sourceOnly ? body : undefined,
+    format,
+  });
+  const notes = found.notes;
+  const bodyNotes = useMemo(() => notes.filter((n) => n.target.kind === 'body'), [notes]);
+  const noteMap = useMemo(() => {
+    const map = new Map<string, A11yNote[]>();
+    for (const note of notes) {
+      if (note.target.kind !== 'field') continue;
+      const key = pathKey(issueTarget(collection.fields ?? [], note.target.path).path);
+      map.set(key, [...(map.get(key) ?? []), note]);
+    }
+    return map;
+  }, [notes, collection.fields]);
+  const bodyApi = useRef<BodyApi | null>(null);
+
   const setValue = useCallback((path: ValuePath, value: DataValue) => {
     setValues((current) => setIn(current, path, value));
   }, []);
@@ -238,12 +263,24 @@ function EntryForm({
       values,
       setValue,
       issues: issueMap,
+      notes: noteMap,
       disabled: !editable || sourceOnly,
       isNew,
       entryId,
       entryPath,
     }),
-    [collection, values, setValue, issueMap, editable, sourceOnly, isNew, entryId, entryPath],
+    [
+      collection,
+      values,
+      setValue,
+      issueMap,
+      noteMap,
+      editable,
+      sourceOnly,
+      isNew,
+      entryId,
+      entryPath,
+    ],
   );
 
   const save = useCallback(async () => {
@@ -487,6 +524,8 @@ function EntryForm({
                 format={format}
                 partials={partials}
                 issues={bodyIssues}
+                notes={bodyNotes}
+                apiRef={bodyApi}
                 disabled={!editable}
                 entryPath={entryPath}
                 imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}
@@ -600,52 +639,6 @@ function titleOf(values: DataObject, title: FieldModel | undefined): string {
   if (!title) return '';
   const value = values[keyOf(title)];
   return typeof value === 'string' ? value.trim() : '';
-}
-
-/**
- * Where an issue is shown: the deepest field on screen along its path. An
- * issue inside a raw field, or in a nested value no control shows, lands on
- * the nearest field that is shown.
- */
-function issueTarget(
-  fields: readonly FieldModel[],
-  path: FieldIssue['path'],
-): { path: ValuePath; focusId: string; label: string } {
-  let models: readonly FieldModel[] = fields;
-  let model: FieldModel | undefined;
-  const matched: (string | number)[] = [];
-  for (const segment of path) {
-    if (typeof segment === 'number') {
-      const item = model?.kind === 'array' ? model.children?.[0] : undefined;
-      if (!item || !usesChildren(model)) break;
-      model = item;
-      models = item.children ?? [];
-    } else {
-      const next = models.find((candidate) => keyOf(candidate) === segment);
-      if (!next || (model && !usesChildren(model))) break;
-      model = next;
-      models = next.children ?? [];
-    }
-    matched.push(segment);
-  }
-  if (!model) return { path: [], focusId: 'main', label: 'Entry' };
-  const id = fieldId(matched);
-  const widget = builtinWidget(model);
-  // A widget that draws its own control for the child at fault (an image's alt text) gets focus there.
-  const child = path[matched.length];
-  const childSuffix = typeof child === 'string' ? widget.childControls?.[child] : undefined;
-  const childLabel = models.find((m) => keyOf(m) === child)?.label;
-  return {
-    path: matched,
-    focusId: childSuffix ? `${id}${childSuffix}` : widget.group ? `${id}-label` : id,
-    label: childSuffix && childLabel ? `${model.label}, ${childLabel.toLowerCase()}` : model.label,
-  };
-}
-
-/** Whether a field's widget shows its children as their own fields (groups and repeaters do). */
-function usesChildren(field: FieldModel | undefined): boolean {
-  if (!field) return true;
-  return builtinWidget(field).rendersChildren === true;
 }
 
 /**

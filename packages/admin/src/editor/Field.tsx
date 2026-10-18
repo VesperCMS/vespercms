@@ -4,6 +4,7 @@ import { Component, Suspense, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
 import type { WidgetProps } from '../types.ts';
 import { builtinWidget } from '../widgets/registry.ts';
+import { FieldNotes } from '../a11y/FieldNotes.tsx';
 import { useEditor } from './context.tsx';
 import { fieldId, getIn, pathKey, type ValuePath } from './values.ts';
 
@@ -26,9 +27,19 @@ export function Field({ field, path, label }: FieldProps) {
   const { widgets } = useStudio();
   const id = fieldId(path, editor.idPrefix);
   const errors = editor.issues.get(pathKey(path)) ?? [];
+  const Custom = field.widget ? widgets[field.widget] : undefined;
+  const builtin = builtinWidget(field);
+  // Notes about a child the widget draws its own control for (an image's alt
+  // text) are shown by the widget, beside that control.
+  const childControls = Custom ? undefined : builtin.childControls;
+  const notes = (editor.notes?.get(pathKey(path)) ?? []).filter((note) => {
+    const child = note.target.kind === 'field' ? note.target.path[path.length] : undefined;
+    return !(typeof child === 'string' && childControls && child in childControls);
+  });
   const helpId = field.description ? `${id}-help` : undefined;
   const errorId = errors.length > 0 ? `${id}-error` : undefined;
-  const describedBy = [helpId, errorId].filter(Boolean).join(' ') || undefined;
+  const notesId = notes.length > 0 ? `${id}-a11y` : undefined;
+  const describedBy = [helpId, errorId, notesId].filter(Boolean).join(' ') || undefined;
 
   const props: WidgetProps & { path: ValuePath } = {
     value: getIn(editor.values, path),
@@ -43,8 +54,6 @@ export function Field({ field, path, label }: FieldProps) {
     path,
   };
 
-  const Custom = field.widget ? widgets[field.widget] : undefined;
-  const builtin = builtinWidget(field);
   const control = Custom ? (
     <WidgetBoundary fallback={<builtin.component {...props} />} name={field.widget ?? ''}>
       <Suspense fallback={<p className="text-sm text-content-muted">Loading…</p>}>
@@ -72,6 +81,7 @@ export function Field({ field, path, label }: FieldProps) {
       {errors.join(' ')}
     </p>
   ) : null;
+  const noteList = notesId ? <FieldNotes id={notesId} notes={notes} /> : null;
 
   if (!Custom && builtin.group) {
     return (
@@ -93,6 +103,7 @@ export function Field({ field, path, label }: FieldProps) {
         {help}
         {control}
         {error}
+        {noteList}
       </fieldset>
     );
   }
@@ -105,6 +116,7 @@ export function Field({ field, path, label }: FieldProps) {
       {control}
       {help}
       {error}
+      {noteList}
     </div>
   );
 }

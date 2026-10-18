@@ -7,7 +7,6 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { sha256 } from '../media/upload.ts';
 import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
-import { altAdvice } from './image.tsx';
 
 afterEach(() => {
   cleanup();
@@ -161,17 +160,6 @@ describe('the image field', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Use the existing file' }));
     expect(api.upload).not.toHaveBeenCalled();
     expect(await screen.findByRole('link', { name: 'guide.pdf' })).toBeInTheDocument();
-  });
-});
-
-describe('altAdvice', () => {
-  it('flags file names, "image of" and very long text, and nothing else', () => {
-    expect(altAdvice('IMG_4032.jpg')).toMatch(/file name/);
-    expect(altAdvice('DSC 0042')).toMatch(/file name/);
-    expect(altAdvice('Image of a harbor at dawn')).toMatch(/already say/);
-    expect(altAdvice('x'.repeat(151))).toMatch(/Long alt text/);
-    expect(altAdvice('Fishing boats leaving the harbor at dawn')).toBeNull();
-    expect(altAdvice('')).toBeNull();
   });
 });
 

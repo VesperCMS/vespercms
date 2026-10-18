@@ -14,7 +14,8 @@ import { Button, Checkbox, Disclosure, cx } from '@vesper/ui';
 import { useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useEditor } from '../editor/context.tsx';
-import type { ValuePath } from '../editor/values.ts';
+import { pathKey, type ValuePath } from '../editor/values.ts';
+import { FieldNotes } from '../a11y/FieldNotes.tsx';
 import { MediaPicker } from '../media/MediaPicker.tsx';
 import type { WidgetProps } from '../types.ts';
 import { inputClass } from './basic.tsx';
@@ -48,25 +49,6 @@ export function fieldRatios(field: FieldModel, site: Record<string, number>): Ra
   return names.map((name) => ({ name, ratio: site[name] ?? 1 }));
 }
 
-/** Problems with alt text worth a gentle word, never a block (spec §6.6.2). */
-export function altAdvice(alt: string): string | null {
-  const text = alt.trim();
-  if (text === '') return null;
-  if (
-    /\.(jpe?g|png|webp|gif|avif|svg|heic)$/i.test(text) ||
-    /^(img|dsc|pxl|image|photo|screenshot)[-_ ]?\d+/i.test(text)
-  ) {
-    return 'This looks like a file name. Describe what the image shows instead.';
-  }
-  if (/^(an? )?(image|picture|photo|graphic) of\b/i.test(text)) {
-    return 'Screen readers already say it’s an image, so you can start with what it shows.';
-  }
-  if (text.length > 150) {
-    return 'Long alt text is tiring to listen to. Keep it to what matters on this page, and put details in the text.';
-  }
-  return null;
-}
-
 /**
  * An image: preview, choose or replace, alt text written for this page, and
  * a "Decorative image" option that stores `alt: ""` and `decorative: true`.
@@ -80,6 +62,7 @@ export function ImageWidget({
   describedBy,
   invalid,
   disabled,
+  path,
 }: WidgetProps<DataValue> & { path: ValuePath }) {
   const { api, manifest } = useStudio();
   const editor = useEditor();
@@ -96,7 +79,10 @@ export function ImageWidget({
     objectShape && (field.children ?? []).some((c) => c.path.at(-1) === 'decorative');
   const decorative = record.decorative === true;
   const alt = typeof record.alt === 'string' ? record.alt : '';
-  const advice = altAdvice(alt);
+  // Accessibility notes about the alt text (spec §6.18), shown beside it.
+  const altNotes = (editor.notes?.get(pathKey(path)) ?? []).filter(
+    (note) => note.target.kind === 'field' && note.target.path[path.length] === 'alt',
+  );
   const childNamed = (name: string) =>
     objectShape && (field.children ?? []).some((c) => c.path.at(-1) === name);
   const hasFocus = childNamed('focus');
@@ -194,7 +180,11 @@ export function ImageWidget({
             onChange={(event) => {
               setRecord({ ...record, alt: event.target.value });
             }}
-            aria-describedby={[`${id}-alt-help`, advice ? `${id}-alt-advice` : '', describedBy]
+            aria-describedby={[
+              `${id}-alt-help`,
+              altNotes.length > 0 ? `${id}-alt-a11y` : '',
+              describedBy,
+            ]
               .filter(Boolean)
               .join(' ')}
             aria-invalid={invalid || undefined}
@@ -204,11 +194,7 @@ export function ImageWidget({
           <p id={`${id}-alt-help`} className="text-sm text-content-muted">
             Describe what this image communicates on this page.
           </p>
-          {advice && (
-            <p id={`${id}-alt-advice`} className="text-sm text-content">
-              {advice}
-            </p>
-          )}
+          {altNotes.length > 0 && <FieldNotes id={`${id}-alt-a11y`} notes={altNotes} />}
         </div>
       )}
       {hasDecorative && (

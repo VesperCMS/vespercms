@@ -4,7 +4,13 @@ import { Markdown, type MarkdownManager } from '@tiptap/markdown';
 import { NodeSelection, type EditorState } from '@tiptap/pm/state';
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { assembleBody, mediaReference, type BodyFormat, type BodyIssue } from '@vesper/core';
+import {
+  assembleBody,
+  mediaReference,
+  type A11yNote,
+  type BodyFormat,
+  type BodyIssue,
+} from '@vesper/core';
 import {
   Button,
   Checkbox,
@@ -16,7 +22,8 @@ import {
   Toolbar,
   cx,
 } from '@vesper/ui';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { NoteText } from '../a11y/FieldNotes.tsx';
 import { useStudio } from '../app/context.tsx';
 import { pageSuggestions, usePages } from '../editor/PagePicker.tsx';
 import { MediaPicker } from '../media/MediaPicker.tsx';
@@ -51,6 +58,7 @@ import {
   containerTypes,
   type ContainerTypes,
 } from './nodes.ts';
+import { revealInEditor, revealInSource } from './reveal.ts';
 import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
 import { bodyChecks } from './checks.ts';
 import { BodyUiContext, type BodyUi } from './ui.ts';
@@ -70,6 +78,16 @@ export type BodyEditorProps = {
   partials?: readonly string[] | null;
   /** Problems in the whole body, from the last check: listed under the source view. */
   issues?: readonly BodyIssue[];
+  /** Accessibility notes about the body (spec §6.18), listed under it. */
+  notes?: readonly A11yNote[];
+  /** Filled with the editor's actions, for the entry's notes drawer. */
+  apiRef?: RefObject<BodyApi | null>;
+};
+
+/** What the rest of the entry editor can ask of the body editor. */
+export type BodyApi = {
+  /** Puts the cursor on the place a note points at, in whichever view is open, and focuses it. */
+  reveal: (note: A11yNote) => void;
 };
 
 const FORMAT_NAMES: Record<BodyFormat, string> = { md: 'Markdown', mdx: 'MDX', mdoc: 'Markdoc' };
@@ -87,6 +105,36 @@ export function BodyEditor(props: BodyEditorProps) {
   const [generation, setGeneration] = useState(0);
   const formatName = FORMAT_NAMES[props.format];
   const blocking = (props.issues ?? []).filter((issue) => issue.level === 'error');
+  const notes = props.notes ?? [];
+  // The writing view registers how it reveals a place; the source view is a plain text area.
+  const writingReveal = useRef<((offset: number) => void) | null>(null);
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+  const reveal = (note: A11yNote) => {
+    if (note.target.kind !== 'body') return;
+    const textarea = document.getElementById('entry-body');
+    if (modeRef.current === 'source' && textarea instanceof HTMLTextAreaElement)
+      revealInSource(textarea, note.target.start, note.target.end);
+    else writingReveal.current?.(note.target.start);
+  };
+  const revealRef = useRef(reveal);
+  useEffect(() => {
+    revealRef.current = reveal;
+  });
+  const { apiRef } = props;
+  useEffect(() => {
+    if (!apiRef) return;
+    apiRef.current = {
+      reveal: (note) => {
+        revealRef.current(note);
+      },
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -105,7 +153,7 @@ export function BodyEditor(props: BodyEditorProps) {
         </Button>
       </div>
       {mode === 'writing' ? (
-        <WritingView key={generation} {...props} />
+        <WritingView key={generation} {...props} revealRef={writingReveal} />
       ) : (
         <>
           <textarea
@@ -139,6 +187,56 @@ export function BodyEditor(props: BodyEditorProps) {
           )}
         </>
       )}
+      <BodyNotes notes={notes} lines={mode === 'source'} onShow={reveal} />
+    </div>
+  );
+}
+
+/**
+ * The body's accessibility notes (spec §6.18), under the body: each names
+ * what it's about and has a Show button that takes the cursor there.
+ */
+function BodyNotes({
+  notes,
+  lines,
+  onShow,
+}: {
+  notes: readonly A11yNote[];
+  /** In the source view, each note says its line. */
+  lines: boolean;
+  onShow: (note: A11yNote) => void;
+}) {
+  if (notes.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <p id="entry-body-a11y-label" className="text-sm font-semibold text-content">
+        Accessibility notes in the body
+      </p>
+      <ul aria-labelledby="entry-body-a11y-label" className="m-0 flex list-none flex-col gap-2 p-0">
+        {notes.map((note, index) => {
+          const id = `entry-body-a11y-${String(index)}`;
+          return (
+            <li
+              key={id}
+              className="flex flex-wrap items-start justify-between gap-2 border-l border-warning pl-3 text-sm text-content"
+            >
+              <p id={id} className="m-0 min-w-0 flex-1">
+                {lines && note.target.kind === 'body' ? `Line ${String(note.target.line)}. ` : ''}
+                <NoteText note={note} />
+              </p>
+              <Button
+                variant="quiet"
+                aria-describedby={id}
+                onPress={() => {
+                  onShow(note);
+                }}
+              >
+                Show
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -268,7 +366,8 @@ function WritingView({
   entryPath,
   imageFolder,
   partials = null,
-}: BodyEditorProps) {
+  revealRef,
+}: BodyEditorProps & { revealRef: RefObject<((offset: number) => void) | null> }) {
   const { api, manifest, loadMdxProps } = useStudio();
   const model = useRef<{ built: BodyDocument; initial: Map<string, string> } | null>(null);
   const onChangeRef = useRef(onChange);
@@ -430,6 +529,24 @@ function WritingView({
     }),
     [catalog, containers, disabled, checks, partials, entryPath, editor],
   );
+
+  // How a note's Show finds its block: by the current text, parsed again.
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  });
+  useEffect(() => {
+    revealRef.current = (offset) => {
+      revealInEditor(editor, valueRef.current, offset, {
+        format,
+        containers,
+        ...(manifest.markdoc ? { markdoc: manifest.markdoc.options } : {}),
+      });
+    };
+    return () => {
+      revealRef.current = null;
+    };
+  }, [editor, format, containers, manifest.markdoc, revealRef]);
 
   const announcement = useEditorState({
     editor,
