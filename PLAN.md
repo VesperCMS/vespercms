@@ -13,7 +13,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284). See "Phase 2.6: outcome" below. |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
-| Studio design pass | In progress (2026-10-18), ahead of 2.9. See "Studio design pass (plan)" below. |
+| Studio design pass | Done locally (2026-10-18), ahead of 2.9; not pushed, CI not run yet. See "Studio design pass: outcome" below. |
 | 2.9 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -295,6 +295,52 @@ The spec's four "Done when" criteria, with evidence:
 - A collection with no `url` can't be traced to its pages in the report (`entry: null`); the docs should say so.
 - Notes can't be dismissed; there's nowhere to keep that in local mode. Cloud drafts (Phase 4) could hold it.
 - Layer 3 (report uploads, history, rendered scans with contrast, exports) is Phase 8.5.
+
+## Studio design pass: outcome
+
+Every studio screen now follows Vesper's design system (Pine) in both themes. Jeremy's three calls are in DECISIONS.md, "Studio design": the accent is Pine and fixed, four named glows and glass on what floats, and Figtree self-hosted. At the checkpoint he approved the Details drawer for wide screens.
+
+| Criterion | Evidence |
+|---|---|
+| Every studio screen follows the design system, light and dark | Before and after screenshots at 1280px, light and dark, on the 4402 preview: Home, the entry list, the page outline, the blog editor, a Markdoc body with blocks, the accessibility fixture, a location (map, colour, switch, custom widget), an event (date-times, link picker), site settings (palette, repeater), the media browser, Redirects, NotFound, the Content menu, the delete, leave, link and crop dialogs, the media picker, the notes drawer and the Details drawer; Home and the editor at 360px too. The checkpoint comparison is a private Artifact for Jeremy. Tokens, the kit and every screen use the type scale, radii, glass, glows and afterglow; Unavailable gets the afterglow without the top bar. |
+| Contrast, both themes | `npm run a11y:contrast`: 39 pairs in each theme. New pairs cover text on the top bar's glass and on overlays' glass, composited over black and over white, and on the afterglow at its brightest. The overlays' fill went from 88% to 93% for that (DECISIONS.md). Script tests cover the compositing. |
+| The budget test, with the new allowances only | `budget.test.ts`: shadows are `overlay`, `glow-accent`, `glow-selected`, `glass-edge` and `glass-overlay`, each only in its named file; `tokens.css` declares exactly those; rings only as the focus halo; no arbitrary colours, sizes or radii; spacing only from the scale; every `outline-2` drawn solid. |
+| Typecheck, lint, format, unit tests | All pass. Vitest: 4,079 tests in 93 files (unit, corpus and integration). New unit tests: the Details drawer on a wide screen (opens from the bar, axe, focus back on Escape; the problem count; a summary link opens it at the field). |
+| `npm run e2e`, axe on every screen | 90 passed, static and studio (88 before this pass). New: axe over Home, the list, the outline, the editor, Media and Redirects in the dark theme; Details as a drawer by keyboard (axe with it open, Escape returns focus) and, at 800px, as the closing disclosure. No selectors changed: the markup kept its roles and names. |
+| `check:dist`, with the font in `dist/studio.css` | 11 entry points load from `dist/`. `dist/studio.css` holds both Figtree files as `data:font/woff2` URLs; the only address in it is Tailwind's licence comment, so `/admin` requests nothing from Google or a CDN. |
+| `astro check` | The playground: 0 errors, 0 warnings, 0 hints. |
+| 200% zoom, 320px, forced colours, keyboard | See below. |
+
+**Manual checks**, in Chromium (Playwright) against the 4402 preview, over eleven screens:
+- **320px wide:** no screen scrolls sideways. The check found the entry list (393px) and Redirects (677px) did; each table now scrolls inside its own container.
+- **200% zoom** (a 640px viewport at twice the scale): no screen scrolls sideways; Details is the closing section, as on any screen under 1100px.
+- **Forced colours** (Chromium's emulation): overlays and the top bar fall back to Canvas with a CanvasText border; every button keeps an edge through a transparent hairline; focus outlines show; the switch's thumb and the radio's dot take a system colour. Found by this check: primary, quiet and danger buttons read as plain text before.
+- **Keyboard**, real key presses with each focused element's computed outline logged: the top bar's Content and Site menus (Enter, arrows, Escape back to the trigger, Enter to navigate), the list's controls and grid, the editor's fields, the Details drawer (Enter opens it with focus inside, Escape returns to the button), the body (the frame rings while the text has focus; Escape moves to the toolbar; arrows move along it), and the notes drawer (Enter, Tab to Close and Go to field, Escape back to the count). Every focused control draws the 2px focus outline with the halo outside it; menu items and list options draw it inside. The app's browser pane started focus partway down the page, so the walkthrough was recorded with Playwright instead.
+
+**Found while building, each fixed in its own commit:**
+- **The focus outline wasn't drawn on kit controls** (since Phase 2). Tailwind 4's `outline-none` sets the style variable `outline-2` reuses, so the ring had a width and no style. Found by the keyboard walkthrough; axe doesn't check it. Every `outline-2` now has `outline-solid`, and the budget test holds it (DECISIONS.md).
+- **Transitions held back focus.** After Shift+F10 (a click from code, which React Aria treats like a screen reader's), React Aria waited for running transitions before focusing the menu, and with reduced motion it never did. Found by the outline's e2e tests. Focus rings and chevrons no longer transition, and reduced motion turns transitions off (DECISIONS.md).
+- A select showed its option's tick inside the closed field; tables overflowed at 320px; buttons had no edge in forced colours; an editor with no title field set its heading outside the column; and the secondary button briefly lost its border to the forced-colours hairline (two border colours on one element resolve by Tailwind's order, not the class string's).
+
+**Size.** For a site installing `@vesper/admin` from npm, `dist/studio.css` goes from 30,484 to 83,096 bytes (6,665 to 32,518 gzipped): the two latin Figtree files, 22,928 bytes as woff2, are inlined as base64, and the rest is the new styles. In this workspace's playground build the fonts are separate files (11,384 and 11,544 bytes, fetched once, from the site), and the admin CSS goes from 29,470 to 49,115 bytes (6,601 to 8,866 gzipped). The studio's JavaScript grows only by the drawer, the media query and the save pulse: `studio.js` from 71,548 to 74,254 bytes.
+
+**The 2.8 follow-up (body headings in the page's outline):** they stay real headings, and the body is now a landmark named "Body", so screen readers say where a heading belongs (DECISIONS.md, with the rejected alternatives).
+
+**Commits:** seventeen, from the decisions (5398cf6) to the docs. The checkpoint's batch came first (tokens and kit, the font, the screens, the budget test), then the drawer, each remaining group of screens, the fixes above and the tests.
+
+**Open, for Jeremy:**
+- **The lowercase site name.** Built as asked, with CSS, so screen readers read the name as written. It also lowercases a site that names itself ("Highlands College" shows as "highlands college"). Keep, or lowercase only Vesper's own wordmark?
+- **The logo.** The design system's last change note says the "Launch" mark was chosen; the brief said no logo yet, so the studio shows none.
+- **93% glass on overlays** instead of the design system's 88% (above).
+- **Body headings:** confirm keeping them as headings in a "Body" region, or prefer isolating the editor (an iframe; not cheap).
+- **A screen reader pass** of the Details drawer, the menus' inset focus and the "Body" region, with the earlier phases' items.
+- The 2.8 product calls are untouched and still open, including the publish gate's "Save anyway"; the editor's bar has room for it beside Save.
+
+**Not built** (the design system shows them; listed in "Studio design pass (plan)"): the ⌘K palette, site switcher and user menu; the Preview toggle; history, duplicate and copy link; a studio light/dark switch; the home greeting and sign-in; shortcuts in menus; choosing an accent; the logo. Also not done: the toolbar's "More" menu for overflow (it wraps instead), a spinner on a pending button, tags inside the combobox's field, and the 180ms chevron rotation (dropped, see above).
+
+**Follow-ups noted, not blocking:**
+- In `astro dev` (React's development build) the first Tab on a fresh load starts after the screen's heading: StrictMode runs the navigation effect twice, so the heading takes focus on load. Production builds don't. Worth a small fix in the router.
+- The overlays' 93% fill makes the glass subtler than the design system's previews; if Jeremy wants it lighter, the contrast check shows exactly what fails below 93%.
 
 ## Studio design pass (plan)
 
@@ -877,7 +923,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | 2.6 URLs/tree/redirects | Confirmed 2026-10-18: the redirects file at the site root; no default `maxDepth` (DECISIONS.md) | URL patterns, route check, tree, `_order.yaml`, subtree moves as one ChangeSet, redirect cleanup and per-host output, link rewriting, site helpers |
 | 2.7 Images | Start by verifying how Astro forwards `position`/`fit` | `fields.image`, focal point and crops, `<Img>`, Sharp wrapper |
 | **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
-| **Studio design pass** (added 2026-10-18; in progress, moved ahead of 2.9) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
+| **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done locally 2026-10-18) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | 3 GitHub mode | whether a free cloud relay exists (needs the §13.1 domain) | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13, D15, §13.1 domain, §13.3 license (decides whether `apps/cloud-*` can live in this MIT repo) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |

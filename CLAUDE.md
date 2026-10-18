@@ -21,7 +21,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284); outcome and open questions in `PLAN.md` |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527); outcome and open questions in `PLAN.md` |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394); outcome and open questions in `PLAN.md` |
-| Studio design pass | In progress (2026-10-18), ahead of 2.9; see `PLAN.md` |
+| Studio design pass | Done locally (2026-10-18), ahead of 2.9; not pushed, CI not run yet. Outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -160,6 +160,10 @@ Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/c
 
 **The studio's font is Figtree 400 and 600, self-hosted in `@vesper/admin`; `/admin` never requests anything from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree").
 
+**Pair every `outline-2` with `outline-solid` (`data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid`).** Tailwind 4's `outline-none` sets the outline style to `none` through a variable `outline-2` reuses, so the ring otherwise isn't drawn; the budget test checks it (DECISIONS.md, "Every focus outline is drawn solid").
+
+**Never transition what changes as focus moves (focus rings, the halo, chevrons): hover colours only, and nothing under reduced motion.** After a screen reader's or a script's click, React Aria moves focus only once every running transition has ended, and focus sits on the page meanwhile (DECISIONS.md, "Transitions never touch focus").
+
 **A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
 
 ## Accessibility is an acceptance criterion
@@ -182,6 +186,7 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - No tabs inside the editor.
 - Body text 15–16px, line-height ≥ 1.5, two font weights.
 - Spacing only from the token scale. Hairline borders only.
+- Type sizes and radii only from the tokens: `text-title`, `text-heading-1`–`3`, `text-body`, `text-label`, `text-small`, `text-caption`; `rounded-sm`, `-md`, `-lg`, `-full` (DECISIONS.md, "One type scale replaces Tailwind's sizes").
 - Shadows only on overlays (`shadow-overlay`), plus four named glows in their named places: `glow-accent` (the primary button), `glow-selected` (the current item), `glow-focus` (outside the focus ring) and `glass-edge` (DECISIONS.md, 2026-10-18).
 - Glass only on what floats (the top bar, menus, popovers, drawers, dialogs, the scrim), at least 88% fill, with solid fallbacks.
 

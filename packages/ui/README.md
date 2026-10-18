@@ -23,9 +23,9 @@ Each component has axe and keyboard tests in `src/components/ui.test.tsx`. `@ves
 @import '@vesper/ui/tokens.css';
 ```
 
-The token file enforces the spec §10.4 design budget:
+The values are the Pine direction of Vesper's design system (DECISIONS.md, "Studio design"): warm sand neutrals and a pine-teal accent, fixed for every site. The token file enforces the spec §10.4 design budget:
 
-- **Tailwind's defaults are reset.** The default palette, font weights and shadows are set to `initial`, so only the declared tokens can be used.
+- **Tailwind's defaults are reset.** The default palette, type scale, font weights, radii, shadows and animations are set to `initial`, so only the declared tokens can be used.
 - **Neutrals:**
   - `surface`, `surface-raised`, `surface-sunken`
   - `border`, `border-strong`
@@ -39,8 +39,10 @@ The token file enforces the spec §10.4 design budget:
   - `warning`
 
   There are no status hues: status is text.
-- **Two font weights:** `normal` and `semibold`. One shadow, `overlay`, used only on overlays.
-- **Theming:** every colour is a `light-dark()` pair, so `color-scheme` (set through `html[data-theme]`, or the OS) selects the palette.
+- **Type:** Figtree (self-hosted by `@vesper/admin`) over the system stack, in two weights, `normal` and `semibold`, and one scale: `text-title`, `text-heading-1` to `-3`, `text-body`, `text-label`, `text-small`, `text-caption`. Code, slugs and URLs use the system monospace stack.
+- **Radii:** `rounded-sm` (6px), `-md` (10px), `-lg` (16px) and `-full`.
+- **Depth:** `shadow-overlay` on overlays, plus four named effects in their named places (DECISIONS.md, "Four named glows"): `shadow-glow-accent` (the primary button), `shadow-glow-selected` (the current item), the focus halo (`ring-6 ring-(color:--glow-focus)`) and `shadow-glass-edge`. Glass utilities for what floats: `glass-bar` (the top bar, 88%), `glass-raised` (overlays, 93%) and `scrim`, each with solid fallbacks; and `afterglow` for welcoming screens.
+- **Theming:** every colour is a `light-dark()` pair, and so is every glow, so `color-scheme` (set through `html[data-theme]`, or the OS) selects the palette.
 
 ## Contrast check
 
@@ -50,7 +52,7 @@ npm run a11y:contrast
 
 `scripts/a11y-contrast.mjs` parses this file directly. It fails if:
 
-- a listed foreground/background pair misses WCAG 2.1 contrast in either theme (4.5:1 for text, 3:1 for UI and focus);
+- a listed foreground/background pair misses WCAG 2.1 contrast in either theme (4.5:1 for text, 3:1 for UI and focus). Text on glass is composited over black and over white with the fill `tokens.css` sets, and text on the afterglow at its brightest;
 - a token is outside the budget allowlist;
 - a token isn't covered by any pair;
 - a value isn't a plain `light-dark(oklch(…), oklch(…))`.
