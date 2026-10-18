@@ -199,6 +199,20 @@ describe('writeYaml: block sequences', () => {
     ).toBe('\nitems:\n  - name: b\n    v: 2\n');
   });
 
+  it('reorders and grows a root list of names without losing its comment (_order.yaml)', () => {
+    const raw = '# Page order\n- about\n- academics\n- admissions\n';
+    const reorder = (names: string[]) => (value: Record<string, DataValue>) => {
+      const list = value as unknown as string[];
+      list.splice(0, list.length, ...names);
+    };
+    expect(edit(raw, reorder(['academics', 'about', 'nursing', 'admissions']), 'any').text).toBe(
+      '# Page order\n- academics\n- about\n- nursing\n- admissions\n',
+    );
+    expect(edit(raw, reorder(['admissions', 'about']), 'any').text).toBe(
+      '# Page order\n- admissions\n- about\n',
+    );
+  });
+
   it('writes [] when every item is removed', () => {
     expect(text('\ntags:\n  - a\nz: 1\n', (v) => (v.tags = []))).toBe('\ntags: []\nz: 1\n');
   });
