@@ -202,7 +202,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         const model = await cache.get();
         writeManifest(model.manifest, fileURLToPath(new URL('_vesper/manifest.json', dir)));
         logger.info('Wrote _vesper/manifest.json');
-        if (redirects) {
+        if (redirects && redirects.redirects.length > 0) {
           const written = writeHostRules(fileURLToPath(dir), redirects, urlSettings(model));
           logger.info(`Wrote ${written.join(', ')}`);
         }
