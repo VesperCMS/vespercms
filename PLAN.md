@@ -12,7 +12,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284). See "Phase 2.6: outcome" below. |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
-| 2.8 Accessibility checks, studio and build | In progress. See "Phase 2.8: Accessibility checks (design)" below. |
+| 2.8 Accessibility checks, studio and build | Done (2026-10-18), not pushed yet. See "Phase 2.8: outcome" below. |
 | 2.9 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -247,6 +247,53 @@ The spec's five "Done when" criteria, with evidence:
 - In this workspace the Astro 6 fixture's crop step loads the root's Astro 7 Sharp service (DECISIONS.md). A published install loads the site's own.
 - The redirects integration test still builds with Vitest's environment; the image tests don't (DECISIONS.md).
 
+## Phase 2.8: outcome
+
+The spec's four "Done when" criteria, with evidence:
+
+| Criterion | Evidence |
+|---|---|
+| Every layer-1 rule fires on the playground's deliberately flawed fixtures, with the message shown beside the right field | `packages/core/src/a11y/playground.test.ts` runs the checks over the real fixture file with the playground's manifest: all seventeen rule IDs fire, 23 notes in all, each at its place: `color-contrast` on `textColor`, the three PDF rules on `brochure` and on the body link at line 29, and every body rule at its line (images 9–15, headings 17–21, links 25–27, the table 33, the typed list 40, the videos 47 and 49). The PDF facts come from PDF.js reading the same file in `packages/admin/src/a11y/pdf.test.ts` (untagged, no title, no language; a generated tagged PDF reads as tagged, titled and in `en-US`). In Chromium (`e2e/studio/a11y.spec.ts`): the colour field's description holds "Contrast 2.3:1 against Page, light is below 4.5:1.", the file field's holds the three PDF notes PDF.js found, and the body's list holds the other 19 notes in order, each naming its subject. Core unit tests cover each rule with cases that must and mustn't fire, in all three formats; admin jsdom tests cover notes beside a field (in its description), beside an image's alt text, under the body with Show, and PDF notes beside a file field. The real content gets one note, a question: the callouts guide's video doesn't say it has captions. |
+| The layer-2 report maps issues to entries | `packages/astro/test/a11y.integration.test.ts` builds a copy of the playground plus one page no entry produces. The report lists the fixture page with its entry (`fixtures`, `accessibility-mistakes`, its file, `/admin/#/c/fixtures/e/accessibility-mistakes`) and its three issues (`image-alt` as an error, `empty-heading` and `heading-order` as warnings, in plain words), the extra page with `entry: null`, and nothing else; three redirect pages and the studio shell are skipped and counted. The static e2e suite reads the playground's own report and finds the fixture page mapped to its entry. Unit tests cover file-to-URL for both build formats and `base`, skipping, and axe's impact as error or warning. The Astro 6 fixture builds with the check too ("checked 1 page, no issues"). |
+| No report file appears in `dist/` | The integration test walks `dist/` for anything named like a report or `.vesper`, and the static e2e suite does the same on the playground's build. CI's build job checks it again, and hands the report to the e2e job as its own artifact. The report sits in `.vesper/` with a `.gitignore`; a unit test checks it isn't written when the output folder would contain it. With `failBuildOn: 'error'` the second build fails, after writing the report, with "Accessibility: 2 errors at build, and vesper({ a11y: { failBuildOn: 'error' } }) fails the build on them." |
+| The notes drawer can be fully operated by keyboard and screen reader | `e2e/studio/a11y.spec.ts`, keys only, in Chromium: Enter on "23 accessibility notes" opens the drawer with focus on it; Tab reaches Close, then the first "Go to field", described by its note; Enter closes the drawer and focuses the Text color field; reopened, ten Tabs reach the skipped heading's Go to field, and Enter puts the caret in that heading in the body editor; Escape closes it and focus returns to the count. axe passes with the drawer open and on the fixture's editor. jsdom tests cover Enter, Tab and Escape, both kinds of Go to field, and axe. Manual keyboard pass below. **Not done: a pass with a real screen reader** (below). |
+
+**Standing criteria:**
+- `npm run dev` serves the playground; the accessibility fixture's editor shows its notes and the count, and every build writes `apps/playground/.vesper/a11y-report.json`.
+- Lint, the format check, typecheck and the contrast check pass. Vitest: 4,063 tests in 93 files (unit, corpus and integration; the integration project includes the new build test, two builds, and the Astro 6 fixture with it installed locally).
+- `npm run e2e`: 88 passed, static and studio (84 before this phase).
+- `check:dist` loads all 11 entry points from `dist/`. `astro check` on the playground: 0 errors, 0 warnings, 0 hints. The Astro 6 fixture builds, with the accessibility check.
+- The first load grows by about 2 KB: the studio's own entry is 67.09 KB minified against 65.09 KB at 305daee, the rest unchanged. The checks (with micromark and Markdoc), the reveal code and PDF.js all load on first use.
+- The build check takes about 4 seconds on the playground's 34 pages, most of it loading jsdom.
+- READMEs, `DECISIONS.md` and `CLAUDE.md` are current.
+- Keyboard pass by hand, in the app's browser pane, one key at a time: Enter on the count opened the drawer with focus on it; Tab reached Close, then the first Go to field with its note as description; Enter closed the drawer and focused the Text color field. Reopened: ten Tabs reached the skipped heading's Go to field, and Enter put the caret in that heading in the body editor. Escape closed the drawer; focus returning to the count couldn't be seen by hand, because the app's window was hidden and animation frames (which React Aria waits for) don't run there. Playwright confirmed it in Chromium. That pass found the bug fixed before its commit: Go to field moved focus in an animation frame, so in a hidden window focus fell to the page.
+
+**Changes from the design:**
+- Commits: the design's eleven became fifteen. Found while building, each in its own commit: two caption notes read the same (subjects now carry the block's summary value); the "Edit as text" button of a protected block didn't contain its visible words in its name (WCAG 2.5.3), found by the new spec's axe check on the first page tested with protected blocks on screen; the build log said "checked 1 pages" on the Astro 6 fixture; and one Phase 2.6 test read the Redirects table's rows before React Aria rendered them, which failed once under a full run's load.
+- The image widget's own alt-text advice (Phase 2) is replaced by the shared rules, beside the alt text box.
+- `PageService.pageEntries()` was added, so the build gets each entry's URL key and file from the same code as the link picker.
+- The playground's fixtures collection got a URL pattern (`/fixtures/:id`): without one, a page can't be traced to its entry.
+- The drawer's groups are `h3`: React Aria's dialog makes its title an `h2`.
+- The report lists only pages with issues, with the counts of pages checked and skipped.
+
+**Open, for Jeremy** (each built with the recommendation; DECISIONS.md has the detail):
+- **The publish gate in local mode**, where the button is Save: refuse the save as built (one rule in every mode, and the gate is opt-in), warn only in local mode, or refuse with "Save anyway".
+- **The DOM for axe at build**: jsdom as built (matched Chromium on every page, never runs the page's scripts, 25 MB, about 100 ms a page) or happy-dom (also matched, about 60 ms a page, 20 MB, but runs the page's inline scripts to load axe). linkedom can't run axe.
+- **Where the heading start is set**: `collections.<name>.headingStart` as built (default 2), a site-wide `a11y.headingStart` with overrides, or a hint on the title field.
+- **PDF.js**: lazy as built, legacy build (524 KB plus a 1,321 KB worker, minified); or the modern build if the studio may require Chrome 140, Firefox 133 or Safari 18.2; or a small reader of Vesper's own. Installed, `pdfjs-dist` is 35 MB, and npm adds its optional `@napi-rs/canvas` (37 MB on Windows) unless optional dependencies are skipped.
+- **An empty alt in a body image**: decorative as built (HTML's rule, and what the studio's image dialog writes for "Decorative"), so only an `<img>` with no `alt` and image fields get `missing-alt`; or a note on every empty alt; or a decorative marker in the body syntax.
+- **Which colours are text, and where backgrounds come from**: `fields.color({ contrast })` and `a11y.backgrounds` as built; or every colour at 3:1; or the site's CSS.
+- **Layer 2 on by default**, as the spec reads: it adds jsdom (25 MB) and about 4 seconds on the playground. Alternatives: off by default, or jsdom as an optional peer the build asks for.
+- **Docs links**: each rule has a docs slug, but no link is shown until the docs site (Phase 9) has a domain (§13.1).
+- **A screen reader pass.** The notes, the drawer and Go to field were driven by keys and checked with axe, not heard. Worth ten minutes with NVDA in Chrome: a field's note read as its description, the count, the drawer's title and groups, each Go to field with its note, and where focus lands after it.
+- Still open from earlier phases: the 2.7 items (screen reader pass, `role="application"` on the crop box, `sharp` as an optional peer, `<Img>` from an npm install), the 2.6 items (screen reader pass, Vercel redirects in `vercel.json`, the treegrid's icon-only toggle, the skipped internal-link build check), HEIC licensing, React 18 sites, and unknown Markdoc tags.
+
+**Follow-ups noted, not blocking:**
+- Headings inside the body editor's text are part of the studio page's heading outline (the fixture's body puts an `h1` and an `h4` there). It's been so since Phase 2; worth a look in the studio design pass.
+- A collection with no `url` can't be traced to its pages in the report (`entry: null`); the docs should say so.
+- Notes can't be dismissed; there's nowhere to keep that in local mode. Cloud drafts (Phase 4) could hold it.
+- Layer 3 (report uploads, history, rendered scans with contrast, exports) is Phase 8.5.
+
 ## Phase 2.8: Accessibility checks (design)
 
 Scope is spec §6.18 layers 1 and 2 and the §11 Phase 2.8 entry. Layer 3 (cloud history, full rendered scans, exports, the agency view) is paid and belongs to Phase 8.5: nothing of it is built here. Both layers report problems; neither claims compliance, and nothing is injected into the site (D19).
@@ -274,7 +321,7 @@ Scope is spec §6.18 layers 1 and 2 and the §11 Phase 2.8 entry. Layer 3 (cloud
 | `link-vague` | Link text such as "click here", "here", "read more", "more", "learn more", "this link", or the bare address | "Link text should say where it goes." | The body, a Markdown field |
 | `link-new-window` | `target="_blank"` with no "new tab" or "new window" in the link's text, `aria-label` or `title` | "Tell readers this opens in a new tab." | Same |
 | `table-header` | An HTML or JSX table with no `<th>` (Markdown and Markdoc tables always have a header row in their syntax) | "Add a header row so screen readers can announce columns." | The body |
-| `color-contrast` | A `fields.color({ contrast: 'text' })` value under 4.5:1 (`'large-text'` and `'graphic'`: 3:1) against any background the site declares | "Contrast 2.2:1 against Page, light is below 4.5:1." | The colour field |
+| `color-contrast` | A `fields.color({ contrast: 'text' })` value under 4.5:1 (`'large-text'` and `'graphic'`: 3:1) against any background the site declares | "Contrast 2.3:1 against Page, light is below 4.5:1." | The colour field |
 | `tag-name-empty` | A Markdoc tag or declared MDX component whose required name attribute (`title`, `alt`, `label`, `aria-label`) is empty text. A missing one is already a validation error | "YouTube video needs a title." | The body |
 | `fake-list` | A paragraph with two or more lines that start like list items (`-`, `*`, `•`, `1.`, `1)`, escaped or not) | "This looks like a list. Format it as one." | The body, a Markdown field |
 | `pdf-untagged` | A PDF in a file field, or linked from the body, with no structure tags (`MarkInfo` / `StructTreeRoot`) | "This PDF isn’t tagged, so screen readers can’t read its structure. Consider an HTML page instead, or tag the PDF." | The file field, or the body |

@@ -592,3 +592,74 @@ The component ships as source (`components/Img.astro`, like the `/admin` page) f
 - A focal point is stored with two decimals, the 1% steps the control moves in; a crop with four, a tenth of a pixel on a 1,000-pixel image. Both are one-line flow maps, as in the spec.
 - A stored crop whose shape no longer matches its ratio (the image was replaced by one of another shape) is trimmed to the ratio around its own centre, never grown.
 - Applying the crop dialog untouched over a ratio with no manual crop writes nothing, so the focal point's crop isn't frozen by accident. "Reset to focal point" removes the ratio's crop, and removing the last one removes `crops`.
+
+## Accessibility checks
+
+### 2026-10-18: One rule set, in core, narrow on purpose
+
+**The studio's accessibility checks (spec §6.18, layer 1) are plain functions in `@vesper/core` (`entryChecker`, `checkFields`, `checkBody`), so local, GitHub and cloud modes find exactly the same things. The spec's twelve rows became seventeen rule IDs (`A11Y_RULE_IDS`), so `a11y.blockPublishOn` names exactly what it blocks.** Each note has a plain message about this case, one sentence on why it matters, a docs slug for the explanation the docs will hold (Phase 9), and its place: a field's value path, or body offsets and a line.
+- Bodies are read with the parser the site renders with (micromark with GFM, plus MDX; Markdoc with Astro's tokenizer options) into a short list of facts with offsets, and every rule runs over the facts, so the three formats share every rule. HTML inside a body (and lowercase JSX in MDX) is read with a small tag scanner: core can't have a DOM, since it runs in Workers.
+- The patterns are narrow, because a note that fires on good content teaches people to ignore notes. A file-name alt is an image extension, a camera or screenshot name (`IMG_2041`, `PXL_…`), or one hyphen- or underscore-joined word holding an underscore or a digit. "Image of" counts only at the start. A fake list needs two or more lines starting like list items, so "1999. That was a year." isn't one. A new-tab link is fine when its text, `aria-label` or `title` says "new tab" or "new window".
+- The image widget's own alt-text advice from Phase 2 is gone: its notes now come from these rules, beside the alt text box, in the same words as everywhere else.
+- Over the playground's real content the rules find one thing, a question: the callouts guide's video doesn't say whether it has captions.
+
+Rejected: running axe in the studio over a rendered preview. Local and GitHub modes have no rendered page of the entry (previews are Phase 7), and the content rules see what a rendered page hides, such as an alt that is a file name.
+
+### 2026-10-18: An empty alt in the body is decorative (open for Jeremy)
+
+**`![](photo.jpg)` in a body is `alt=""`, which is HTML's mark for a decorative image, and it's exactly what the studio's image dialog writes for "Decorative image" (Phase 2). So it gets no note. `missing-alt` fires for an HTML or JSX `<img>` with no `alt` at all, and for an image field with no alt text that isn't marked decorative.** The fixture's empty Markdown alt is the decorative case, and an HTML `<img>` with no alt was added for `missing-alt`. The cost: content imported with forgotten alts written as `alt=""` (WordPress writes those) passes silently. The alternatives are a note on every empty alt (which can't be cleared for images that really are decorative) or a decorative marker in the body syntax (only Markdoc and MDX could carry one). Jeremy's call.
+
+### 2026-10-18: Embed names and captions come from the tag's own schema
+
+**A Markdoc tag or declared MDX component gets `tag-name-empty` when a required attribute named `title`, `alt`, `label` or `aria-label` is empty text, and `video-captions` when its schema has a `captions` attribute and the tag leaves it out or turns it off.** A missing required attribute is already a validation error; Markdoc's `required` accepts `""`, which is the case left. No new hint in vesper.config.ts: a site that names its attributes differently doesn't get these two checks, and an explicit hint can come later if one is asked for. A note's subject carries the block's summary value ("YouTube video “A campus walking tour”"), so two videos' notes can be told apart.
+
+### 2026-10-18: Text colours are opted in, and backgrounds are declared (open for Jeremy)
+
+**`fields.color({ contrast: 'text' | 'large-text' | 'graphic' })` marks a colour for the check, and `vesper.config.ts` `a11y.backgrounds` names the colours the site draws text on. Each marked colour is checked against each background (4.5:1 for text, 3:1 otherwise), and a note names the background it fails on.** Not every colour field is text: the playground's map pin colour isn't. Reading backgrounds from the site's CSS was rejected: custom properties can be computed, themed or `light-dark()` pairs (the playground's are). With no backgrounds declared, nothing is checked, and the manifest warns once per marked field. Ratios are WCAG 2.1's, rounded down to one decimal in messages, so a failing colour never reads as passing ("2.3:1").
+
+### 2026-10-18: Each collection sets where its body's headings start (open for Jeremy)
+
+**`collections.<name>.headingStart` (1 to 6) is the level a body's top headings should have; 2 when absent, because a layout usually renders the title as the page's `h1`.** A heading above it is `heading-extra-top`, a second `h1` when it's 1 is too, and a heading more than one level below the previous (the title counts as `start − 1`) is `heading-skip`. A per-collection key fits sites where docs bodies hold their own `h1` and blog bodies don't. The alternatives are a site-wide `a11y.headingStart` with overrides, or a `.meta()` hint on the title field. Compact Markdown fields get no heading checks.
+
+### 2026-10-18: Notes sit under their field; the count opens a drawer
+
+**A field's notes sit under its help and error text as "Accessibility note: …" plus why it matters, and join its control's `aria-describedby`. The body's are listed under the body editor, each with Show. The top bar's status gains a quiet text button, "21 accessibility notes", that opens the kit's `Drawer` with every note grouped by field in form order (title, main fields, body, Details), each with "Go to field".** No tabs and no badges (spec §10.4): the only colour is a hairline warning border, and the words say what it is.
+- The count sits outside the live status region, so typing doesn't announce every change in it.
+- Show finds the block by parsing the current text again and taking the editor node at the same place (blocks map to nodes one to one, nested only in containers), then selects it: a caret in a text block, a node selection on a card, which the editor already announces. Notes aren't drawn inside the editor's text, where a screen reader would read them as content.
+- Go to field closes the drawer and moves focus with a timeout, not an animation frame. React Aria gives focus back to the drawer's trigger in an animation frame, but only if focus fell to the page, so moving it first wins; and animation frames don't run while the window is hidden, which left focus on the page in the app's browser pane. A field inside Details opens Details first and takes focus once it's rendered.
+- The drawer's title is an `h2` (React Aria's dialog sets it), so the groups are `h3`.
+
+### 2026-10-18: The publish gate refuses a save, and Save stays focusable
+
+**With `a11y.blockPublishOn`, a note on a listed rule refuses the save the way a body the build would fail on is refused (Phase 2.5): the error summary takes focus and links each blocking note to its field, and the count reads "3 accessibility notes, 1 blocks saving".** The spec says the gate "disables Publish, with the reason in text and a link to the field". A disabled button can't take focus, so a keyboard user couldn't reach it to learn why, and Ctrl+S would do nothing at all. The gate checks the values at the moment of saving, not the last debounced check. It runs in the studio only: the PDF rules need PDF.js, and the gate is a site's policy, not a file the build can't read. In local mode, publishing is Save, so the gate refuses saves there too; whether local mode should only warn is open for Jeremy.
+
+### 2026-10-18: PDFs are read with PDF.js, in the browser, on first use (open for Jeremy)
+
+**PDFs in file fields, and site PDFs linked from the body, are read with `pdfjs-dist`'s legacy build in the browser, so the check works in every mode. It loads the first time an entry has a PDF to check, its worker through a Vite `?url` import as MapLibre's is, and stays external in the studio's build. Each PDF is read once per session.** Tagged means the document marks itself tagged and its first page has a structure tree; the title comes from the info dictionary, else XMP; the language from the catalog.
+- Weight: 524 KB plus a 1,321 KB worker, minified, never in the first load. The modern build (459 KB plus 1,264 KB) needs `Uint8Array.prototype.toHex`, so Chrome 140, Firefox 133 or Safari 18.2. Installed, `pdfjs-dist` is 35 MB, and npm also installs its optional `@napi-rs/canvas` (37 MB on Windows) unless optional dependencies are skipped.
+- PDF.js 6 returns `getMarkInfo()` as a `Map`, though its types say an object, and an absent XMP block as `null`; both are read defensively.
+- The alternative is a small reader of Vesper's own for the three facts: a few KB, but a hand-written parser of an untrusted binary format (object streams, compression, encryption), and the spec names PDF.js.
+
+### 2026-10-18: The build checks with axe-core in jsdom (open for Jeremy)
+
+**In `astro:build:done`, every built page is loaded into jsdom with `runScripts: 'outside-only'` (the page's own scripts never run), axe-core is compiled once as a `vm.Script` and run in each page's context, and only the structure rules in `BUILD_RULES` run.** Measured on the playground's 38 built files with the same 60 rules, against axe in Chromium:
+
+| DOM | Matches Chromium | Per page | Module load | Installed |
+|---|---|---|---|---|
+| jsdom 30.1 | Every page, once `document.elementFromPoint` is shimmed | about 100 ms (21 ms to parse, 14 to load axe, 66 to run) | 2.7 s | 25 MB, 30 packages |
+| happy-dom 21.0 | Every page | about 60 ms | 1.1 s | 20 MB, 7 packages |
+| linkedom 0.18 | Can't run axe (no `screen`, no `getComputedStyle`) | | | 1.8 MB |
+
+Without the shim, jsdom's page-level rules (`landmark-one-main`, `page-has-heading-one`) error out into "incomplete" and miss real problems. jsdom won over happy-dom because it never runs the page's scripts while still letting axe in, it's axe's documented environment, and it's already the repo's test DOM; happy-dom needs JavaScript evaluation on to load axe, which runs the page's inline scripts too.
+- The rule list is pinned by a snapshot test: a rule joins only once its result without layout is checked. Contrast, `link-in-text-block`, `target-size` and `scrollable-region-focusable` need a rendered page (layer 3).
+- axe's impact maps to `error` (critical, serious) or `warning` (moderate, minor), which is what `failBuildOn` compares against.
+- Astro's redirect pages fail four landmark and language rules by their template, and `/admin` fails landmark rules before its script runs; both are skipped and counted, as the e2e gate skips them.
+- The check runs at every build, as the spec has it; only failing is off by default. It adds about a tenth of a second a page plus loading jsdom, and `vesper({ a11y: false })` turns it off.
+
+### 2026-10-18: Built pages are traced to entries by URL
+
+**Each built page's URL key is matched to the entry whose collection `url` pattern produces it, through `PageService.pageEntries` and `entryUrlKey`, the same code "View on site", the link picker and the redirects use.** Function-form URLs work because the build loads vesper.config.ts. Recording which entries each page reads during the build was rejected: spec §6.10 has production builds emit no mapping, and §6.11 keeps production `vesper:content` a plain re-export. The cost is that a collection with no `url` can't be traced; its pages report `entry: null`. The playground's fixtures collection got a `url` for this.
+
+### 2026-10-18: The report lives in `.vesper/`, never in `dist/`
+
+**The report is `.vesper/a11y-report.json` in the project root, and the integration writes `.vesper/.gitignore` (`*`) beside it, so it's never deployed and never committed by accident. If the output folder would contain `.vesper/` (an `outDir` of the project root), nothing is written and the build log says why.** It has no timestamp, so the same build writes the same bytes; a cloud upload (Phase 8.5) adds the time. `failBuildOn` throws after the report is written, so its reasons are there to read. CI checks that the report exists beside `dist/` and that nothing in `dist/` looks like one, and passes it to the e2e job as its own artifact.

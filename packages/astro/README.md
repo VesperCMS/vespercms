@@ -2,7 +2,7 @@
 
 The Vesper integration for Astro.
 
-**Status:** Phases 2 to 2.7 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, and renders images with their focal points and crops.
+**Status:** Phases 2 to 2.8 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, renders images with their focal points and crops, and checks every built page's accessibility structure.
 
 ## The integration
 
@@ -21,11 +21,13 @@ Zero config. It:
 - at build, cleans `vesper.redirects.yaml` and hands it to Astro, and writes the host's own redirect rules when it has them (see below).
 - when the site uses Astro's own Sharp image service, wraps it so each image's stored crop is cut before Astro resizes it (see "Images" below). The build log says so.
 - writes `dist/_vesper/manifest.json` after `astro build`, which is how the cloud learns the schema.
+- after `astro build`, checks every page's accessibility structure and writes `.vesper/a11y-report.json` beside `dist/` (see "Accessibility checks at build" below).
 
 | Option | Default | |
 |---|---|---|
 | `studio.deploy` | `true` | `false` leaves `/admin` out of production builds, for sites edited only locally. |
 | `siteName` | the host of Astro's `site`, then the package name | Shown in the studio's top bar and page titles. |
+| `a11y` | `{}` | Accessibility checks at build. `{ failBuildOn: 'error' }` (or `'warning'`) fails the build on an issue at that level; `false` turns the check off. |
 | `imageService` | `true` | `false` leaves Astro's image service alone. `<Img>` then uses Astro's own server crop for each ratio, with the focal point as `object-position`, and manual crops aren't applied. |
 
 The studio comes precompiled from `@vesper/admin`. React and React DOM are peer dependencies, shared with any custom widgets.
@@ -72,7 +74,7 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 
 | Helper | Raw Zod equivalent | Stored as |
 |---|---|---|
-| `fields.color({ palette?, alpha? })` | `z.string().regex(/^#[0-9a-f]{6}$/i).meta({ widget: 'color' })` | `"#1a73e8"` |
+| `fields.color({ palette?, alpha?, contrast? })` | `z.string().regex(/^#[0-9a-f]{6}$/i).meta({ widget: 'color' })` | `"#1a73e8"` |
 | `fields.geo()` | `z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).meta({ widget: 'geo' })` | `{ lat, lng }` |
 | `fields.slug({ from })` | `z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).meta({ widget: 'slug', widgetOptions: { from } })` | `"my-post"` |
 | `fields.url()` | `z.url().meta({ widget: 'url' })` | `"https://…"` |
@@ -82,7 +84,7 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | Markdown string |
 | `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | relative path |
 
-A test checks that each helper equals its raw equivalent, so this table can't drift.
+A test checks that each helper equals its raw equivalent, so this table can't drift. `fields.color({ contrast: 'text' })` (or `'large-text'`, `'graphic'`) adds `widgetOptions: { contrast }`: the studio then checks the colour against the site's `a11y.backgrounds`, at 4.5:1 for text and 3:1 otherwise.
 
 `fields.image(image, { ratios? })` takes Astro's `image` helper from the schema function, so `src` still resolves to `ImageMetadata` (spec §6.6.2):
 
@@ -158,6 +160,22 @@ images: {
 
 The ratios drive the studio's crop previews and `<Img ratio>`, so editors see exactly the crops the site renders.
 
+### Accessibility (spec §6.18)
+
+```ts
+a11y: {
+  backgrounds: { 'Page, light': '#ffffff', 'Page, dark': '#12151f' }, // what text is drawn on
+  blockPublishOn: ['missing-alt'], // optional: these rules' notes refuse a save
+},
+collections: {
+  docs: { headingStart: 1 }, // the body holds its own h1; 2 by default
+},
+```
+
+The studio checks each entry as it's edited (layer 1): alt text, heading order and empty headings, vague and new-tab links, tables without a header row, typed lists, empty names on embeds, video captions, text colours against the declared backgrounds, and PDFs (tagged, title, language). Notes appear beside the field they concern, and every note only warns unless its rule is in `blockPublishOn`. Rule IDs: `missing-alt`, `alt-file-name`, `alt-redundant`, `alt-too-long`, `heading-skip`, `heading-extra-top`, `heading-empty`, `link-vague`, `link-new-window`, `table-header`, `color-contrast`, `tag-name-empty`, `fake-list`, `pdf-untagged`, `pdf-no-title`, `pdf-no-language`, `video-captions`.
+
+A Markdoc tag or declared MDX component gets the embed checks from its own schema: a required `title`, `alt`, `label` or `aria-label` attribute left empty is a note, and a tag with a `captions` attribute asks to confirm captions when it's absent or off.
+
 ### Markdoc hints and MDX components (spec §6.5.1, §6.5.2)
 
 Markdoc tags already declare their attributes in `markdoc.config.mjs`; the studio builds each tag's settings form from them. Optional UI hints live here, never in Markdoc's config:
@@ -189,6 +207,17 @@ mdx: {
 ```
 
 `children: true` makes a frame whose content stays editable; `inline: true` inserts the component inside a line of text. The studio loads `vesper.config.ts`, props schemas included, the first time an MDX body needs them, so it checks props exactly as the site does.
+
+## Accessibility checks at build (spec §6.18, layer 2)
+
+After every `astro build`, each built page is loaded into jsdom (no browser) and axe-core runs only its structure rules: language, page title, landmarks, heading order, image alt, form labels, names on links and buttons, duplicate IDs, basic ARIA, list and table structure. Colour contrast and other visual rules need a rendered page and aren't checked here. Astro's redirect pages and the studio's shell are skipped.
+
+- **The report** is `.vesper/a11y-report.json` in the project, never in `dist/`, so it's never deployed. The integration writes `.vesper/.gitignore` so it stays out of git. Each page with issues lists them in plain words, with axe's impact as `error` or `warning`, the element, and a link to axe's explanation.
+- **Page to entry.** A page is traced to the entry that produced it through its collection's `url` in vesper.config.ts, the URLs the studio uses, with the entry's file and its studio link ("fix in studio"). Pages without one (listings, the 404 page, collections with no `url`) have `entry: null`.
+- **Failing the build** is off by default. `vesper({ a11y: { failBuildOn: 'error' } })` fails it after the report is written.
+- It adds about a tenth of a second a page, plus a few seconds to load jsdom. `vesper({ a11y: false })` turns it off.
+
+Automated checks find some problems, not all. The report says so, and nothing replaces testing with a keyboard and a screen reader (D19).
 
 ## Images (`@vesper/astro/components`)
 

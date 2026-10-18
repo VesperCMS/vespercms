@@ -12,7 +12,7 @@ An Astro 7 site that exercises every Vesper feature (spec §11, Phase 0). It sta
 - `src/content.config.ts` uses every `fields.*` helper from `@vesper/astro/fields`:
   - `select`, `email`, `url`, `slug`, `markdown`, `file`, `datetime`, `color`, `geo` and `image`;
   - `locations` keeps the raw Zod equivalents of `geo` and `color` on purpose.
-- `vesper.config.ts` sets presentation only: labels, URL patterns, `tree` for pages, `singleton` for settings, `schedule` for events, `search: false` for the fixtures, the site's `timeZone`, `placement` to keep event times in the main column, and the image ratios `wide`, `square` and `portrait` (spec D2, §6.6.3).
+- `vesper.config.ts` sets presentation only: labels, URL patterns, `tree` for pages, `singleton` for settings, `schedule` for events, `search: false` for the fixtures, the site's `timeZone`, `placement` to keep event times in the main column, the image ratios `wide`, `square` and `portrait` (spec D2, §6.6.3), and the two page backgrounds (`a11y.backgrounds`, light and dark) text colours are checked against (spec §6.18).
 - It also registers the example custom widget, `store-hours` (`src/cms/StoreHours.tsx`), which claims the locations' `hours` field by its name (spec §6.3.3).
 - It gives the body editor UI hints for the three Markdoc tags (friendly names, the summary attribute, value labels, help text) and declares the MDX `Callout` with a Zod props schema, so it's a block in the studio; `Gallery` is left undeclared on purpose (spec §6.5.1, §6.5.2).
 - Pages read content through `vesper:content`, so the dev toolbar's Vesper app can link each page to its entries (spec §6.10).
@@ -40,9 +40,11 @@ npm run check -w @vesper/playground    # astro check
 | `settings` | `glob('site.yaml')` | A singleton (one entry, ID `site`) read by the layout: a folded `>-` string, a commented-out key, a colour with a named palette, `z.url()`, the site time zone (spec §6.17), and a repeater mixing block and flow maps. |
 | `locations` | `file('src/data/locations.yaml')` | One YAML file holding many entries. `geo` (a lat/lng object) and `color` (a hex string), tagged with `.meta({ widget })` exactly as `fields.geo()` and `fields.color()` will produce them. Flow and block maps, single and double quotes. |
 | `events` | `glob('**/[^_]*.md')` | Scheduling (spec §6.17, D18): `publishAt` / `unpublishAt` as ISO 8601 with offsets, covering past, future, expired, an `unpublishRedirect`, and one entry whose publish and unpublish times are the two different 1:30 AMs of the November 1, 2026 daylight-saving change. Filtering arrives in Phase 4.5; for now every event is built. |
-| `fixtures` | `glob('**/[^_]*.mdoc')` | `accessibility-mistakes.mdoc`: one deliberate mistake per studio accessibility check (spec §6.18, layer 1), including a failing `textColor`, an untagged PDF (`public/files/untagged-brochure.pdf`) and a video with an empty title. Excluded from the e2e axe gate, which instead checks that axe flags it. |
+| `fixtures` | `glob('**/[^_]*.mdoc')` | `accessibility-mistakes.mdoc`: at least one deliberate mistake per studio accessibility check (spec §6.18, layer 1), including a failing `textColor` (`fields.color({ contrast: 'text' })`), an untagged PDF (`public/files/untagged-brochure.pdf`) in a file field and linked from the body, an HTML image with no alt, and a video with an empty title. Its empty Markdown alt (`![](/favicon.svg)`) is the decorative case and gets no note. The collection's `url` (`/fixtures/:id`) lets the build's report trace the page to its entry. Excluded from the e2e axe gate, which instead checks that axe flags it. |
 
 ## Other fixtures
+
+- Every build writes `.vesper/a11y-report.json` (spec §6.18, layer 2; ignored by git), never into `dist/`. Only the fixture page has issues. The playground doesn't set `failBuildOn`, so the build passes.
 
 - `vesper.redirects.yaml`: a two-hop redirect chain and a manual 302 (spec §6.15.5). The build collapses the chain and writes an HTML redirect page at each old URL.
 - `src/pages/contact.astro`: a static route the studio refuses to move or create a page onto (spec §6.15.4).

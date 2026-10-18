@@ -2,7 +2,7 @@
 
 The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
 
-**Status:** Phases 2 to 2.7 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages. A `fields.image()` field sets its focal point and crops behind a "Focal point & crops" disclosure.
+**Status:** Phases 2 to 2.8 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages. A `fields.image()` field sets its focal point and crops behind a "Focal point & crops" disclosure. Accessibility notes sit beside the fields they concern, with a count in the top bar that opens a drawer of every note.
 
 ## How it's built
 
@@ -81,6 +81,14 @@ Keys in the writing view: arrow onto a block to select it, Enter opens its setti
 - `widgets/focal-point.tsx`: the image is one button. A click or tap sets the focal point and the marker drags; with focus on it, the arrow keys move the point 1% (Shift, 10%). "Across (%)" and "Down (%)" number fields set it without seeing or pointing, and each move is announced politely.
 - `widgets/crops.tsx`: a preview per ratio the field lists (or every site ratio), cropped by CSS from the same `cropForRatio` the site's `<Img>` uses, captioned "Wide · 16:9" and "Custom crop" when overridden. "Adjust crop" opens a wide dialog with a fixed-ratio box (`role="application"`): drag it or a corner, or use the arrow keys (Shift resizes); Enter applies, Escape cancels, "Reset to focal point" removes the override. Each change is announced.
 - Both only change the entry. Focal points are stored with two decimals, crops with four; the image file is never written.
+
+## Accessibility notes (spec §6.18, layer 1)
+
+- `a11y/useNotes.ts` runs `entryChecker` from `@vesper/core` a moment after typing stops (the same 300 ms as body validation). The checks read bodies with micromark and Markdoc, so `a11y/run.ts` loads on first use, like the body checks.
+- PDFs (file fields, and site PDFs linked from the body) are read once per session with PDF.js (`a11y/pdf.ts`, `pdfjs-dist`'s legacy build, its worker through a Vite `?url` import). It stays external in `dist/` and loads only when a PDF is checked.
+- Notes render under their field (`a11y/FieldNotes.tsx`) and join the control's description; an image's alt-text notes sit beside the alt text box. The body's notes are listed under the body editor, each with Show (`body/reveal.ts` finds the block by parsing the current text again).
+- The count in the top bar opens `a11y/NotesDrawer.tsx`: every note grouped by field in form order, with Go to field. With `a11y.blockPublishOn`, a listed rule's note refuses the save the way a body the build would fail on is refused, and the error summary links to the field.
+- Text only: the one colour is a hairline warning border, and the words say "Accessibility note". Vesper reports problems; it never claims compliance (D19).
 
 ## Accessibility
 

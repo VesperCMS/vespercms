@@ -20,6 +20,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652); outcome and open questions in `PLAN.md` |
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284); outcome and open questions in `PLAN.md` |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527); outcome and open questions in `PLAN.md` |
+| 2.8 Accessibility checks, studio and build | Done (2026-10-18), not pushed yet; outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -56,7 +57,7 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run a11y:contrast` | Token contrast (WCAG 2.1, both themes) and the §10.4 token budget, parsed from `packages/ui/src/tokens.css`. |
 | `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
 | `npm run build` | `dist/` for every package: tsc for the libraries, Vite for the studio bundle and its CSS. |
-| `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`. |
+| `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`, and its accessibility report into `apps/playground/.vesper/`. |
 | `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). |
 | `npm run manifest` | Print the playground's manifest, generated from source. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
@@ -64,8 +65,8 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 ## Layout
 
 ```
-packages/core      Schema introspection, manifest, serializers, storage interface, URL and image geometry. No framework imports.
-packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling, <Img> and the crop step.
+packages/core      Schema introspection, manifest, serializers, storage interface, URL and image geometry, accessibility rules. No framework imports.
+packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling, <Img>, the crop step and the build's accessibility check.
 packages/ui        Design tokens and the accessible component kit. Tokens enforce the §10.4 budget.
 packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene. Precompiled for sites.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
@@ -135,6 +136,18 @@ Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/c
 **Test static behavior against `scripts/static-server.mjs`, never a dev server or a host with rewrites.** It behaves like Apache with no `.htaccess`: `/x/` serves `x/index.html`, `/x` redirects to `/x/` only if that folder exists, everything else is a 404.
 
 **The studio uses hash routing (`/admin/#/…`) and respects Astro's `base`, `trailingSlash` and `build.format`.** Deep links must survive a reload on a host with no rewrite rules.
+
+### Accessibility checks
+
+**Accessibility rules live in `@vesper/core` (`entryChecker` for the studio, `BUILD_RULES` for the build). The studio, the build and the cloud use them, never their own copies.** Spec §6.18 asks for one rule set and one message style; the image widget's Phase 2 alt advice was folded in for that reason.
+
+**The accessibility report goes to `.vesper/` in the project, never into `dist/`.** A report must never be deployed (spec §6.18); the integration refuses to write it inside the output folder, and CI checks `dist/`.
+
+**A rule joins `BUILD_RULES` only once its result in jsdom has been checked against Chromium.** jsdom has no layout, so visual rules give wrong answers there; a snapshot pins the list (DECISIONS.md, "The build checks with axe-core in jsdom").
+
+**A built page is traced to its entry only through the collection's `url`, never by recording reads at build.** Production `vesper:content` stays a plain re-export (spec §6.10, §6.11).
+
+**Notes are text beside their field: no badges, no panel, and the count stays outside the live status.** Spec §10.4; an announcement on every keystroke would drown the editor.
 
 ### Studio and cloud
 
