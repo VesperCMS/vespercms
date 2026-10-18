@@ -296,7 +296,8 @@ function urlDiagnostics(
       collection: name,
     });
   }
-  if (source.loader === 'glob') {
+  // Order files sit among pages; a collection of data files has none to pick up.
+  if (source.loader === 'glob' && (config.tree || entryKindOf(source.formats) === 'content')) {
     const matches = globMatcher(source.pattern);
     if (matches('_order.yaml') || matches('section/_order.yaml')) {
       found.push({
