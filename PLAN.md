@@ -11,7 +11,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18), merged into main (4e311a7); every check passes on the merge. See "Phase 2.6: outcome" below. |
-| 2.7 onward | Roadmap below |
+| 2.7 Focal points, crops and `<Img>` | In progress on main. See "Phase 2.7 (design)" below. |
+| 2.8 onward | Roadmap below |
 
 ## Phase 0: Scaffold
 
@@ -204,6 +205,95 @@ The spec's five "Done when" criteria, with evidence:
 - A function-form `url` has no "View on site" in the studio (the studio's bundle doesn't run it); the link picker still lists those pages, from the dev API.
 - In dev the playground logs a hint to set `tree: true` for `docs`, whose guides sit in a folder. It's the spec's suggestion working as meant.
 - The S3 deploy template's redirect metadata is Phase 9; `_vesper/redirects.json` is its input.
+
+## Phase 2.7: Focal points, crops and `<Img>` (design)
+
+Scope is spec §6.6.2 to §6.6.5 and the §11 Phase 2.7 entry. Body images keep Astro's own processing and get no focal point or crops in v1 (§6.6.5).
+
+**What was found first** (DECISIONS.md, "Astro hands `position` to Sharp unchanged"), measured with real builds on Astro 7.4.0 and the fixture's 6.4.8, which agree:
+- `position` and `fit` reach Sharp untouched, and Sharp takes only its own keywords. `"62% 35%"` and CSS-order `"top right"` fail the build (and are a 500 from `/_image` in dev). With `layout`, every `srcset` width sends `position` to Sharp.
+- Astro's CSS for `data-astro-image-pos` covers keyword pairs only. An inline `object-position` style passes through and wins.
+- A transform key Astro doesn't know (`crop`) reaches the service but isn't hashed, so two crops shared one file, and it leaked into the `<img>` as an attribute.
+- Astro 7.4 can configure separate `build` and `runtime` services; `imageConfig.service` in `astro:assets` is the one for the current environment, on both majors.
+- Sharp's `.rotate().extract()` rotates first, so a crop measured on the upright image (what browsers show) is cut correctly from an EXIF-rotated file.
+
+**Geometry** (`packages/core/src/images/`, exported as `@vesper/core/images` and from the main entry; no dependencies, so the studio, the build and `<Img>` share it):
+- Types: `FocalPoint { x, y }` and `CropRect { x, y, w, h }`, both 0–1 from the top left (§6.6.2); `ImageSize { width, height }`.
+- `siteRatios(declared)`: the declared ratios plus the built-in `og` (1.91:1) unless the site redefines it. `ratioLabel(1.777…)` is "16:9" (the nearest fraction with a denominator up to 20, else "1.91:1").
+- `focalCrop(size, ratio, focus)`: the largest rectangle of that ratio, centred on the focus (the centre when there's none), kept inside the image.
+- `cropForRatio(value, name, ratio, size)` → `{ rect, custom }`: the stored crop for that ratio name, else the focal crop. A stored crop whose pixel shape no longer matches its ratio (the image was replaced) is trimmed to the ratio around its own centre.
+- `pixelRect(rect, size)`: whole pixels, clamped, the one rounding rule the wrapper and the studio both use.
+- `moveRect`, `scaleRect` (fixed ratio, around the centre or a corner), `clampRect`, `focusWithin(rect, focus)`, `objectPosition(focus)` ("62% 35%"), `sharpAnchor(rect)` (the nearest of Sharp's nine anchors, and the rectangle Sharp would cut there), `roundFocus` (two decimals: the 1% steps the control makes) and `roundRect` (four decimals).
+- `imageValueOf(value)`: reads `focus` and `crops` defensively from an entry's value, ignoring anything malformed.
+
+**Schema and config** (`packages/astro`, `packages/core`):
+- `fields.image(image, { ratios? })` in `@vesper/astro/fields`, typed so `src` keeps Astro's `ImageMetadata`:
+  `z.object({ src: image(), alt: z.string(), decorative: z.boolean().optional(), focus: z.object({ x, y }).optional(), crops: z.record(z.string(), rect).optional() })`, with the playground's existing refinement (alt text, or decorative with `alt: ""`), rectangles that stay inside the image, and `.meta({ widget: 'image', widgetOptions: { ratios } })`. The README shows the raw Zod.
+- `vesper.config.ts` `images: { ratios, maxUploadEdge }` is checked when it loads: ratio names are words, values are positive numbers, `maxUploadEdge` is a whole number of pixels.
+- The manifest gains `site.images` (`ratios` with `og` included, and `maxUploadEdge` when set), and a warning when an image field lists a ratio the site doesn't declare. The studio's upload hygiene starts using `maxUploadEdge` (it was fixed at 3000).
+
+**The crop step** (`@vesper/astro/image-service`, `src/images/service.ts`): Astro's Sharp service with one more transform option, `crop` (a normalized rectangle):
+- `propertiesToHash` adds `crop` to Astro's own list, so each crop gets its own file.
+- `validateOptions` checks the rectangle (a plain-language error names the image) and drops it for SVG and GIF sources, which Sharp passes through or animates.
+- `getURL` and `parseURL` carry it as `crop=x,y,w,h` on `/_image`, so dev crops too; `getHTMLAttributes` keeps it out of the page.
+- `transform` cuts the rectangle out of the upright image (`rotate().extract()`), as a lossless PNG, then hands that to Astro's own Sharp transform for resizing and formats. Without `crop` it's Astro's transform, untouched.
+- The integration registers it in `astro:config:setup` only where the site uses Astro's Sharp service (the flat form, or either target of Astro 7.4's `{ build, runtime }`), keeping the service's `config`. `vesper({ imageService: false })` turns it off. The build log says it's on and how to turn it off.
+- `sharp` becomes an optional peer dependency of `@vesper/astro`: the wrapper loads the copy Astro already depends on, and a strict installer (pnpm) has to let it resolve.
+
+**`<Img>`** (`@vesper/astro/components`: `components/Img.astro` and `getImg()`, shipped as source like the `/admin` page; the planning is `src/images/plan.ts`, exported as `@vesper/astro/images` so it's unit-tested and Node-loadable):
+- `virtual:vesper/images` gives the site's ratios. Which service is active comes from `imageConfig.service.entrypoint`: Vesper's wrapper, Astro's Sharp, or anything else.
+- `ratio` (a declared name or a number), or `width` and `height` together (a ratio of their own): the crop from `cropForRatio`. With the wrapper, Astro's `<Image>` (`<Picture>` when `formats` is given) gets the exact width and height plus `crop`. Without it, the same width and height (Astro's own server crop), `position` set to the nearest Sharp anchor when the service is Astro's Sharp, and nothing for other services. Either way the focal point, relative to what was cut, goes into `style` as `object-position`.
+- Widths are capped at the crop's own pixel width, as Astro caps them at the original's, so a 720-pixel crop is never labelled 1440w. With a `layout` and no `widths`, the widths are worked out the way Astro does from its breakpoints, against the crop's width.
+- No ratio and no fixed size (fluid layouts): the original, no server crop, the focal point as `object-position`.
+- `art={{ base: 'square', '(min-width: 48rem)': 'wide' }}`: a `<picture>` built with `getImage()`. For each breakpoint in the order given, one `<source media>` per format (`formats`, default WebP) with that ratio's own crop, `srcset`, `sizes`, and its own `width` and `height`; then the base ratio's sources without `media`, then the `<img>` in the fallback format (the original's for JPEG and GIF, else PNG, as Astro's `<Picture>` chooses).
+- Always: `alt` from the field, `alt=""` when `decorative`. Every other Astro prop passes through. A ratio name the site doesn't declare fails the build with the declared names listed.
+- `getImg(props)`: the same crop for one image, returning Astro's `getImage()` result (for `og:image` and the like).
+
+**Studio** (`packages/admin`, `packages/ui`):
+- The image field shows its image, the alt text and one more control: a "Focal point & crops" disclosure (the kit's `Disclosure`), only for fields that store `focus` or `crops`, and only once an image is chosen (§6.6.4 "calm by default"). A plain `image()` field never shows it.
+- Focal point (`widgets/focal-point.tsx`): the image is one button, named "Focal point" and described by its position ("62% across, 35% down") and how to move it. A click or tap sets the point, and the marker can be dragged. With focus on it, the arrow keys move the point 1%, Shift+arrows 10%. Beside it, "Across (%)" and "Down (%)" number fields (0–100) set it without seeing or pointing. Each keyboard or pointer move is announced in a polite live region: "Focal point 62% across, 35% down." "Use the center" removes `focus`.
+- Crop previews (`widgets/crops.tsx`): a strip of small figures, one per ratio the field lists (or every site ratio), each the image cropped by CSS from the same `cropForRatio`, captioned with its name and ratio ("Wide · 16:9") and "Custom crop" in text when overridden. They follow the focal point live. Each has an "Adjust crop" button (named "Adjust crop for Wide").
+- The crop dialog (the kit's `Dialog`, in a new wide size): the image with a fixed-ratio crop box over it, and the area outside dimmed. Drag the box to move it, drag a corner to resize it. The box is one focusable element (`role="application"`, named "Crop box for Wide (16:9)" and described by its keys), so screen readers pass the arrow keys through: arrows move it 1%, Shift+arrows resize it (Shift+→ and Shift+↓ grow, Shift+← and Shift+↑ shrink, around its centre), Enter applies, Escape cancels. Moves are announced: "Crop 40% from the left, 10% from the top, 45% of the width." Buttons: "Reset to focal point" (only when the ratio has a custom crop; it removes the override and closes), "Cancel", and "Apply crop" (the dialog's one primary). Applying an untouched box over a ratio with no override writes nothing.
+- Values: focal points with two decimals, crops with four. Removing the last crop removes `crops`. Nothing but the entry is written: the image file is never touched.
+
+**Where each feature lives in the UI** (§10.4): inside the image field, behind the "Focal point & crops" disclosure. The crop tools hide behind each preview's "Adjust crop" button, in a dialog. No new screens, panels or navigation.
+
+**Playground:**
+- `vesper.config.ts`: `images.ratios` `{ wide: 16/9, square: 1, portrait: 4/5 }` (plus the built-in `og`).
+- The blog hero becomes `fields.image(image, { ratios: ['wide', 'square'] })`; its stored focal point and square crop stay as they are.
+- A post's page shows the hero art-directed (`base: 'square'`, `wide` from 48rem), with `og:image` from `getImg({ ratio: 'og' })`. The blog list shows square thumbnails (`ratio`).
+- `src/pages/images.astro` ("Image crops") shows every post's hero at every site ratio, art-directed and fluid, for the e2e checks and for people.
+
+**Dependencies:** none new. `sharp` is already Astro's own (optional) dependency; it's declared as an optional peer for the reason above.
+
+**Tests mapped to the "Done when" criteria:**
+- **The playground hero renders correct crops at every declared ratio; a manual crop overrides the focal point only for its own ratio:**
+  - `images/*.test.ts` in core: focal crops at every edge and ratio, trimming a stale crop, `cropForRatio` using the square crop for `square` only.
+  - `plan.test.ts`: what `<Img>` asks Astro for in each mode.
+  - The static e2e reads `/images/` from the built playground, and for every ratio compares the served file, pixel by pixel, with the same rectangle cut independently from the original by Sharp in the test; `square` must match the stored crop and differ from the focal one, every other ratio the focal crop.
+- **Art direction outputs a valid `<picture>` with per-breakpoint sources, each correctly cropped:** `plan.test.ts` for the structure; the static e2e checks the post page's `<picture>` (each `<source>` has `media`, `type`, `srcset` and its ratio's `width` and `height`, `<img>` last with the alt text), compares every source's files with their crops, and loads the page at 375 and 1280 pixels wide to see the browser pick the square and the wide crop.
+- **The focal point and crop box can be set fully by keyboard, with values announced:** jsdom tests (`focal-point.test.tsx`, `crops.test.tsx`) for every key, the number fields, the announcements and axe; `e2e/studio/images.spec.ts` does the whole flow with keys only in Chromium, saves, checks the file, and runs axe with the disclosure and the dialog open; a manual keyboard pass is noted.
+- **Original image files are byte-identical before and after any focal-point or crop edit:** `images.spec.ts` hashes every file under the site's `src/assets` before and after setting a focal point, applying a crop and resetting one, and requires the entry to be the only file changed. The integration test hashes the playground's originals before and after a build.
+- **Disabling the wrapper leaves the site building, with crops falling back to Astro's server crop plus focal `object-position`:** `packages/astro/test/images.integration.test.ts` builds a copy of the playground with `vesper({ imageService: false })`: the build passes, every ratio's file has the ratio's exact size and Sharp's anchored crop, each `<img>` carries the `object-position` style, and no `crop` reaches the page. `register.test.ts` covers when the wrapper is installed (Astro's Sharp in either form, not a custom or host service, not when turned off). The same test builds the Astro 6 fixture, which gains a hero image and `<Img>`, with the wrapper on.
+
+**Commits, in order:**
+1. `docs`: this design.
+2. `feat(core)`: image ratios and crop geometry, as `@vesper/core/images`.
+3. `feat(core)`: the manifest's `site.images`, and a warning for undeclared ratios.
+4. `feat(astro)`: `fields.image()` and `images` in `vesper.config.ts`.
+5. `feat(astro)`: the crop step around Astro's Sharp service, registered when the site uses it.
+6. `feat(astro)`: `<Img>` and `getImg()`.
+7. `feat(ui)`: a wide dialog.
+8. `feat(admin)`: the focal point control, and `maxUploadEdge` for uploads.
+9. `feat(admin)`: crop previews and the crop dialog.
+10. `feat(playground)`: the blog hero on `fields.image()`, rendered with `<Img>`.
+11. `test`: the fallback build, the Astro 6 fixture, and the e2e specs.
+12. `docs`: decisions, READMEs and the Phase 2.7 outcome.
+
+**Not in this phase:**
+- Focal points and crops for body images (§6.6.5: not in v1).
+- R2 media (cloud, §6.6.1). `<Img>` takes a remote `src` as Astro does, with `object-position` only.
+- Manual crops through a host's image service: `<Img>` falls back as described, and the docs say so (§6.6.5).
 
 ## Phase 2.6: URLs, hierarchy and redirects (design)
 
