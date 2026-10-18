@@ -8,7 +8,7 @@ import {
   type PdfFacts,
   type PdfTarget,
 } from '@vesper/core';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { a11yChecker } from './run.ts';
 
 type Checks = typeof import('./run.ts');
@@ -22,6 +22,11 @@ export type EntryNotes = {
 };
 
 const NONE: EntryNotes = { notes: [], pdfs: [] };
+
+export type EntryNotesResult = EntryNotes & {
+  /** Checks the current values now, without the pause (for a save). PDFs keep their last result. */
+  recheck: () => Promise<A11yNote[]>;
+};
 
 /**
  * What each PDF says about itself, by the URL the studio reads it from, for
@@ -65,7 +70,7 @@ export function useEntryNotes(options: {
   entryPath: string;
   /** Where the studio reads a site file from. */
   fileUrl: (path: string) => string;
-}): EntryNotes {
+}): EntryNotesResult {
   const { manifest, collection, values, body, format, entryPath, fileUrl } = options;
   const load = useMemo(() => {
     let loaded: Promise<{ checks: Checks; check: Checker }> | null = null;
@@ -112,8 +117,23 @@ export function useEntryNotes(options: {
     };
   }, [load, found.pdfs, entryPath, fileUrl]);
 
+  const latest = useRef({ collection, values, body, format, pdfNotes });
+  useEffect(() => {
+    latest.current = { collection, values, body, format, pdfNotes };
+  });
+  const recheck = useCallback(async () => {
+    const { check } = await load();
+    const now = latest.current;
+    const fresh = check(now.collection, {
+      values: now.values,
+      ...(now.body !== undefined ? { body: now.body } : {}),
+      format: now.format,
+    });
+    return [...fresh.notes, ...now.pdfNotes];
+  }, [load]);
+
   return useMemo(
-    () => ({ notes: [...found.notes, ...pdfNotes], pdfs: found.pdfs }),
-    [found, pdfNotes],
+    () => ({ notes: [...found.notes, ...pdfNotes], pdfs: found.pdfs, recheck }),
+    [found, pdfNotes, recheck],
   );
 }

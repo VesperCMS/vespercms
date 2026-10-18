@@ -52,6 +52,7 @@ import {
 import type { BodyChecks } from '../body/checks.ts';
 import type { BodyApi } from '../body/BodyEditor.tsx';
 import { useEntryNotes } from '../a11y/useNotes.ts';
+import { NotesDrawer, notesCount, type NoteGroup } from '../a11y/NotesDrawer.tsx';
 
 // Tiptap and the Markdown tooling are most of the studio's weight, and only
 // entries with a body need them: they load the first time one is opened.
@@ -244,7 +245,13 @@ function EntryForm({
     entryPath,
     fileUrl,
   });
-  const notes = found.notes;
+  const { notes, recheck } = found;
+  // The publish gate (spec §6.18): notes on these rules refuse a save.
+  const blockOn = useMemo(
+    () => new Set<string>(manifest.site.a11y?.blockPublishOn ?? []),
+    [manifest.site.a11y],
+  );
+  const blocking = useMemo(() => notes.filter((n) => blockOn.has(n.rule)), [notes, blockOn]);
   const bodyNotes = useMemo(() => notes.filter((n) => n.target.kind === 'body'), [notes]);
   const noteMap = useMemo(() => {
     const map = new Map<string, A11yNote[]>();
@@ -256,6 +263,72 @@ function EntryForm({
     return map;
   }, [notes, collection.fields]);
   const bodyApi = useRef<BodyApi | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  /** A note whose field gets focus once the drawer has closed. */
+  const [goTo, setGoTo] = useState<A11yNote | null>(null);
+
+  /** Where a note is shown: its field's focus target and name, or the body. */
+  const placeOf = useCallback(
+    (note: A11yNote) => {
+      if (note.target.kind === 'body')
+        return { key: 'body', label: 'Body', focusId: 'entry-body', top: '' };
+      const target = issueTarget(collection.fields ?? [], note.target.path);
+      return {
+        key: pathKey(target.path) || 'entry',
+        label: target.label,
+        focusId: target.focusId,
+        top: String(note.target.path[0] ?? ''),
+      };
+    },
+    [collection.fields],
+  );
+  // Grouped under each field in the order the form shows them: title, main fields, body, Details.
+  const noteGroups = useMemo<NoteGroup[]>(() => {
+    const order = [
+      ...(arranged.title ? [keyOf(arranged.title)] : []),
+      ...arranged.main.map(keyOf),
+      '',
+      ...arranged.details.map(keyOf),
+    ];
+    const groups = new Map<string, NoteGroup & { rank: number }>();
+    for (const note of notes) {
+      const place = placeOf(note);
+      const group = groups.get(place.key) ?? {
+        key: place.key,
+        label: place.label,
+        notes: [],
+        rank: order.indexOf(place.top),
+      };
+      group.notes.push(note);
+      groups.set(place.key, group);
+    }
+    return [...groups.values()].sort((a, b) => a.rank - b.rank);
+  }, [notes, placeOf, arranged]);
+
+  const goToNote = useCallback(
+    (note: A11yNote) => {
+      if (note.target.kind === 'body') {
+        bodyApi.current?.reveal(note);
+        return;
+      }
+      const place = placeOf(note);
+      if (arranged.details.some((field) => keyOf(field) === place.top)) setDetailsOpen(true);
+      focusWhenShown(place.focusId);
+    },
+    [placeOf, arranged.details],
+  );
+  // Once the drawer has closed. React Aria gives focus back to the count
+  // only if focus fell to the page, so moving it first wins.
+  useEffect(() => {
+    if (notesOpen || !goTo) return;
+    const timer = setTimeout(() => {
+      goToNote(goTo);
+      setGoTo(null);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [notesOpen, goTo, goToNote]);
 
   const setValue = useCallback((path: ValuePath, value: DataValue) => {
     setValues((current) => setIn(current, path, value));
@@ -290,6 +363,13 @@ function EntryForm({
     if (!editable || saving) return;
     setSaving(true);
     setNotice(null);
+    // The publish gate, on the values as they are now (spec §6.18). In local
+    // mode publishing is Save (DECISIONS.md).
+    if (blockOn.size > 0 && (await recheck()).some((note) => blockOn.has(note.rule))) {
+      setRefusals((n) => n + 1);
+      setSaving(false);
+      return;
+    }
     const bodyChanged = body !== saved.body;
     // A body the site couldn't be built with isn't saved (spec §6.5.1).
     if (isContent && (bodyChanged || isNew)) {
@@ -365,6 +445,8 @@ function EntryForm({
     arranged.details,
     checks,
     parent,
+    blockOn,
+    recheck,
   ]);
 
   // Ctrl+S / ⌘S saves; unsaved changes are protected from navigation and reloads.
@@ -435,6 +517,17 @@ function EntryForm({
       </Link>
       <span className="min-w-0 flex-1 truncate text-content-muted">{titleText}</span>
       <InlineStatus>{[draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ')}</InlineStatus>
+      {notes.length > 0 && (
+        // Outside the live status, so typing doesn't announce every change in the count.
+        <Button
+          variant="quiet"
+          onPress={() => {
+            setNotesOpen(true);
+          }}
+        >
+          {notesCount(notes.length, blocking.length)}
+        </Button>
+      )}
       {editable && (
         <Button variant="primary" onPress={() => void save()} isPending={saving}>
           Save
@@ -464,6 +557,16 @@ function EntryForm({
           fieldId: 'entry-body',
           message: `Body, line ${String(issue.line)}: ${issue.message}`,
         }))
+      : []),
+    // So do notes the site's publish gate blocks on.
+    ...(refusals > 0
+      ? blocking.map((note) => {
+          const place = placeOf(note);
+          return {
+            fieldId: place.focusId,
+            message: `${place.label}, accessibility: ${note.subject ? `${note.subject}: ` : ''}${note.message}`,
+          };
+        })
       : []),
   ];
 
@@ -548,6 +651,17 @@ function EntryForm({
         </div>
       </EditorContext.Provider>
 
+      <NotesDrawer
+        isOpen={notesOpen}
+        onOpenChange={setNotesOpen}
+        groups={noteGroups}
+        isBlocking={(note) => blockOn.has(note.rule)}
+        onGo={(note) => {
+          setGoTo(note);
+          setNotesOpen(false);
+        }}
+      />
+
       <Dialog
         title={`Delete “${titleText}”?`}
         role="alertdialog"
@@ -573,6 +687,22 @@ function EntryForm({
       </Dialog>
     </Screen>
   );
+}
+
+/**
+ * Focuses an element as soon as it's on screen (a field inside Details
+ * renders once Details opens), and scrolls it into view.
+ */
+function focusWhenShown(id: string, tries = 20): void {
+  const element = document.getElementById(id);
+  if (element) {
+    element.scrollIntoView({ block: 'center' });
+    element.focus();
+  } else if (tries > 0) {
+    setTimeout(() => {
+      focusWhenShown(id, tries - 1);
+    }, 25);
+  }
 }
 
 /** Where a new page will go in the tree: under its parent, named by title. */

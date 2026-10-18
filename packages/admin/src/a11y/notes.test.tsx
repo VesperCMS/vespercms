@@ -183,3 +183,122 @@ describe('PDF notes', () => {
     expect(fetched).toEqual(['/_vesper/api/file?path=public%2Ffiles%2Funtagged-brochure.pdf']);
   });
 });
+
+describe('the notes drawer', () => {
+  it('opens from the count in the top bar, lists notes by field, and goes to each', async () => {
+    const user = open('#/c/fixtures/e/accessibility-mistakes', fixture);
+    const count = await screen.findByRole('button', { name: '3 accessibility notes' });
+    // The count isn't part of the live status, so typing doesn't announce each change.
+    expect(count.closest('[role="status"]')).toBeNull();
+    await user.click(count);
+    const drawer = await screen.findByRole('dialog', { name: 'Accessibility notes' });
+    expect(drawer).toHaveTextContent('Automated checks find some problems, not all.');
+    const groups = within(drawer).getAllByRole('heading', { level: 3 });
+    expect(groups.map((h) => h.textContent)).toEqual(['Text color', 'Body']);
+    const goButtons = within(drawer).getAllByRole('button', { name: 'Go to field' });
+    expect(goButtons).toHaveLength(3);
+    expect(goButtons[0]).toHaveAccessibleDescription(
+      expect.stringContaining('Contrast 2.3:1') as string,
+    );
+    await expectNoViolations();
+
+    await user.click(goButtons[0] as HTMLElement);
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /Text color/ })).toHaveFocus();
+    });
+
+    await user.click(screen.getByRole('button', { name: '3 accessibility notes' }));
+    const again = await screen.findByRole('dialog', { name: 'Accessibility notes' });
+    await user.click(
+      within(again).getAllByRole('button', { name: 'Go to field' })[2] as HTMLElement,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Body' })).toHaveFocus();
+    });
+  });
+
+  it('works by keyboard: Enter opens it, Tab reaches each note, Escape returns to the count', async () => {
+    const user = open('#/c/fixtures/e/accessibility-mistakes', fixture);
+    const count = await screen.findByRole('button', { name: '3 accessibility notes' });
+    count.focus();
+    await user.keyboard('{Enter}');
+    const drawer = await screen.findByRole('dialog', { name: 'Accessibility notes' });
+    await waitFor(() => {
+      expect(drawer).toContainElement(document.activeElement as HTMLElement);
+    });
+    await user.tab();
+    expect(within(drawer).getByRole('button', { name: 'Close' })).toHaveFocus();
+    await user.tab();
+    expect(document.activeElement).toHaveTextContent('Go to field');
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(count).toHaveFocus();
+    });
+  });
+});
+
+describe('the publish gate', () => {
+  function gated(rules: string[]): Manifest {
+    const manifest = siteWithBackgrounds();
+    manifest.site.a11y = { ...manifest.site.a11y, blockPublishOn: rules as never };
+    return manifest;
+  }
+
+  it('warns only by default: a save goes through with notes', async () => {
+    const api = fakeApi({ documents: { 'fixtures/accessibility-mistakes': fixture } });
+    renderStudio('#/c/fixtures/e/accessibility-mistakes', { api, manifest: siteWithBackgrounds() });
+    const user = userEvent.setup();
+    await screen.findByRole('button', { name: '3 accessibility notes' });
+    await user.type(screen.getByRole('textbox', { name: /Summary/ }), ' More.');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('refuses a save with a blocking note, says why and links to the field', async () => {
+    const api = fakeApi({ documents: { 'fixtures/accessibility-mistakes': fixture } });
+    renderStudio('#/c/fixtures/e/accessibility-mistakes', {
+      api,
+      manifest: gated(['heading-skip']),
+    });
+    const user = userEvent.setup();
+    expect(
+      await screen.findByRole('button', { name: '3 accessibility notes, 1 blocks saving' }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const summary = await screen.findByRole('alert');
+    expect(summary).toHaveFocus();
+    const link = within(summary).getByRole('link', {
+      name: 'Body, accessibility: Heading “A heading that skips level 3”: Heading jumps from level 2 to level 4.',
+    });
+    expect(link).toHaveAttribute('href', '#entry-body');
+    expect(api.saveEntry).not.toHaveBeenCalled();
+    // The Save button stays focusable, with its reason in the count beside it.
+    expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled();
+    await expectNoViolations(summary);
+  });
+
+  it('checks the values as they are at the moment of saving', async () => {
+    const api = fakeApi({ documents: { 'fixtures/accessibility-mistakes': fixture } });
+    renderStudio('#/c/fixtures/e/accessibility-mistakes', { api, manifest: gated(['link-vague']) });
+    const user = userEvent.setup();
+    await screen.findByRole('button', { name: '3 accessibility notes, 1 blocks saving' });
+    await user.click(screen.getByRole('button', { name: 'Edit as Markdoc' }));
+    const source = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Body' });
+    await user.clear(source);
+    // user-event reads [ as a key name; [[ types one.
+    await user.type(source, 'See [[the timetable](/academics/).');
+    // Saved at once, before the pause after typing: the gate checks the new text.
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalledTimes(1);
+    });
+  });
+});
