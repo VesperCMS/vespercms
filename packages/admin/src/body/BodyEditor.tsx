@@ -495,7 +495,8 @@ function WritingView({
             const dom = editor.view.dom;
             let done = false;
             const reselect = () => {
-              if (done) return;
+              // Someone may have left the entry in the meantime.
+              if (done || editor.isDestroyed) return;
               done = true;
               dom.removeEventListener('focusin', onFocus);
               editor.view.focus();

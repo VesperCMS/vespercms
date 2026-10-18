@@ -356,3 +356,23 @@ describe('MDX components', () => {
     );
   });
 });
+
+describe('leaving the editor', () => {
+  it('closing a block’s settings and leaving at once leaves nothing running', async () => {
+    const { user } = setup();
+    const editor = await editorOf();
+    selectNode(
+      editor,
+      findNode(editor, 'vesperCard', (a) => a.name === 'youtube'),
+    );
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog', { name: 'YouTube video settings' });
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    // Leave before the editor takes the block's selection back (it waits up
+    // to 500 ms for focus). A late callback touching the destroyed editor
+    // throws, and Vitest fails the run on that unhandled error.
+    cleanup();
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(editor.isDestroyed).toBe(true);
+  });
+});
