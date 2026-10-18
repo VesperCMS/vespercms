@@ -10,9 +10,10 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
-| 2.6 URLs, hierarchy and redirects | Done (2026-10-18), merged into main (4e311a7); every check passes on the merge. See "Phase 2.6: outcome" below. |
+| 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284). See "Phase 2.6: outcome" below. |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
-| 2.8 onward | Roadmap below |
+| 2.8 Accessibility checks, studio and build | In progress. See "Phase 2.8: Accessibility checks (design)" below. |
+| 2.9 onward | Roadmap below |
 
 ## Phase 0: Scaffold
 
@@ -245,6 +246,118 @@ The spec's five "Done when" criteria, with evidence:
 - R2 media (§6.6.1) is cloud work; `<Img>` treats a remote `src` as Astro does, with `object-position` only.
 - In this workspace the Astro 6 fixture's crop step loads the root's Astro 7 Sharp service (DECISIONS.md). A published install loads the site's own.
 - The redirects integration test still builds with Vitest's environment; the image tests don't (DECISIONS.md).
+
+## Phase 2.8: Accessibility checks (design)
+
+Scope is spec §6.18 layers 1 and 2 and the §11 Phase 2.8 entry. Layer 3 (cloud history, full rendered scans, exports, the agency view) is paid and belongs to Phase 8.5: nothing of it is built here. Both layers report problems; neither claims compliance, and nothing is injected into the site (D19).
+
+**What was found first** (measured on the playground's static build, 38 HTML files, before writing any code):
+- axe-core 4.14 runs in **jsdom** 30 and **happy-dom** 21. Over the same 60 structure rules (below), both gave exactly the violations real Chromium gives on every one of the 38 pages. jsdom needs one shim: it has no `document.elementFromPoint`, and without it the page-level rules (`landmark-one-main`, `page-has-heading-one`) error out and land in "incomplete". **linkedom** 0.18 can't run axe at all (no `screen`, no `getComputedStyle`), not without shimming half a browser.
+- Time per page: jsdom about 100 ms (construction 21 ms, loading axe 14 ms with one compiled `vm.Script`, the run 66 ms), happy-dom about 60 ms. Loading the module once: jsdom 2.7 s, happy-dom 1.1 s. Installed: jsdom 25 MB in 30 packages, happy-dom 20 MB in 7, axe-core 3.4 MB.
+- jsdom with `runScripts: 'outside-only'` never runs the page's own scripts while still letting axe in. happy-dom needs JavaScript evaluation on to load axe the same way, which runs the page's inline scripts too.
+- Astro's static redirect pages (a meta refresh, no `lang`, no `main`) fail `html-has-lang`, `landmark-one-main`, `page-has-heading-one` and `region`. That's Astro's template, not the site's content, so the build check skips them, as the e2e gate already does. The `/admin` shell fails the same landmark rules before its script runs; the studio has its own axe checks in e2e, so it's skipped too.
+- Of the fixture page's mistakes, axe sees only `empty-heading` and `heading-order` at build (plus `color-contrast` in a real browser, which layer 2 doesn't check). The rest are content problems only the studio can see, which is why layer 1 exists.
+- PDF.js 6.4 (`pdfjs-dist`, Apache-2.0) reads the fixture PDF in 76 ms: `getMarkInfo()` is null (untagged), `getMetadata()` has no `Title` and `Language: null`. Its modern build needs `Uint8Array.prototype.toHex` (Chrome 140, Firefox 133, Safari 18.2 and later); the legacy build doesn't. Minified, the legacy build is 524 KB plus a 1,321 KB worker.
+- Markdoc with `allowHTML` gives inline and block HTML as `html_inline` / `html_block` nodes with line ranges and no content, so HTML is read from those lines of the source.
+
+**Rules** (`packages/core/src/a11y/`, no dependencies, so the studio, the dev API and the cloud can share them). Each rule has an ID, a plain-language message, one sentence on why it matters, and a docs slug for the link the docs will hold (spec §6.18: "a link to a short explanation in the docs"). The spec's twelve rows become seventeen IDs, so `blockPublishOn` can name exactly what it blocks:
+
+| ID | Fires on | Message (example) | Shown beside |
+|---|---|---|---|
+| `missing-alt` | An image field with no alt text and not `decorative`; an HTML or JSX `<img>` with no `alt` | "Describe this image, or mark it decorative." | The image field (Go to: its alt text), or the body |
+| `alt-file-name` | Alt text that is a file name (`IMG_2041.jpg`, `DSC0042`, `photo-1.png`) | "Alt text looks like a file name." | Same |
+| `alt-redundant` | Alt text starting "image of", "picture of", "photo of", "graphic of" | "Leave out “Image of”: screen readers already say it’s an image." | Same |
+| `alt-too-long` | Alt text over 150 characters | "This alt text is 214 characters long. Keep it under 150 and put the rest in the text." | Same |
+| `heading-skip` | A heading more than one level below the previous one, or a first heading below the start level | "Heading jumps from level 2 to level 4." | The body |
+| `heading-extra-top` | A heading above the collection's start level (an `h1` when the title is the page's `h1`), or a second `h1` when the start is 1 | "The title is already the page’s main heading. Use level 2 here." | The body |
+| `heading-empty` | A heading with no text | "This heading is empty." | The body |
+| `link-vague` | Link text such as "click here", "here", "read more", "more", "learn more", "this link", or the bare address | "Link text should say where it goes." | The body, a Markdown field |
+| `link-new-window` | `target="_blank"` with no "new tab" or "new window" in the link's text, `aria-label` or `title` | "Tell readers this opens in a new tab." | Same |
+| `table-header` | An HTML or JSX table with no `<th>` (Markdown and Markdoc tables always have a header row in their syntax) | "Add a header row so screen readers can announce columns." | The body |
+| `color-contrast` | A `fields.color({ contrast: 'text' })` value under 4.5:1 (`'large-text'` and `'graphic'`: 3:1) against any background the site declares | "Contrast 2.2:1 against Page, light is below 4.5:1." | The colour field |
+| `tag-name-empty` | A Markdoc tag or declared MDX component whose required name attribute (`title`, `alt`, `label`, `aria-label`) is empty text. A missing one is already a validation error | "YouTube video needs a title." | The body |
+| `fake-list` | A paragraph with two or more lines that start like list items (`-`, `*`, `•`, `1.`, `1)`, escaped or not) | "This looks like a list. Format it as one." | The body, a Markdown field |
+| `pdf-untagged` | A PDF in a file field, or linked from the body, with no structure tags (`MarkInfo` / `StructTreeRoot`) | "This PDF isn’t tagged, so screen readers can’t read its structure. Consider an HTML page instead, or tag the PDF." | The file field, or the body |
+| `pdf-no-title` | Such a PDF with no document title (Info or XMP) | "This PDF has no title, so screen readers announce its file name instead." | Same |
+| `pdf-no-language` | Such a PDF with no language set | "This PDF doesn’t say what language it’s in." | Same |
+| `video-captions` | A tag or component whose schema has a `captions` attribute, used without it or with it off | "Confirm this video has captions." | The body |
+
+- Body checks read each format with the parser the site renders with: micromark (GFM, plus MDX) for `.md` and `.mdx`, Markdoc with Astro's tokenizer options for `.mdoc`. HTML (and lowercase JSX in MDX) is read with a small tag scanner over the block's own text. Each note carries the body offsets and line of what it's about, and a short subject ("Image “IMG_2041.jpg”", "Heading “A heading that skips level 3”").
+- `fields.markdown()` values get the image, link and fake-list rules, not the heading rules.
+- PDFs: core only turns facts (`tagged`, `title`, `language`) into notes. Reading the file is the studio's job, with PDF.js, loaded the first time an entry has a PDF to check, and its result cached per file version.
+- Contrast is the WCAG 2.1 relative-luminance ratio, rounded down to one decimal for the message, so a value never reads as passing when it doesn't.
+
+**Settings** (spec §6.18 names `a11y.blockPublishOn` a site setting):
+- `vesper.config.ts`: `a11y: { blockPublishOn?: RuleId[]; backgrounds?: Record<string, string> }`. Unknown rule IDs warn when the config loads. With no backgrounds declared, contrast isn't checked, and the manifest warns once if a colour field asks for it.
+- `collections.<name>.headingStart`: the level the body's top headings should have, 2 by default (the layout's `<h1>` is usually the title).
+- `fields.color({ contrast: 'text' | 'large-text' | 'graphic' })` in `@vesper/astro/fields`; raw Zod: `.meta({ widget: 'color', widgetOptions: { contrast: 'text' } })`.
+- The manifest gains `site.a11y` (`blockPublishOn`, `backgrounds`) and `presentation.headingStart`.
+
+**Studio** (`packages/admin`):
+- `a11y/useNotes.ts`: runs the core checks on the entry's values and body a moment after typing stops (the same 300 ms as body validation), then the PDF checks as their files load. Body checks load with the body checks' chunk; PDF.js loads on first use (`a11y/pdf.ts`, `pdfjs-dist/legacy`, worker through a Vite `?url` import, as the map's worker is).
+- Beside each field: notes go under the field's help and error text, as "Accessibility note: …" in body text with a hairline warning border on the left, and are joined into the control's `aria-describedby`. A note inside a field (an image's alt text) shows under that field; Go to focuses the alt text.
+- Beside the body: a list "Accessibility notes in the body" under the editor's help line. Each item names its subject and has a "Show" button that puts the cursor on that block in the writing view (or selects its text in the source view) and scrolls it into view.
+- The top bar's status gains the count ("Draft · Saved just now", then a quiet text button "2 accessibility notes"). It opens the kit's `Drawer`, titled "Accessibility notes": one sentence that automated checks find some problems, not all (D19), then the notes in form order, grouped under their field's name, each with its message, why it matters, and "Go to field" (described by its note). Go to field closes the drawer and moves focus to the field, opening Details first when the field is there. The count sits outside the live status, so typing doesn't announce every change.
+- **Publish gate.** With `blockPublishOn`, a note on a listed rule refuses the save the way a body the build would fail on is refused (Phase 2.5): Save stays focusable, the error summary takes focus and lists each blocking note with a link to its field, and the count reads "2 accessibility notes, 1 blocks saving". A disabled button would hide its own reason from keyboard users, and Ctrl+S would fail silently. The gate is checked in the studio; the dev API doesn't repeat it (the PDF rules need PDF.js, and the gate is a site policy rather than a file the build can't read).
+
+**Build** (`packages/astro/src/integration/a11y.ts`):
+- In `astro:build:done`, unless `vesper({ a11y: false })`: every HTML file in `dir` except Astro's redirect pages and `/admin` is loaded into jsdom (`runScripts: 'outside-only'`, the `elementFromPoint` shim), axe-core is run in it from one compiled script, and only the structure rules run: `lang` (`html-has-lang`, `html-lang-valid`, `valid-lang`, `html-xml-lang-mismatch`), `document-title`, landmarks (`landmark-*`, `region`, `bypass`), headings (`heading-order`, `page-has-heading-one`, `empty-heading`), images (`image-alt` and its relatives), form labels and names (`label`, `select-name`, `button-name`, `link-name`, `frame-title`, …), duplicate IDs (`duplicate-id`, `duplicate-id-aria`), basic ARIA (`aria-*` validity, required attributes, parents and children, hidden focus) and list and table structure. No colour or visual rules (layer 3). The full list is a constant, with the test that pins it.
+- Each issue gets the same message style as layer 1 (a plain message and why for every rule in the list, in core), axe's impact as `error` (critical, serious) or `warning` (moderate, minor), the element's selector and a short HTML snippet.
+- **Page to entry:** every built page's URL is matched to the entry whose URL pattern produces it, through `PageService` and `entryUrlKey`, the same code the studio's "View on site" and the redirects use (spec §6.15.1). Function-form URLs work because the build loads `vesper.config.ts`. Pages no entry produced (listings, the 404 page) are reported with `entry: null`. Each mapped page carries the entry's collection, id, file and its studio link (`<base>admin/#/c/<collection>/e/<id>`), for "fix in studio". This needs no runtime recording, so production `vesper:content` stays a plain re-export (spec §6.10, §6.11).
+- `.vesper/a11y-report.json` in the project root, with a `.vesper/.gitignore` of `*` so it never reaches git by accident. It never goes into `dist/`: if `outDir` contains the project root's `.vesper` folder, the report isn't written and the build says why. No timestamps, so the same build writes the same bytes.
+- The log says what was checked and found ("Accessibility: checked 35 pages, 2 issues on 1 page (1 error). Report: .vesper/a11y-report.json"). `vesper({ a11y: { failBuildOn: 'error' | 'warning' } })` fails the build when there's an issue at that level or above; off by default.
+
+**Where each feature lives in the UI** (§10.4): notes sit under the field they're about, the body's under the body. The count is part of the top bar's status text, and the full list hides behind it, in a drawer. No new screen, no tabs, no coloured badges (the note's border is the warning token, the text says "Accessibility note"), no icon-only buttons, and the one primary button is still Save.
+
+**Playground:**
+- The fixture keeps every mistake it has, and gains what's missing: an HTML `<img>` with no `alt` (`missing-alt`; an empty Markdown alt is decorative, see the open questions), and `textColor` becomes `fields.color({ contrast: 'text' })`.
+- `vesper.config.ts`: `a11y.backgrounds` with the site's two page backgrounds (`#ffffff` and `#12151f`).
+- `.vesper/` joins `.gitignore`. The playground doesn't set `failBuildOn`, since its fixture page fails on purpose; the report lists it.
+
+**Dependencies, each with its reason:**
+- `axe-core` (MPL-2.0, used unmodified) in `@vesper/astro`: the rule engine the spec names, and the one the e2e suite already uses, so layer 2 and the browser checks agree.
+- `jsdom` (MIT) in `@vesper/astro`: the DOM axe runs in at build, chosen above. Imported only inside `astro:build:done`.
+- `pdfjs-dist` (Apache-2.0) in `@vesper/admin`: the PDF checks the spec names. Left external in the studio's build like MapLibre, and loaded only when a PDF is checked.
+
+**Tests mapped to the "Done when" criteria:**
+- **Every layer-1 rule fires on the playground's deliberately flawed fixtures, beside the right field:**
+  - Core unit tests per rule, each with cases that must and must not fire, in all three formats.
+  - A core test over the real fixture file and the playground's manifest: every one of the seventeen rule IDs fires, each on its field (`textColor`, `brochure`) or the body, at the right line. A real-content test runs the same checks over every other playground entry, which must have no notes (their pages already pass axe).
+  - Admin jsdom tests: notes under the right field and joined to its control's description, the body list and Show, the count, the drawer and its Go to field, the refused save.
+  - `e2e/studio/a11y.spec.ts` opens the fixture in Chromium and checks each rule's message beside its field, including both PDF notes from PDF.js.
+- **The layer-2 report maps issues to entries:** unit tests for the page-to-entry mapping (directory and file formats, `base`, trailing slashes, unmapped pages, redirect pages); `packages/astro/test/a11y.integration.test.ts` builds a copy of the playground and checks the report: the fixture page's issues (`image-alt`, `heading-order`, `empty-heading`) under the `fixtures` entry with its file and studio link, a listing page with `entry: null`, no other issues; then builds again with `failBuildOn: 'error'` and expects the build to fail with the report written.
+- **No report file appears in `dist/`:** the same test walks `dist/` for any `a11y-report` file or `.vesper` folder; the static e2e suite checks the playground build the same way and reads `apps/playground/.vesper/a11y-report.json`.
+- **The notes drawer can be fully operated by keyboard and screen reader:** `a11y.spec.ts`, keys only: Tab to the count, Enter opens the drawer with focus inside, Tab through every Go to field, Enter on one lands focus on the field, Escape from a reopened drawer returns focus to the count; axe passes with the drawer open and with the refused-save summary. Manual keyboard pass in the browser pane. **A screen reader pass is Jeremy's**, as in earlier phases.
+
+**Commits, in order:**
+1. `docs`: this design, and Phase 2.6's CI run.
+2. `feat(core)`: accessibility rules for entries: alt text, headings, links, tables, fake lists, tags, contrast and PDF facts.
+3. `feat(core)`: the manifest's `site.a11y` and `headingStart`, and plain messages for the build's axe rules.
+4. `feat(astro)`: `a11y` and `headingStart` in vesper.config.ts, and `fields.color({ contrast })`.
+5. `feat(admin)`: accessibility notes beside each field and under the body.
+6. `feat(admin)`: PDF checks with PDF.js, loaded on first use.
+7. `feat(admin)`: the notes drawer from the top bar, and the publish gate.
+8. `feat(astro)`: build checks with axe-core in jsdom, mapped to entries, into `.vesper/a11y-report.json`.
+9. `feat(playground)`: fixture additions, declared backgrounds, `.vesper` ignored.
+10. `test`: the build integration test and the e2e specs.
+11. `docs`: decisions, READMEs and the Phase 2.8 outcome.
+
+**Open, for Jeremy** (built with the recommendation, each easy to change):
+- **What the publish gate does in local mode, where the button is Save.** (a) Refuse the save, as a body the build would fail on is refused (built: one rule in every mode, and the gate is opt-in); (b) warn only in local mode and block only where saving publishes (GitHub, cloud); (c) refuse with a "Save anyway" for local mode.
+- **The DOM for axe at build.** (a) jsdom (built: matched Chromium on every page, never runs the page's scripts, axe's documented environment, already the repo's test DOM; 25 MB, about 100 ms a page); (b) happy-dom (also matched Chromium, about 60 ms a page and 1.6 s faster to load, 20 MB, but runs the page's inline scripts to load axe); (c) linkedom (can't run axe).
+- **Where the per-collection heading start is set.** (a) `collections.<name>.headingStart` in vesper.config.ts, default 2 (built); (b) a site-wide `a11y.headingStart` with per-collection overrides; (c) a `.meta()` hint on the title field saying it's the page's `h1`.
+- **PDF.js: lazy, and its weight.** (a) `pdfjs-dist`'s legacy build, loaded the first time a PDF is checked: 524 KB plus a 1,321 KB worker, minified, never in the first load (built); (b) the modern build (459 KB plus 1,264 KB) if the studio may require Chrome 140, Firefox 133 or Safari 18.2; (c) a small reader of Vesper's own for the three facts (a few KB, but a hand-written parser of an untrusted binary format, and the spec names PDF.js).
+- **An empty alt in a body image.** Markdown has no "decorative" mark: `![](photo.jpg)` is `alt=""`, which is HTML's decorative image, and the studio's own image dialog writes exactly that for "Decorative image" (Phase 2). (a) Treat it as decorative, and flag images with no `alt` at all (HTML or JSX) and image fields (built); (b) note every empty alt, which also flags images marked decorative on purpose, with no way to clear the note; (c) add a decorative marker to the body syntax (only Markdoc and MDX could carry one).
+- **Which colours are text, and where backgrounds are declared.** (a) `fields.color({ contrast })` per field and `a11y.backgrounds` in vesper.config.ts (built); (b) check every colour field at 3:1; (c) read the backgrounds from the site's CSS custom properties (fragile: values can be computed, themed or `light-dark()`).
+- **Layer 2 runs by default.** The spec has the check run at every build, with only failing off by default. That adds jsdom (25 MB installed) and about 0.1 s a page (100 s for a thousand pages); `vesper({ a11y: false })` turns it off. Alternatives: off by default, or jsdom as an optional peer that the build asks for.
+- **Docs links.** Each rule carries a docs slug, but no link is shown until the docs site exists (Phase 9) and has a domain (§13.1).
+- Tier: none unclear. Spec §13.4 lists studio accessibility checks and build checks as free; layer 3 stays paid (Phase 8.5). Spec §13.10 (machine-suggested alt text) and §13.13 (scan engine) stay open and untouched.
+
+**Not in this phase:**
+- Layer 3: report uploads with `VESPER_BUILD_TOKEN`, history, full rendered scans, exports, the agency view (Phase 8.5).
+- Dismissing a note: there's nowhere to store it in local mode yet. Notes go away when the content changes.
+- Running the gate in the dev API, and layer 2 in `astro dev`.
+- Broken-link checks of any kind (do-not-build list).
 
 ## Phase 2.7: Focal points, crops and `<Img>` (design)
 
@@ -693,7 +806,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | 2.5 Markdoc/MDX | §13.6 | tag blocks, "/" menu, settings forms, source chips, live validation, tag-level splicing |
 | 2.6 URLs/tree/redirects | Confirmed 2026-10-18: the redirects file at the site root; no default `maxDepth` (DECISIONS.md) | URL patterns, route check, tree, `_order.yaml`, subtree moves as one ChangeSet, redirect cleanup and per-host output, link rewriting, site helpers |
 | 2.7 Images | Start by verifying how Astro forwards `position`/`fit` | `fields.image`, focal point and crops, `<Img>`, Sharp wrapper |
-| **2.8 A11y checks** (new) | — | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
+| **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | **Studio design pass** (added 2026-10-18) | Jeremy reviews the visual direction first (screens, references, what feels off) | One visual pass over every studio screen once local mode is complete, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | 3 GitHub mode | whether a free cloud relay exists (needs the §13.1 domain) | GitHub adapter passing the storage contract suite; OAuth relay template |
