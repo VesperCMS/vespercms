@@ -57,7 +57,8 @@ function PickerBody({
   folder,
   onChoose,
 }: Pick<MediaPickerProps, 'kind' | 'extensions' | 'folder' | 'onChoose'>) {
-  const { api, siteName } = useStudio();
+  const { api, siteName, manifest } = useStudio();
+  const maxEdge = manifest.site.images?.maxUploadEdge;
   const [media, reloadMedia] = useLoad(() => api.listMedia(), 'media');
   const [step, setStep] = useState<UploadStep | { step: 'working'; text: string } | null>(null);
   const [query, setQuery] = useState('');
@@ -119,6 +120,7 @@ function PickerBody({
             setStep({ step: 'working', text: `Preparing ${file.name}…` });
             void checkUpload(file, media.state === 'ready' ? media.value : [], {
               accept: kind === 'image' ? 'image' : 'any',
+              ...(maxEdge ? { maxEdge } : {}),
             }).then((next) => {
               if (next.step === 'ready') void upload(next);
               else setStep(next);

@@ -19,6 +19,7 @@ type Show = 'all' | 'unused';
  */
 export function MediaBrowser() {
   const { api, manifest } = useStudio();
+  const maxEdge = manifest.site.images?.maxUploadEdge;
   const [load, reload] = useLoad(() => api.listMedia(), 'media');
   const [query, setQuery] = useState('');
   const [folder, setFolder] = useState('all');
@@ -96,10 +97,12 @@ export function MediaBrowser() {
             if (!file) return;
             setMessage('');
             setStep({ step: 'working', text: `Preparing ${file.name}…` });
-            void checkUpload(file, items, { accept: 'any' }).then((next) => {
-              if (next.step === 'ready') void upload(next);
-              else setStep(next);
-            });
+            void checkUpload(file, items, { accept: 'any', ...(maxEdge ? { maxEdge } : {}) }).then(
+              (next) => {
+                if (next.step === 'ready') void upload(next);
+                else setStep(next);
+              },
+            );
           }}
         />
         <Button
