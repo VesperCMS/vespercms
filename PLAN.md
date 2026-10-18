@@ -12,7 +12,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
 | 2.6 URLs, hierarchy and redirects | Done (2026-10-18). CI green on GitHub (run 39134480284). See "Phase 2.6: outcome" below. |
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
-| 2.8 Accessibility checks, studio and build | Done (2026-10-18), not pushed yet. See "Phase 2.8: outcome" below. |
+| 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | 2.9 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -262,6 +262,7 @@ The spec's four "Done when" criteria, with evidence:
 - `npm run dev` serves the playground; the accessibility fixture's editor shows its notes and the count, and every build writes `apps/playground/.vesper/a11y-report.json`.
 - Lint, the format check, typecheck and the contrast check pass. Vitest: 4,063 tests in 93 files (unit, corpus and integration; the integration project includes the new build test, two builds, and the Astro 6 fixture with it installed locally).
 - `npm run e2e`: 88 passed, static and studio (84 before this phase).
+- CI green on GitHub (run 39152989394): every job, the Windows tests and the Astro 6 fixture included.
 - `check:dist` loads all 11 entry points from `dist/`. `astro check` on the playground: 0 errors, 0 warnings, 0 hints. The Astro 6 fixture builds, with the accessibility check.
 - The first load grows by about 2 KB: the studio's own entry is 67.09 KB minified against 65.09 KB at 305daee, the rest unchanged. The checks (with micromark and Markdoc), the reveal code and PDF.js all load on first use.
 - The build check takes about 4 seconds on the playground's 34 pages, most of it loading jsdom.
