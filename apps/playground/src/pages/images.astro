@@ -1,0 +1,71 @@
+---
+import { Img } from '@vesper/astro/components';
+import { getCollection } from 'vesper:content';
+import { ratios } from 'virtual:vesper/images';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+/*
+ * Every blog hero at every ratio the site declares, art-directed and fluid
+ * (spec §6.6.5). People can see what each crop looks like; the static e2e
+ * suite compares each image's pixels with the crop it should be.
+ */
+const posts = (await getCollection('blog')).filter((post) => post.data.hero);
+const names = Object.keys(ratios);
+---
+
+<BaseLayout title="Image crops" description="Each blog hero at each of the site’s ratios.">
+  <h1>Image crops</h1>
+  <p>
+    Each blog post’s hero image at every ratio the site declares in vesper.config.ts. A crop the
+    editor set by hand is used for its own ratio; every other ratio follows the focal point.
+  </p>
+  {posts.map((post) => {
+    const hero = post.data.hero;
+    if (!hero) return null;
+    return (
+      <section aria-labelledby={`crops-${post.id.replaceAll('/', '-')}`}>
+        <h2 id={`crops-${post.id.replaceAll('/', '-')}`}>{post.data.title}</h2>
+        <ul class="crops">
+          {names.map((name) => (
+            <li>
+              <figure>
+                <Img image={hero} ratio={name} width={320} data-ratio={name} data-post={post.id} />
+                <figcaption>
+                  {name}
+                  {hero.crops?.[name] ? ', custom crop' : ''}
+                </figcaption>
+              </figure>
+            </li>
+          ))}
+        </ul>
+        <h3>Art-directed</h3>
+        <Img
+          image={hero}
+          art={{ base: 'square', '(min-width: 48rem)': 'wide' }}
+          widths={[320, 640]}
+          sizes="(min-width: 48rem) 640px, 320px"
+          data-art={post.id}
+        />
+        <h3>Fluid</h3>
+        <Img class="fluid" image={hero} layout="full-width" data-fluid={post.id} />
+      </section>
+    );
+  })}
+</BaseLayout>
+
+<style>
+  .crops {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0;
+    list-style: none;
+  }
+  figure {
+    margin: 0;
+  }
+  .fluid {
+    height: 12rem;
+    object-fit: cover;
+  }
+</style>

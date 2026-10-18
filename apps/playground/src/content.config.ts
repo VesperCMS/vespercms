@@ -7,17 +7,8 @@ import { fields } from '@vesper/astro/fields';
  * The playground's schemas exercise every field mapping in spec §6.2 and
  * every `fields.*` helper (spec §6.3.2). The locations collection keeps
  * the raw Zod that fields.geo() and fields.color() produce, as the
- * documented equivalent. The blog hero stays raw until fields.image()
- * ships in Phase 2.7.
+ * documented equivalent.
  */
-
-/** A normalized rectangle, 0–1 with the origin top-left (spec §6.6.2). */
-const cropRect = z.object({
-  x: z.number().min(0).max(1),
-  y: z.number().min(0).max(1),
-  w: z.number().gt(0).max(1),
-  h: z.number().gt(0).max(1),
-});
 
 const blog = defineCollection({
   // `[^_]` keeps `_`-prefixed drafts and helper files out of the collection.
@@ -28,22 +19,9 @@ const blog = defineCollection({
       summary: z
         .string()
         .meta({ widget: 'textarea', description: 'One or two sentences for cards and search.' }),
-      // The §6.6.2 image object, written out the way `fields.image(image, { ratios })` will
-      // produce it in Phase 2.7.
-      hero: z
-        .object({
-          src: image(),
-          alt: z.string(),
-          decorative: z.boolean().optional(),
-          focus: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).optional(),
-          crops: z.record(z.string(), cropRect).optional(),
-        })
-        .refine((hero) => (hero.decorative === true ? hero.alt === '' : hero.alt.trim() !== ''), {
-          message: 'Describe this image, or mark it decorative.',
-          path: ['alt'],
-        })
-        .meta({ widget: 'image', widgetOptions: { ratios: ['wide', 'square'] } })
-        .optional(),
+      // The spec §6.6.2 image: alt text or decorative, a focal point, and crops for the
+      // ratios the studio previews (vesper.config.ts declares them).
+      hero: fields.image(image, { ratios: ['wide', 'square'] }).optional(),
       author: reference('authors'),
       related: z.array(reference('blog')).optional(),
       tags: z.array(z.string()).default([]),

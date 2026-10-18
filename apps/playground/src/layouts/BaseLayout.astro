@@ -5,9 +5,11 @@ import '../styles/site.css';
 interface Props {
   title: string;
   description?: string;
+  /** A social image's URL (`getImg()` with the built-in og ratio). */
+  image?: string;
 }
 
-const { title, description } = Astro.props;
+const { title, description, image } = Astro.props;
 const settings = await getEntry('settings', 'site');
 if (!settings) throw new Error('src/content/settings/site.yaml is missing');
 const { siteName, tagline } = settings.data;
@@ -33,6 +35,12 @@ const current = Astro.url.pathname;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title === siteName ? title : `${title} · ${siteName}`}</title>
     {description && <meta name="description" content={description} />}
+    {
+      // Absolute when the site sets `site`, as social networks need; the playground doesn't.
+      image && (
+        <meta property="og:image" content={Astro.site ? new URL(image, Astro.site) : image} />
+      )
+    }
   </head>
   <body>
     <a class="skip-link" href="#main">

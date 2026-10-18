@@ -1,5 +1,5 @@
 ---
-import { Image } from 'astro:assets';
+import { Img, getImg } from '@vesper/astro/components';
 import { getCollection, getEntries, getEntry, render } from 'vesper:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
@@ -13,14 +13,12 @@ const { Content } = await render(post);
 const author = await getEntry(post.data.author);
 const related = post.data.related ? await getEntries(post.data.related) : [];
 const { hero } = post.data;
-// Until <Img> lands (Phase 2.7), the focal point becomes object-position (spec §6.6.5).
-const objectPosition = hero?.focus
-  ? `${String(hero.focus.x * 100)}% ${String(hero.focus.y * 100)}%`
-  : 'center';
+// The social image: the hero's og crop (1.91:1), built in (spec §6.6.3).
+const og = hero ? await getImg({ image: hero, ratio: 'og', width: 1200 }) : undefined;
 const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' });
 ---
 
-<BaseLayout title={post.data.title} description={post.data.summary}>
+<BaseLayout title={post.data.title} description={post.data.summary} image={og?.src}>
   <article>
     <h1>{post.data.title}</h1>
     <p class="muted">
@@ -31,13 +29,13 @@ const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UT
       {post.data.draft && ' · Draft'}
     </p>
     {hero && (
-      <Image
+      // Art direction (spec §6.6.5): the square crop on narrow screens, wide from 48rem.
+      <Img
         class="hero"
-        src={hero.src}
-        alt={hero.decorative ? '' : hero.alt}
+        image={hero}
+        art={{ base: 'square', '(min-width: 48rem)': 'wide' }}
         widths={[480, 960, 1440]}
         sizes="(min-width: 46rem) 46rem, 100vw"
-        style={{ objectPosition }}
       />
     )}
     <Content />

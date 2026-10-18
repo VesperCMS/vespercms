@@ -10,10 +10,9 @@ An Astro 7 site that exercises every Vesper feature (spec §11, Phase 0). It sta
 ## Schemas and config
 
 - `src/content.config.ts` uses every `fields.*` helper from `@vesper/astro/fields`:
-  - `select`, `email`, `url`, `slug`, `markdown`, `file`, `datetime`, `color` and `geo`;
-  - `locations` keeps their raw Zod equivalents on purpose;
-  - the blog hero stays raw Zod until `fields.image()` lands in Phase 2.7.
-- `vesper.config.ts` sets presentation only: labels, URL patterns, `tree` for pages, `singleton` for settings, `schedule` for events, `search: false` for the fixtures, the site's `timeZone`, and `placement` to keep event times in the main column (spec D2).
+  - `select`, `email`, `url`, `slug`, `markdown`, `file`, `datetime`, `color`, `geo` and `image`;
+  - `locations` keeps the raw Zod equivalents of `geo` and `color` on purpose.
+- `vesper.config.ts` sets presentation only: labels, URL patterns, `tree` for pages, `singleton` for settings, `schedule` for events, `search: false` for the fixtures, the site's `timeZone`, `placement` to keep event times in the main column, and the image ratios `wide`, `square` and `portrait` (spec D2, §6.6.3).
 - It also registers the example custom widget, `store-hours` (`src/cms/StoreHours.tsx`), which claims the locations' `hours` field by its name (spec §6.3.3).
 - It gives the body editor UI hints for the three Markdoc tags (friendly names, the summary attribute, value labels, help text) and declares the MDX `Callout` with a Zod props schema, so it's a block in the studio; `Gallery` is left undeclared on purpose (spec §6.5.1, §6.5.2).
 - Pages read content through `vesper:content`, so the dev toolbar's Vesper app can link each page to its entries (spec §6.10).
@@ -34,7 +33,7 @@ npm run check -w @vesper/playground    # astro check
 
 | Collection | Loader | Exercises |
 |---|---|---|
-| `blog` | `glob('**/[^_]*.md')` | `image()` inside the §6.6.2 hero object (focal point, one manual crop, decorative), `reference()` single and multi, tags, enum, `z.coerce.date()` and `z.date()`, date-only and datetime values, an unmappable union, a nested `index.md` (ID `2026/winter-market`), a CRLF file, and an `_`-prefixed file the pattern skips |
+| `blog` | `glob('**/[^_]*.md')` | `fields.image()` for the hero (§6.6.2: a focal point and one manual crop on Harbor at dawn, a decorative image, an image beside its entry), `reference()` single and multi, tags, enum, `z.coerce.date()` and `z.date()`, date-only and datetime values, an unmappable union, a nested `index.md` (ID `2026/winter-market`), a CRLF file, and an `_`-prefixed file the pattern skips |
 | `authors` | `file('src/data/authors.json')` | JSON data collection; `z.email()`, `z.url()` |
 | `pages` | `glob('**/[^_]*.{md,mdx}')` | The folder hierarchy (spec §6.15): section `index.md` pages, four levels deep at `academics/nursing/clinical-placements/`, `_order.yaml` files, a folder with no index (`admissions/`), an `_`-prefixed draft the pattern skips, internal links into the nursing section (Markdown, MDX, a Markdoc partial and an event's URL field) for moves to rewrite, a field group, a repeater with an inline-markdown widget, and an MDX page with a declared (`Callout`) and an undeclared, imported (`Gallery`) component. The root `index.md` is the home page's content. |
 | `docs` | `glob('**/[^_]*.mdoc')` | Markdoc (spec §6.5.1): a block tag with children (`callout`), a self-closing tag (`youtube`), an inline tag (`abbr`), a partial (`_support-hours.mdoc`, included from two folder depths), `$product` variables, `{% if %}`/`{% else /%}`, functions (`equals`, `and`) and a class annotation (`{% .lead %}`). Tags are defined in `markdoc.config.mjs`. |
@@ -48,6 +47,7 @@ npm run check -w @vesper/playground    # astro check
 - `vesper.redirects.yaml`: a two-hop redirect chain and a manual 302 (spec §6.15.5). The build collapses the chain and writes an HTML redirect page at each old URL.
 - `src/pages/contact.astro`: a static route the studio refuses to move or create a page onto (spec §6.15.4).
 - Page routes use Vesper's site helpers from `vesper:content`: breadcrumbs from `getBreadcrumbs`, section lists from `getChildren`, the home page's list of sections in `_order.yaml` order. `src/pages/site-tree.json.ts` prints everything the helpers return, and the e2e suite compares it between `astro dev` and the build.
+- Blog heroes render with `<Img>` (spec §6.6.5): art-directed on each post (square, then wide from 48rem), square thumbnails on the blog list, and an `og:image` from `getImg()`. `src/pages/images.astro` (`/images/`) shows every hero at every ratio, art-directed and fluid; the e2e suite checks each one's pixels.
 - `src/forms.config.ts`: the contact form (department select for routing, an upload field, a confirmation email). `<Form>` renders it from Phase 6.
 - The header reserves the spot for `<Search />` (Phase 2.9).
 

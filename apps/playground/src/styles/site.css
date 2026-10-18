@@ -124,11 +124,17 @@ main:focus {
   border-bottom: 1px solid var(--rule);
 }
 
+/* <Img> crops the hero for each screen (square, then wide), so the box takes the image's shape. */
 .hero {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
+  height: auto;
+}
+
+.thumb {
+  float: right;
+  margin: 0 0 0.5rem 1rem;
+  border-radius: 4px;
 }
 
 .panel {

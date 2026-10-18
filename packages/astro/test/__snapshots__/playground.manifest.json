@@ -105,7 +105,7 @@
               ],
               "kind": "object",
               "required": false,
-              "label": "Focus",
+              "label": "Focal point",
               "children": [
                 {
                   "path": [
@@ -1537,5 +1537,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "78fd6536a948ad9250fe29ecb85a03fd2afdfa41ec47bafc16e6d34cc279d62f"
+  "hash": "876b4a458e22a56f45e2cea87987e47b29fe5e4479779af60fc5491adbac64a0"
 }
