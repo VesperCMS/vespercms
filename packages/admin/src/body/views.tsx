@@ -200,6 +200,8 @@ export function InlineView({ node, selected }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper
       as="span"
+      // One piece to the browser too: a caret can't land inside it.
+      contentEditable={false}
       className={cx(
         'mx-0.5 rounded-sm border border-border-strong bg-surface-sunken px-1 py-0.5 text-sm',
         !known && 'font-mono',

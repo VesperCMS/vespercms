@@ -358,14 +358,28 @@ export function partialOptions(
   entryPath: string,
   current: string,
 ): { value: string; label: string }[] {
-  const options = files
-    .filter((path) => path !== entryPath)
-    .filter((path) => /(^|\/)_[^/]+$/.test(path) || /(^|\/)_?partials\//.test(path))
-    .map((path) => ({ value: relativePath(entryPath, path), label: path }));
+  const options = partialFiles(files, entryPath).map((path) => ({
+    value: relativePath(entryPath, path),
+    label: path,
+  }));
   if (current !== '' && !options.some((o) => o.value === current)) {
     options.unshift({ value: current, label: `${current} (as written)` });
   }
   return options;
+}
+
+/**
+ * Markdoc files named like partials (`_name.mdoc`, or in a `partials`
+ * folder), nearest the entry first: its own folder, then the folders above
+ * it, then everything else.
+ */
+export function partialFiles(files: readonly string[], entryPath: string): string[] {
+  // How far a file is from the entry: the folders between them (`_x.mdoc` 0, `../_x.mdoc` 1).
+  const distance = (path: string) => relativePath(entryPath, path).split('/').length - 1;
+  return files
+    .filter((path) => path !== entryPath && path.endsWith('.mdoc'))
+    .filter((path) => /(^|\/)_[^/]+$/.test(path) || /(^|\/)_?partials\//.test(path))
+    .sort((a, b) => distance(a) - distance(b) || a.localeCompare(b));
 }
 
 /** `to` relative to the folder holding `from`, both site-relative: `_x.mdoc`, `../_x.mdoc`. */

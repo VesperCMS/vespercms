@@ -25,13 +25,13 @@ export const slashKey = new PluginKey<SlashState>('vesperSlash');
 
 /** What can be inserted at the cursor right now, by friendly name. */
 export function choicesAt(
-  editor: Editor,
+  state: EditorState,
   catalog: Catalog,
   containers: ContainerTypes,
 ): InsertChoice[] {
   return insertable(catalog)
     .flatMap((kind) => {
-      const shape = placementAt(editor, kind, containers);
+      const shape = placementAt(state, kind, containers);
       return shape ? [{ kind, shape }] : [];
     })
     .sort((a, b) => a.kind.label.localeCompare(b.kind.label));
@@ -54,7 +54,7 @@ export type SlashOptions = {
   listboxId: string;
   optionId: (index: number) => string;
   /** The options for the current query (computed by the caller, which knows the catalog). */
-  choices: (editor: Editor) => InsertChoice[];
+  choices: (state: EditorState) => InsertChoice[];
   choose: (choice: InsertChoice, range: { from: number; to: number }) => void;
   disabled: () => boolean;
 };
@@ -71,7 +71,6 @@ export function SlashCommands(options: SlashOptions) {
     // belong to the list while it's open.
     priority: 1000,
     addProseMirrorPlugins() {
-      const editor = this.editor;
       return [
         new Plugin<SlashState>({
           key: slashKey,
@@ -115,7 +114,7 @@ export function SlashCommands(options: SlashOptions) {
               const state = slashKey.getState(view.state);
               if (!state?.active) return false;
               const query = slashQuery(view.state) ?? '';
-              const list = filterChoices(options.choices(editor), query);
+              const list = filterChoices(options.choices(view.state), query);
               if (event.key === 'Escape') {
                 view.dispatch(view.state.tr.setMeta(slashKey, { active: false }));
                 return true;
@@ -178,7 +177,7 @@ export function SlashList({
   editor: Editor;
   listboxId: string;
   optionId: (index: number) => string;
-  choices: (editor: Editor) => InsertChoice[];
+  choices: (state: EditorState) => InsertChoice[];
   onChoose: (choice: InsertChoice, range: { from: number; to: number }) => void;
 }) {
   const state = useEditorState({
@@ -198,7 +197,7 @@ export function SlashList({
   });
   if (!state) return null;
   const { place } = state;
-  const list = filterChoices(choices(editor), state.query);
+  const list = filterChoices(choices(editor.state), state.query);
   const active = Math.min(state.index, Math.max(0, list.length - 1));
   return (
     <div
@@ -265,18 +264,18 @@ export function InsertMenu({
   disabled,
 }: {
   editor: Editor;
-  choices: (editor: Editor) => InsertChoice[];
+  choices: (state: EditorState) => InsertChoice[];
   onChoose: (choice: InsertChoice) => void;
   disabled: boolean;
 }) {
   const list = useEditorState({
     editor,
     selector: ({ editor: e }) =>
-      choices(e)
+      choices(e.state)
         .map((c) => `${c.kind.key}|${c.shape}`)
         .join(','),
   });
-  const available = choices(editor);
+  const available = choices(editor.state);
   if (disabled || list === '' || available.length === 0) return null;
   return (
     <Menu

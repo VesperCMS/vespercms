@@ -1,7 +1,7 @@
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, type EditorState } from '@tiptap/pm/state';
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { assembleBody, mediaReference, type BodyFormat, type BodyIssue } from '@vesper/core';
@@ -50,7 +50,7 @@ import {
   containerTypes,
   type ContainerTypes,
 } from './nodes.ts';
-import { BlockSettings, relativePath } from './settings.tsx';
+import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
 import { BodyUiContext, bodyChecks, type BodyUi } from './ui.ts';
 import { CardView, ContainerView, InlineView, SourceView } from './views.tsx';
 
@@ -163,12 +163,8 @@ const ReactInline = VesperInline.extend({
  */
 class Bridge {
   actions: EditorActions = { open: () => undefined, insert: () => undefined, disabled: true };
-  editor: Editor | null = null;
   update(actions: EditorActions): void {
     this.actions = actions;
-  }
-  attach(editor: Editor): void {
-    this.editor = editor;
   }
 }
 
@@ -292,7 +288,7 @@ function WritingView({
   const [bridge] = useState(() => new Bridge());
 
   const [extensions] = useState<AnyExtension[]>(() => {
-    const choices = (e: Editor) => choicesAt(e, catalog, containers);
+    const choices = (state: EditorState) => choicesAt(state, catalog, containers);
     return [
       StarterKit.configure({
         // Underline has no Markdown; a trailing empty line would add text nobody typed.
@@ -348,15 +344,11 @@ function WritingView({
         // A textbox, or a combobox while the "/" list is open.
         ...slashAttributes(state, {
           ...slashIds,
-          count: (query) =>
-            bridge.editor
-              ? filterChoices(choicesAt(bridge.editor, catalog, containers), query).length
-              : 0,
+          count: (query) => filterChoices(choicesAt(state, catalog, containers), query).length,
         }),
       }),
     },
     onCreate: ({ editor: created }) => {
-      bridge.attach(created);
       const built = buildDocument(value, {
         format,
         markdown: created.markdown as MarkdownManager,
@@ -395,7 +387,7 @@ function WritingView({
   /** A new partial starts out pointing at the first partial file, so it's valid from the start. */
   function defaultsFor(choice: InsertChoice): Record<string, unknown> {
     if (choice.kind.builtin !== 'partial') return {};
-    const first = partials?.find((path) => /(^|\/)_[^/]+$/.test(path) && path !== entryPath);
+    const [first] = partialFiles(partials ?? [], entryPath);
     return first ? { file: relativePath(entryPath, first) } : {};
   }
 
@@ -458,7 +450,7 @@ function WritingView({
               hasBlocks ? (
                 <InsertMenu
                   editor={editor}
-                  choices={(e) => choicesAt(e, catalog, containers)}
+                  choices={(state) => choicesAt(state, catalog, containers)}
                   onChoose={(choice) => {
                     insertChoice(choice);
                   }}
@@ -472,7 +464,7 @@ function WritingView({
         <SlashList
           editor={editor}
           {...slashIds}
-          choices={(e) => choicesAt(e, catalog, containers)}
+          choices={(state) => choicesAt(state, catalog, containers)}
           onChoose={(choice, range) => {
             insertChoice(choice, range);
           }}
@@ -493,13 +485,18 @@ function WritingView({
           onClose={() => {
             const pos = settingsAt;
             setSettingsAt(null);
-            const node = pos === null ? null : editor.state.doc.nodeAt(pos);
-            if (pos !== null && node && isManaged(node.type.name, containers)) {
-              editor.view.dispatch(
-                editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)),
-              );
-            }
-            editor.commands.focus();
+            // Back to the text with the block still selected, so Enter reopens
+            // its settings and Alt+↑/↓ or cut moves it. After the dialog has
+            // put focus back where it was, which would move the selection.
+            setTimeout(() => {
+              editor.view.focus();
+              const node = pos === null ? null : editor.state.doc.nodeAt(pos);
+              if (pos !== null && node && isManaged(node.type.name, containers)) {
+                editor.view.dispatch(
+                  editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)),
+                );
+              }
+            }, 0);
           }}
         />
         <LinkDialog editor={editor} isOpen={linkOpen} onOpenChange={setLinkOpen} />

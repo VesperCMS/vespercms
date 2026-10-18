@@ -1,6 +1,6 @@
 import type { Editor, JSONContent } from '@tiptap/core';
 import { Fragment } from '@tiptap/pm/model';
-import { NodeSelection, TextSelection } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection, type EditorState } from '@tiptap/pm/state';
 import type { BlockKind, BlockShape } from './catalog.ts';
 import { newTagText } from './catalog.ts';
 import type { ContainerTypes } from './nodes.ts';
@@ -113,13 +113,13 @@ export function newNode(
   };
 }
 
-/** Where a kind can go at the cursor: as a block, inline, or not at all. */
+/** Where a kind can go at the cursor: as a block, inline, or not at all. Reads only the state. */
 export function placementAt(
-  editor: Editor,
+  state: EditorState,
   kind: BlockKind,
   containers: ContainerTypes,
 ): BlockShape | null {
-  const { $from } = editor.state.selection;
+  const { $from } = state.selection;
   const block = $from.parent;
   if (!block.isTextblock) return null;
   // An empty line (or one holding only the "/" being typed) takes a block; a line of text, a chip.
@@ -129,7 +129,7 @@ export function placementAt(
   const fitsBlock = (shape: BlockShape) => {
     const depth = $from.depth - 1;
     if (depth < 0) return false;
-    const node = editor.schema.nodeFromJSON(newNode(kind, shape, containers));
+    const node = state.schema.nodeFromJSON(newNode(kind, shape, containers));
     const parent = $from.node(depth);
     const index = $from.index(depth);
     return emptyLine
@@ -137,7 +137,7 @@ export function placementAt(
       : parent.canReplaceWith(index + 1, index + 1, node.type);
   };
   if (kind.block && (emptyLine || !kind.inline) && fitsBlock(kind.block)) return kind.block;
-  const chip = editor.schema.nodes.vesperInline;
+  const chip = state.schema.nodes.vesperInline;
   if (kind.inline && chip && block.canReplaceWith($from.index(), $from.index(), chip)) {
     return 'inline';
   }
