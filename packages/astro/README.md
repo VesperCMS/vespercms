@@ -2,7 +2,7 @@
 
 The Vesper integration for Astro.
 
-**Status:** Phase 2, in progress. The integration injects the studio at `/admin` and serves local mode's API in `astro dev`. The studio's list and editor screens, widgets, media and the dev toolbar are still being built.
+**Status:** Phases 2 and 2.5 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, and reads the site's Markdoc config and declared MDX components for the body editor.
 
 ## The integration
 
@@ -15,7 +15,8 @@ export default defineConfig({ integrations: [vesper()] });
 Zero config. It:
 
 - injects `/admin`, one **prerendered** page, so it works with `output: 'static'` and no adapter. Studio screens use hash routes (`/admin/#/c/blog`), so deep links work on any host. Astro's `base` is respected.
-- in `astro dev`, serves local mode's API at `<base>_vesper/api/`. It reads and writes content files on disk, validates every save with the site's own Zod schemas, and refuses any request that isn't the studio on this machine (DECISIONS.md).
+- in `astro dev`, serves local mode's API at `<base>_vesper/api/`. It reads and writes content files on disk, validates every save with the site's own Zod schemas, refuses a body the site couldn't build (Markdoc checked with the site's real config, custom attribute types and `validate` functions included; MDX props with their Zod schemas), and refuses any request that isn't the studio on this machine (DECISIONS.md).
+- reads `markdoc.config.*` the way @astrojs/markdoc does (merged by its own `setupConfig`) and learns its `allowHTML` and `ignoreIndentation` options from `astro.config`, so the studio parses Markdoc exactly as the site does. The manifest's `markdoc` section keeps only the schema parts: tags, attributes, `children`, `selfClosing`, `inline`, partials, function names and variable keys (never values).
 - writes `dist/_vesper/manifest.json` after `astro build`, which is how the cloud learns the schema.
 
 | Option | Default | |
@@ -92,3 +93,35 @@ export default defineConfig({
 ```
 
 It holds presentation, URLs, widgets and permissions, never field definitions (D2). Unknown keys warn rather than fail.
+
+### Markdoc hints and MDX components (spec §6.5.1, §6.5.2)
+
+Markdoc tags already declare their attributes in `markdoc.config.mjs`; the studio builds each tag's settings form from them. Optional UI hints live here, never in Markdoc's config:
+
+```ts
+markdoc: {
+  tags: {
+    callout: {
+      label: 'Callout',
+      summary: 'type', // shown in the block's header: "Callout · Warning"
+      attributes: { type: { labels: { note: 'Note', warning: 'Warning', tip: 'Tip' } } },
+    },
+    youtube: { label: 'YouTube video', attributes: { title: { description: 'Describes the video for screen reader users.' } } },
+  },
+},
+```
+
+Hints cover a friendly name, help text, the summary attribute, value labels and a `widget` per attribute (so `color` and `geo` work inside tags too).
+
+MDX components don't declare their props anywhere the editor can read, so they are blocks only when declared here with a Zod props schema (from `astro/zod`). Undeclared components, expressions, imports and exports stay protected source blocks:
+
+```ts
+mdx: {
+  components: {
+    Callout: { label: 'Callout', summary: 'type', children: true, props: z.object({ type: fields.select({ note: 'Note', tip: 'Tip' }).default('note'), title: z.string().optional() }) },
+    YouTube: { label: 'YouTube video', props: z.object({ id: z.string(), title: z.string() }) },
+  },
+},
+```
+
+`children: true` makes a frame whose content stays editable; `inline: true` inserts the component inside a line of text. The studio loads `vesper.config.ts`, props schemas included, the first time an MDX body needs them, so it checks props exactly as the site does.

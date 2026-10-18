@@ -15,6 +15,7 @@ An Astro 7 site that exercises every Vesper feature (spec §11, Phase 0). It sta
   - the blog hero stays raw Zod until `fields.image()` lands in Phase 2.7.
 - `vesper.config.ts` sets presentation only: labels, URL patterns, `tree` for pages, `singleton` for settings, `schedule` for events, `search: false` for the fixtures, the site's `timeZone`, and `placement` to keep event times in the main column (spec D2).
 - It also registers the example custom widget, `store-hours` (`src/cms/StoreHours.tsx`), which claims the locations' `hours` field by its name (spec §6.3.3).
+- It gives the body editor UI hints for the three Markdoc tags (friendly names, the summary attribute, value labels, help text) and declares the MDX `Callout` with a Zod props schema, so it's a block in the studio; `Gallery` is left undeclared on purpose (spec §6.5.1, §6.5.2).
 - Pages read content through `vesper:content`, so the dev toolbar's Vesper app can link each page to its entries (spec §6.10).
 - `npm run manifest` at the repo root prints the manifest Vesper builds from these files.
 

@@ -17,6 +17,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100); outcome in `PLAN.md` |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810); outcome and open questions in `PLAN.md` |
+| 2.5 Markdoc tags and MDX components | Done locally (2026-10-17); CI runs once the push is approved. Outcome in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -35,6 +36,8 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `node`. The `.npmrc` sets `--conditions=@vesper/source`, and it only applies inside npm.
 
 **Preview the playground on port 4402 (`.claude/launch.json`), never 4321, 4400 or 4401.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files. The e2e tests own 4400 (static build) and 4401 (studio) and never reuse a running server, so a preview can't stand in for what they test.
+
+**Never serve `scripts/studio-site.mjs` yourself while `npm run e2e` runs.** Both use the one copy in `e2e/.studio-site`, and two dev servers over the same files make the tests' saves fail.
 
 **On Windows, stopping a background `npm run dev` leaves `astro dev` running, and it locks native modules so `npm ci` fails with EPERM.** Find the tree's root shell and stop it with `taskkill /PID <pid> /T /F`. Never kill Node processes that belong to other projects.
 
@@ -97,6 +100,10 @@ Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/c
 
 **Edit raw input values, never Zod's parsed output.** Defaults, coercions and transforms must not leak into files the editor didn't touch.
 
+**Parse Markdoc bodies with `parseBody` / `parseMarkdoc` and the manifest's Markdoc options, never `Markdoc.parse(text)`.** Astro parses with its own tokenizer options (`allowComments`, plus `html` with `allowHTML`), and Markdoc's defaults read HTML comments and inline HTML differently.
+
+**Change a tag through `editMarkdocTag` or `editJsxTag`, and never run `Markdoc.format()` over content.** They change one attribute's bytes and keep the rest of the tag; `format` normalizes everything it touches.
+
 ### Static output, any host
 
 **No feature may depend on a host's rewrites, headers, functions or image service.** The built site and the studio must work when `dist/` is copied to an FTP host (D4, D16). Host-specific extras are optional and always have a universal fallback.
@@ -110,6 +117,8 @@ Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/c
 **The studio only ever runs from the site itself at `/admin`. `app.{{domain}}` never hosts a second copy of the editor.** Cloud features are reached by signing in to the cloud from the studio (D14).
 
 **Cloud-only features are absent, not disabled, when the studio isn't connected.** No upsell banners (spec §6.9).
+
+**A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
 
 ## Accessibility is an acceptance criterion
 

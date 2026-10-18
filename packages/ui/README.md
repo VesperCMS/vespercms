@@ -10,7 +10,7 @@ Vesper's design tokens and, from Phase 2, its accessible component kit: Button, 
 | Text inputs | `TextField`, `TextArea`: visible label, "(required)" in words, help and error text linked with aria-describedby |
 | Choices | `Select`, `Combobox`, `MultiCombobox` (tags and multi-references, with named remove buttons), `Checkbox`, `Switch` (state also in words), `RadioGroup` |
 | Overlays | `Dialog` (focus trap, Escape, focus returns to the trigger), `Drawer`, `Menu` (the "…" menu), `Disclosure` |
-| Data and feedback | `Table` (rows can be links), `InlineStatus` (status in words), `ErrorSummary` (takes focus, links to fields) |
+| Data and feedback | `Table` (rows can be links), `InlineStatus` (status in words), `ErrorSummary` (takes focus, links to fields; `focusKey` moves focus only on a new failed save, never while errors update as people type) |
 | Toolbars | `Toolbar` (one Tab stop, arrow keys inside), `ToggleButton` (pressed shown as a fill and semibold text, and announced as pressed), `ToolButton` |
 
 Each component has axe and keyboard tests in `src/components/ui.test.tsx`. `@vesper/admin`'s `src/budget.test.ts` checks the kit's and the studio's source against the §10.4 design budget. Colour contrast is checked separately, on the tokens.

@@ -132,7 +132,7 @@ Rejected:
 - Tiptap 3 edits the document, and every block remembers the content it was loaded with.
 - On save, unchanged blocks copy their original bytes, and the whitespace between two untouched neighbors is kept too.
 - Only changed or new blocks are serialized, in one house style.
-- Blocks the writing view can't represent faithfully (JSX, Markdoc tags until Phase 2.5, raw HTML, front-loaded imports) are protected source blocks, edited as raw text.
+- Blocks the writing view can't represent faithfully (undeclared JSX, raw HTML, front-loaded imports, tables) are protected source blocks, edited as raw text. Since Phase 2.5, Markdoc tags and declared MDX components are blocks of their own (see "Markdoc tags and declared MDX components are nested blocks").
 
 Rejected:
 - Tiptap's Markdown serializer for the whole body: it normalizes list markers, emphasis, escaping and wrapping, which spec §6.5 forbids.
@@ -187,7 +187,7 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 ### 2026-10-17: The studio page ignores Astro's reload after content changes
 
-**After any content file changes, Astro tells every open page to reload. The studio page skips that one reload (a `full-reload` with path `*` and no `triggeredBy`) through Vite's `vite:beforeFullReload` hook, because the studio made the change and reloading would throw away its state.** Code changes and manifest changes still reload it. This relies on Vite's client reading the payload after its listeners run (true in Vite 5 to 8). If that ever changes, the studio simply reloads after a save, as it did before. A file changed by someone else while it's open is caught at save time as a conflict.
+**After any content file changes, Astro tells every open page to reload. The studio page skips that one reload (a `full-reload` with path `*`, or with no path at all, which is what a Markdoc entry's change sends, and no `triggeredBy`) through Vite's `vite:beforeFullReload` hook, because the studio made the change and reloading would throw away its state.** Code changes and manifest changes still reload it. This relies on Vite's client reading the payload after its listeners run (true in Vite 5 to 8). If that ever changes, the studio simply reloads after a save, as it did before. A file changed by someone else while it's open is caught at save time as a conflict.
 
 ### 2026-10-17: Times are entered in the site's time zone and written with that day's offset
 
@@ -196,6 +196,8 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 ### 2026-10-17: The body editor loads on first use
 
 **Tiptap, its Markdown support and the body editor load as a separate chunk the first time an entry with a body (or a Markdown field) is opened, behind a short "Loading the body editor…" status.** They were over half of the `/admin` script: the first load went from 1,818 KB to 843 KB minified. The home screen, lists and data-only entries never need them.
+
+Amended in Phase 2.5: body checks (Markdoc, micromark and the validation around them) and `vesper.config.ts` (with the Zod it brings for MDX props schemas) load the same way, on first use. Imported eagerly, they took the first load to 1,480 KB. Now it is 846 KB, with the checks in a 513 KB chunk and `vesper.config` in an 85 KB one. The entry editor imports the checks the first time a body needs validating; `virtual:vesper/widgets` imports `vesper.config.ts` the first time a custom widget renders or an MDX body needs its components' props schemas.
 
 ### 2026-10-17: The geo field's map loads only when asked for
 
@@ -215,7 +217,7 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 ### 2026-10-17: The writing view owns only blocks it can round-trip
 
-**A body block is editable in the writing view only if every node in it is one the editor writes back faithfully (paragraphs, headings, lists, quotes, code, rules, emphasis, strong, code spans, links, images, strikethrough), and parsing what the editor would save gives the same document again. Everything else is a protected source block, named in words ("Component, kept as written") and edited in the source view.** That covers tables, footnotes, reference-style links, task items, links or images with titles, HTML, JSX, expressions, imports and Markdoc tags. Each writable block's editor node remembers its block index (not copied when a block is split). On save, a node whose JSON is unchanged copies its original bytes, and `assembleBody` keeps the spacing around untouched neighbours, so typing in one paragraph changes only that paragraph's lines. Tiptap 3 with `@tiptap/markdown` (as in Taproot), StarterKit minus underline (no Markdown for it) and the trailing empty line.
+**A body block is editable in the writing view only if every node in it is one the editor writes back faithfully (paragraphs, headings, lists, quotes, code, rules, emphasis, strong, code spans, links, images, strikethrough), and parsing what the editor would save gives the same document again. Everything else is a protected source block, named in words ("Component, kept as written") and edited as raw text (in a small dialog since Phase 2.5, or in the source view).** That covers tables, footnotes, reference-style links, task items, links or images with titles, HTML, undeclared JSX, expressions and imports. Markdoc tags and declared MDX components have been blocks since Phase 2.5, and inline tags, variables and annotations are chips inside writable blocks. Each writable block's editor node remembers its block index (not copied when a block is split). On save, a node whose JSON is unchanged copies its original bytes, and `assembleBody` keeps the spacing around untouched neighbours, so typing in one paragraph changes only that paragraph's lines. Tiptap 3 with `@tiptap/markdown` (as in Taproot), StarterKit minus underline (no Markdown for it) and the trailing empty line.
 
 ### 2026-10-17: The body editor's keyboard and toolbar
 
@@ -240,6 +242,43 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 ### 2026-10-17: In this workspace, the integration compiles the studio's CSS from source
 
 **When `@vesper/admin/studio.css` resolves to `src/` (the `@vesper/source` condition), the integration adds `@tailwindcss/vite` to the site's Vite. Installed from npm, it resolves to the precompiled `dist/studio.css` and Tailwind never loads.** So the playground stays a zero-config site, and the dev loop still never builds `dist/`. `@tailwindcss/vite` is a devDependency of `@vesper/astro` for this reason only.
+
+### 2026-10-17: Markdoc tags and declared MDX components are nested blocks
+
+**A Markdoc tag or MDX element laid out as an opening line, content and a closing line is a container: its opening, its closing and its children are separate parts of the block. A tag without content, or with content on its opening's line, is one piece (a card). Inline tags, variables, annotations, inline JSX and expressions are chips inside Markdown blocks.** A save re-writes a container's opening only when its attributes change, splices its children block by block with the same spacing rules as the body, and never re-writes its closing. Unknown Markdoc tags and undeclared components stay protected source blocks (§13.6, decided: MDX needs a declared schema).
+- Markdoc records only line ranges, so offsets come from lines, and every chip found by Markdoc's own `parseTags` (with code spans blanked) must match the tree's count of inline tags and variables. When they disagree, the block is kept as written.
+- Containers get one editor node type each, made from the manifest, and their content expression comes from Markdoc's `children`: only allowed node types fit inside, including on paste. Protected blocks always fit.
+- Indented content (JSX children, Markdoc with `allowIndentation`) keeps its indentation: new and changed children are indented like the original's first child.
+
+Rejected: one generic container node type with the allowed children checked by a plugin. It can't stop a paste, and an insert would "fit" by splitting the frame.
+
+### 2026-10-17: Inline chips travel through the Markdown serializer as placeholders
+
+**For Tiptap's Markdown parser and serializer, each chip is one private-use placeholder (`U+E000`, the chip's source as hex, `U+E001`). The editor node's only real attribute is that source. After serializing, placeholders become each chip's current source.** Marks can span chips, nothing is ever escaped or rewrapped inside one, and the writing view's round-trip check (parse, serialize, parse again) still applies to the whole block. A block whose only change is inside its chips (an inline tag's settings, a variable edited as text) doesn't go through the serializer at all: the chips' new text is spliced into the block's original text, so Markdown the editor would restyle (`__strong__`) stays as written. Found by the jazzy corpus, where `affiliateLink` sits inline 69 times.
+
+### 2026-10-17: A body blocks saving exactly when Astro's build would fail
+
+**`validateMarkdocBody` blocks on Markdoc errors at `error` or `critical` level, except the ones @astrojs/markdoc ignores: `variable-undefined` (pages can pass variables in) and Markdoc's own "Partial … not found" (Astro resolves partial files itself). In its place, a partial's file must exist relative to the entry, as Astro resolves it. Unknown tags and functions are warnings, not blocks.** Measured in @astrojs/markdoc 2.1: `raiseValidationErrors` applies exactly that filter and fails the build. The spec's table says unknown tags get "a validation warning", while Markdoc rates them critical. Blocking on them would block saves whenever the studio's view of the config is incomplete (an `extends` it couldn't read, a config that failed to load), and the build reports them anyway, so they warn. HTML and comment nodes that Astro turns into its own tags before validating aren't reported. Messages are plain language and name the block ("YouTube video: Title is required."), and each issue records the attribute at fault, so a settings form shows it under that field.
+
+### 2026-10-17: The browser checks Markdoc with the manifest; the dev API with the real config
+
+**In the studio, `Markdoc.validate()` runs with a config rebuilt from the manifest: types, `matches`, `required`, `children`, `selfClosing`, `inline`, slots. On save, the dev API validates again with the site's real config, merged by @astrojs/markdoc's own `setupConfig`, so custom attribute type classes and `validate` functions run too, and it refuses a body with blocking issues.** Custom classes and functions are code: they can't go into a JSON manifest. Bundling `markdoc.config.mjs` into `/admin` instead was rejected: `@astrojs/markdoc/config` imports Astro's server runtime, and a config may `extends` integrations such as Shiki, neither of which belongs in a browser bundle. In GitHub mode (Phase 3), the build is the last check for those custom validators.
+
+### 2026-10-17: MDX props are checked with the real Zod schema, in the browser too
+
+**`virtual:vesper/widgets` also exports a loader for each declared component's props schema, so the studio validates props with the site's own Zod schema in every mode, and the dev API checks them again on save.** `vesper.config.ts` already reaches `/admin` for custom widgets. It loads the first time an MDX body needs the schemas (see "The body editor loads on first use"), so `astro/zod` (about 60 KB) never weighs on the first load. Props that hold code (`on={fn}`) or spreads are shown read-only, kept byte for byte and not validated; a component with a spread isn't checked at all.
+
+### 2026-10-17: One Settings dialog per block, reached by Enter on a selected block
+
+**Each frame and card is a group named after its tag ("Callout · Warning") with one Settings button. The dialog holds the attributes as fields, rendered with the frontmatter widgets, plus Move up, Move down and Remove. On the keyboard: arrow onto a block (ProseMirror selects it), Enter opens its settings, Alt+↑/↓ move it, Delete removes it, and Escape inside a frame selects the frame.** Buttons inside the text are out of the Tab order (jazzy has pages with dozens of chips), except the Settings button of the frame the cursor is in, so Tab from inside a frame reaches it. The dialog focuses its first field (the chosen option, in a radio group), applies changes as they're made so Ctrl+Z undoes them, and returns to the text with the block still selected. A selection change onto a block is announced ("YouTube video selected. Press Enter for its settings."). An inline chip moves with cut and paste, as text does. A new tag with attributes opens its settings straight away. Rejected: a "…" menu on every block, which would add a second button to every frame for actions the dialog already has.
+
+### 2026-10-17: The "/" list is a small ProseMirror plugin, and the text becomes a combobox while it's open
+
+**Typing "/" at the start of a line or after a space opens a listbox of what fits at the cursor, filtered as you type; Enter or Tab inserts, Escape closes. While it's open, the editor element has `role="combobox"`, `aria-expanded`, `aria-controls` and `aria-activedescendant`; otherwise it's `role="textbox"` with `aria-multiline`.** The ARIA attributes come from `editorProps.attributes` as a function of the state, the only place that can replace Tiptap's own `role="textbox"`. What fits is asked of the schema directly (`canReplace`), because inserting through ProseMirror would make a block "fit" by splitting the frame the cursor is in. A tag that doesn't say whether it's inline is offered inline only if it holds no block children and isn't self-closing (a Markdoc tag may go either way). The toolbar's Insert menu offers the same list for people who don't use "/". Rejected: `@tiptap/suggestion`, a dependency for about a hundred lines, whose list isn't a combobox.
+
+### 2026-10-17: Partials are `.mdoc` files named like partials, nearest the entry first
+
+**The partial card's file picker lists `.mdoc` files whose name starts with `_` or that sit in a `partials` folder, ordered by how far they are from the entry, and stores the path relative to the entry, as @astrojs/markdoc resolves it. A new partial starts out pointing at the nearest one.** Astro's glob loader skips `_` files, so they're the usual place for partials; but `_` alone also marks drafts (the playground's `_unpublished-idea.md`), hence `.mdoc` only. Existence is checked against every Markdown and Markdoc file under the source folder, so a partial elsewhere is still valid.
 
 ## Schema introspection
 
@@ -268,6 +307,10 @@ Schema functions are called with an `image()` that returns `z.string().meta({ ve
 Validation never uses these shims. Studio and cloud validation run the real schema (Phase 2 and later).
 
 A test runs `astro sync` on the playground and checks Vesper's entry IDs and file paths against `.astro/data-store.json` for every collection. Generating the playground manifest takes about a second.
+
+### 2026-10-17: Markdoc's config and options are read as Astro reads them
+
+**The isolated loader reads `markdoc.config.*` (Astro's four names, in its order) and merges it with @astrojs/markdoc's own exported `setupConfig`, so Astro's heading node, `extends` and the HTML tag are included. The integration's options live only in its closure, so `astro.config` is loaded too, with `@astrojs/markdoc` aliased to a wrapper that records the options it's called with (`allowHTML`, `ignoreIndentation`).** Those options decide Astro's Markdoc tokenizer (`allowComments` always; `html` and `allowIndentation` with `allowHTML`), which Vesper then parses with. Parsing with Markdoc's defaults was wrong in both directions: jazzy's `{% comment %}` text inside `<!-- -->` became four undefined tags, and the playground's inline HTML became text the editor could retype. When `astro.config` can't be loaded on its own, Astro's defaults are assumed and an info diagnostic says so. The manifest keeps only schema parts: render targets by name, variables by their keys, never their values.
 
 ### 2026-10-17: Detect `reference()` by behavior, not shape
 
@@ -348,6 +391,16 @@ The anchors fixture is the one allowed exception, because it takes the flagged r
 
 **`LocalStorage.commit` checks every change first, writes new contents to temporary files and renames them into place, and restores the originals if any step fails.** Filesystems have no multi-file transactions, so a crash in the middle of a save can still leave part of it applied. Git shows exactly what happened, and local mode is a developer's own machine. It never lists or writes `node_modules`, `dist`, `.git`, `.astro` or `.vesper`.
 
+Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a few milliseconds while anything else has the file open, and right after a save the dev server's watcher reads it (antivirus does the same). In repeated studio e2e runs, a few saves in a hundred failed this way. The rename is now retried on `EPERM`, `EACCES` and `EBUSY` for about a second and a quarter, as graceful-fs does, and a temporary file is removed if the save fails anyway, so none is left in the content folder.
+
 ### 2026-10-17: Line endings are pinned to LF, and fixtures are byte-exact
 
 **`.gitattributes` sets `* text=auto eol=lf` and marks fixture folders `-text`.** Git for Windows ships `core.autocrlf=true`, which rewrites every working-tree file as CRLF. Real sites contain CRLF and mixed-EOL files (domsys has 56 files committed as CRLF), and the serializer must preserve whatever it finds. So test data has to reach the tests exactly as committed, on Windows and Linux alike.
+
+### 2026-10-17: A tag is edited one attribute at a time; new tags use one house style
+
+**`editMarkdocTag` and `editJsxTag` change one attribute's value bytes, remove an attribute with the whitespace before it, or insert a new one after the nearest earlier attribute in schema order. Everything else in the tag (other values, quoting, spacing, order, multi-line arrays) stays byte-identical. A value set back to its default is removed. New tags put attributes in schema order and leave out defaults and empty values.** Markdoc records no attribute positions, so a scanner finds each span, and its reading must agree with Markdoc's `parseTags` before anything is changed; MDX openings are read by micromark, which records positions. Markdoc strings are double-quoted with Markdoc's only escapes (`\"`, `\\`, `\n`, `\r`, `\t`). JSX strings are `"…"`, then `'…'`, then `{"…"}` when they hold both quotes or an `&` (JSX decodes character references in quoted attributes); other values go in braces. Brace values are read as plain JavaScript literals; anything else is code, kept and never edited. Rejected: `Markdoc.format()` on a changed tag, which normalizes the whole tag and, run on the file, the whole document (spec §6.5.1).
+
+### 2026-10-17: Trailing whitespace belongs to the gap after a block
+
+**A Markdoc block's range stops at its last non-whitespace character. Trailing spaces on its last line, and the blank line Markdoc counts into a list, belong to the gap after it, which a save keeps.** Rewriting a block used to drop them (the serializer trims), an unrelated diff the jazzy corpus suite found in seven files. mdast already ended blocks there.

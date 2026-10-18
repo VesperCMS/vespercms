@@ -2,7 +2,7 @@
 
 The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
 
-**Status:** Phase 2, in progress. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone.
+**Status:** Phases 2 and 2.5 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build.
 
 ## How it's built
 
@@ -24,6 +24,7 @@ mountStudio(document.getElementById('vesper-studio')!, {
   manifest,                              // from virtual:vesper/manifest
   api: createLocalApi('/_vesper/api'),   // null on a build with no back end yet
   widgets,                               // custom widgets from vesper.config.ts
+  loadMdxProps,                          // loads declared MDX components' Zod props schemas
   siteName: 'Playground',
 });
 ```
@@ -52,7 +53,14 @@ Custom widgets receive `WidgetProps` (spec §6.3.3): `{ value, onChange, field, 
 
 ## Body editor
 
-`body/document.ts` turns a body into editor nodes (one per writable block, tagged with its index) and protected source blocks, and back into text with `assembleBody`, so only changed blocks are rewritten. `body/BodyEditor.tsx` is the toolbar, the writing view, the source view, and the link and image dialogs.
+- `body/document.ts` turns a body into editor nodes, each tagged with its block's path (`3`, or `3.1` inside a frame), and back into items for `assembleBody`, so only what changed is rewritten: a frame's opening only when its attributes change, its children block by block, and a paragraph whose only change is in its chips by splicing the chips into its original text.
+- `body/catalog.ts` lists the blocks the site has: its Markdoc tags, Markdoc's `partial` and `if`, and declared MDX components. `body/nodes.ts` makes the editor's node types from it: one frame type per tag with content (its content expression comes from Markdoc's `children`, so only allowed node types fit), a card, an inline chip, and the protected source block.
+- `body/views.tsx` draws them: each frame and card is a group named after its tag, with a Settings button and its own validation messages.
+- `body/settings.tsx` is the settings dialog: fields from the manifest rendered with the frontmatter widgets, a file picker for partials, a condition field for `if`, raw text for protected constructs, and Move up, Move down and Remove.
+- `body/insert.tsx` is the "/" list (the text becomes a combobox while it's open) and the toolbar's Insert menu, both limited to what fits at the cursor.
+- `body/BodyEditor.tsx` is the toolbar, the writing view, the source view, the keys, and the link and image dialogs.
+
+Keys in the writing view: arrow onto a block to select it, Enter opens its settings, Alt+↑ and Alt+↓ move it, Delete removes it; Escape inside a frame selects the frame, and Escape again moves to the toolbar.
 
 ## Media
 

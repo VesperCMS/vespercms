@@ -9,7 +9,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 0 Scaffold | Done (2026-10-17). CI green on GitHub (run 39054499051). |
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
-| 2.5 Markdoc tags and MDX components | In progress. See "Phase 2.5 (design)" below. |
+| 2.5 Markdoc tags and MDX components | Done locally (2026-10-17). CI runs once the push is approved. See "Phase 2.5: outcome" below. |
 | 2.6 onward | Roadmap below |
 
 ## Phase 0: Scaffold
@@ -114,6 +114,52 @@ The spec's three "Done when" criteria, with evidence:
 **Follow-ups noted, not blocking:**
 - The body editor and the compact Markdown field (Tiptap) now load on first use, like the map. The `/admin` script went from 1,818 KB to 843 KB minified in the playground build. Vite still warns that the two lazy chunks (the body editor, 972 KB, and the map, 1,018 KB) are over 500 KB. That no longer affects the first load.
 - `fields.image()` with focal points and crops is Phase 2.7. The image field keeps those values untouched until then.
+
+## Phase 2.5: outcome
+
+The spec's five "Done when" criteria, with evidence:
+
+| Criterion | Evidence |
+|---|---|
+| Every tag in the playground's Markdoc collection can be inserted, configured, moved and removed by keyboard alone | `e2e/studio/markdoc.spec.ts`, in Chromium, keys only, with the file checked byte for byte after every save. **Callout:** inserted with "/", type set with the arrow keys, title typed, moved with Alt+↑, removed with Delete. **YouTube video:** inserted from the toolbar's Insert menu, settings reopened with Enter, the captions switch, Alt+↑ and Alt+↓, Delete. **Abbreviation:** inserted inline, configured, moved with cut and paste, Delete. **Partial:** points at the nearest partial file, Alt+↑, Delete. axe passes with the "/" list, the Insert menu and each dialog open. `packages/admin/src/body/blocks.test.tsx` covers the same commands in jsdom. Manual keyboard pass below. |
+| Editing one tag changes only that tag's text in the file (snapshot tests) | `packages/core/test/tag-edits.snapshot.test.ts` records one attribute edit per tag in every playground Markdoc file (`__snapshots__/tag-edits.md`), and each edit's only changed bytes are that tag's. `markdoc-tag.test.ts` and `jsx-tag.test.ts` cover each kind of edit: changed, removed, added in schema order, set back to its default, quoting. `document.test.ts` checks the same through Tiptap: an attribute change rewrites only the opening, typing in a callout only that paragraph, and an inline tag's change only that tag. |
+| Variables, conditionals, functions and annotations survive any edit byte-identical | `packages/admin/src/body/fidelity.test.ts` (206 tests) opens every Markdoc file in the playground and the jazzy corpus in the real editor. It types into each editable block in turn, at any depth, and checks that every byte outside that block is unchanged and that the block still holds its chips, byte for byte, in order. Opening and saving with no edit changes nothing. `document.test.ts` checks variables, conditions and annotations beside edited neighbours. |
+| A missing required attribute shows inline and blocks publish | `blocks.test.tsx`: the message shows on the card and in the error summary, and the save is never sent. `dev-api.test.ts`: the dev API refuses the body too, checked with the site's real Markdoc config. In Chromium (`markdoc.spec.ts`): a YouTube video with no ID or title shows both messages on its card, Ctrl+S is refused, the summary takes focus and the file is unchanged. In local mode, publishing is Save. GitHub and cloud modes go through the same check. |
+| A real Markdoc site's content passes the round-trip suite (Jazzy Cabbages) | `packages/core/test/markdoc.corpus.test.ts` (433 tests) runs over jazzy-astro5's 108 Markdoc files, with jazzy's own tag definitions (`test/helpers/jazzy-markdoc.ts`, from jazzy commit ea28ab6). For each file: keeping everything reproduces it; every tag Markdoc finds is a block or a chip (inside tables, which stay protected, excepted); validation blocks nothing in content the site builds; editing each tag's first attribute changes only that tag's opening. The suite found two bugs, both fixed in their own commits: a rewritten block dropped its trailing whitespace (seven files), and an inline tag's edit re-serialized its whole paragraph. |
+
+**Standing criteria:**
+- `npm run dev` serves the playground with `/admin`. Every Markdoc tag and the declared MDX `Callout` are blocks there.
+- Typecheck, lint, the format check, and 3,721 unit, corpus and integration tests pass. `check:dist` loads all seven entry points from `dist/`. `astro check` on the playground reports 0 errors, 0 warnings and 0 hints. The Astro 6 contract test and fixture build pass.
+- `npm run e2e`: 52 passed, static and studio. The Markdoc spec passed 24 of 24 in four repeated serial runs.
+- axe passes in Chromium with the "/" list, the Insert menu, each settings dialog and the refused-save summary on screen, and in jsdom for each kind of block.
+- Manual keyboard pass in Chromium, on the playground's writing-callouts guide:
+  - Escape inside a callout selects the frame and announces it;
+  - Enter opens its settings, with focus on the chosen type; the arrow keys change it, and Tab moves through the fields;
+  - Escape closes the settings, and the block stays selected;
+  - Tab from inside a frame reaches only that frame's Settings button, and Shift+Tab goes back;
+  - Escape on a selected block moves to the toolbar, whose arrow keys reach Insert;
+  - "/" turns the text into a combobox with a filtered list, and Enter inserts;
+  - a save with a missing required attribute is refused, and the summary takes focus.
+- READMEs, `DECISIONS.md` and `CLAUDE.md` are current.
+
+**Changes from the design:**
+- Modules. `mdx.ts` became `mdast.ts` (structure) and `jsx-tag.ts` (attributes). `inline.ts` folded into `markdoc.ts` and `mdast.ts`. The admin's `issues.ts` became `useBlockIssues` in `body/ui.ts`, plus `body/checks.ts`. `body/catalog.ts`, `body/chips.ts` and `body/commands.ts` are new.
+- Frames have no "…" menu. The Settings dialog holds every action (DECISIONS.md).
+- Body checks and `vesper.config.ts` load on first use. Loaded eagerly, they took `/admin`'s first load to 1,480 KB; it's now 846 KB, against 843 KB after Phase 2.
+- Commits. The design's twelve became 25: fixes found by the corpus, fidelity and e2e suites landed as their own commits.
+- Found by the e2e suite on Windows: a save's rename could fail with `EPERM` while the dev server's watcher read the file. It's now retried briefly, as graceful-fs does (DECISIONS.md).
+
+**Open, for Jeremy:**
+- **Unknown Markdoc tags warn instead of blocking a save.** That follows the spec's table ("a validation warning"), but Markdoc rates them critical, so Astro's build fails on them. The studio never inserts one; one can only come from the source view or an existing file. Options:
+  - keep the warning;
+  - block in the dev API only, which has the site's complete config, and keep warning in the browser;
+  - block everywhere, which would refuse saves whenever the studio's copy of the config is incomplete.
+- **Custom attribute types and `validate` functions run only in the dev API.** They're code, so the browser can't run them. In GitHub mode (Phase 3) the site's build is the last check for them. Decide in Phase 3 whether that's enough.
+- Still open from Phase 2: HEIC conversion licensing, React 18 sites, and timing `npx astro add` at the first npm publish.
+
+**Follow-ups noted, not blocking:**
+- Tables stay protected source blocks, edited as text.
+- Vite warns about three lazy chunks over 500 KB: the map (1,018 KB), the body checks (513 KB) and the body editor (512 KB). None is in the first load.
 
 ## Phase 2.5: Markdoc tags and MDX components (design)
 
