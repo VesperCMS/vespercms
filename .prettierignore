@@ -22,6 +22,7 @@ fixtures/astro6-site/src/content/
 fixtures/astro6-site/src/data/
 apps/playground/vesper.redirects.yaml
 e2e/.studio-site
+e2e/.move-site
 
 # Other sessions' git worktrees: separate checkouts, checked there.
 .claude/

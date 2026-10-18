@@ -84,6 +84,8 @@ export default defineConfig(
       'test-results/**',
       // The studio e2e tests' throwaway copy of the playground.
       'e2e/.studio-site/**',
+      // The redirects integration test's copy of the playground.
+      'e2e/.move-site/**',
       // Byte-exact content fixtures: never linted, never formatted.
       'packages/core/test/corpus/**',
       'packages/core/test/fixtures/**',
