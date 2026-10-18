@@ -46,7 +46,7 @@ export type Option = {
  * accent-subtle and its halo (glow-selected); aria-selected says it in words.
  */
 const listBoxItem = cx(
-  'group flex min-h-9 cursor-default items-center gap-2 rounded-md px-3 py-1.5 text-body text-content outline-none',
+  'group flex min-h-9 cursor-default items-center gap-2 rounded-md px-3 py-1 text-body text-content outline-none',
   'data-[focused]:bg-accent-subtle data-[selected]:bg-accent-subtle data-[selected]:shadow-glow-selected',
 );
 const popover = cx('min-w-[var(--trigger-width)]', popoverClass);

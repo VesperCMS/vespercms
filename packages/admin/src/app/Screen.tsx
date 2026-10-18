@@ -13,6 +13,8 @@ export type ScreenProps = {
   bar?: ReactNode;
   /** The accent's wash at the top of a welcoming screen: home and empty states, never a form. */
   afterglow?: boolean;
+  /** Line the heading up with the editor's 720px column. */
+  column?: boolean;
   children: ReactNode;
 };
 
@@ -27,6 +29,7 @@ export function Screen({
   hideTitle = false,
   bar,
   afterglow = false,
+  column = false,
   children,
 }: ScreenProps) {
   const { siteName } = useStudio();
@@ -62,6 +65,7 @@ export function Screen({
             className={cx(
               'rounded-sm text-heading-3 tracking-tight text-content lowercase no-underline',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+              'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
             )}
           >
             {siteName}
@@ -77,7 +81,14 @@ export function Screen({
         <h1
           ref={heading}
           tabIndex={-1}
-          className={hideTitle ? 'sr-only' : 'mb-8 text-heading-1 text-content outline-none'}
+          className={
+            hideTitle
+              ? 'sr-only'
+              : cx(
+                  'mb-8 text-heading-1 text-content outline-none',
+                  column && 'mx-auto max-w-editor',
+                )
+          }
         >
           {title}
         </h1>

@@ -108,7 +108,7 @@ export function Field({ field, path, label }: FieldProps) {
     );
   }
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-2">
       <label id={`${id}-label`} htmlFor={id} className="text-label text-content">
         {text}
         {required}

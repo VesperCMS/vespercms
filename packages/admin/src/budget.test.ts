@@ -68,6 +68,12 @@ const RULES: [string, RegExp][] = [
     /\b(bg|text|border|outline|ring|shadow|fill|stroke)-\[(#|rgba?\(|hsla?\()/,
   ],
   ['type sizes only from the scale', /\btext-\[\d/],
+  [
+    // The token scale is 1, 2, 3, 4, 6, 8, 12 and 16 (4px steps); 0.5 nudges a
+    // control's inside by 2px, and 10 clears a 40px control.
+    'spacing only from the scale',
+    /(^|[\s'"`])-?(p|m|gap|space)(-[xy]|[trblxyse])?(-[xy])?-(1\.5|2\.5|3\.5|5|7|9|11|14|20|24|\[)/,
+  ],
   ['radii only from the scale', /\brounded(-[trblse]{1,2})?-\[/],
 ];
 

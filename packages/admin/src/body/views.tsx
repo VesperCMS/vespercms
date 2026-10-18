@@ -26,8 +26,10 @@ import { summaryOf, useBlockIssues, useBodyUi } from './ui.ts';
  */
 
 /** A selected block shows a focus outline, but only while the text has focus. */
-const SELECTED =
-  'in-[.ProseMirror-focused]:outline-2 in-[.ProseMirror-focused]:outline-offset-2 in-[.ProseMirror-focused]:outline-focus';
+const SELECTED = cx(
+  'in-[.ProseMirror-focused]:outline-2 in-[.ProseMirror-focused]:outline-offset-2 in-[.ProseMirror-focused]:outline-focus',
+  'in-[.ProseMirror-focused]:ring-6 in-[.ProseMirror-focused]:ring-(color:--glow-focus)',
+);
 
 function Issues({ id, issues }: { id: string; issues: readonly BodyIssue[] }) {
   if (issues.length === 0) return null;
@@ -154,7 +156,8 @@ export function CardView({ node, getPos, selected }: ReactNodeViewProps) {
       aria-labelledby={headerId}
       aria-describedby={issues.length > 0 ? issuesId : undefined}
       className={cx(
-        'my-3 rounded-md border border-border bg-surface-raised p-3',
+        // The page's own surface, a step back from the writing surface around it.
+        'my-3 rounded-md border border-border bg-surface p-3',
         issues.some((i) => i.level === 'error') && 'border-danger',
         selected && SELECTED,
       )}

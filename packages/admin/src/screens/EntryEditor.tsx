@@ -614,7 +614,7 @@ function EntryForm({
   ];
 
   return (
-    <Screen title={titleText} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar}>
+    <Screen title={titleText} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar} column>
       <EditorContext.Provider value={editor}>
         <div className="mx-auto flex max-w-editor flex-col gap-6">
           {doc?.message && (

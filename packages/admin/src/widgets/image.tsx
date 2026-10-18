@@ -119,7 +119,7 @@ export function ImageWidget({
             </p>
           )}
           <div className="flex min-w-0 flex-col gap-2">
-            <p id={`${id}-file`} className="break-all text-small">
+            <p id={`${id}-file`} className="font-mono text-small break-all">
               {fileName(srcText)}
             </p>
             <div className="flex flex-wrap gap-2">

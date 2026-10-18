@@ -74,7 +74,7 @@ export function BlockSettings({
       }}
     >
       {target && view && (
-        <FirstFieldFocus className="flex flex-col gap-5">
+        <FirstFieldFocus className="flex flex-col gap-6">
           {view.mode === 'tag' && view.kind && (
             <TagForm editor={editor} target={target} kind={view.kind} />
           )}
@@ -310,7 +310,7 @@ function TagForm({ editor, target, kind }: { editor: Editor; target: Target; kin
       {Object.keys(code).length > 0 && (
         <div className="text-small text-content-muted">
           <p>Set in the page’s code, so kept as written:</p>
-          <ul className="list-disc pl-5">
+          <ul className="list-disc pl-6">
             {Object.entries(code).map(([key, text]) => (
               <li key={key}>
                 <code className="font-mono">{key}</code>: <code className="font-mono">{text}</code>

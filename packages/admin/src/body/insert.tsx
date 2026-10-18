@@ -1,7 +1,7 @@
 import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { useEditorState } from '@tiptap/react';
-import { Menu, cx } from '@vesper/ui';
+import { Menu, cx, popoverClass } from '@vesper/ui';
 import { useId } from 'react';
 import { insertable, type BlockKind, type BlockShape, type Catalog } from './catalog.ts';
 import { placementAt } from './commands.ts';
@@ -205,7 +205,7 @@ export function SlashList({
       role="listbox"
       aria-label="Insert a block"
       style={place ? { top: place.top, left: place.left } : undefined}
-      className="fixed z-40 max-h-64 min-w-56 overflow-y-auto rounded-md border border-border bg-surface-raised p-1 shadow-overlay"
+      className={cx('fixed z-40 max-h-64 min-w-56 overflow-y-auto', popoverClass)}
     >
       {list.length === 0 ? (
         <div
@@ -213,7 +213,7 @@ export function SlashList({
           tabIndex={-1}
           aria-selected="false"
           aria-disabled="true"
-          className="px-3 py-2 text-content-muted"
+          className="px-3 py-2 text-small text-content-muted"
         >
           Nothing fits here
         </div>
@@ -226,7 +226,7 @@ export function SlashList({
             tabIndex={-1}
             aria-selected={index === active}
             className={cx(
-              'cursor-default rounded-sm px-3 py-2 text-body text-content',
+              'flex min-h-9 cursor-default items-center rounded-md px-3 text-body text-content',
               index === active && 'bg-accent-subtle',
             )}
             onMouseDown={(event) => {

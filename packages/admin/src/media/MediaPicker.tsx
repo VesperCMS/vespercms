@@ -181,7 +181,7 @@ function MediaChoice({ item, onChoose }: { item: MediaItem; onChoose: (path: str
       onClick={() => {
         onChoose(item.path);
       }}
-      className="flex w-full items-center gap-3 rounded-md border border-border p-2 text-left hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="flex w-full items-center gap-3 rounded-md border border-border p-2 text-left hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
     >
       {isImagePath(item.path) ? (
         <img
@@ -229,7 +229,7 @@ export function UploadStatus({
     );
   }
   const notes = step.upload.notes.length > 0 && (
-    <ul className="list-disc pl-5 text-small text-content-muted">
+    <ul className="list-disc pl-6 text-small text-content-muted">
       {step.upload.notes.map((note) => (
         <li key={note}>{note}</li>
       ))}

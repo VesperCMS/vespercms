@@ -108,7 +108,10 @@ export function MarkdownWidget(props: WidgetProps<string>) {
         'aria-labelledby': `${id}-label`,
         'aria-describedby': [describedBy, `${id}-md`].filter(Boolean).join(' '),
         ...(invalid ? { 'aria-invalid': 'true' } : {}),
-        class: cx(inputClass, 'vesper-body', inline ? 'min-h-10' : 'min-h-24'),
+        class: cx(
+          'vesper-body w-full px-3 py-2 text-body text-content outline-none',
+          inline ? 'min-h-10' : 'min-h-24',
+        ),
       },
     },
     onCreate: ({ editor: created }) => {
@@ -158,34 +161,45 @@ export function MarkdownWidget(props: WidgetProps<string>) {
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <div ref={toolbar}>
-        <Toolbar label={`Formatting for ${field.label}`}>
-          <ToggleButton
-            isDisabled={disabled}
-            isSelected={state.bold}
-            onChange={() => editor.chain().focus().toggleBold().run()}
-          >
-            Bold
-          </ToggleButton>
-          <ToggleButton
-            isDisabled={disabled}
-            isSelected={state.italic}
-            onChange={() => editor.chain().focus().toggleItalic().run()}
-          >
-            Italic
-          </ToggleButton>
-          <ToolButton
-            isDisabled={disabled}
-            onPress={() => {
-              setLinkOpen(true);
-            }}
-          >
-            {state.link ? 'Edit link' : 'Link'}
-          </ToolButton>
-        </Toolbar>
+    <div className="flex flex-col gap-2">
+      {/* Framed like the body: the toolbar and the text in one hairline box. */}
+      <div
+        className={cx(
+          'rounded-md border border-border-strong bg-surface-raised',
+          invalid && 'border-danger',
+          disabled && 'opacity-60',
+          'has-[.ProseMirror-focused]:outline-2 has-[.ProseMirror-focused]:outline-offset-2 has-[.ProseMirror-focused]:outline-focus',
+          'has-[.ProseMirror-focused]:ring-6 has-[.ProseMirror-focused]:ring-(color:--glow-focus)',
+        )}
+      >
+        <div ref={toolbar} className="border-b border-border p-1">
+          <Toolbar label={`Formatting for ${field.label}`}>
+            <ToggleButton
+              isDisabled={disabled}
+              isSelected={state.bold}
+              onChange={() => editor.chain().focus().toggleBold().run()}
+            >
+              Bold
+            </ToggleButton>
+            <ToggleButton
+              isDisabled={disabled}
+              isSelected={state.italic}
+              onChange={() => editor.chain().focus().toggleItalic().run()}
+            >
+              Italic
+            </ToggleButton>
+            <ToolButton
+              isDisabled={disabled}
+              onPress={() => {
+                setLinkOpen(true);
+              }}
+            >
+              {state.link ? 'Edit link' : 'Link'}
+            </ToolButton>
+          </Toolbar>
+        </div>
+        <EditorContent editor={editor} />
       </div>
-      <EditorContent editor={editor} />
       <p id={`${id}-md`} className="text-small text-content-muted">
         Saved as Markdown. Escape moves to the formatting buttons.
       </p>
