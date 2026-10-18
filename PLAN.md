@@ -10,7 +10,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 1 Core | Done (2026-10-17). CI green on GitHub (run 39060134100). See "Phase 1: outcome" below. |
 | 2 Integration and local mode | Done (2026-10-17). CI green on GitHub (run 39072815810). See "Phase 2: outcome" below. |
 | 2.5 Markdoc tags and MDX components | Done (2026-10-17). CI green on GitHub (run 39085788652). See "Phase 2.5: outcome" below. |
-| 2.6 onward | Roadmap below |
+| 2.6 URLs, hierarchy and redirects | In progress. See "Phase 2.6 (design)" below. |
+| 2.7 onward | Roadmap below |
 
 ## Phase 0: Scaffold
 
@@ -160,6 +161,167 @@ The spec's five "Done when" criteria, with evidence:
 **Follow-ups noted, not blocking:**
 - Tables stay protected source blocks, edited as text.
 - Vite warns about three lazy chunks over 500 KB: the map (1,018 KB), the body checks (513 KB) and the body editor (512 KB). None is in the first load.
+
+## Phase 2.6: URLs, hierarchy and redirects (design)
+
+Scope is spec §6.15 and the §11 Phase 2.6 entry. Confirmed before starting (DECISIONS.md, 2026-10-18): `vesper.redirects.yaml` sits at the site root, and `maxDepth` is optional with no default.
+
+**What was found first** (measured on Astro 7.4, React Aria Components 1.22 and the playground):
+- Astro's glob loader drops a trailing `/index` from IDs but keeps a top-level `index.md` as `index`. Vesper's `defaultEntryId` already matches, so `:path` only has to turn `index` into the root.
+- `astro:routes:resolved` (Astro 6 and 7) gives every route with its `pattern`, `patternRegex`, `params`, `type`, `origin` and `entrypoint`, before the build starts and when dev starts. That's enough for the route check and the static-route collision check.
+- Astro's static redirect page is a meta refresh (`redirectTemplate`): no delay for 301, two seconds for 302. On the plain static host, `/old` first gets the host's own slash redirect to `/old/`, then the meta refresh. So redirect targets must be written in the page's canonical form (`/academics/nursing/`), or every redirect gains a second hop.
+- The YAML writer appends flow maps shaped like their neighbours and writes new dates date-only, so redirects can go through `writeDataFile`. Inserting into the middle of a scalar sequence (reordering `_order.yaml`) replaced the whole sequence and dropped the file's leading comment: fixed in the writer, not worked around.
+- React Aria's `Tree` is a single-column `treegrid` with `aria-level`, `aria-expanded`, arrow keys, Home/End, type-ahead, rows with interactive content, and keyboard-accessible drag and drop. WAI-ARIA's own guidance is a treegrid when rows hold buttons (each page has a "…" menu), so that's what the outline is.
+- Vercel reads `vercel.json` before the build runs, so redirects merged into it at build time would never apply. They're merged when the studio writes the redirects file instead.
+
+**URLs** (`packages/core/src/urls/`, exported as `@vesper/core/urls`: no Markdoc, no YAML, small enough for a site's own pages):
+- `pattern.ts`:
+  - `UrlSettings` (`base`, `trailingSlash`, `buildFormat`, `timeZone`) come from Astro's config and `vesper.config.ts`, into the manifest's `site.urls`.
+  - `expandUrlPattern(pattern, { id, data })` handles `:id`, `:path`, `:slug`, `:<field>` and `:<dateField>|yyyy|mm|dd`. Date parts are read in the site's time zone, else UTC, so the studio, dev and build agree.
+  - `formatUrl(path, settings)` adds `base` and the trailing slash Astro's settings imply (`always` or `never`; `ignore` follows `build.format`). `urlKey(url, settings)` is the comparable form: no base, query, hash or trailing slash.
+  - The function form `url: (entry) => string` runs where vesper.config.ts is loaded (dev API, build, `vesper:content`). In the studio's own bundle it loads lazily, as custom widgets do.
+- `tree.ts`: `buildTree(entries, orders)`. Folders are the hierarchy and `foo/index` is foo's section page. A folder without one is still a node (no entry, no URL), so the studio can flag it. Children follow `_order.yaml` first, then unlisted ones by title (`Intl.Collator('en', { numeric: true })`, the same everywhere). Also `childrenOf`, `breadcrumbsOf` and `pathDepth`.
+- `redirects.ts`: `cleanRedirects(list, pages)`, run every time the file is written and at every build:
+  - loops are removed (self-redirects, cycles, and chains that run into a cycle);
+  - chains collapse (A→B→C becomes A→C); the result is temporary if any hop was;
+  - a redirect whose `from` is now a real page is dropped, with a warning: the page wins;
+  - a repeated `from` keeps the later entry;
+  - a `to` that's neither a page, a redirect nor an external URL is flagged (warning), never removed.
+- `hosts.ts`: rules per host, as pure functions:
+  - `_redirects` for Netlify (forced `301!`) and Cloudflare Pages;
+  - `.htaccess` `RedirectMatch` lines between `# BEGIN vesper` / `# END vesper`;
+  - nginx `location =` blocks;
+  - Vercel `redirects` entries.
+  - `mergeMarkedBlock` replaces Vesper's block and leaves the rest of the file alone.
+- `csv.ts`: `parseRedirectsCsv(text)`. It reads `from,to[,status]` with or without a header, the WordPress Redirection plugin's export (`source,target,regex,code,…`) and Drupal's Redirect import (`source,destination,…,status_code`). It turns absolute old-site URLs into paths, skips regex rows with a reason, and reports each problem row in words.
+
+**Content operations** (`packages/core/src/studio/`):
+- `order.ts`: reads `_order.yaml` and writes it through `writeDataFile`, so comments survive.
+- `links.ts`: `rewriteLinks(file, moves)` finds links to the old URLs and changes only those bytes:
+  - Markdown links, images and reference definitions (micromark positions; `.mdoc` bodies use the same Markdown reader for links);
+  - Markdoc tag attributes and MDX JSX attributes whose string value is an old URL (the tag scanners' spans, `editMarkdocTag` / `editJsxTag`);
+  - frontmatter fields with `widget: 'url'`, through `writeEntryFile`.
+  - Old URLs match with or without `base`, a trailing slash, `?query` or `#hash`. The replacement keeps the original's shape.
+  - Moved files keep pointing at the same files: relative links, images and `{% partial file %}` paths to anything outside the moved folder are recomputed from the new location.
+- `pages.ts`: `PageService`, beside `ContentService` (which gains `locateEntries`):
+  - `pages()` lists every entry in a collection with a URL (`collection`, `id`, `title`, `url`), for the link picker and duplicate checks;
+  - `tree(collection)`;
+  - `planMove({ collection, id, parent, slug })` validates and returns the whole change set with a summary (pages, links, redirects);
+  - `move` commits that plan with expected versions;
+  - `reorder` writes the parent's `_order.yaml`;
+  - `createSection(folder)` creates the missing section page;
+  - `redirects()` / `saveRedirects()` read the file, and write it after cleanup.
+- `ContentService` changes: creating an entry under a parent (a leaf parent becomes `parent/index.md` in the same change set, at the same URL), and deleting a page also removes its `_order.yaml` line.
+
+**Validation before a move, create or rename**, each refused in words before anything is written:
+- a valid slug;
+- not onto its own subtree;
+- no duplicate URL in any collection;
+- no static route from `src/pages`, e.g. "/contact/ is already a page on this site that isn't edited here (src/pages/contact.astro). Choose a different address.";
+- no reserved path (`/admin`, `/_vesper`);
+- `maxDepth`;
+- not a page whose frontmatter sets its own `slug` (its ID doesn't follow its file).
+
+**One move is one change set:**
+- a `move` for every file in the subtree (pages, `_order.yaml`, images, `_` files), with new bytes where links or relative paths changed;
+- `put`s for the two parents' `_order.yaml`;
+- `vesper.redirects.yaml` with a redirect for every page in the subtree, then cleanup;
+- every other file whose links changed;
+- `vercel.json` when the site has one.
+
+**Integration** (`packages/astro`):
+- `vesper.config.ts`:
+  - `collections.<name>.maxDepth`;
+  - top-level `redirects: { native?: ('netlify' | 'cloudflare' | 'vercel' | 'apache' | 'nginx')[] }`.
+- The manifest gains `site.urls` and `presentation.maxDepth`. A warning when a collection's pattern would pick up `_order.yaml`.
+- `integration/routes.ts`, from `astro:routes:resolved`:
+  - the static routes (no params, from the project), for collisions;
+  - for each collection with a URL, the route that renders its entries, recorded in the manifest (`route`), or a warning naming the URLs no route can produce;
+  - a hint, logged in dev, when a flat collection has nested folders (spec: "suggests `tree: true`").
+- `integration/redirects.ts`, at build:
+  - reads the file, cleans it against every content URL and static route, and merges the result into Astro's `redirects` (without overriding the site's own);
+  - native rules are on when detected (`NETLIFY`, `CF_PAGES`, `VERCEL`) or set in `redirects.native`. `astro:build:done` writes `_redirects`, `.htaccess` or `_vesper/nginx-redirects.conf` into `dist`. URLs a native rule covers get no HTML page; Vercel's are covered only when `vercel.json` already holds them;
+  - `_vesper/redirects.json` (the cleaned list) is written for the S3 deploy template (Phase 9) and the e2e test;
+  - warns about redirects to URLs that no longer exist.
+- `vesper:content` gains `getTree`, `getChildren`, `getBreadcrumbs` and `getUrl` (`runtime/helpers.ts` over `@vesper/core/urls`). The module embeds the URL settings, each collection's pattern and its parsed `_order.yaml` files, and imports vesper.config.ts only for function-form URLs. In dev, a change to an `_order.yaml` invalidates the module and reloads site pages, not the studio. The same code runs in dev and build.
+- Dev API:
+  - `GET pages`, `GET tree`;
+  - `POST move` (`dryRun` gives the plan for the confirmation), `POST reorder`, `POST section`;
+  - `GET redirects`, `PUT redirects` (with the file's version);
+  - `PUT entry` accepts `parent` for a new child page.
+
+**Studio** (`packages/admin`, `packages/ui`):
+- `ui`: `Tree`, a styled wrapper of React Aria's Tree, plus a file-picking button for CSV.
+- `screens/PageTree.tsx` replaces the flat list for `tree: true` collections (spec §6.15.2, §10.3):
+  - one row per page: title, muted path, status in words ("No section page", "Draft");
+  - collapsed beyond the first level;
+  - Enter opens the page; arrows, Home/End and type-ahead come from React Aria;
+  - each row's "…" menu: Add child page, Move to…, Move up, Move down, Create section page (folders without one), Delete;
+  - Alt+↑/↓ move the focused page, as blocks do in the body editor;
+  - drag and drop (React Aria's, with its keyboard mode) is offered on top and never needed;
+  - moves are announced politely: "Nursing moved under Academics, position 1 of 3."
+- `MoveDialog`: a searchable parent picker (React Aria's ComboBox), the page's address, then a plain-language confirmation from the dry run: "Move Nursing and its 3 pages to the top level? 4 links on other pages will be updated, and visitors to the old addresses will be sent to the new ones." Refusals show in the dialog in words.
+- `screens/Redirects.tsx`, reached from the top bar's Site menu (beside Media):
+  - a table (From, To, Kind as words: Permanent or Temporary, Reason, Added) with one search box;
+  - "Add redirect" is the one primary action; edit and delete sit in each row's "…" menu;
+  - "Import from CSV…" opens a dialog that previews what will be added, replaced or skipped and why, before anything is written.
+- Link picker: the body editor's link dialog and URL fields search pages by title (React Aria's ComboBox, custom values allowed) and insert the page's current path. A field whose schema requires a full URL (`z.url()`) gets the site's address in front when Astro's `site` is set, and no picker otherwise.
+- "View on site" uses the shared URL code instead of the editor's own token replacement.
+
+**Where each feature lives in the UI** (spec §10.4): the outline replaces the entry list for tree collections. Page actions hide behind each row's "…" menu. Redirects sit behind the Site menu. CSV import hides behind a secondary button on the Redirects screen. The link picker is inside the existing link dialog and URL fields.
+
+**Playground:**
+- `src/lib/pages.ts` gives way to the helpers. Section pages list their children with `getChildren`, and breadcrumbs come from `getBreadcrumbs`.
+- `src/pages/site-tree.json.ts` prints the helpers' output for the parity test.
+- Internal links are added so a move has something to rewrite: Markdown links in `.md`, `.mdx` and `.mdoc` bodies, and an event's `unpublishRedirect` (a URL field).
+
+**Dependencies:** none new. React Aria (Tree, ComboBox, drag and drop), micromark/mdast, Markdoc, `yaml` and `jsonc-parser` are already in.
+
+**Tests mapped to the "Done when" criteria:**
+- **Moving a playground section with descendants produces one change set with the moved files, the updated `_order.yaml` files, a redirect for every old URL and every internal link updated:**
+  - `pages.test.ts` moves Nursing (four pages) over a memory copy of the playground through a storage adapter that records commits. It asserts exactly one commit and its exact contents: each `move`, both `_order.yaml` files, the redirects file (four new entries and the old chain collapsed onto the new URL), and each rewritten link, byte for byte.
+  - `links.test.ts` covers every link form.
+  - `e2e/studio/tree.spec.ts` does the same move by keyboard and checks the files on disk.
+- **The built site serves every old URL as a redirect to the new one, with no chains:**
+  - `packages/astro/test/redirects.integration.test.ts` copies the playground, moves Nursing through `PageService` and `LocalStorage` as the studio does, runs `astro build`, and serves `dist/` with `scripts/static-server.mjs`. Every old URL (the four moved pages and the file's original chain) must reach its final page in one Vesper hop, and the target must be a real page, not another redirect page.
+  - The static e2e suite checks the same for the committed playground's redirects, from `_vesper/redirects.json`.
+  - Unit tests cover the cleanup and every host's rules.
+- **The tree can be fully operated by keyboard and screen reader: expand, collapse, move, reorder, add a child:**
+  - `tree.spec.ts` in Chromium, keys only: arrows to expand and collapse, type-ahead, the "…" menu, Move up/down and Alt+↑/↓ (with the live-region announcement), Move to… through the combobox, Add child page, Create section page.
+  - axe runs with the outline, the menu and each dialog open.
+  - `PageTree.test.tsx` covers the same in jsdom. A manual pass with a screen reader is noted.
+- **A path colliding with a static route in `src/pages` is blocked with a plain-language message:**
+  - `pages.test.ts`: moving, renaming or creating `contact` is refused with the message, and nothing is written;
+  - `routes.test.ts` derives the static routes from `astro:routes:resolved` data;
+  - `tree.spec.ts` tries to rename a page to "contact" in the studio and sees the message.
+- **`getTree()`, `getChildren()`, `getBreadcrumbs()` and `getUrl()` return identical results in dev and in a production build:**
+  - `helpers.test.ts` unit-tests the runtime;
+  - an e2e test fetches `/site-tree.json` from the static build (port 4400) and from `astro dev` (port 4401) and requires identical JSON;
+  - the static e2e also checks the rendered breadcrumbs on a four-level page.
+
+**Commits, in order:**
+1. `docs`: this design.
+2. `fix(core)`: keep comments when a scalar sequence gains or loses items in the middle.
+3. `feat(core)`: URL patterns and site URL settings, as `@vesper/core/urls`.
+4. `feat(core)`: page trees and `_order.yaml`.
+5. `feat(core)`: redirect cleanup, per-host rules and CSV import.
+6. `feat(core)`: rewrite links to moved pages, and relative paths in moved files.
+7. `feat(core)`: `PageService`: tree, reorder, child and section pages, moves as one change set, the redirects file.
+8. `feat(astro)`: config, manifest URL settings, the route check and the page API.
+9. `feat(astro)`: redirects at build, with native rules per host.
+10. `feat(astro)`: `getTree`, `getChildren`, `getBreadcrumbs` and `getUrl`; the playground uses them.
+11. `feat(ui)`: `Tree` and a file button.
+12. `feat(admin)`: the page outline with moves, reordering, child and section pages.
+13. `feat(admin)`: the Redirects screen with CSV import.
+14. `feat(admin)`: the link picker.
+15. `test`: the move-and-build integration test and the e2e specs.
+16. `docs`: decisions, READMEs and the Phase 2.6 outcome.
+
+**Not in this phase:**
+- **Edit grants on both ends of a move** (spec §6.15.4) are cloud roles, Phase 4.
+- **The S3 redirect metadata** is the deploy template's job (Phase 9). `_vesper/redirects.json` is its input.
+- **The optional build check for internal links** (§6.15.6) overlaps "broken-link checks" on the do-not-build list. It isn't built: a question for Jeremy.
+- **Redirects aren't served by `astro dev`.** Merging them into Astro's config there would restart the dev server on every move.
 
 ## Phase 2.5: Markdoc tags and MDX components (design)
 
