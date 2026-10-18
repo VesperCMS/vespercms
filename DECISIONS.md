@@ -525,3 +525,21 @@ Parity between dev and build is tested by comparing `/site-tree.json` from both.
 ### 2026-10-18: Route checks come from Astro's resolved routes
 
 **`astro:routes:resolved` (Astro 5 and later, so 6 and 7) gives each route's pattern, regex, parameters, type and origin. Static routes are the project's own pages and endpoints with no parameters; Vesper's injected `/admin` and redirect routes don't count.** In dev the check runs alongside startup rather than holding it up, and logs each message once. At build it records in the manifest, for each collection, the route that renders most of its URLs (`collections[].route`, for previews), and warns about URLs no route can produce. A flat collection kept in folders gets a hint, in dev only, to set `tree: true` (spec §6.15.2, "the editor suggests").
+
+## Images
+
+### 2026-10-18: Astro hands `position` to Sharp unchanged, so focal points go into `style`
+
+**`<Img>` never passes a focal point as Astro's `position`. It writes it as an inline `object-position` style, and sends Sharp only one of Sharp's own anchor keywords.** Spec §6.6.5 asked this to be checked first. Measured with real builds on Astro 7.4.0 (Sharp 0.35.5) and on the Astro 6 fixture's 6.4.8 (Sharp 0.34.5), which behave the same:
+- `position` and `fit` reach the image service untouched: in the transform at build, and as `position=` and `fit=` query parameters on `/_image` in dev. Sharp uses them only when both `width` and `height` are set, as `resize({ fit, position })`.
+- Sharp accepts only its own keywords there: `top`, `right top`, `left`, `centre` and so on, plus `entropy` and `attention`. `position="62% 35%"` fails the build with "Could not transform image" (Sharp: "Expected valid position/gravity/strategy for position but received 62% 35%"), and the same image is a 500 in dev. So does CSS's own keyword order, `"top right"`.
+- `layout` makes it worse: Astro then sets `fit: cover` and `position: center` by default, and every `srcset` width carries both a width and a height, so `position` reaches Sharp for every responsive image.
+- On the page, `position` becomes `data-astro-image-pos`, and Astro's stylesheet has rules only for keyword pairs. `62%-35%` matches nothing, so a percentage would do nothing in CSS even if Sharp accepted it.
+- An inline `style="object-position: 62% 35%"` passes through to the `<img>` and beats Astro's layered rule. It doesn't move a server crop: with `width` and `height` set, Sharp cuts the centre (or the keyword's anchor) first.
+- `fit` maps to Sharp's own names (`contain` becomes `inside`, `none` is dropped). `fit="contain"` with 400×400 wrote a 400×267 file into an `<img width="400" height="400">`.
+- A transform key Astro doesn't know (`crop`) reaches the service, but it isn't in the hashed properties, so two different crops of one image shared one output file. It also leaked into the page as `crop="[object Object]"`.
+
+What follows for Phase 2.7:
+- With the crop wrapper, `<Img>` sends a normalized `crop` rectangle; the wrapper adds `crop` to the hashed properties, to `/_image` URLs and their parsing, and keeps it out of the HTML attributes.
+- Without the wrapper (turned off, or a host's image service), `<Img>` asks for the ratio's exact width and height, which is Astro's own server crop. With Astro's Sharp service it also picks the anchor keyword nearest the crop Vesper would have made. The focal point, relative to whatever was cut, goes into `style` as `object-position`.
+- A fluid image (no ratio) gets no server crop, only the `object-position` style.
