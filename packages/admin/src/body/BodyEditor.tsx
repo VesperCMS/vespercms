@@ -10,7 +10,7 @@ import {
   Checkbox,
   Dialog,
   TextArea,
-  TextField,
+  SuggestField,
   ToggleButton,
   ToolButton,
   Toolbar,
@@ -18,6 +18,7 @@ import {
 } from '@vesper/ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
+import { pageSuggestions, usePages } from '../editor/PagePicker.tsx';
 import { MediaPicker } from '../media/MediaPicker.tsx';
 import { inputClass } from '../widgets/basic.tsx';
 import { catalogOf, fallbackLabel } from './catalog.ts';
@@ -681,6 +682,9 @@ function LinkForm({
   onDone: () => void;
 }) {
   const [href, setHref] = useState(current ?? '');
+  // The link picker (spec §6.15.6): pages by title, written as their address.
+  const pages = usePages();
+  const suggestions = useMemo(() => pageSuggestions(pages), [pages]);
   return (
     <form
       className="flex flex-col gap-4"
@@ -692,11 +696,13 @@ function LinkForm({
         onDone();
       }}
     >
-      <TextField
-        label="Web address or page path"
-        description="For example https://example.com or /about."
+      <SuggestField
+        label="Page or web address"
+        description="Search pages by title, or type an address such as https://example.com."
         value={href}
         onChange={setHref}
+        suggestions={suggestions}
+        inputMode="url"
       />
       <div className="flex flex-wrap justify-end gap-3">
         {current && (

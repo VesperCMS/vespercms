@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { fromWallTime, resolveTimeZone, wallTime, zoneName } from '../app/time.ts';
 import { useEditor } from '../editor/context.tsx';
+import { ChoosePageButton } from '../editor/PagePicker.tsx';
 import type { WidgetProps } from '../types.ts';
 import { inputClass } from './basic.tsx';
 
@@ -176,10 +177,15 @@ export function UrlWidget({
   invalid,
   disabled,
 }: WidgetProps<string>) {
+  const { manifest } = useStudio();
   const current = typeof value === 'string' ? value : '';
   const openable = /^https?:\/\/\S+$/i.test(current);
+  // A schema that takes only full URLs (z.url()) gets the site's address in
+  // front of the page's path, which needs Astro's `site`; without it, no picker.
+  const site = manifest.site.urls?.site;
+  const pickable = field.format !== 'url' || site !== undefined;
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <input
         id={id}
         type="url"
@@ -203,6 +209,16 @@ export function UrlWidget({
         >
           Open <span className="sr-only">{current} in a new tab</span>
         </a>
+      )}
+      {pickable && (
+        <ChoosePageButton
+          fieldLabel={field.label}
+          {...(field.format === 'url' && site ? { absolute: site } : {})}
+          {...(disabled ? { isDisabled: true } : {})}
+          onPick={(url) => {
+            onChange(url);
+          }}
+        />
       )}
     </div>
   );
