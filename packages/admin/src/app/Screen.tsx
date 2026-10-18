@@ -68,8 +68,12 @@ export function Screen({
               'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
             )}
           >
-            {/* Decorative: the link is named by the site's name beside it (DECISIONS.md). */}
-            <VesperMark size={20} />
+            {/*
+             * Decorative: the link is named by the site's name beside it. Left
+             * out on a narrow screen, where the editor's bar needs the room
+             * (DECISIONS.md).
+             */}
+            <VesperMark size={20} className="hidden sm:block" />
             {siteName}
           </a>
           {bar ?? <DefaultBar />}
