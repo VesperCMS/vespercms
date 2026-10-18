@@ -138,7 +138,10 @@ export function BodyEditor(props: BodyEditorProps) {
   }, [apiRef]);
 
   return (
-    <div className="flex flex-col gap-2">
+    // A region named "Body": the text's own headings stay real headings, so
+    // people can move through them while editing, and screen readers say
+    // they're in the body when a heading list or quick navigation lands there.
+    <section aria-labelledby="entry-body-label" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span id="entry-body-label" className="text-label text-content">
           Body
@@ -189,7 +192,7 @@ export function BodyEditor(props: BodyEditorProps) {
         </>
       )}
       <BodyNotes notes={notes} lines={mode === 'source'} onShow={reveal} />
-    </div>
+    </section>
   );
 }
 
