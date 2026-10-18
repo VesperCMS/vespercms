@@ -135,6 +135,8 @@ test('the studio shell loads at /admin, deep links included, and says where edit
   await page.goto('/admin/#/c/blog');
   await expect(page.locator('h1')).toHaveText('Editing isn’t available here yet');
   await expect(page).toHaveTitle(/Editing unavailable/);
+  // Vesper's mark as the favicon, inline: nothing to fetch, from this host or any other.
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /^data:image\/svg\+xml,/);
 });
 
 test('the build publishes the manifest for the cloud', async ({ request }) => {

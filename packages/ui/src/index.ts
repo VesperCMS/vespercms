@@ -76,6 +76,7 @@ export {
   FieldHelp,
   type FieldTextProps,
 } from './components/shared.tsx';
+export { VesperMark, type VesperMarkProps } from './components/Mark.tsx';
 export {
   Toolbar,
   ToolbarSeparator,

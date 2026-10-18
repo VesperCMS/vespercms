@@ -21,6 +21,7 @@ import {
   Table,
   TextArea,
   TextField,
+  VesperMark,
 } from '../index.ts';
 
 afterEach(cleanup);
@@ -60,6 +61,25 @@ describe('Button and IconButton', () => {
     await user.keyboard(' ');
     expect(onPress).toHaveBeenCalledTimes(2);
     await expectNoViolations();
+  });
+});
+
+describe('VesperMark', () => {
+  it('is decorative, and draws the small cut at 24px and below', () => {
+    const { container } = render(
+      <>
+        <VesperMark size={20} />
+        <VesperMark size={48} />
+      </>,
+    );
+    const [small, large] = [...container.querySelectorAll('svg')];
+    expect(small).toHaveAttribute('aria-hidden', 'true');
+    expect(large).toHaveAttribute('aria-hidden', 'true');
+    // The small cut: a heavier stroke and one star, no halo.
+    expect(small?.querySelector('path')).toHaveAttribute('stroke-width', '11');
+    expect(small?.querySelectorAll('circle')).toHaveLength(1);
+    expect(large?.querySelector('path')).toHaveAttribute('stroke-width', '9');
+    expect(large?.querySelectorAll('circle')).toHaveLength(2);
   });
 });
 

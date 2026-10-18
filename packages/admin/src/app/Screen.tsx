@@ -1,4 +1,4 @@
-import { cx, Menu } from '@vesper/ui';
+import { cx, Menu, VesperMark } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useStudio } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
@@ -63,11 +63,13 @@ export function Screen({
           <a
             href={hrefFor({ screen: 'home' })}
             className={cx(
-              'rounded-sm text-heading-3 tracking-tight text-content lowercase no-underline',
+              'inline-flex items-center gap-2 rounded-sm text-heading-3 tracking-tight text-content lowercase no-underline',
               'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus',
               'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
             )}
           >
+            {/* Decorative: the link is named by the site's name beside it (DECISIONS.md). */}
+            <VesperMark size={20} />
             {siteName}
           </a>
           {bar ?? <DefaultBar />}

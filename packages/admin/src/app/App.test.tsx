@@ -39,6 +39,13 @@ describe('the studio shell', () => {
     await expectNoViolations();
   });
 
+  it('shows Vesper’s mark before the site’s name, and names the home link by the site alone', () => {
+    renderStudio('#/');
+    const home = screen.getByRole('link', { name: 'Playground' });
+    expect(home).toHaveAttribute('href', '#/');
+    expect(home.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('starts with a skip link that moves focus to the content', async () => {
     renderStudio('#/');
     const user = userEvent.setup();

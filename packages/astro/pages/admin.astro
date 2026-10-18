@@ -5,6 +5,20 @@
  * studio's screens use hash routes, so deep links work on any host (D16).
  */
 import { siteName } from 'virtual:vesper/page';
+
+// Vesper's mark, small cut, as /admin's favicon (DECISIONS.md, "Vesper's mark
+// is Launch"). Inline, so it costs no request. A favicon can't read CSS
+// variables, so it carries Pine's content and accent values for each theme.
+const favicon = `data:image/svg+xml,${encodeURIComponent(
+  [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">',
+    '<style>path{stroke:#282019}circle{fill:#226b63}',
+    '@media (prefers-color-scheme:dark){path{stroke:#f3ede7}circle{fill:#63ccc0}}</style>',
+    '<path d="M11 14 L29 50 L42 25" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>',
+    '<circle cx="52" cy="11" r="7"/>',
+    '</svg>',
+  ].join(''),
+)}`;
 ---
 
 <!doctype html>
@@ -14,6 +28,7 @@ import { siteName } from 'virtual:vesper/page';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <title>{siteName} · Vesper</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
   </head>
   <body>
     <div id="vesper-studio">
