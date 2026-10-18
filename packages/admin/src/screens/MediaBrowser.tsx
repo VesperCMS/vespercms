@@ -52,7 +52,7 @@ export function MediaBrowser() {
   };
 
   return (
-    <Screen title="Media">
+    <Screen title="Media" afterglow={load.state === 'ready' && items.length === 0}>
       <div className="mb-6 flex flex-wrap items-end gap-4">
         <TextField
           label="Search by file name"
@@ -132,7 +132,7 @@ export function MediaBrowser() {
         </p>
       </div>
 
-      {load.state === 'loading' && <p className="text-content-muted">Loading files…</p>}
+      {load.state === 'loading' && <p className="text-small text-content-muted">Loading files…</p>}
       {load.state === 'failed' && (
         <p role="alert" className="text-danger">
           Couldn’t list files: {load.message}
@@ -145,26 +145,26 @@ export function MediaBrowser() {
       )}
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((item) => (
-          <li key={item.path} className="flex flex-col gap-2 rounded-md border border-border p-3">
+          <li key={item.path} className="flex flex-col gap-2 rounded-lg border border-border p-3">
             {isImagePath(item.path) ? (
               <img
                 src={api.fileUrl(item.path)}
                 alt=""
                 loading="lazy"
-                className="h-36 w-full rounded-sm bg-surface-sunken object-contain"
+                className="h-36 w-full rounded-md bg-surface-sunken object-contain"
               />
             ) : (
               <span
                 aria-hidden="true"
-                className="flex h-36 items-center justify-center rounded-sm bg-surface-sunken text-small uppercase text-content-muted"
+                className="flex h-36 items-center justify-center rounded-md bg-surface-sunken text-small text-content-muted uppercase"
               >
                 {extensionOf(item.path)}
               </span>
             )}
-            <h2 className="break-all text-body">
+            <h2 className="text-label break-all text-content">
               {item.path.slice(item.path.lastIndexOf('/') + 1)}
             </h2>
-            <p className="break-all text-small text-content-muted">
+            <p className="font-mono text-caption break-all text-content-muted">
               {dirOf(item.path)} · {fileSize(item.size)}
             </p>
             <UsedOn item={item} />

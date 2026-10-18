@@ -41,10 +41,7 @@ export function NotesDrawer({
         </p>
         {groups.map((group) => (
           <section key={group.key} aria-labelledby={`a11y-group-${group.key}`}>
-            <h3
-              id={`a11y-group-${group.key}`}
-              className="mb-2 text-body font-semibold text-content"
-            >
+            <h3 id={`a11y-group-${group.key}`} className="mb-2 text-heading-3 text-content">
               {group.label}
             </h3>
             <ul className="m-0 flex list-none flex-col gap-4 p-0">

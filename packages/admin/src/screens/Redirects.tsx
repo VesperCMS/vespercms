@@ -94,7 +94,7 @@ export function Redirects() {
   };
 
   return (
-    <Screen title="Redirects">
+    <Screen title="Redirects" afterglow={load.state === 'ready' && rows.length === 0}>
       <p className="mb-6 max-w-2xl text-content-muted">
         A redirect sends visitors from an old address to a new one. Moving a page adds them for you.
         Add your own for short links, or import a list when you bring an old site over.
@@ -154,7 +154,7 @@ export function Redirects() {
         </section>
       )}
       {load.state === 'loading' ? (
-        <p className="text-content-muted">Loading redirects…</p>
+        <p className="text-small text-content-muted">Loading redirects…</p>
       ) : (
         <Table
           label="Redirects"
@@ -162,8 +162,10 @@ export function Redirects() {
           rows={shown}
           emptyState={rows.length === 0 ? 'No redirects yet.' : 'No redirects match.'}
           renderCell={(row, column) => {
-            if (column === 'from') return <span className="font-semibold">{row.from}</span>;
-            if (column === 'to') return row.to;
+            // Addresses are set in mono, the old one as the row's name.
+            if (column === 'from')
+              return <span className="font-mono text-small font-semibold">{row.from}</span>;
+            if (column === 'to') return <span className="font-mono text-small">{row.to}</span>;
             if (column === 'kind') return isPermanent(row.status) ? 'Permanent' : 'Temporary';
             if (column === 'reason')
               return <span className="text-content-muted">{reasonText(row.reason)}</span>;
@@ -436,7 +438,7 @@ function ImportDialog({
           </p>
           {parsed.problems.length > 0 && (
             <section aria-labelledby="import-skipped">
-              <h3 id="import-skipped" className="mb-1 text-body font-semibold">
+              <h3 id="import-skipped" className="mb-1 text-heading-3">
                 {parsed.problems.length === 1
                   ? '1 row is skipped'
                   : `${String(parsed.problems.length)} rows are skipped`}

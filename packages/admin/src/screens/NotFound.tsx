@@ -8,8 +8,9 @@ export function NotFound({
   message?: string;
 }) {
   return (
-    <Screen title="Not found">
-      <p className="mb-4">{message}</p>
+    <Screen title="Not found" afterglow>
+      <p className="mb-4 max-w-2xl">{message}</p>
+
       <Link href={hrefFor({ screen: 'home' })}>Back to content</Link>
     </Screen>
   );

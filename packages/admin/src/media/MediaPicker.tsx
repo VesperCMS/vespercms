@@ -98,7 +98,7 @@ function PickerBody({
   return (
     <div className="flex flex-col gap-6">
       <section aria-labelledby="picker-upload" className="flex flex-col gap-3">
-        <h3 id="picker-upload" className="text-body">
+        <h3 id="picker-upload" className="text-heading-3">
           Upload from your computer
         </h3>
         <p className="text-small text-content-muted">
@@ -147,11 +147,13 @@ function PickerBody({
       </section>
 
       <section aria-labelledby="picker-existing" className="flex flex-col gap-3">
-        <h3 id="picker-existing" className="text-body">
+        <h3 id="picker-existing" className="text-heading-3">
           Or choose one already in the site
         </h3>
         <TextField label="Search by file name" type="search" value={query} onChange={setQuery} />
-        {media.state === 'loading' && <p className="text-content-muted">Loading files…</p>}
+        {media.state === 'loading' && (
+          <p className="text-small text-content-muted">Loading files…</p>
+        )}
         {media.state === 'failed' && (
           <p role="alert" className="text-danger">
             Couldn’t list files: {media.message}
@@ -188,19 +190,19 @@ function MediaChoice({ item, onChoose }: { item: MediaItem; onChoose: (path: str
           src={api.fileUrl(item.path)}
           alt=""
           loading="lazy"
-          className="size-12 shrink-0 rounded-sm object-cover"
+          className="size-12 shrink-0 rounded-md object-cover"
         />
       ) : (
         <span
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-caption uppercase text-content-muted"
+          className="flex size-12 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-caption text-content-muted uppercase"
         >
           {extensionOf(item.path)}
         </span>
       )}
       <span className="min-w-0">
         <span className="block truncate font-semibold">{name}</span>
-        <span className="block truncate text-small text-content-muted">
+        <span className="block font-mono text-caption break-all text-content-muted">
           {item.path.slice(0, item.path.lastIndexOf('/'))} · {fileSize(item.size)}
         </span>
       </span>
