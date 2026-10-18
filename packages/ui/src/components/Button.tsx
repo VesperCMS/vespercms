@@ -15,7 +15,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   // the only thing that glows with the accent: on hover and focus, never at
   // rest (DECISIONS.md, "Four named glows").
   primary: cx(
-    'bg-accent text-on-accent data-[hovered]:bg-accent-hover',
+    'border-transparent bg-accent text-on-accent data-[hovered]:bg-accent-hover',
     'data-[hovered]:shadow-glow-accent data-[focus-visible]:shadow-glow-accent',
     // The glow fades in on hover only; on focus it's there at once (see colorTransition).
     'data-[hovered]:transition-[background-color,box-shadow] duration-180 ease-out',
@@ -24,8 +24,11 @@ const VARIANTS: Record<ButtonVariant, string> = {
     'border-border-strong bg-surface text-content data-[hovered]:bg-surface-sunken',
     colorTransition,
   ),
-  quiet: cx('text-accent data-[hovered]:bg-accent-subtle', colorTransition),
-  danger: cx('bg-danger text-on-accent data-[hovered]:opacity-90', colorTransition),
+  quiet: cx('border-transparent text-accent data-[hovered]:bg-accent-subtle', colorTransition),
+  danger: cx(
+    'border-transparent bg-danger text-on-accent data-[hovered]:opacity-90',
+    colorTransition,
+  ),
 };
 
 export type ButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
@@ -39,10 +42,12 @@ export type ButtonProps = Omit<RACButtonProps, 'className' | 'children'> & {
   pulse?: number;
 };
 
-// A transparent hairline on every button: forced colours draw it, so a button
-// whose fill they remove still shows its edge.
+// A hairline on every button, transparent but for the secondary's: forced
+// colours draw it, so a button whose fill they remove still shows its edge.
+// Each variant sets the colour, so two colours never compete for it.
 const buttonBase = cx(
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-transparent px-4 text-label',
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-4 text-label',
+
   'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[pending]:cursor-progress',
   focusRing,
 );
