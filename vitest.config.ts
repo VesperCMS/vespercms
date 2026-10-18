@@ -16,6 +16,9 @@ export default defineConfig({
           environment: 'node',
           include: ['packages/*/src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
           setupFiles: ['./vitest.setup.ts'],
+          // The studio's keyboard tests drive the real editor in jsdom: about a
+          // second each locally, and past 5 s on a loaded Windows CI runner.
+          testTimeout: 20_000,
         },
       },
       {

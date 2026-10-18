@@ -39,6 +39,12 @@ if (typeof window !== 'undefined') {
       value: () => undefined,
     });
   }
+
+  // The body editor and the map load on first use, as they do in the studio.
+  // On a Windows CI runner the first import of the editor's chunk can take
+  // longer than findBy*'s default second.
+  const { configure } = await import('@testing-library/dom');
+  configure({ asyncUtilTimeout: 10_000 });
 }
 
 export {};
