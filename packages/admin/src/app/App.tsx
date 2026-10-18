@@ -123,15 +123,19 @@ function routeKey(route: Route): string {
   return JSON.stringify(route);
 }
 
+/**
+ * Counts in-app navigations, so a new screen can take focus. It compares the
+ * route with the last one counted rather than skipping a "first run": React's
+ * StrictMode runs effects twice on mount in development, and a first-run flag
+ * then counted the load as a navigation and moved focus past the top bar.
+ */
 function useNavigationCount(route: Route): { count: number } {
   const [count, setCount] = useState(0);
-  const first = useRef(true);
   const key = routeKey(route);
+  const counted = useRef(key);
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
+    if (counted.current === key) return;
+    counted.current = key;
     setCount((n) => n + 1);
   }, [key]);
   return useMemo(() => ({ count }), [count]);

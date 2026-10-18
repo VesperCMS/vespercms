@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { act, cleanup, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
+import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
+import { App } from './App.tsx';
 
 afterEach(() => {
   cleanup();
@@ -44,6 +46,29 @@ describe('the studio shell', () => {
     const home = screen.getByRole('link', { name: 'Playground' });
     expect(home).toHaveAttribute('href', '#/');
     expect(home.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('leaves focus alone on load in StrictMode, and moves it to the heading on navigation', async () => {
+    // mountStudio renders in StrictMode, which runs effects twice on mount in development.
+    window.location.hash = '#/';
+    render(
+      <StrictMode>
+        <App manifest={playgroundManifest} siteName="Playground" api={fakeApi()} />
+      </StrictMode>,
+    );
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Content' });
+    expect(heading).not.toHaveFocus();
+    const user = userEvent.setup();
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveFocus();
+
+    act(() => {
+      window.location.hash = '#/media';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Media' })).toHaveFocus();
+    });
   });
 
   it('starts with a skip link that moves focus to the content', async () => {
