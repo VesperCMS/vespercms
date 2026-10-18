@@ -207,6 +207,18 @@ describe('Dialog, Menu and Disclosure', () => {
     });
   });
 
+  it('Dialog comes in a wide size for work on images, and scrolls rather than overflowing', () => {
+    render(
+      <Dialog title="Adjust the crop" isOpen onOpenChange={() => {}} size="wide">
+        <p>The image</p>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Adjust the crop' });
+    const modal = dialog.parentElement;
+    expect(modal?.className).toContain('max-w-3xl');
+    expect(modal?.className).toContain('overflow-y-auto');
+  });
+
   it('Menu opens from its named trigger and acts on Enter', async () => {
     const onAction = vi.fn();
     render(

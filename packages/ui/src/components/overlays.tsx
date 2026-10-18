@@ -27,6 +27,8 @@ export type DialogProps = {
   isDismissable?: boolean;
   /** `alertdialog` for confirmations, so screen readers announce them as such. */
   role?: 'dialog' | 'alertdialog';
+  /** `wide` for work on an image, such as cropping. Still fits a 320px screen. */
+  size?: 'default' | 'wide';
 };
 
 /**
@@ -40,6 +42,7 @@ export function Dialog({
   children,
   isDismissable = true,
   role = 'dialog',
+  size = 'default',
 }: DialogProps) {
   return (
     <ModalOverlay
@@ -48,7 +51,12 @@ export function Dialog({
       isDismissable={isDismissable}
       className={cx(overlay, 'flex items-center justify-center p-4')}
     >
-      <Modal className="w-full max-w-lg rounded-lg border border-border bg-surface-raised shadow-overlay">
+      <Modal
+        className={cx(
+          'max-h-full w-full overflow-y-auto rounded-lg border border-border bg-surface-raised shadow-overlay',
+          size === 'wide' ? 'max-w-3xl' : 'max-w-lg',
+        )}
+      >
         <RACDialog role={role} className="flex flex-col gap-4 p-6 outline-none">
           {({ close }) => (
             <>
