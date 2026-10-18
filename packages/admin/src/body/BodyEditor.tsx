@@ -489,9 +489,15 @@ function WritingView({
             const pos = settingsAt;
             setSettingsAt(null);
             // Back to the text with the block still selected, so Enter reopens
-            // its settings and Alt+↑/↓ or cut moves it. After the dialog has
-            // put focus back where it was, which would move the selection.
-            setTimeout(() => {
+            // its settings and Alt+↑/↓ or cut moves it. Only once the closing
+            // dialog has put focus back in the editor (after its exit), since
+            // the caret that focus brings would replace the selection.
+            const dom = editor.view.dom;
+            let done = false;
+            const reselect = () => {
+              if (done) return;
+              done = true;
+              dom.removeEventListener('focusin', onFocus);
               editor.view.focus();
               const node = pos === null ? null : editor.state.doc.nodeAt(pos);
               if (pos !== null && node && isManaged(node.type.name, containers)) {
@@ -499,7 +505,11 @@ function WritingView({
                   editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)),
                 );
               }
-            }, 0);
+            };
+            const onFocus = () => setTimeout(reselect, 0);
+            dom.addEventListener('focusin', onFocus);
+            // In case focus was meant to go somewhere else entirely.
+            setTimeout(reselect, 500);
           }}
         />
         <LinkDialog editor={editor} isOpen={linkOpen} onOpenChange={setLinkOpen} />
