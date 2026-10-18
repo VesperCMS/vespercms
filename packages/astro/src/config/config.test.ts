@@ -117,3 +117,40 @@ describe('URLs, trees and redirects', () => {
     ]);
   });
 });
+
+describe('images', () => {
+  it('accepts ratios and an upload limit', () => {
+    expect(
+      checkConfig({ images: { ratios: { wide: 16 / 9, square: 1, og: 2 }, maxUploadEdge: 2400 } }),
+    ).toEqual([]);
+  });
+
+  it('explains bad names, ratios and limits', () => {
+    expect(
+      checkConfig({
+        images: { ratios: { '16x9': 16 / 9, flat: 0, tall: '9/16' }, maxUploadEdge: 1.5, max: 1 },
+      }),
+    ).toEqual([
+      { level: 'warning', message: 'Unknown setting "images.max" is ignored.' },
+      {
+        level: 'error',
+        message: "images.ratios: \"16x9\" can't be a ratio's name. Use a word, such as wide or square.",
+      },
+      {
+        level: 'error',
+        message: 'images.ratios.flat must be a number above zero, width / height, such as 16 / 9.',
+      },
+      {
+        level: 'error',
+        message: 'images.ratios.tall must be a number above zero, width / height, such as 16 / 9.',
+      },
+      { level: 'error', message: 'images.maxUploadEdge must be a whole number of pixels, such as 3000.' },
+    ]);
+    expect(checkConfig({ images: { ratios: [1] } })).toEqual([
+      {
+        level: 'error',
+        message: 'images.ratios must be an object of names and ratios, such as { wide: 16 / 9 }.',
+      },
+    ]);
+  });
+});

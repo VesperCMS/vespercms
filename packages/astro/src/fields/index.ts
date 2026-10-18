@@ -8,8 +8,6 @@ import { z } from 'astro/zod';
  *
  * Everything comes from `astro/zod`, the copy Astro validates with, so the
  * meta hints are visible to Vesper (spec §6.3).
- *
- * `fields.image()` (focal point and crops) arrives in Phase 2.7.
  */
 
 /**
@@ -113,6 +111,75 @@ export function file(options: { accept?: string | string[] } = {}) {
   return z.string().meta(withOptions('file', { accept: options.accept }));
 }
 
+/** A share of the image, 0 to 1 from the top left (spec §6.6.2). */
+const fraction = () => z.number().min(0).max(1);
+
+/** A crop: a normalized rectangle that lies inside the image. */
+const cropRect = () =>
+  z
+    .object({
+      x: fraction(),
+      y: fraction(),
+      w: z.number().gt(0).max(1),
+      h: z.number().gt(0).max(1),
+    })
+    .refine((rect) => rect.x + rect.w <= 1 + 1e-9 && rect.y + rect.h <= 1 + 1e-9, {
+      message: 'The crop must lie inside the image.',
+    });
+
+/**
+ * An image with alt text written for this page, an optional focal point and
+ * optional crops per aspect ratio (spec §6.6.2). Pass `image` from the
+ * schema function, so `src` is Astro's own `image()` and resolves to
+ * `ImageMetadata`:
+ *
+ * ```ts
+ * schema: ({ image }) => z.object({ hero: fields.image(image, { ratios: ['wide', 'square'] }) })
+ * ```
+ *
+ * Stored as `{ src, alt, decorative?, focus?: { x, y }, crops?: { [ratio]: { x, y, w, h } } }`,
+ * every number 0–1 from the top left. `alt` is required unless the image is
+ * decorative, which stores `alt: ""` and `decorative: true`.
+ *
+ * Raw equivalent:
+ * ```ts
+ * z.object({
+ *   src: image(),
+ *   alt: z.string(),
+ *   decorative: z.boolean().optional(),
+ *   focus: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).meta({ label: 'Focal point' }).optional(),
+ *   crops: z.record(z.string(), z.object({
+ *     x: z.number().min(0).max(1), y: z.number().min(0).max(1),
+ *     w: z.number().gt(0).max(1), h: z.number().gt(0).max(1),
+ *   }).refine((r) => r.x + r.w <= 1 + 1e-9 && r.y + r.h <= 1 + 1e-9, { message: 'The crop must lie inside the image.' })).optional(),
+ * }).refine((v) => (v.decorative === true ? v.alt === '' : v.alt.trim() !== ''), {
+ *   message: 'Describe this image, or mark it decorative.', path: ['alt'],
+ * }).meta({ widget: 'image', widgetOptions: { ratios: ['wide', 'square'] } })
+ * ```
+ *
+ * @param image Astro's `image` helper, from the collection's schema function.
+ * @param options.ratios The ratio names (from `images.ratios` in vesper.config.ts)
+ *   the editor previews and crops. Defaults to every ratio the site declares.
+ */
+export function image<Src extends z.ZodType>(
+  image: () => Src,
+  options: { ratios?: string[] } = {},
+) {
+  return z
+    .object({
+      src: image(),
+      alt: z.string(),
+      decorative: z.boolean().optional(),
+      focus: z.object({ x: fraction(), y: fraction() }).meta({ label: 'Focal point' }).optional(),
+      crops: z.record(z.string(), cropRect()).optional(),
+    })
+    .refine((value) => (value.decorative === true ? value.alt === '' : value.alt.trim() !== ''), {
+      message: 'Describe this image, or mark it decorative.',
+      path: ['alt'],
+    })
+    .meta(withOptions('image', { ratios: options.ratios ? [...options.ratios] : undefined }));
+}
+
 /** `{ widget }`, plus `widgetOptions` only when an option was given, matching the documented raw Zod. */
 function withOptions(widget: string, options: Record<string, unknown>): Record<string, unknown> {
   const defined = Object.fromEntries(
@@ -121,4 +188,4 @@ function withOptions(widget: string, options: Record<string, unknown>): Record<s
   return Object.keys(defined).length > 0 ? { widget, widgetOptions: defined } : { widget };
 }
 
-export const fields = { color, geo, slug, url, email, datetime, select, markdown, file };
+export const fields = { color, geo, slug, url, email, datetime, select, markdown, file, image };

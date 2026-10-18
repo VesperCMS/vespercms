@@ -1,5 +1,7 @@
 import {
   NATIVE_TARGETS,
+  RATIO_NAME,
+  isRatio,
   type CollectionConfig,
   type FieldModel,
   type MarkdocTagHint,
@@ -36,7 +38,13 @@ export type { MarkdocTagHint };
 export type VesperConfig = {
   collections?: Record<string, VesperCollectionConfig>;
   widgets?: Record<string, CustomWidget>;
-  /** Image ratios and upload limits (spec §6.6.3). Used from Phase 2.7. */
+  /**
+   * Images (spec §6.6.3, §6.6.6). `ratios` names the crops the site renders,
+   * as width / height: `{ wide: 16 / 9, square: 1 }`. The studio previews
+   * them and `<Img ratio="wide">` renders them; `og` (1.91:1, for social
+   * images) is built in. `maxUploadEdge` scales down uploads whose long
+   * edge is larger, in pixels (3000 by default).
+   */
   images?: { ratios?: Record<string, number>; maxUploadEdge?: number };
   /**
    * UI hints for Markdoc tags (spec §6.5.1): a friendly name, help text, the
@@ -172,6 +180,7 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
     ...checkMarkdoc(record.markdoc),
     ...checkMdx(record.mdx),
     ...checkRedirects(record.redirects),
+    ...checkImages(record.images),
   );
   const widgets = record.widgets;
   if (widgets !== undefined && typeof widgets === 'object' && widgets !== null) {
@@ -305,6 +314,43 @@ function checkRedirects(redirects: unknown): Problem[] {
         message: `redirects.native: ${JSON.stringify(target)} isn't a host Vesper writes rules for. Use ${NATIVE_TARGETS.join(', ')}.`,
       });
     }
+  }
+  return problems;
+}
+
+function checkImages(images: unknown): Problem[] {
+  if (images === undefined) return [];
+  if (!isObject(images)) return [{ level: 'error', message: '"images" must be an object.' }];
+  const problems = unknownKeys(images, ['ratios', 'maxUploadEdge'], 'images');
+  const { ratios, maxUploadEdge } = images;
+  if (ratios !== undefined && !isObject(ratios)) {
+    problems.push({
+      level: 'error',
+      message: 'images.ratios must be an object of names and ratios, such as { wide: 16 / 9 }.',
+    });
+  } else if (ratios !== undefined) {
+    for (const [name, ratio] of Object.entries(ratios)) {
+      if (!RATIO_NAME.test(name)) {
+        problems.push({
+          level: 'error',
+          message: `images.ratios: ${JSON.stringify(name)} can't be a ratio's name. Use a word, such as wide or square.`,
+        });
+      } else if (!isRatio(ratio)) {
+        problems.push({
+          level: 'error',
+          message: `images.ratios.${name} must be a number above zero, width / height, such as 16 / 9.`,
+        });
+      }
+    }
+  }
+  if (
+    maxUploadEdge !== undefined &&
+    !(typeof maxUploadEdge === 'number' && Number.isInteger(maxUploadEdge) && maxUploadEdge > 0)
+  ) {
+    problems.push({
+      level: 'error',
+      message: 'images.maxUploadEdge must be a whole number of pixels, such as 3000.',
+    });
   }
   return problems;
 }
