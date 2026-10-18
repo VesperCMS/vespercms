@@ -2,7 +2,8 @@
 import type { EntryDocument, EntrySummary, SaveRequest } from '@vesper/core';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WIDE_EDITOR } from '../app/media.ts';
 import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
@@ -193,6 +194,73 @@ describe('the entry editor', () => {
     await user.click(within(summary).getByRole('link', { name: /Hero, alt:/ }));
     expect(alt).toHaveFocus();
     expect(window.location.hash).toBe('#/c/blog/e/harbor-at-dawn');
+  });
+
+  describe('on a wide screen', () => {
+    beforeEach(() => {
+      vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+        matches: query === WIDE_EDITOR,
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }));
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('opens Details as a drawer from the top bar, and returns focus there', async () => {
+      const { user } = setup('#/c/blog/e/harbor-at-dawn');
+      await screen.findByRole('textbox', { name: 'Title (required)' });
+      // No section in the column: a button in the bar instead.
+      const button = screen.getByRole('button', { name: 'Details' });
+      expect(button).not.toHaveAttribute('aria-expanded');
+      expect(screen.queryByRole('textbox', { name: /^Tags/ })).not.toBeInTheDocument();
+
+      await user.click(button);
+      const drawer = await screen.findByRole('dialog', { name: 'Details' });
+      expect(within(drawer).getByRole('combobox', { name: /^Tags/ })).toBeInTheDocument();
+      await expectNoViolations();
+
+      await user.keyboard('{Escape}');
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(button).toHaveFocus();
+      });
+    });
+
+    it('counts Details’ problems in its button, and a summary link opens the drawer at the field', async () => {
+      const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
+      api.saveEntry.mockResolvedValueOnce({
+        ok: false,
+        reason: 'invalid',
+        issues: [{ path: ['publishedAt'], message: 'Enter a valid date.' }],
+      });
+      await screen.findByRole('textbox', { name: 'Title (required)' });
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      const summary = await screen.findByRole('alert');
+      await waitFor(() => {
+        expect(summary).toHaveFocus();
+      });
+      // The drawer doesn't open on its own: it would take focus from the summary.
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Details (1 problem)' })).toBeInTheDocument();
+
+      await user.click(within(summary).getByRole('link', { name: /Enter a valid date\./ }));
+      const drawer = await screen.findByRole('dialog', { name: 'Details' });
+      await waitFor(() => {
+        expect(drawer).toContainElement(document.activeElement as HTMLElement);
+      });
+      expect(document.activeElement).toHaveAttribute('aria-invalid', 'true');
+      expect(window.location.hash).toBe('#/c/blog/e/harbor-at-dawn');
+    });
   });
 
   it('explains a conflict and offers to reload', async () => {

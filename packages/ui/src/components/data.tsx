@@ -163,6 +163,11 @@ export type ErrorSummaryProps = {
    * fixing one never pulls focus away from what they're doing.
    */
   focusKey?: string | number;
+  /**
+   * Takes a link to its field, for fields that aren't always on the page (one
+   * in a closed drawer). By default the link focuses the element with that id.
+   */
+  onGo?: (fieldId: string) => void;
 };
 
 /**
@@ -174,6 +179,7 @@ export function ErrorSummary({
   errors,
   focusOnMount = true,
   focusKey,
+  onGo,
 }: ErrorSummaryProps) {
   const ref = useRef<HTMLDivElement>(null);
   const trigger = focusKey ?? errors.length;
@@ -201,12 +207,18 @@ export function ErrorSummary({
             <a
               href={`#${error.fieldId}`}
               onClick={(event) => {
+                if (onGo) {
+                  event.preventDefault();
+                  onGo(error.fieldId);
+                  return;
+                }
                 const target = document.getElementById(error.fieldId);
                 if (target) {
                   event.preventDefault();
                   target.focus();
                 }
               }}
+
               className="text-danger underline underline-offset-2"
             >
               {error.message}

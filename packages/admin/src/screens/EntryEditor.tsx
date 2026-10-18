@@ -23,6 +23,7 @@ import {
   Button,
   Dialog,
   Disclosure,
+  Drawer,
   ErrorSummary,
   InlineStatus,
   Link,
@@ -32,8 +33,9 @@ import {
 } from '@vesper/ui';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
-import { formatRelative } from '../app/format.ts';
+import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
+import { useMediaQuery, WIDE_EDITOR } from '../app/media.ts';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
@@ -156,7 +158,13 @@ function EntryForm({
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [notice, setNotice] = useState<Notice>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /**
+   * Details (spec §10.3): a drawer from the top bar on a wide screen, the
+   * closing section of the column on a narrow one. One state for both, so
+   * resizing keeps it open or closed.
+   */
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const wide = useMediaQuery(WIDE_EDITOR);
   /** Each successful save glows Save once (glow-accent). */
   const [savedPulse, setSavedPulse] = useState(0);
 
@@ -418,8 +426,10 @@ function EntryForm({
         // The dev API checks the body again with the site's real config.
         if (result.bodyIssues) setBodyIssues(result.bodyIssues);
         setRefusals((n) => n + 1);
+        // In the column, Details opens to show its errors. The drawer doesn't:
+        // it would take focus from the summary, whose links open it instead.
         const detailKeys = new Set(arranged.details.map(keyOf));
-        if (result.issues.some((issue) => detailKeys.has(String(issue.path[0]))))
+        if (!wide && result.issues.some((issue) => detailKeys.has(String(issue.path[0]))))
           setDetailsOpen(true);
       } else {
         setNotice({ kind: result.reason, text: result.message });
@@ -446,6 +456,7 @@ function EntryForm({
     bodyEol,
     api,
     arranged.details,
+    wide,
     checks,
     parent,
     blockOn,
@@ -513,6 +524,9 @@ function EntryForm({
     : { href: hrefFor({ screen: 'list', collection: collection.name }), label: collection.label };
 
   const statusLine = [draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ');
+  const hasDetails = !sourceOnly && arranged.details.length > 0;
+  const detailKeys = new Set(arranged.details.map(keyOf));
+  const detailProblems = issues.filter((issue) => detailKeys.has(String(issue.path[0]))).length;
   const bar = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
       <Link href={back.href} className="text-small">
@@ -534,6 +548,19 @@ function EntryForm({
             }}
           >
             {notesCount(notes.length, blocking.length)}
+          </Button>
+        )}
+        {hasDetails && wide && (
+          // The problem count is words, so the drawer's errors are known before it opens.
+          <Button
+            variant="quiet"
+            onPress={() => {
+              setDetailsOpen(true);
+            }}
+          >
+            {detailProblems > 0
+              ? `Details (${formatCount(detailProblems, 'problem', 'problems')})`
+              : 'Details'}
           </Button>
         )}
         <div className="flex items-center gap-2">
@@ -610,7 +637,16 @@ function EntryForm({
               rewritten in a standard layout.
             </p>
           )}
-          <ErrorSummary title="The entry wasn’t saved" errors={errors} focusKey={refusals} />
+          <ErrorSummary
+            title="The entry wasn’t saved"
+            errors={errors}
+            focusKey={refusals}
+            onGo={(fieldId) => {
+              // A field in the closed drawer isn't on the page until the drawer opens.
+              if (hasDetails && !document.getElementById(fieldId)) setDetailsOpen(true);
+              focusWhenShown(fieldId);
+            }}
+          />
           {isNew && parent !== undefined && <ParentNote collection={collection} parent={parent} />}
 
           {sourceOnly ? (
@@ -655,7 +691,7 @@ function EntryForm({
             </Suspense>
           )}
 
-          {!sourceOnly && arranged.details.length > 0 && (
+          {hasDetails && !wide && (
             <Disclosure title="Details" isExpanded={detailsOpen} onExpandedChange={setDetailsOpen}>
               <div className="flex flex-col gap-6 pt-2 pl-6">
                 {arranged.details.map((field) => (
@@ -665,6 +701,16 @@ function EntryForm({
             </Disclosure>
           )}
         </div>
+
+        {hasDetails && wide && (
+          <Drawer title="Details" isOpen={detailsOpen} onOpenChange={setDetailsOpen}>
+            <div className="flex flex-col gap-6 pt-2">
+              {arranged.details.map((field) => (
+                <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
+              ))}
+            </div>
+          </Drawer>
+        )}
       </EditorContext.Provider>
 
       <NotesDrawer
