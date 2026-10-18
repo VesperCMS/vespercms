@@ -1,9 +1,17 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  promises,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { runStorageContract } from '@vesper/core/testing';
-import { afterAll, describe, expect, it } from 'vitest';
-import { LocalStorage } from '../src/node/storage-local.ts';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import { LocalStorage, renameWithRetry } from '../src/node/storage-local.ts';
 
 const roots: string[] = [];
 
@@ -46,6 +54,44 @@ describe('LocalStorage', () => {
       changes: [{ op: 'put', path: 'dist/evil.html', bytes: new TextEncoder().encode('x') }],
     });
     expect(result.ok ? null : result.reason).toBe('rejected');
+  });
+
+  it('retries a rename while Windows reports the file busy, and gives up on other errors', async () => {
+    const busy = (code: string) => Object.assign(new Error(code), { code });
+    let calls = 0;
+    await renameWithRetry('a', 'b', () => {
+      calls++;
+      return calls < 3 ? Promise.reject(busy('EPERM')) : Promise.resolve();
+    });
+    expect(calls).toBe(3);
+
+    calls = 0;
+    await expect(
+      renameWithRetry('a', 'b', () => {
+        calls++;
+        return Promise.reject(busy('ENOENT'));
+      }),
+    ).rejects.toThrow('ENOENT');
+    expect(calls).toBe(1);
+  });
+
+  it('leaves no temporary file behind when a save fails', async () => {
+    const root = siteWith({ 'src/content/a.md': 'a' });
+    const store = new LocalStorage(root);
+    const rename = vi
+      .spyOn(promises, 'rename')
+      .mockRejectedValue(Object.assign(new Error('EXDEV'), { code: 'EXDEV' }));
+    try {
+      const result = await store.commit({
+        message: { summary: 'x' },
+        changes: [{ op: 'put', path: 'src/content/a.md', bytes: new TextEncoder().encode('b') }],
+      });
+      expect(result.ok).toBe(false);
+    } finally {
+      rename.mockRestore();
+    }
+    expect(readdirSync(join(root, 'src', 'content'))).toEqual(['a.md']);
+    expect(readFileSync(join(root, 'src', 'content', 'a.md'), 'utf8')).toBe('a');
   });
 
   it('writes bytes exactly, CRLF and all', async () => {

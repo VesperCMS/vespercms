@@ -15,6 +15,34 @@ import {
 /** Folders that are never content. Listing skips them; writing into them is refused. */
 const SKIPPED = new Set(['node_modules', '.git', 'dist', '.astro', '.vesper']);
 
+/** Windows refuses to replace a file while anything has it open, briefly. */
+const BUSY = new Set(['EPERM', 'EACCES', 'EBUSY']);
+const RENAME_DELAYS = [10, 20, 40, 80, 160, 320, 640];
+
+/**
+ * fs.rename, retried while Windows reports the target busy. The dev server's
+ * watcher reads a content file right after it changes, and antivirus scans
+ * new files; either makes a rename fail with EPERM for a few milliseconds.
+ * graceful-fs retries the same way. The delays add up to about a second
+ * and a quarter, past which the error is real.
+ */
+export async function renameWithRetry(
+  from: string,
+  to: string,
+  rename: (from: string, to: string) => Promise<void> = (a, b) => fs.rename(a, b),
+): Promise<void> {
+  for (const delay of [...RENAME_DELAYS, null]) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code ?? '';
+      if (delay === null || !BUSY.has(code)) throw error;
+      await new Promise((settle) => setTimeout(settle, delay));
+    }
+  }
+}
+
 /**
  * Local mode's storage (spec §6.7): files on disk under the site root.
  *
@@ -150,7 +178,13 @@ export class LocalStorage implements StorageAdapter {
     await fs.mkdir(dirname(target), { recursive: true });
     const temporary = `${target}.vesper-${randomUUID()}.tmp`;
     await fs.writeFile(temporary, bytes);
-    await fs.rename(temporary, target);
+    try {
+      await renameWithRetry(temporary, target);
+    } catch (error) {
+      // A leftover .tmp would sit in the site's content folder.
+      await fs.rm(temporary, { force: true });
+      throw error;
+    }
   }
 
   private async restore(originals: Map<string, Uint8Array | null>): Promise<void> {
