@@ -65,6 +65,12 @@ export default defineConfig({
   images: {
     ratios: { wide: 16 / 9, square: 1, portrait: 4 / 5 },
   },
+  // The page backgrounds in src/styles/site.css (light and dark), so the
+  // studio can check text colours from fields.color({ contrast: 'text' })
+  // against both (spec §6.18). No blockPublishOn: every note only warns.
+  a11y: {
+    backgrounds: { 'Page, light': '#ffffff', 'Page, dark': '#12151f' },
+  },
   collections: {
     blog: {
       label: 'Blog posts',
@@ -84,6 +90,7 @@ export default defineConfig({
       // Dates go to Details by default; an event's own times belong up front.
       placement: { startsAt: 'main', endsAt: 'main' },
     },
-    fixtures: { label: 'Accessibility fixtures', search: false },
+    // The URL lets the build's accessibility report trace the page to its entry.
+    fixtures: { label: 'Accessibility fixtures', url: '/fixtures/:id', search: false },
   },
 });

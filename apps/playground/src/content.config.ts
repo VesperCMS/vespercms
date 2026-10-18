@@ -166,7 +166,8 @@ const fixtures = defineCollection({
   schema: z.object({
     title: z.string(),
     summary: z.string(),
-    textColor: fields.color(),
+    // A text colour: the studio checks it against vesper.config.ts's a11y.backgrounds.
+    textColor: fields.color({ contrast: 'text' }),
     brochure: fields.file({ accept: 'application/pdf' }).optional(),
   }),
 });

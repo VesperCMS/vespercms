@@ -11,6 +11,18 @@
         "portrait": 0.8,
         "og": 1.91
       }
+    },
+    "a11y": {
+      "backgrounds": [
+        {
+          "name": "Page, light",
+          "color": "#ffffff"
+        },
+        {
+          "name": "Page, dark",
+          "color": "#12151f"
+        }
+      ]
     }
   },
   "collections": [
@@ -1136,6 +1148,9 @@
           "required": true,
           "label": "Text color",
           "widget": "color",
+          "widgetOptions": {
+            "contrast": "text"
+          },
           "constraints": {
             "pattern": "^#[0-9a-f]{6}$",
             "patternFlags": "i"
@@ -1158,6 +1173,7 @@
       ],
       "extraKeys": "strip",
       "presentation": {
+        "url": "/fixtures/:id",
         "search": false
       }
     }
@@ -1537,5 +1553,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "876b4a458e22a56f45e2cea87987e47b29fe5e4479779af60fc5491adbac64a0"
+  "hash": "b1c22199beca5e634aa55a149bd243221607e26814b32b2a9ac495d9d1a1ddc0"
 }
