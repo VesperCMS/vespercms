@@ -48,6 +48,14 @@ describe('the studio shell', () => {
     expect(home.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
+  it('shows a site’s name as written, and only Vesper’s own in lowercase', () => {
+    const { unmount } = renderStudio('#/', { siteName: 'Highlands College' });
+    expect(screen.getByRole('link', { name: 'Highlands College' })).not.toHaveClass('lowercase');
+    unmount();
+    render(<App manifest={playgroundManifest} api={fakeApi()} />);
+    expect(screen.getByRole('link', { name: 'Vesper' })).toHaveClass('lowercase');
+  });
+
   it('leaves focus alone on load in StrictMode, and moves it to the heading on navigation', async () => {
     // mountStudio renders in StrictMode, which runs effects twice on mount in development.
     window.location.hash = '#/';

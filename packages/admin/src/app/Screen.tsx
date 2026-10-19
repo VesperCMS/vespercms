@@ -1,6 +1,6 @@
 import { cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
-import { useStudio } from './context.tsx';
+import { useStudio, VESPER_NAME } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
 import { collectionIcon } from './collection-icon.ts';
 import { hrefFor, navigate, parseRoute } from './router.ts';
@@ -67,7 +67,9 @@ export function Screen({
           <a
             href={hrefFor({ screen: 'home' })}
             className={cx(
-              'inline-flex items-center gap-2 rounded-sm text-heading-3 tracking-tight text-content lowercase no-underline',
+              'inline-flex items-center gap-2 rounded-sm text-heading-3 tracking-tight text-content no-underline',
+              // Only Vesper's own name is lowercase; a site's shows as the site writes it.
+              siteName === VESPER_NAME && 'lowercase',
               'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus',
               'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
             )}

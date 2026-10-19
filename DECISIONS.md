@@ -763,3 +763,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 - An unknown name warns once ("collections.blog.icon: \"newspapr\" isn't a Lucide icon name…") and falls back to the default.
 - The kit draws a manifest icon only from Lucide's shapes and geometry attributes (`path`, `circle`, `rect`, `line`, `polyline`, `polygon`, `ellipse`), so manifest data can't put anything else into the page.
 - Free, like every other `vesper.config.ts` presentation setting: it isn't the studio's branding, which is white-label's.
+
+### 2026-10-19: A site's name shows as written; only Vesper's own is lowercase
+
+**The top bar shows the site's name exactly as the site writes it. Only Vesper's own name, shown when a site gives none, is set lowercase, as its wordmark.** The design pass lowercased every name with CSS, so screen readers still read it as written, but it showed "Highlands College" as "highlands college": a customer's own name, changed in their own studio. Jeremy chose this on 2026-10-19. The integration always passes a name (the site's host, its package name, or "Your site"), so in practice the lowercase wordmark appears only where the studio is mounted without one.

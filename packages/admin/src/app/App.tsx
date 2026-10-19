@@ -10,7 +10,7 @@ import { PageTree } from '../screens/PageTree.tsx';
 import { Redirects } from '../screens/Redirects.tsx';
 import { Unavailable } from '../screens/Unavailable.tsx';
 import type { StudioOptions, WidgetComponent, WidgetLoader } from '../types.ts';
-import { StudioContext, type Studio } from './context.tsx';
+import { StudioContext, VESPER_NAME, type Studio } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
 import { useRouter, type Route } from './router.ts';
 
@@ -22,7 +22,7 @@ export function App({
   api,
   widgets = NO_WIDGETS,
   loadMdxProps = NO_PROPS,
-  siteName = 'Vesper',
+  siteName = VESPER_NAME,
   siteUrl,
 }: StudioOptions) {
   const { route, pending, leave, stay } = useRouter();

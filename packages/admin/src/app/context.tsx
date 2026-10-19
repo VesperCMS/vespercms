@@ -15,6 +15,9 @@ export type Studio = {
   collection: (name: string) => CollectionManifest | undefined;
 };
 
+/** The name the studio shows when the site gives none: Vesper's own, set lowercase as its wordmark. */
+export const VESPER_NAME = 'Vesper';
+
 export const StudioContext = createContext<Studio | null>(null);
 
 export function useStudio(): Studio {
