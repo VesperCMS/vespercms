@@ -15,7 +15,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
-| 3 GitHub mode | Built (2026-10-19), every criterion met against a fake GitHub; waiting for CI on GitHub and the real-world check. See "Phase 3: outcome" below. |
+| 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
 | 4 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -36,7 +36,7 @@ Jeremy took the recommendation on every open item on 2026-10-19: the earlier pha
 | Phase 2.9 calls 1 to 10 and the smaller defaults | All (a), as recommended | Phase 2.9 |
 | Filing the audit's findings with Pagefind | Yes, once Jeremy's screen reader Part A confirms findings 1 and 2; posted only with his OK | Drafted in 2.9 |
 
-Still Jeremy's: claim the `@vesper` npm org, register the domain, and the screen reader passes (2.6, 2.7, 2.8, the design pass, then 2.9's Part B).
+Still Jeremy's: claim the `@vesper` npm org, register the domain, and the screen reader passes (2.6, 2.7, 2.8, the design pass, 2.9's Part B, then 3).
 
 ## Phase 0: Scaffold
 
@@ -384,11 +384,11 @@ Jeremy asked for icons, the body editor's toolbar first. His calls are in DECISI
 
 ## Phase 3: outcome
 
-Built 2026-10-19 on the design below, with every call as recommended (Jeremy, 2026-10-19). Unit, integration and every e2e test pass locally on macOS (4,167 and 111); CI hasn't run yet.
+Built 2026-10-19 on the design below, with every call as recommended (Jeremy, 2026-10-19). CI is green on GitHub (run 39287685831). The first run (39284180201) failed only in the GitHub-mode e2e tests: the sign-in helper waited for the user menu, which an editor's own bar doesn't have, so it passed only while the entry was still loading. The helper now waits for the signed-in studio, and the github project doesn't retry, since a serial file reruns against a repository its first attempt already changed (2509206).
 
 | Criterion (spec §11) | How it's met |
 |---|---|
-| An editor with a GitHub account can edit and publish, with an image, from a deployed static site | `e2e/github/github.spec.ts`: a GitHub-mode build of the playground on the plain static server signs in through the real relay (`templates/oauth-relay`) against a fake GitHub whose repository is real git. It edits a post, uploads a new image through the field, and publishes. The bare repository then has exactly one new commit, by the editor, with the post changed and the image added, and every other file's bytes unchanged. The same project covers a deep link across a reload, a conflict with a change published elsewhere, a reorder as one commit, and axe on the sign-in screen, Home and the user menu. **Not done: the same with real GitHub and a real host** (the checklist below). |
+| An editor with a GitHub account can edit and publish, with an image, from a deployed static site | `e2e/github/github.spec.ts`: a GitHub-mode build of the playground on the plain static server signs in through the real relay (`templates/oauth-relay`) against a fake GitHub whose repository is real git. It edits a post, uploads a new image through the field, and publishes. The bare repository then has exactly one new commit, by the editor, with the post changed and the image added, and every other file's bytes unchanged. The same project covers a deep link across a reload, a conflict with a change published elsewhere, a reorder as one commit, and axe on the sign-in screen, Home and the user menu. **And on real GitHub and a real host** (below). |
 | GitHub adapter passing the storage contract suite (roadmap) | `packages/astro/test/storage-github.test.ts`: `GitHubStorage` passes `runStorageContract` against the fake, plus a push from elsewhere mid-save (built on once, or a conflict), branch rules, an expired sign-in, rate limits, a truncated tree, a monorepo's subfolder, byte exactness (CRLF, a BOM, non-UTF-8), batched reads with a warm cache, and held uploads. |
 | OAuth relay template (roadmap) | `templates/oauth-relay`: one dependency-free Worker, a `wrangler.toml` and a README. Its tests sign in from end to end against the fake, and refuse unknown sites, missing state or challenge, wrong verifiers and forged callbacks. |
 
@@ -401,20 +401,27 @@ Measured: the playground's schemas for the browser are 93 KB minified, loaded on
 - **The field model's fallback checks** (`fieldModelIssues`) are new in core; nothing had them before.
 - **The Details focus test waits for the field** (a479c50): it raced on a fast run, before this phase and after.
 
-**Open, for Jeremy:**
-- **The real-world check**, the criterion's "deployed static site". Recommended:
-  1. Create a private copy of this repository on GitHub (for example `vesper-github-test`), so test commits never land in the real one.
-  2. Create a GitHub App, "Vesper (test)", as `templates/oauth-relay/README.md` describes, and install it on that copy only.
-  3. Deploy the relay on your Cloudflare account. Its `workers.dev` address goes in the app's callback; `ALLOWED_ORIGINS` is the Pages site's address.
-  4. On Cloudflare Pages, connect the copy:
-     - build command `npm ci && npm run build -w @vesper/playground`;
-     - output `apps/playground/dist`;
-     - the playground's config gets `vesper({ search, github: { relay: '…' } })`.
+**The real-world check** (2026-10-19). The setup:
+- a private copy of this repository, `jeremybise/vesper-github-test`, with GitHub Actions off;
+- a GitHub App, "Vesper (test)", installed on that copy only;
+- the relay as a Worker on Jeremy's Cloudflare account;
+- the playground on Cloudflare Pages at `vesper-github-test.pages.dev`, with only `github: { relay }` added to its config.
 
-     The site's folder (`apps/playground`) is read from git, which also checks monorepo detection on a real host.
-  5. You sign in to GitHub yourself in the browser pane. I can drive the rest and check the commit on GitHub.
+Jeremy signed in and published a title change and a new image on Harbor at dawn. GitHub has one commit for it (3f0894d), by him, with the `Vesper-Collection: blog` trailer. The post changed by two lines (the title and `hero.src`), with its line endings kept, and the image was added beside the others in `apps/playground/src/assets/blog/`. Pages rebuilt within three minutes, and the live post shows both. The build read the repository, `main` and the site's folder from git on Cloudflare's builder, with no settings.
+
+The copy, the app, the relay and the Pages site are still up. Delete them when they're no longer useful.
+
+**Open, for Jeremy:**
+- **Replacing an image keeps the old one's alt text, focal point and crops.** This happens in every mode: the image field's `setSrc` changes only `src`. On the test site the new picture went live with the old one's description. No check catches it, because the alt text isn't empty. Options:
+  - (a) Clear the focal point and crops, keep the alt text, and show a note beside it asking whether it still describes the new image. Recommended.
+  - (b) Clear all three, so the missing-alt check asks for new words.
+  - (c) Leave it as built.
+- **Publishes are unsigned commits.** The Git Data API doesn't sign them, so GitHub doesn't mark them as verified, and a branch rule that requires signed commits would refuse every publish (not tried). GraphQL's `createCommitOnBranch` makes commits that GitHub signs, with the expected head built in. But it takes the whole change in one request, which limits image size, and it would replace the retry path. Options:
+  - (a) Leave it as built, and say so in the deployment notes. Recommended for now.
+  - (b) Switch to `createCommitOnBranch`.
+  - (c) Use `createCommitOnBranch` for small changes and the Git Data API for large ones.
+- **Cloudflare's Create button now makes a Worker, not Pages.** A Worker's default deploy command, `npx wrangler deploy`, fails at a workspace root ("application detection … root of a workspace"). Pages is a link on the same screen. A Worker also works with `npx wrangler deploy --assets ./apps/playground/dist --name … --compatibility-date …`: a dry run read the built site. This is for the deployment notes (Phase 9's docs).
 - **A screen reader pass** of the sign-in screen, the user menu and Publish, with the earlier phases' passes.
-- **Push, and CI.** Nothing is pushed yet.
 
 **Not built** (as planned): pull-request mode (Phase 9), deploy status (cloud), the cloud's free relay (when the domain exists), a read-only studio, GitLab and Bitbucket.
 
