@@ -14,6 +14,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const STATIC_PORT = 4400;
 const STUDIO_PORT = 4401;
+/** GitHub mode's site; 4403 and 4404 are its fake GitHub and relay (scripts/github-site.mjs). */
+const GITHUB_SITE_PORT = 4405;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -39,6 +41,18 @@ export default defineConfig({
       workers: 1,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${String(STUDIO_PORT)}` },
     },
+    {
+      // GitHub mode (spec §6.8): a built site, the real relay and a fake
+      // GitHub over one repository, so these run one at a time too.
+      name: 'github',
+      testMatch: 'github/*.spec.ts',
+      fullyParallel: false,
+      workers: 1,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${String(GITHUB_SITE_PORT)}`,
+      },
+    },
   ],
   webServer: [
     {
@@ -51,6 +65,12 @@ export default defineConfig({
       url: `http://localhost:${String(STUDIO_PORT)}/admin/`,
       reuseExistingServer: false,
       timeout: 120_000,
+    },
+    {
+      command: 'node scripts/github-site.mjs --serve',
+      url: `http://127.0.0.1:${String(GITHUB_SITE_PORT)}/admin/`,
+      reuseExistingServer: false,
+      timeout: 180_000,
     },
   ],
 });

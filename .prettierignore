@@ -26,6 +26,8 @@ e2e/.move-site
 e2e/.images-site
 e2e/.a11y-site
 e2e/.search-site
+e2e/.github-site
+e2e/.github-site-repo.git
 
 # Other sessions' git worktrees: separate checkouts, checked there.
 .claude/

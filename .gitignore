@@ -18,6 +18,9 @@ e2e/.images-site/
 e2e/.a11y-site/
 # The search integration test's copy of the playground, built twice.
 e2e/.search-site/
+# GitHub mode's e2e site and its repository (scripts/github-site.mjs).
+e2e/.github-site/
+e2e/.github-site-repo.git/
 
 # Secrets: local Worker vars and env files.
 .dev.vars

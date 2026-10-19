@@ -89,6 +89,8 @@ export default defineConfig(
       'e2e/.images-site/**',
       'e2e/.a11y-site/**',
       'e2e/.search-site/**',
+      'e2e/.github-site/**',
+      'e2e/.github-site-repo.git/**',
       // Byte-exact content fixtures: never linted, never formatted.
       'packages/core/test/corpus/**',
       'packages/core/test/fixtures/**',

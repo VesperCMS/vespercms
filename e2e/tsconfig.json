@@ -9,5 +9,5 @@
     "noEmit": true
   },
   "include": ["**/*.ts"],
-  "exclude": [".studio-site", ".move-site", ".images-site", ".a11y-site", ".search-site"]
+  "exclude": [".studio-site", ".move-site", ".images-site", ".a11y-site", ".search-site", ".github-site"]
 }
