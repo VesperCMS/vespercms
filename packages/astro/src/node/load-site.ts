@@ -450,7 +450,7 @@ function loaderInfo(loader: unknown, root: string): LoaderInfo {
 }
 
 /** The site's own Vite, so Vesper never brings a second one (Vite 8 on Astro 7, Vite 7 on Astro 6). */
-async function importSiteVite(root: string): Promise<typeof import('vite')> {
+export async function importSiteVite(root: string): Promise<typeof import('vite')> {
   const fromSite = createRequire(join(root, 'package.json'));
   let vitePath: string;
   try {
@@ -525,7 +525,7 @@ export function customConditions(
   return [...new Set(found)];
 }
 
-function processConditions(vite: typeof import('vite')): Plugin {
+export function processConditions(vite: typeof import('vite')): Plugin {
   const extra = customConditions(process.execArgv, process.env.NODE_OPTIONS);
   return {
     name: 'vesper:process-conditions',

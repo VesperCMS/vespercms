@@ -6,6 +6,7 @@ import { createDevApi } from './dev-api.ts';
 import type { StaticRoutes } from '@vesper/core';
 import type { SiteModel } from '../node/manifest.ts';
 import type { HelperData } from '../runtime/helpers.ts';
+import type { GitHubSettings } from '../node/github.ts';
 import type { SiteModelCache } from './site-model.ts';
 
 /*
@@ -38,6 +39,8 @@ export type StudioPluginOptions = {
   adminCss: string;
   /** True in this workspace, where @vesper/admin resolves to its TypeScript source. */
   studioFromSource: boolean;
+  /** GitHub mode's settings in a built site, or null (spec §6.8). */
+  github?: () => GitHubSettings | null;
   /** The site's static routes, for the dev API's collision checks. */
   routes?: () => StaticRoutes;
   /** The `vesper:content` helpers' runtime (runtime/helpers): TypeScript here, JavaScript once built. */
@@ -137,7 +140,11 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       }
       if (name === WIDGETS) {
         if (!options.vesperConfig) {
-          return 'export const widgets = {};\nexport const loadMdxProps = () => Promise.resolve({});';
+          return [
+            'export const widgets = {};',
+            'export const loadMdxProps = () => Promise.resolve({});',
+            'export const loadUrlFunctions = () => Promise.resolve({});',
+          ].join('\n');
         }
         const { widgetNames } = await options.cache.get();
         return [
@@ -155,6 +162,11 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           '  Object.entries(config.mdx?.components ?? {}).flatMap(([name, component]) =>',
           '    component?.props ? [[name, component.props]] : []),',
           '));',
+          // Function-form URL patterns, for moves and links in GitHub mode (spec §6.15.1).
+          'export const loadUrlFunctions = () => load().then((config) => Object.fromEntries(',
+          '  Object.entries(config.collections ?? {}).flatMap(([name, collection]) =>',
+          "    typeof collection?.url === 'function' ? [[name, collection.url]] : []),",
+          '));',
         ].join('\n');
       }
       if (name === IMAGES) {
@@ -168,11 +180,14 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         ].join('\n');
       }
       if (name === STUDIO) {
+        const github = options.command === 'build' ? (options.github?.() ?? null) : null;
+        const { manifest } = await options.cache.get();
+        const routes = github ? [...(options.routes?.() ?? new Map<string, string>())] : [];
         return [
           `import { createLocalApi, mountStudio } from ${JSON.stringify(toPosix(options.adminEntry))};`,
           `import ${JSON.stringify(toPosix(options.adminCss))};`,
           `import manifest from '${MANIFEST}';`,
-          `import { widgets, loadMdxProps } from '${WIDGETS}';`,
+          `import { widgets, loadMdxProps, loadUrlFunctions } from '${WIDGETS}';`,
           "const element = document.getElementById('vesper-studio');",
           'if (element) {',
           '  mountStudio(element, {',
@@ -183,6 +198,18 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           `    api: import.meta.env.DEV ? createLocalApi(${JSON.stringify(options.apiBase)}) : null,`,
           `    siteName: ${JSON.stringify(options.siteName)},`,
           `    siteUrl: ${JSON.stringify(options.siteUrl)},`,
+          // GitHub mode in a built site (spec §6.8): the schemas built for the
+          // browser carry the manifest's hash, so a new build is fetched anew.
+          `    github: import.meta.env.DEV ? null : ${JSON.stringify(
+            github
+              ? {
+                  ...github,
+                  schemas: `${options.siteUrl}_vesper/schemas.js?v=${manifest.hash.slice(0, 12)}`,
+                }
+              : null,
+          )},`,
+          `    routes: ${JSON.stringify(routes)},`,
+          '    loadUrlFunctions,',
           '  });',
           '}',
           // Astro reloads every open page when a content file changes (a

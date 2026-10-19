@@ -7,6 +7,12 @@ import type { PluginOption } from 'vite';
 import { withCropStep } from '../images/register.ts';
 import { checkBuild, summaryLine, type A11yBuildOptions } from './a11y.ts';
 import { siteConfigFiles } from '../node/load-site.ts';
+import {
+  buildSchemaBundle,
+  githubSettings,
+  type GitHubOptions,
+  type GitHubSettings,
+} from '../node/github.ts';
 import { writeManifest } from '../node/manifest.ts';
 import { reactProblem, reactVersionFrom } from './react-check.ts';
 import { indexSearch, openSearchXml, type SearchOptions } from './search.ts';
@@ -56,6 +62,14 @@ export type VesperOptions = {
    * (`['/tags/**']`). `false` turns search off.
    */
   search?: false | SearchOptions;
+  /**
+   * GitHub mode (spec §6.8): editors sign in with GitHub on the deployed
+   * site, and each save is one commit to the repository's default branch.
+   * `relay` is the address of the OAuth relay (templates/oauth-relay).
+   * `repo`, `branch` and the site's folder in the repository are read from
+   * git when absent. `astro dev` stays local mode.
+   */
+  github?: GitHubOptions;
 };
 
 /** A file in ../runtime: TypeScript in this workspace, JavaScript once built. */
@@ -92,6 +106,9 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
   let redirects: BuildRedirects | null = null;
   const logged = new Set<string>();
   let siteName = 'Your site';
+  /** GitHub mode's settings for built sites, or null. */
+  let github: GitHubSettings | null = null;
+  let contentConfig: string | undefined;
   const staticRoutes = () =>
     resolved ? staticRoutesOf(resolved, root) : staticRoutesFromFiles(root, srcDir);
 
@@ -112,6 +129,15 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         srcDir = relative(root, fileURLToPath(config.srcDir)).split(sep).join('/') || 'src';
         command = astroCommand;
         const files = siteConfigFiles(root, srcDir);
+        contentConfig = files.contentConfig;
+        if (options.github && command === 'build') {
+          const found = githubSettings(options.github, root);
+          if ('problem' in found) logger.warn(found.problem);
+          else {
+            github = found.settings;
+            for (const note of found.notes) logger.warn(note);
+          }
+        }
         cache = new SiteModelCache(
           {
             root,
@@ -185,6 +211,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             adminEntry,
             adminCss,
             studioFromSource,
+            github: () => github,
           }),
         ];
         // In this workspace the studio's stylesheet is its Tailwind source,
@@ -287,6 +314,23 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
           else logger.warn(summaryLine(result));
           // Thrown after the report is written, so the reasons are there to read.
           if (result.failed) throw new Error(result.failed);
+        }
+        if (github && contentConfig) {
+          // The real schemas for the studio in the browser (spec §6.3.1), or why not.
+          const built = await buildSchemaBundle({
+            root,
+            contentConfig,
+            outFile: fileURLToPath(new URL('_vesper/schemas.js', dir)),
+          });
+          if (built.ok) {
+            logger.info(
+              `GitHub mode: publishing to ${github.owner}/${github.repo} (${github.branch}). The studio checks entries with your content schemas (_vesper/schemas.js, ${String(Math.round(built.bytes / 1024))} KB).`,
+            );
+          } else {
+            logger.warn(
+              `GitHub mode: your content schemas couldn't be built for the browser (${built.reason}). The studio checks entries from the manifest instead, and the site's build is the last check.`,
+            );
+          }
         }
         if (options.search !== false) {
           const settings = urlSettings(model);
