@@ -28,9 +28,21 @@ if (serve !== -1) {
   const port = process.argv[serve + 1] ?? '4401';
   const astro = join(root, 'node_modules', 'astro', 'bin', 'astro.mjs');
   // The workspace's @vesper/* packages resolve to source, as in `npm run dev`.
+  // --ignore-lock keeps the server attached: under an AI agent on macOS and
+  // Linux, Astro 7 otherwise starts it in the background and returns, and
+  // Playwright reads that as the server exiting.
   const child = spawn(
     process.execPath,
-    ['--conditions=@vesper/source', astro, 'dev', '--root', target, '--port', port],
+    [
+      '--conditions=@vesper/source',
+      astro,
+      'dev',
+      '--root',
+      target,
+      '--port',
+      port,
+      '--ignore-lock',
+    ],
     { stdio: 'inherit', cwd: root },
   );
   const stop = () => {
