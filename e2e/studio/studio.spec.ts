@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { jpegFacts } from '../../packages/admin/src/media/formats.ts';
+import { keys } from './keys.ts';
 
 /*
  * The studio in local mode, end to end: astro dev over a throwaway copy of
@@ -147,10 +148,10 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
   const title = page.getByRole('textbox', { name: 'Title (required)' });
   await expect(title).toHaveValue('Welcome to the playground');
   await title.focus();
-  await page.keyboard.press('End');
+  await page.keyboard.press(keys.lineEnd);
   await page.keyboard.type(', again');
   await expect(page.getByRole('status').first()).toHaveText('Unsaved changes');
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
 
   const after = read('src/content/blog/welcome.md');
@@ -169,12 +170,13 @@ test('the writing view rewrites only the paragraph that was edited', async ({ pa
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
   const body = page.getByRole('textbox', { name: 'Body' });
   await expect(body.getByText(/^Park by the old customs house/)).toBeVisible();
-  // The paragraph is the body's last block. End would reach only the end
-  // of the visual line a click landed on, which depends on how it wraps.
+  // The paragraph is the body's last block, so the caret goes to the text's
+  // end. The line's end is only the end of the visual line a click landed
+  // on, which depends on how it wraps.
   await body.focus();
-  await page.keyboard.press('Control+End');
+  await page.keyboard.press(keys.textEnd);
   await page.keyboard.type(' Bring a thermos.');
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
 
   expect(read(path)).toBe(
@@ -226,7 +228,7 @@ test('a custom widget edits its field', async ({ page }) => {
   await expect(hours.getByLabel('Days, row 1')).toHaveValue('Mon–Fri');
   await hours.getByRole('button', { name: 'Add opening hours' }).click();
   await hours.getByLabel('Days, row 3').fill('Holidays');
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
   expect(read('src/data/locations.yaml')).toMatch(/days: Holidays/);
 });

@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { keys } from './keys.ts';
 
 /*
  * Pages, moves and redirects in the studio (spec §6.15), in Chromium, on
@@ -176,7 +177,7 @@ test('by keyboard: move Nursing and its pages to the top level, in one go', asyn
   await expect(dialog).toBeVisible();
   const parent = dialog.getByRole('combobox', { name: 'Put it under' });
   await tabTo(page, parent);
-  await page.keyboard.press('Control+a');
+  await page.keyboard.press(keys.selectAll);
   await page.keyboard.type('Top');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
@@ -259,7 +260,7 @@ test('by keyboard: add a child page, and create a missing section page', async (
   const title = page.getByRole('textbox', { name: 'Title (required)' });
   await title.focus();
   await page.keyboard.type('Small business');
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect(page).toHaveURL(/#\/c\/pages\/e\/academics%2Fbusiness%2Fsmall-business$/);
   expect(read(`${P}academics/business/small-business.md`)).toContain('title: Small business');
 

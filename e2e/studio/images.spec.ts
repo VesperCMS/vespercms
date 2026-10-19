@@ -4,6 +4,7 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { keys } from './keys.ts';
 
 /*
  * Focal points and crops in the studio (spec §6.6.4, §11 Phase 2.7):
@@ -117,7 +118,7 @@ test('the focal point and crops, by keyboard alone; only the entry changes', asy
   await expect(hero.getByRole('button', { name: 'Adjust crop for Wide' })).toBeFocused();
   await expect(hero.getByRole('listitem').first()).toContainText('Wide · 16:9 · Custom crop');
 
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
   // Only the focal point's two values changed, and the wide crop was added in
   // the square crop's style: every other byte is as it was.
@@ -137,7 +138,7 @@ test('the focal point and crops, by keyboard alone; only the entry changes', asy
   await page.keyboard.press('Enter');
   await expect(squareDialog).toBeHidden();
   await expect(hero.getByText('Square crop reset to the focal point.')).toBeAttached();
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
   await expect.poll(() => read(entry)).toBe(moved.replace(square, wide));
 

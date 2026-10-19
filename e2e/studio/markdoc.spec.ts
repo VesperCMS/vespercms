@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { keys } from './keys.ts';
 
 /*
  * Phase 2.5 in a real browser, by keyboard alone: every tag in the
@@ -42,7 +43,7 @@ test.beforeEach(async ({ context, baseURL }) => {
     if (!original.has(path)) original.set(path, read(path));
   }
   // The guide ends with a partial; a last line of text gives the keyboard a
-  // place to start (Ctrl+End, then Enter for a new line).
+  // place to start (the text's end, then Enter for a new line).
   write(DOC, `${original.get(DOC) ?? ''}\nLast line.\n`);
 });
 
@@ -65,13 +66,13 @@ async function openOnNewLine(page: Page) {
   await expect(body).toBeVisible();
   // Focus the text, as Tab would; from here on, keys only.
   await body.focus();
-  await moveCaret(page, 'Control+End');
+  await moveCaret(page, keys.textEnd);
   await page.keyboard.press('Enter');
   page.on('load', () => reloaded.add(page));
 }
 
 async function save(page: Page, expected: string) {
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect.poll(() => read(DOC)).toBe(expected);
 }
 
@@ -83,9 +84,10 @@ async function selected(page: Page, label: string) {
 }
 
 /**
- * Presses a key the browser handles itself (Home, End) and waits for its
- * selectionchange. ProseMirror learns of native caret moves from that event,
- * and a paste or arrow key sent before it lands would act on the old caret.
+ * Presses a key that moves the caret (`keys.lineStart`, `keys.lineEnd`) and
+ * waits for its selectionchange. Off a Mac the browser moves it, and
+ * ProseMirror learns of native caret moves from that event; a paste or arrow
+ * key sent before it lands would act on the old caret.
  */
 async function moveCaret(page: Page, key: string) {
   await page.evaluate(() => {
@@ -173,7 +175,7 @@ test('a YouTube video: inserted from the toolbar, configured by Enter, moved and
   await page.keyboard.press('Enter');
   await expect(dialog.getByRole('textbox', { name: /Video ID/ })).toBeFocused();
   await page.keyboard.press('Tab');
-  await page.keyboard.press('End');
+  await page.keyboard.press(keys.lineEnd);
   await page.keyboard.type(', with captions');
   await page.keyboard.press('Tab');
   await page.keyboard.press('Space');
@@ -219,16 +221,16 @@ test('an abbreviation: inserted inline, configured, moved with cut and paste, an
 
   // Moved by keyboard: from the line's end, the left arrow selects the chip;
   // cut it, go to the line's start, paste.
-  await moveCaret(page, 'End');
+  await moveCaret(page, keys.lineEnd);
   await page.keyboard.press('ArrowLeft');
   await selected(page, 'Abbreviation');
-  await page.keyboard.press('Control+x');
-  await moveCaret(page, 'Home');
-  await page.keyboard.press('Control+v');
+  await page.keyboard.press(keys.cut);
+  await moveCaret(page, keys.lineStart);
+  await page.keyboard.press(keys.paste);
   await save(page, `${before}\n${abbr}Use it in the\n`);
 
   // Removed: from the line's start, the right arrow selects it; Delete removes it.
-  await moveCaret(page, 'Home');
+  await moveCaret(page, keys.lineStart);
   await page.keyboard.press('ArrowRight');
   await selected(page, 'Abbreviation');
   await page.keyboard.press('Delete');
@@ -269,7 +271,7 @@ test('a missing required attribute shows on its block and stops the save', async
   const card = page.getByRole('group', { name: 'YouTube video', exact: true });
   await expect(card).toContainText('YouTube video: Video ID is required.');
   await expect(card).toContainText('YouTube video: Title is required.');
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   const summary = page.getByRole('alert');
   await expect(summary).toContainText('The entry wasn’t saved');
   await expect(summary).toContainText('YouTube video: Title is required.');
@@ -290,7 +292,7 @@ test('a declared MDX component: its props come from its Zod schema', async ({ pa
   await page.keyboard.press('ArrowLeft');
   await expectAccessible(page);
   await page.keyboard.press('Escape');
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(keys.save);
   await expect
     .poll(() => read(MDX))
     .toBe(
