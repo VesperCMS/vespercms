@@ -138,7 +138,9 @@ export function GitHubGate({
   );
 
   useEffect(() => {
-    document.title = `${titleOf(state)} · ${options.siteName ?? 'Vesper'}`;
+    // Signed in, each screen names the page itself.
+    if (state.kind !== 'ready')
+      document.title = `${titleOf(state)} · ${options.siteName ?? 'Vesper'}`;
   }, [state, options.siteName]);
 
   if (api && account) return <App {...options} api={api} account={account} />;
