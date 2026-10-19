@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createGitHubFake, type GitHubFake } from '../../../../scripts/github-fake.mjs';
 import { expectNoViolations, playgroundManifest } from '../test/helpers.tsx';
 import { GitHubGate } from './GitHubGate.tsx';
@@ -33,6 +33,7 @@ const settings: GitHubStudioSettings = {
 };
 
 const dirs: string[] = [];
+let seeded: string;
 let fake: GitHubFake;
 
 /** The fake GitHub for API calls, and a relay whose /token answers with the fake's token. */
@@ -50,11 +51,21 @@ const fetcher: typeof fetch = async (input, init) => {
 
 const options = { manifest: playgroundManifest, siteName: 'Playground', siteUrl: '/' };
 
+// Seeding starts a git process per file. On Windows CI, under load, that took
+// longer than a hook's 10 seconds, so the playground is seeded once and each
+// test gets a copy of the repository.
+beforeAll(() => {
+  const dir = mkdtempSync(join(tmpdir(), 'vesper-studio-github-'));
+  dirs.push(dir);
+  seeded = join(dir, 'seeded.git');
+  createGitHubFake({ dir: seeded }).seedFolder(playground);
+}, 60_000);
+
 beforeEach(() => {
   const dir = mkdtempSync(join(tmpdir(), 'vesper-studio-github-'));
   dirs.push(dir);
+  cpSync(seeded, join(dir, 'repo.git'), { recursive: true });
   fake = createGitHubFake({ dir: join(dir, 'repo.git') });
-  fake.seedFolder(playground);
   sessionStorage.clear();
   window.history.replaceState(null, '', '/admin/');
 });
