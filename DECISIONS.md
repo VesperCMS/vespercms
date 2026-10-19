@@ -638,6 +638,14 @@ The component ships as source (`components/Img.astro`, like the `/admin` page) f
 - A stored crop whose shape no longer matches its ratio (the image was replaced by one of another shape) is trimmed to the ratio around its own centre, never grown.
 - Applying the crop dialog untouched over a ratio with no manual crop writes nothing, so the focal point's crop isn't frozen by accident. "Reset to focal point" removes the ratio's crop, and removing the last one removes `crops`.
 
+### 2026-10-19: Replacing an image clears its geometry, not its words
+
+**When the image field gets a different image from the picker (chosen or uploaded), it drops `focus` and `crops` and keeps `alt` and `decorative`. A note beside the alt text, or beside the decorative option when that's set, says "You replaced the image. Check that the alt text still describes it." (or "that it's still decorative"). The note goes once the editor changes either one.** Phase 3's real-world check found the problem: replacing changed only `src`, so a new picture went live with the old one's description, focal point and crops, in every mode. No rule caught it, because the alt text wasn't empty. Jeremy chose this on 2026-10-19 over clearing all three (the missing-alt check would then ask for new words) and over leaving it as built.
+- A focal point and crops are positions on one picture. On another they point at nothing in particular, and a crop of the wrong shape is trimmed (above). Setting them again takes seconds.
+- Alt text is words an editor wrote for this page, and a replacement is often the same subject: a better photo of the same scene. Clearing it would throw good words away. Keeping it silently is how the old description went live, so the note asks for a look.
+- The note is text beside its field and part of that control's description, like the rules' notes, but it isn't a rule. No check can tell whether words still describe a picture, so the note isn't counted, never blocks a save, and stays out of the live status. It lives in the studio, not the file, so it's gone after a reload.
+- A first image (nothing to clear), the same image again (not even how its path is written) and a plain `image()` field, which stores only a path, change nothing.
+
 ## Accessibility checks
 
 ### 2026-10-18: One rule set, in core, narrow on purpose

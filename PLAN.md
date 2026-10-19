@@ -416,6 +416,8 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
   - (a) Clear the focal point and crops, keep the alt text, and show a note beside it asking whether it still describes the new image. Recommended.
   - (b) Clear all three, so the missing-alt check asks for new words.
   - (c) Leave it as built.
+
+  **Decided 2026-10-19: (a), and built.** A different image from the picker, chosen or uploaded, drops `focus` and `crops` and keeps `alt` and `decorative`. A note beside the alt text, or beside the decorative option when that's set, says "You replaced the image. Check that the alt text still describes it." It is part of that control's description, never in the live status, and goes once the editor changes either one. A first image, the same image again and a plain `image()` path change nothing. Tests: `packages/admin/src/widgets/image.test.tsx`. Reasons: DECISIONS.md, "Replacing an image clears its geometry, not its words".
 - **Publishes are unsigned commits.** The Git Data API doesn't sign them, so GitHub doesn't mark them as verified, and a branch rule that requires signed commits would refuse every publish (not tried). GraphQL's `createCommitOnBranch` makes commits that GitHub signs, with the expected head built in. But it takes the whole change in one request, which limits image size, and it would replace the retry path. Options:
   - (a) Leave it as built, and say so in the deployment notes. Recommended for now.
   - (b) Switch to `createCommitOnBranch`.
