@@ -23,10 +23,8 @@ export type GitHubOptions = {
   branch?: string;
   /** The site's folder inside the repository, when it isn't at the root. Read from git when absent. */
   root?: string;
-  /** GitHub Enterprise Server's API (`https://host/api/v3`), or a test double. */
+  /** GitHub Enterprise Server's API (`https://host/api/v3`), or a test double. Its sign-in pages are the relay's `GITHUB_URL`. */
   apiUrl?: string;
-  /** Where GitHub's sign-in pages are (`https://host` on Enterprise Server). */
-  webUrl?: string;
 };
 
 /** What the studio needs to save to GitHub. */
