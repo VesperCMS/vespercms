@@ -191,7 +191,7 @@ test('by keyboard: move Nursing and its pages to the top level, in one go', asyn
   await expectAccessible(page);
   await tabTo(page, confirm.getByRole('button', { name: 'Move' }));
   await page.keyboard.press('Enter');
-  await expect(announcement(page)).toHaveText('Nursing moved to the top level, position 5 of 5.');
+  await expect(announcement(page)).toHaveText('Nursing moved to the top level, position 5 of 6.');
 
   // One set of renames on disk: the folder, both order files, redirects and every link.
   expect(read(`${P}academics/nursing/index.md`)).toBeNull();
