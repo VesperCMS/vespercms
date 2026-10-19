@@ -2,7 +2,7 @@ import { fill, stringsFor, type SearchStrings } from './strings.ts';
 
 /*
  * `<Search>`'s behaviour (spec §6.19), on Pagefind's JS API with no
- * framework (DECISIONS.md, "Site search: Vesper's own UI"). Pagefind's
+ * framework (DECISIONS.md, "Site search is Vesper's own UI on Pagefind's JS API"). Pagefind's
  * Component UI fell short of the spec's criteria: its modal never announced
  * counts, and most results were hidden from screen readers until scrolled
  * to. So:

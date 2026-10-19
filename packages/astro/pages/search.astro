@@ -37,7 +37,9 @@ const t = stringsFor(search.strings, lang);
     </style>
   </head>
   <body>
-    <p><a href={search.home}>{search.siteName}</a></p>
+    <p>
+      <a href={search.home}>{search.siteName}</a>
+    </p>
     <main>
       <h1>{t.pageTitle}</h1>
       <Search variant="inline" lang={lang} />
