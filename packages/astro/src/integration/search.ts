@@ -31,6 +31,7 @@ import {
   type StoredEntry,
   type UrlSettings,
 } from '@vesper/core';
+import type { IndexFile } from 'pagefind';
 import type { SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 import { builtPages, skipReason } from './a11y.ts';
@@ -67,7 +68,7 @@ export const SEARCH_DIR = '_vesper/search';
 export const FIRST_QUERY_BUDGET = 300 * 1024;
 
 /** Pagefind's own interfaces and highlighter, which `<Search>` doesn't use. */
-const BUNDLED_UI = [
+const BUNDLED_UI = new Set([
   'pagefind-ui.js',
   'pagefind-ui.css',
   'pagefind-modular-ui.js',
@@ -75,7 +76,7 @@ const BUNDLED_UI = [
   'pagefind-component-ui.js',
   'pagefind-component-ui.css',
   'pagefind-highlight.js',
-];
+]);
 
 /** The marker `<Search>` renders; the inline variant (the `/search` page) says so. */
 const USES_SEARCH = /\sdata-vesper-search=["']?(dialog|inline)/;
@@ -409,13 +410,20 @@ async function thumbnailMaker(folder: string, base: string): Promise<Thumbnails>
   };
 }
 
-/** Indexes the pages and writes the bundle, without Pagefind's own interfaces. */
+/**
+ * Indexes the pages and writes the bundle. Pagefind hands the files back as
+ * bytes (`getFiles`) and they're written here, never by its `writeFiles`:
+ * Pagefind 1.5.2 answers that before its writes reach the disk, and `close()`
+ * kills the service, so a file could ship empty (DECISIONS.md, "Vesper
+ * writes Pagefind's files itself").
+ */
 async function writeIndex(
   pages: readonly { url: string; content: string }[],
   out: string,
 ): Promise<string[]> {
   const pagefind = await import('pagefind');
   const errors: string[] = [];
+  let files: readonly IndexFile[] = [];
   try {
     const created = await pagefind.createIndex({});
     errors.push(...created.errors);
@@ -425,12 +433,35 @@ async function writeIndex(
       const added = await index.addHTMLFile({ url: page.url, content: page.content });
       errors.push(...added.errors.map((error) => `${page.url}: ${error}`));
     }
-    const written = await index.writeFiles({ outputPath: out });
-    errors.push(...written.errors);
+    // The wrapper leaves `files` out when Pagefind answers with an error.
+    const bundle: { errors: string[]; files?: IndexFile[] } = await index.getFiles();
+    errors.push(...bundle.errors);
+    files = bundle.files ?? [];
   } finally {
     await pagefind.close();
   }
-  for (const file of BUNDLED_UI) rmSync(join(out, file), { force: true });
+  return [...errors, ...writeBundle(files, out)];
+}
+
+/**
+ * Writes the files Pagefind returned into `out`, each whole before this
+ * returns, leaving out Pagefind's own interfaces.
+ */
+export function writeBundle(files: readonly IndexFile[], out: string): string[] {
+  const errors: string[] = [];
+  const folder = resolve(out);
+  for (const file of files) {
+    if (BUNDLED_UI.has(file.path)) continue;
+    const target = resolve(folder, file.path);
+    if (!target.startsWith(folder + sep)) {
+      errors.push(
+        `Pagefind returned ${file.path}, outside the index's folder, so it wasn't written.`,
+      );
+      continue;
+    }
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, file.content);
+  }
   return errors;
 }
 

@@ -10,6 +10,7 @@ import {
   openSearchXml,
   pageLanguage,
   searchFile,
+  writeBundle,
 } from './search.ts';
 
 const page = (main = '<main id="main">Hi</main>') =>
@@ -145,6 +146,29 @@ describe('the index on disk', () => {
       // The script and worker, then French: 600 + 5 + 200 beats English's 700 + 10 + 40.
       firstQuery: 100 + 50 + 600 + 5 + 200,
     });
+  });
+
+  it('writes each file Pagefind returns whole, without its interfaces or anything outside the folder', () => {
+    const dist = mkdtempSync(join(tmpdir(), 'vesper-bundle-'));
+    dirs.push(dist);
+    const out = join(dist, '_vesper/search');
+    const bytes = (text: string) => new TextEncoder().encode(text);
+    const errors = writeBundle(
+      [
+        { path: 'pagefind-entry.json', content: bytes('{"languages":{}}') },
+        { path: 'index/en_a.pf_index', content: bytes('x'.repeat(5000)) },
+        { path: 'pagefind-ui.js', content: bytes('ui') },
+        { path: '../escaped.js', content: bytes('no') },
+      ],
+      out,
+    );
+    expect(readFileSync(join(out, 'pagefind-entry.json'), 'utf8')).toBe('{"languages":{}}');
+    expect(readFileSync(join(out, 'index/en_a.pf_index'), 'utf8')).toBe('x'.repeat(5000));
+    expect(existsSync(join(out, 'pagefind-ui.js'))).toBe(false);
+    expect(existsSync(join(dist, '_vesper/escaped.js'))).toBe(false);
+    expect(errors).toEqual([
+      "Pagefind returned ../escaped.js, outside the index's folder, so it wasn't written.",
+    ]);
   });
 
   it('serves files from the index in dev, and nothing outside it', () => {
