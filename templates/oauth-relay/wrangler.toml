@@ -1,0 +1,18 @@
+# Vesper's GitHub sign-in relay. Copy this folder, fill in the two values
+# below, set the secret, and deploy:
+#
+#   npx wrangler secret put GITHUB_CLIENT_SECRET
+#   npx wrangler deploy
+#
+# The README walks through creating the GitHub App first.
+name = "vesper-github-relay"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# The GitHub App's client ID (not its App ID).
+GITHUB_CLIENT_ID = "Iv1.replace-me"
+# The sites that may sign in through this relay: whole origins, comma-separated.
+ALLOWED_ORIGINS = "https://example.edu"
+# On GitHub Enterprise Server, your server's address:
+# GITHUB_URL = "https://github.example.com"
