@@ -263,7 +263,7 @@ Amended in Phase 2.5: body checks (Markdoc, micromark and the validation around 
 
 ### 2026-10-17: Upload hygiene strips metadata losslessly unless the pixels must change
 
-**JPEG, PNG and WebP uploads lose their EXIF, XMP, IPTC, text and comment data by dropping those segments or chunks, so the image data is byte-for-byte the original. They're re-encoded through a canvas only when the pixels must change: a photo whose EXIF orientation isn't upright, or one larger than `maxUploadEdge` (3000px by default).** Re-encoding drops all metadata too. Colour profiles (JPEG APP2) are kept. SVG is sanitized with DOMPurify's SVG profile, plus `foreignObject`, `set` or `animate` that rewrite links or handlers, and `javascript:`/`data:` links. Files are typed by their bytes, not their names. Duplicates are found by SHA-256 against the site's files, and the editor chooses between reusing the existing file and uploading a copy. Over 5 MB asks first; over 20 MB is refused (the dev API enforces the hard limit too).
+**JPEG, PNG and WebP uploads lose their EXIF, XMP, IPTC, text and comment data by dropping those segments or chunks, so the image data is byte-for-byte the original. They're re-encoded through a canvas only when the pixels must change: a photo whose EXIF orientation isn't upright, or one larger than `maxUploadEdge` (3000px by default).** Re-encoding drops all metadata too. Colour profiles (JPEG APP2) are kept. SVG is sanitized with DOMPurify's SVG profile, plus `foreignObject`, `set` or `animate` that rewrite links or handlers, and `javascript:`/`data:` links. Files are typed by their bytes, not their names. Duplicates are found by content hash against the site's files (the git blob SHA since Phase 3, see "Duplicate uploads are found by git blob SHA"), and the editor chooses between reusing the existing file and uploading a copy. Over 5 MB asks first; over 20 MB is refused (the dev API enforces the hard limit too).
 
 ### 2026-10-17: HEIC converts only where the browser can decode it, for now
 
@@ -764,6 +764,87 @@ What the script does instead: a native `<dialog>` opened with `showModal()`, who
 ### 2026-10-19: Search's words are English, with the site's own for other languages
 
 **`<Search>` ships English words and takes others from `vesper({ search: { strings: { fr: { … } } } })`, keyed by the page's `<html lang>` and filled in one by one.** The design proposed seeding them from Pagefind's MIT-licensed translations where the messages match. That isn't done: Pagefind's translations live inside its bundled interfaces, which aren't shipped, and its messages differ from Vesper's. It's a follow-up if a site asks.
+
+## GitHub mode
+
+### 2026-10-19: GitHub mode runs core's services in the browser
+
+**In GitHub mode the studio runs the same `ContentService`, `PageService` and `MediaService` that local mode's dev API runs in Node, over `GitHubStorage` (`@vesper/core`) in the browser (`packages/admin/src/github/api.ts`). Every screen, check and splice is the same code; only storage differs.** The dev API was already a thin shell over those services, and the storage interface was built for this from Phase 1: a file's version is its git blob SHA in every mode, a change set is applied whole or not at all, and a stale expected version is a conflict. The five inputs that lived only in Node reach the browser instead:
+- the Zod schemas, as a separate bundle (below);
+- the Markdoc config, as the manifest's (custom validators are the build's to check, 2026-10-19);
+- MDX props and function-form URLs, from `vesper.config.ts`, which the studio already loads;
+- the static routes, written into the studio at build.
+
+`GitHubStorage` needs only `fetch`, so Phase 4's cloud can run it in a Worker with an installation token.
+
+What GitHub's documentation and changelog said on 2026-10-19 (checked then; see the design in PLAN.md):
+- `api.github.com` answers CORS from any origin (docs.github.com/en/rest/using-the-rest-api/using-cors-and-jsonp-to-make-cross-origin-requests);
+- `github.com/login/oauth/access_token` doesn't, and needs `client_secret` even with PKCE (github.blog/changelog/2025-07-14-pkce-support-for-oauth-and-github-app-authentication; docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps);
+- a GitHub App's user token reaches only repositories where the app is installed, intersected with the user's access, and lasts 8 hours (docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-with-a-github-app-on-behalf-of-a-user);
+- a ref update with `force: false` must be a fast-forward (docs.github.com/en/rest/git/refs).
+
+### 2026-10-19: A GitHub App each site owner makes, through a relay that stores nothing
+
+**Editors sign in through a GitHub App the site owner (or an agency, once) creates and installs on the repository, with Contents read and write and nothing else. The token exchange goes through `templates/oauth-relay`, a dependency-free Worker the owner deploys. Jeremy chose both on 2026-10-19 (calls 1 and 2).**
+- **Why an app, not an OAuth App:** an OAuth App can't be narrowed to one repository; `repo` reaches every private repository the editor can, and new organizations block OAuth Apps until an owner approves them. Vesper's shared app, through the cloud's free relay, waits for the domain.
+- **The flow** is a top-level redirect, as D14's cloud sign-in is: no popup and no third-party cookie.
+  1. The studio keeps a random state and a PKCE verifier in `sessionStorage` and goes to the relay's `/authorize`.
+  2. The relay checks the site's origin against `ALLOWED_ORIGINS` and sends the browser to GitHub with its callback.
+  3. GitHub returns to the relay, which checks the site again and sends the code on to `/admin/?github=…&state=…`.
+  4. The studio posts the code and verifier to `/token`, the only step that adds the secret.
+- **Why it's safe without storage:** the verifier never leaves the tab, so a code seen in an address is useless to anyone else, and the relay needs no storage, signing key or session. It drops any refresh token GitHub sends.
+- **Rejected:** the popup and `postMessage` hand-off Decap and Sveltia use (a second window, and a message channel to secure); a relay that keeps tokens; the device flow (it also needs a relay, and shows editors a code to type).
+
+### 2026-10-19: GitHub mode keeps its token in sessionStorage
+
+**Only the 8-hour access token is kept, in `sessionStorage`. It's gone when the tab closes, and signing in again is one redirect, since GitHub remembers the approval. Jeremy chose this on 2026-10-19 (call 4).** `/admin` shares its origin with the public site and whatever scripts it loads, so a long-lived refresh token in `localStorage` would sit where any of them could read it. Memory only was rejected because a reload would sign the editor out and break deep links. A token within five minutes of expiring counts as expired. When GitHub says it has expired, the editor's unsaved changes are kept in `sessionStorage` across the sign-in and put back, and the top bar's user menu becomes "Sign in again".
+
+### 2026-10-19: GitHub mode validates with the real schemas
+
+**At `astro build` with GitHub mode on, `content.config.ts` is built a second time, for the browser, into `_vesper/schemas.js`. Shims for `astro:content` and `astro/loaders` carry no Astro runtime, and `reference()` is Astro's own union without the lookup. The studio loads the file on first save, so saves are checked with the site's own Zod schemas, as spec §6.3.1 asks. Jeremy chose this on 2026-10-19 (call 3).**
+- **When it can't be built:** a config that imports Node or another `astro:*` module fails that build alone. The site's own build is never affected, the log says why, and the studio falls back to `fieldModelIssues`.
+- **The fallback** checks required values, choices, numbers and patterns from the manifest, never refusing what the schema accepts. The site's build is then the last check.
+- **Measured** on the playground: 93 KB minified, and it catches the image field's own "Describe this image, or mark it decorative.", which the field model alone misses. The URL carries the manifest's hash, so a new build is fetched anew.
+- **The schemas' code ships with `/admin`,** as `vesper.config.ts` already does; their shapes were already public in `_vesper/manifest.json`.
+
+### 2026-10-19: Saves are one commit through the Git Data API, retried once over others' pushes
+
+**`GitHubStorage.commit` makes one commit on the branch (spec §6.8): new bytes up as blobs, a tree on the head's tree, the commit, then the ref moved with `force: false`. If the ref won't fast-forward because someone else pushed, it reads the new head, and if none of its files changed there, builds the same changes on it once more; if they did, it's a conflict, reported as in local mode. Jeremy chose the Git Data API for every save on 2026-10-19 (call 8).** One path for text and a 20 MB upload alike. `createCommitOnBranch` would give Verified commits and a true compare-and-swap, but GraphQL requests stop at about 16 MB of base64, and two paths would need two sets of tests. A branch rule that refuses the push (pull requests or signed commits required) is said plainly; pull-request mode is Phase 9.
+- **Reading.** The branch is read as one snapshot: the commit and its recursive tree, reused for 10 seconds and refreshed before every commit.
+- **The cache.** Bytes are fetched by blob SHA and kept in IndexedDB, which never goes stale because a SHA always means the same bytes. Listing a folder prefetches its text files in GraphQL batches of 50, since the services read what they list one file at a time; every batch is checked against its SHA and refetched raw on a mismatch, so content stays byte-exact.
+- **Truncated trees.** A tree GitHub truncates (over 100,000 entries) is read folder by folder.
+- **Messages.** The editor is the commit's author. Messages are the change set's plain summary plus a `Vesper-Collection` trailer.
+
+### 2026-10-19: An upload from a field waits for the publish
+
+**Spec §6.8 makes an entry and its uploaded image one commit, but the studio uploads when a file is chosen. A change set can now be deferred (`ChangeSet.defer`). `GitHubStorage` holds its new files, shows them in `list` and `read` meanwhile (so previews and duplicate checks see them), and sends them with the next commit; one deleted first is simply forgotten.** The media picker, which fields and the body editor use, defers. The Media screen doesn't, since nothing else will be saved with it, and local mode writes every upload at once as before. A held file is lost if the tab closes before the publish; the unsaved-changes guard covers that, and no orphan file reaches the repository.
+
+### 2026-10-19: Duplicate uploads are found by git blob SHA
+
+**`MediaItem.hash` is the file's git blob SHA, which every storage mode already has, so listing Media reads no file. The studio hashes an upload the same way.** With SHA-256, listing Media in GitHub mode would have downloaded every image in the site.
+
+### 2026-10-19: The studio asks for file URLs asynchronously
+
+**`StudioApi.fileUrl` returns a promise. In local mode it's the dev API's `/file` URL; in GitHub mode an object URL for the blob, kept for the visit. A private repository's `src/assets` image has no address a browser can load without the token, and `raw.githubusercontent.com` refuses an `Authorization` header from a browser. `useFileUrl` and `FileImage` show a file once its URL is ready.**
+
+### 2026-10-19: Publish, the user menu, and editors who can't push
+
+**Jeremy chose these on 2026-10-19 (calls 5, 6 and 7):**
+- **Publish.** In GitHub mode the editor's button reads Publish, because saving there commits to the default branch and the site rebuilds. After it, the status reads "Published just now" and a line says "Published. It will be live after the site is next built." (spec §6.16). Local mode keeps Save.
+- **The user menu.** The signed-in editor's GitHub login is a quiet text button at the end of the top bar (`@login`), with "Sign out of GitHub" in it. It's the design system's user menu, where the cloud's account goes in Phase 4. The editor's own bar doesn't carry it.
+- **Editors who can't push** see "Your GitHub account can't change this site", what to ask the owner, and Sign out of GitHub. There's no read-only studio; roles are a cloud feature (§4).
+
+### 2026-10-19: GitHub mode is tested against a fake GitHub over real git
+
+**`scripts/github-fake.mjs` answers the REST, GraphQL and OAuth calls GitHub mode makes, over a bare repository through the git CLI. Blob SHAs, trees, commits and fast-forward refusals are git's own. It signs any user in at once and answers CORS as GitHub does.**
+- **Unit tests** run `GitHubStorage` through the shared storage contract on it, and the studio's GitHub mode in jsdom.
+- **The relay's tests** sign in from end to end against it.
+- **The e2e `github` project** builds a copy of the playground with `vesper({ github })` and serves the fake on 4403, the real relay on 4404 and the built site on the plain static server on 4405 (`scripts/github-site.mjs`).
+- **Rejected:** recorded HTTP fixtures, which can't answer a commit with a real new SHA; and a hand-written model of git, which would only be as right as the model.
+
+### 2026-10-19: Hosts that check commit authors
+
+**In GitHub mode each editor is the author of their own commits. On private repositories, Vercel builds only commits by members of the team, and Netlify holds commits by unknown authors for approval (vercel.com/kb/guide/commits-not-triggering-deployments; docs.netlify.com/build/git-workflows/repo-permissions-linking).** No such rule was found for Cloudflare Pages or GitHub Actions. The relay's README and the integration's README say so. Committing as a bot would hide who changed what, so editors stay the authors.
 
 ## Studio design
 

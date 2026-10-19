@@ -2,7 +2,7 @@
 
 The Vesper integration for Astro.
 
-**Status:** Phases 2 to 2.9 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, renders images with their focal points and crops, checks every built page's accessibility structure, and builds the site's search.
+**Status:** Phases 2 to 3 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, renders images with their focal points and crops, checks every built page's accessibility structure, builds the site's search, and in GitHub mode lets editors publish from the deployed site.
 
 ## The integration
 
@@ -29,6 +29,7 @@ Zero config. It:
 | `studio.deploy` | `true` | `false` leaves `/admin` out of production builds, for sites edited only locally. |
 | `siteName` | the host of Astro's `site`, then the package name | Shown in the studio's top bar and page titles. |
 | `a11y` | `{}` | Accessibility checks at build. `{ failBuildOn: 'error' }` (or `'warning'`) fails the build on an issue at that level; `false` turns the check off. |
+| `github` | off | GitHub mode (see below): `{ relay }`, plus `repo`, `branch`, `root` or `apiUrl` when git can't tell them. |
 | `search` | `{}` | Site search. `filters` and `sort` name each collection's fields, `exclude` leaves pages out by URL, `noJsLink` and `noJsFallback` decide what `/search` offers without JavaScript, `strings` gives other languages' words. `false` turns search off. |
 | `imageService` | `true` | `false` leaves Astro's image service alone. `<Img>` then uses Astro's own server crop for each ratio, with the focal point as `object-position`, and manual crops aren't applied. |
 
@@ -306,3 +307,23 @@ vesper({
   --vesper-search-radius: 0.5rem;
 }
 ```
+
+## GitHub mode (spec §6.8)
+
+Editors sign in with their own GitHub account on the deployed site's `/admin` and publish from there. Each save is one commit to the repository's default branch, and the site's host rebuilds as on any push.
+
+```js
+// astro.config.mjs
+vesper({ github: { relay: 'https://vesper-github-relay.your-account.workers.dev' } })
+```
+
+1. **The relay.** Deploy `templates/oauth-relay` (its README walks through creating the GitHub App and installing it on the repository). GitHub's token exchange needs the app's secret and can't be called from a browser, so it goes through the relay, which stores nothing.
+2. **The repository.** `owner/name`, the default branch and the site's folder in the repository (for a monorepo) are read from git, or from the host's environment. Set `repo`, `branch` or `root` when they can't be read; the build log says so.
+3. **The schemas.** At build, `content.config.ts` is also built for the browser into `_vesper/schemas.js`, so the studio checks saves with your real schemas. A config that imports Node-only code can't be; the log says why, the site still builds, and the studio checks what the manifest knows, with your build as the last check.
+
+`astro dev` stays local mode. GitHub mode is on in built sites only.
+
+**Hosts that check commit authors.** In GitHub mode each editor is the author of their commits. On private repositories, Vercel builds only commits by team members and Netlify holds unknown authors for approval: add your editors there, or build with GitHub Actions or Cloudflare Pages.
+
+**A Content Security Policy for `/admin`**, if your host sets headers, needs `connect-src` for `https://api.github.com` and your relay, and `img-src blob:` for previews.
+

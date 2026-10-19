@@ -15,7 +15,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
-| 3 GitHub mode | Design below (2026-10-19). Jeremy confirmed every call on 2026-10-19; in progress. |
+| 3 GitHub mode | Built (2026-10-19), every criterion met against a fake GitHub; waiting for CI on GitHub and the real-world check. See "Phase 3: outcome" below. |
 | 4 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -381,6 +381,42 @@ Jeremy asked for icons, the body editor's toolbar first. His calls are in DECISI
 - **React Aria closes a tooltip when the page scrolls,** so a tooltip shown as focus scrolls a toolbar into view can vanish at once. That's React Aria's behaviour, kept; the screenshot script settles the scroll first.
 
 **Commits:** the decisions (6acbf46), the kit (13e20f3), the formatting tools (057f787), icons beside words (95a9978), the Shift+F10 fix (1c21e3f), collection icons (b09ddb9) and this note. The first-Tab fix (de40775) came just before.
+
+## Phase 3: outcome
+
+Built 2026-10-19 on the design below, with every call as recommended (Jeremy, 2026-10-19). Unit, integration and every e2e test pass locally on macOS (4,167 and 111); CI hasn't run yet.
+
+| Criterion (spec §11) | How it's met |
+|---|---|
+| An editor with a GitHub account can edit and publish, with an image, from a deployed static site | `e2e/github/github.spec.ts`: a GitHub-mode build of the playground on the plain static server signs in through the real relay (`templates/oauth-relay`) against a fake GitHub whose repository is real git. It edits a post, uploads a new image through the field, and publishes. The bare repository then has exactly one new commit, by the editor, with the post changed and the image added, and every other file's bytes unchanged. The same project covers a deep link across a reload, a conflict with a change published elsewhere, a reorder as one commit, and axe on the sign-in screen, Home and the user menu. **Not done: the same with real GitHub and a real host** (the checklist below). |
+| GitHub adapter passing the storage contract suite (roadmap) | `packages/astro/test/storage-github.test.ts`: `GitHubStorage` passes `runStorageContract` against the fake, plus a push from elsewhere mid-save (built on once, or a conflict), branch rules, an expired sign-in, rate limits, a truncated tree, a monorepo's subfolder, byte exactness (CRLF, a BOM, non-UTF-8), batched reads with a warm cache, and held uploads. |
+| OAuth relay template (roadmap) | `templates/oauth-relay`: one dependency-free Worker, a `wrangler.toml` and a README. Its tests sign in from end to end against the fake, and refuse unknown sites, missing state or challenge, wrong verifiers and forged callbacks. |
+
+Measured: the playground's schemas for the browser are 93 KB minified, loaded on the first save. A warm visit reads from GitHub only files whose blob SHA changed.
+
+**Built as designed, with these differences:**
+- **An upload from a field waits for the publish** (`ChangeSet.defer`). The design missed that the studio uploads when a file is chosen, which would have made an entry and its image two commits (spec §6.8 says one). The Media screen still publishes an upload at once (DECISIONS.md).
+- **Entry saves carry a `Vesper-Collection` trailer** in every mode; adapters without history ignore it.
+- **The user menu is in the top bar of every screen but the editor**, whose bar holds the entry's own controls.
+- **The field model's fallback checks** (`fieldModelIssues`) are new in core; nothing had them before.
+- **The Details focus test waits for the field** (a479c50): it raced on a fast run, before this phase and after.
+
+**Open, for Jeremy:**
+- **The real-world check**, the criterion's "deployed static site". Recommended:
+  1. Create a private copy of this repository on GitHub (for example `vesper-github-test`), so test commits never land in the real one.
+  2. Create a GitHub App, "Vesper (test)", as `templates/oauth-relay/README.md` describes, and install it on that copy only.
+  3. Deploy the relay on your Cloudflare account. Its `workers.dev` address goes in the app's callback; `ALLOWED_ORIGINS` is the Pages site's address.
+  4. On Cloudflare Pages, connect the copy:
+     - build command `npm ci && npm run build -w @vesper/playground`;
+     - output `apps/playground/dist`;
+     - the playground's config gets `vesper({ search, github: { relay: '…' } })`.
+
+     The site's folder (`apps/playground`) is read from git, which also checks monorepo detection on a real host.
+  5. You sign in to GitHub yourself in the browser pane. I can drive the rest and check the commit on GitHub.
+- **A screen reader pass** of the sign-in screen, the user menu and Publish, with the earlier phases' passes.
+- **Push, and CI.** Nothing is pushed yet.
+
+**Not built** (as planned): pull-request mode (Phase 9), deploy status (cloud), the cloud's free relay (when the domain exists), a read-only studio, GitLab and Bitbucket.
 
 ## Phase 3: GitHub mode (design)
 
@@ -1434,7 +1470,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
 | **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done 2026-10-18, CI green in run 39169607328) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above). Calls confirmed 2026-10-19 | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
-| 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators. Design above (2026-10-19); its calls are listed for Jeremy there | GitHub adapter passing the storage contract suite; OAuth relay template |
+| 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators. Design and outcome above (2026-10-19) | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); the §13.1 domain; check OpenCage's terms and price (§13.9) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
 | **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
 | 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |

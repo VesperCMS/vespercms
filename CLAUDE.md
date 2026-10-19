@@ -23,7 +23,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394); outcome and open questions in `PLAN.md` |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
-| 3 GitHub mode | In progress. Every call confirmed by Jeremy (2026-10-19); design in `PLAN.md` |
+| 3 GitHub mode | Built (2026-10-19); waiting for CI and the real-world check. Outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -41,7 +41,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 
 Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `node`. The `.npmrc` sets `--conditions=@vesper/source`, and it only applies inside npm.
 
-**Preview the playground on port 4402 (`.claude/launch.json`), never 4321, 4400 or 4401.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files. The e2e tests own 4400 (static build) and 4401 (studio) and never reuse a running server, so a preview can't stand in for what they test.
+**Preview the playground on port 4402 (`.claude/launch.json`), never 4321 or 4400–4405.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files. The e2e tests own 4400 (static build), 4401 (studio) and 4403–4405 (GitHub mode: the fake GitHub, the relay and the built site) and never reuse a running server, so a preview can't stand in for what they test.
 
 **Never serve `scripts/studio-site.mjs` yourself while `npm run e2e` runs.** Both use the one copy in `e2e/.studio-site`, and two dev servers over the same files make the tests' saves fail.
 
@@ -63,24 +63,25 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
 | `npm run build` | `dist/` for every package: tsc for the libraries, Vite for the studio bundle and its CSS. |
 | `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`, and its accessibility report into `apps/playground/.vesper/`. |
-| `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). |
+| `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). `github`: a GitHub-mode build, the real relay and a fake GitHub over real git (`scripts/github-site.mjs`). |
 | `npm run manifest` | Print the playground's manifest, generated from source. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout
 
 ```
-packages/core      Schema introspection, manifest, serializers, storage interface, URL and image geometry, accessibility rules. No framework imports.
+packages/core      Schema introspection, manifest, serializers, storage interface and GitHub storage, URL and image geometry, accessibility rules. No framework imports.
 packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling, <Img>, the crop step, the build's accessibility check, and site search (the Pagefind index, <Search>, /search).
 packages/ui        Design tokens and the accessible component kit. Tokens enforce the §10.4 budget.
-packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene. Precompiled for sites.
+packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene, GitHub mode's sign-in and back end. Precompiled for sites.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
 fixtures/          astro6-site: an Astro 6 site, installed on its own, for the Astro 6 CI job.
-e2e/               Playwright specs: static-site.spec.ts (the built site) and studio/ (local mode).
-scripts/           Repo tooling (contrast check, static server, dist check, studio test site).
+e2e/               Playwright specs: static-*.spec.ts (the built site), studio/ (local mode) and github/ (GitHub mode).
+scripts/           Repo tooling (contrast check, static server, dist check, studio and GitHub-mode test sites, the fake GitHub).
+templates/         oauth-relay: the GitHub sign-in relay, one Worker a site owner deploys (GitHub mode).
 ```
 
-Later phases add `templates/oauth-relay` (Phase 3), `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (`cloud-api`, `cloud-app`) lives in its own private repository, never this one (spec §13.3, decided 2026-10-19).
+Later phases add `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (`cloud-api`, `cloud-app`) lives in its own private repository, never this one (spec §13.3, decided 2026-10-19).
 
 ## Constraints that are easy to violate
 
@@ -169,6 +170,20 @@ Later phases add `templates/oauth-relay` (Phase 3), `packages/create-vesper` and
 **The studio only ever runs from the site itself at `/admin`. `app.{{domain}}` never hosts a second copy of the editor.** Cloud features are reached by signing in to the cloud from the studio (D14).
 
 **Cloud-only features are absent, not disabled, when the studio isn't connected.** No upsell banners (spec §6.9).
+
+### GitHub mode
+
+**GitHub mode runs core's services over `GitHubStorage`; never give a screen a GitHub-only path.** Local and GitHub mode then save, check and splice with the same code (DECISIONS.md, "GitHub mode runs core's services in the browser").
+
+**Use bytes from GitHub only once they match their blob SHA.** The cache and the GraphQL batches depend on it, and content must stay byte-exact.
+
+**Keep only the 8-hour access token, in `sessionStorage`; never keep a refresh token in the browser.** `/admin` shares its origin with the site's own scripts (DECISIONS.md, "GitHub mode keeps its token in sessionStorage").
+
+**`fileUrl` is asynchronous: show a site file with `useFileUrl` or `FileImage`.** A private repository's files have no URL a browser can load without the token.
+
+**An upload from a field waits for the entry's publish (`ChangeSet.defer`); the Media screen's doesn't.** Spec §6.8 makes an entry and its image one commit.
+
+**The relay stays one dependency-free file that stores nothing, and checks the site's origin on the way out and back.** Site owners deploy it themselves, and PKCE is what makes a stateless relay safe.
 
 **The accent is Pine, and fixed: no picker, setting or config key chooses another.** Choosing an accent is white-label, the higher paid tier, in Phase 9 (DECISIONS.md, 2026-10-18).
 

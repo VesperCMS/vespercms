@@ -2,7 +2,7 @@
 
 The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
 
-**Status:** Phases 2 to 2.8 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages. A `fields.image()` field sets its focal point and crops behind a "Focal point & crops" disclosure. Accessibility notes sit beside the fields they concern, with a count in the top bar that opens a drawer of every note. Since the studio design pass, every screen follows Vesper's design system (Pine), and on wide screens Details opens as a drawer from the top bar.
+**Status:** Phases 2 to 3 complete. In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages. A `fields.image()` field sets its focal point and crops behind a "Focal point & crops" disclosure. Accessibility notes sit beside the fields they concern, with a count in the top bar that opens a drawer of every note. Since the studio design pass, every screen follows Vesper's design system (Pine), and on wide screens Details opens as a drawer from the top bar.
 
 
 ## How it's built
@@ -29,6 +29,16 @@ mountStudio(document.getElementById('vesper-studio')!, {
   siteName: 'Playground',
 });
 ```
+
+With `api: null` and `github` set (a built site in GitHub mode), the studio signs the editor in with GitHub first, through the site's relay, and then saves to the repository: `github: { owner, repo, branch, root, relay, apiUrl?, schemas }`, plus `routes` (the site's static routes) and `loadUrlFunctions`. `@vesper/astro` writes all of it into the page.
+
+## GitHub mode (spec §6.8)
+
+- `github/session.ts`: the sign-in. The studio keeps a state and a PKCE verifier in `sessionStorage`, goes to the relay's `/authorize`, and on the way back posts the code and verifier to `/token`. Only the 8-hour access token is kept, in `sessionStorage`.
+- `github/GitHubGate.tsx`: before the studio. It finishes a sign-in, checks the editor can push, and shows "Sign in with GitHub", "Your GitHub account can't change this site" or "GitHub couldn't be reached".
+- `github/api.ts`: `createGitHubApi`, the same core services local mode's dev API runs, over `GitHubStorage`. It validates with the site's schemas built for the browser (`_vesper/schemas.js`), or the field model's checks when those can't load. Files come back as object URLs, and GitHub's errors are put in plain words.
+- `github/cache.ts`: file bytes by git blob SHA in IndexedDB, so a later visit reads only what changed.
+- Signed in, the top bar has the user menu (`@login`, Sign out of GitHub). The editor's button reads Publish, and an expired sign-in keeps the open entry's unsaved changes across the sign-in.
 
 ## Routes
 
@@ -75,7 +85,8 @@ Keys in the writing view: arrow onto a block to select it, Enter opens its setti
 ## Media
 
 - `media/formats.ts` reads JPEG, PNG and WebP structure (size, EXIF orientation, location) and strips metadata without decoding. `media/hygiene.ts` decides what each upload needs: a lossless strip, a canvas re-encode (to turn a photo upright or scale it down), HEIC conversion where the browser can decode it, or SVG sanitizing with DOMPurify.
-- `media/upload.ts` checks for a duplicate by SHA-256 before uploading. The picker and the media browser share it, and both scale uploads to the site's `images.maxUploadEdge`.
+- `media/upload.ts` checks for a duplicate by git blob SHA (`MediaItem.hash`) before uploading. The picker and the media browser share it, and both scale uploads to the site's `images.maxUploadEdge`. The picker's uploads wait for the entry's publish in GitHub mode, so the two are one commit.
+- `fileUrl` is asynchronous: `useFileUrl` and `FileImage` show a site file once its URL is ready.
 
 ## Focal point and crops (spec §6.6.4)
 
