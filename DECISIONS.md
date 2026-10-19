@@ -42,6 +42,28 @@ The spec's D1–D17 are recorded in `vesper-spec.md` §3 and aren't repeated her
 
 Phase 1's storage design already assumes D13: a draft records the git blob SHA it was based on, and conflicts are a version comparison.
 
+### 2026-10-19: Jeremy's calls on the open product decisions (spec §13)
+
+**Jeremy took the recommendation on every open item on October 19, 2026. `vesper-spec.md` §13 records each one; the reasons are here.**
+- **§13.3, the cloud's license: closed, in a separate private repository.** A closed license can be opened later and an open one can't be closed. It also settles Phase 4's question: `cloud-api` and `cloud-app` never enter this MIT repository, which goes public at launch.
+- **§13.4, plans and prices: the addendum's numbers stay placeholders.** Entitlements are built on them, pricing stays per site with the Agency bundle (10 sites, then per site), and the final numbers come in Phase 5 from measured cost.
+- **§13.5, pull-request mode: Phase 9,** or sooner only for a paying agency that asks. D13's cloud drafts and review cover most teams.
+- **§13.7, a Git Gateway–compatible API: no.** An Astro site on Decap already keeps its content as files, so it switches by installing Vesper. The API would be maintenance for a wedge that's already open.
+- **§13.8, self-hosting the cloud: no.** At most an Institution contract term later.
+- **§13.9, geocoding: OpenCage, proxied and cached by the cloud,** once its current terms and price are checked before Phase 4. Coordinates are saved into the site's files, which is permanent storage, so the provider's terms must allow keeping results. Rejected: Nominatim's public server (its usage policy forbids autocomplete) and geocoders whose terms limit storing results.
+- **§13.10, machine-suggested alt text: not for now.** It sits close to "AI writing" on the not-adopted list, and D19's posture favours human judgement. Revisit after launch.
+- **§13.11, cloud-rendered previews: after launch,** as D17 already says.
+- **§13.12, conditional form fields: not adopted.** Forms stay static and routing covers the cases. Show/hide logic would need its own accessibility work (announcing fields that appear) for little gain.
+- **§13.13, the scan engine: measure Cloudflare Browser Rendering first** (it fits D7), and set page caps from that cost in Phase 8.5.
+- **§13.14, custom sending domains: Agency and Institution.** The Site plan sends from Vesper's domain, with reply-to set to the site owner. A sending domain means DNS records (SPF, DKIM) per customer, which is support work.
+- **Still Jeremy's to do (§13.1):** claim the `@vesper` org on npmjs.com, and register the cloud domain before Phase 3. On October 19, 2026 no package was published under `@vesper`; whether the scope itself is held couldn't be checked from here.
+
+### 2026-10-19: GitHub mode gets a free relay, and the site's build checks custom validators
+
+**Jeremy confirmed both on October 19, 2026, ahead of Phase 3.**
+- **The cloud runs a free OAuth relay for GitHub mode (spec §6.8), and `templates/oauth-relay` stays for sites that want their own.** The relay turns GitHub mode's setup into minutes instead of deploying a Worker first, and a token exchange costs next to nothing on Workers. It needs the §13.1 domain.
+- **In GitHub mode, the site's build is the last check for Markdoc's custom attribute types and `validate` functions.** They're code, so only the dev API can run them (2026-10-17, "The browser checks Markdoc with the manifest"). A save that fails them fails the deploy, and the live site stays as it was.
+
 ## Process
 
 ### 2026-10-17: The repo starts private and goes public at launch
@@ -241,7 +263,7 @@ Amended in Phase 2.5: body checks (Markdoc, micromark and the validation around 
 
 ### 2026-10-17: HEIC converts only where the browser can decode it, for now
 
-**HEIC photos are converted to JPEG when the browser can decode them (Safari). Elsewhere the studio says plainly to export a JPEG first or to use Safari.** The browser libraries that decode HEIC everywhere (libheif-js, heic-to) are LGPL-3.0. Whether that suits the studio bundle is Jeremy's call, raised at the end of Phase 2.
+**HEIC photos are converted to JPEG when the browser can decode them (Safari). Elsewhere the studio says plainly to export a JPEG first or to use Safari.** The browser libraries that decode HEIC everywhere (libheif-js, heic-to) are LGPL-3.0. Whether that suits the studio bundle was Jeremy's call, raised at the end of Phase 2. **He kept this for launch on 2026-10-19.** An LGPL library inside an MIT bundle would draw questions from the legal reviews of the colleges and public bodies Vesper sells to. If editors ask for it, `heic-to` loads as a separate, unmodified chunk on the first HEIC upload, with its licence notice.
 
 ### 2026-10-17: Images go beside their siblings; other files go to `public/files`
 
@@ -302,7 +324,7 @@ Two additions on top:
 
 Every change is announced in a polite live region: "Nursing moved under Academics, position 1 of 3." React Aria's key handling keeps row key events to itself, so the outline reads them in the capture phase from whichever row has focus.
 
-**Budget note (spec §10.4, icon-only buttons):** the expand toggle is a "▸" button with no visible text. It's React Aria's chevron: named "Expand" or "Collapse", outside the Tab order, and only a mouse affordance, since the arrow keys expand and collapse. It's the one icon-only control beyond close, overflow and drag handles, and it's the convention every outline uses.
+**Budget note (spec §10.4, icon-only buttons):** the expand toggle is a "▸" button with no visible text. It's React Aria's chevron: named "Expand" or "Collapse", outside the Tab order, and only a mouse affordance, since the arrow keys expand and collapse. It's the one icon-only control beyond close, overflow and drag handles, and it's the convention every outline uses. Confirmed by Jeremy, 2026-10-19.
 
 ### 2026-10-18: The Redirects screen lives behind the Site menu
 
@@ -316,7 +338,7 @@ Every change is announced in a polite live region: "Nursing moved under Academic
 
 **The image field's focal point is one native button holding the image: a click or tap sets the point, the marker drags, and the arrow keys move it 1% (Shift, 10%). "Across (%)" and "Down (%)" number fields beside it are the way in without seeing or pointing, as the geo field's latitude and longitude are (spec §6.3.2). Every move made with the keys or the pointer is announced politely: "Focal point 62% across, 35% down."** A screen reader in browse mode keeps the arrow keys for itself on a button, which is why the number fields exist; the button is still one Tab stop, with its position in its description.
 
-**The crop dialog's box is one focusable element with `role="application"`, named "Crop box for Wide (16:9)" and described by its position and its keys.** A two-way box has no ARIA widget role, and `application` is the role that makes screen readers pass the arrow keys through to it. jsx-a11y counts it as non-interactive, so that one element carries a lint exception with the reason. The box takes focus as the dialog opens, in a layout effect: React's `autoFocus` works only on form controls, and React Aria's dialog focuses itself unless focus is already inside. Arrows move it 1%, Shift+→ and Shift+↓ grow it and Shift+← and Shift+↑ shrink it around its centre, Enter applies and Escape cancels; each change is announced. The corner handles are for the pointer and hidden from assistive technology.
+**The crop dialog's box is one focusable element with `role="application"`, named "Crop box for Wide (16:9)" and described by its position and its keys.** A two-way box has no ARIA widget role, and `application` is the role that makes screen readers pass the arrow keys through to it. jsx-a11y counts it as non-interactive, so that one element carries a lint exception with the reason (confirmed by Jeremy, 2026-10-19; his screen reader pass can still send it back to number fields). The box takes focus as the dialog opens, in a layout effect: React's `autoFocus` works only on form controls, and React Aria's dialog focuses itself unless focus is already inside. Arrows move it 1%, Shift+→ and Shift+↓ grow it and Shift+← and Shift+↑ shrink it around its centre, Enter applies and Escape cancels; each change is announced. The corner handles are for the pointer and hidden from assistive technology.
 
 **Where it lives (spec §10.4):** inside the image field, behind one "Focal point & crops" disclosure, and only for fields that store a focal point or crops. The crop tools are behind each preview's "Adjust crop" button, in a dialog in a new wide size whose one primary action is "Apply crop". No icon-only buttons, no tabs, hairline borders; the image outside the crop is dimmed with the `content` token at half strength.
 
@@ -494,7 +516,7 @@ The build cleans against every content URL and every static route in `src/pages`
 - Apache gets `RedirectMatch` (mod_alias, so no mod_rewrite), matching with or without a slash, between `# BEGIN vesper` and `# END vesper` in `dist/.htaccess`, after whatever `public/.htaccess` held.
 - nginx gets `location =` blocks in `dist/_vesper/nginx-redirects.conf`.
 
-Vercel is the exception. It reads `vercel.json` before the build runs, so rules written during the build never apply (reported in Vercel's community forum and a Vercel-hosted write-up; Vercel's own docs don't say). So the studio keeps the site's `vercel.json` in step whenever it writes the redirects file, in the same change set, replacing only the entries whose `source` is one of Vesper's old or new addresses. At build, only redirects already in `vercel.json` count as covered; the rest keep their HTML page.
+Vercel is the exception. It reads `vercel.json` before the build runs, so rules written during the build never apply (reported in Vercel's community forum and a Vercel-hosted write-up; Vercel's own docs don't say). So the studio keeps the site's `vercel.json` in step whenever it writes the redirects file, in the same change set, replacing only the entries whose `source` is one of Vesper's old or new addresses. At build, only redirects already in `vercel.json` count as covered; the rest keep their HTML page. Confirmed by Jeremy, 2026-10-19.
 
 `dist/_vesper/redirects.json` lists the cleaned redirects: the input for the S3 deploy template (Phase 9, spec §6.16), which sets each redirect page's website-redirect metadata.
 
@@ -525,7 +547,7 @@ A page with no folder that gains a child becomes `page/index.md` in the same cha
 
 Each change replaces only that address's bytes and keeps its shape: base or not, trailing slash or not, `?query` and `#hash`, angle brackets. Links relative to the page's URL (`nursing/`, `../apply/`) become root-relative when either end moves, the one form that can't be misread from the new place. References relative to the *file* keep pointing at the same files when the file moves or its target does: images, MDX `import` paths, Markdoc `{% partial file %}`, and frontmatter values starting with `./` or `../`. Links inside code are left alone, and a destination with escapes or entities is skipped (it would need decoding to compare). The confirmation counts links on other pages only. Attributes are matched by value, not by declared type: a tag attribute holding exactly an old page URL is a link in all but name.
 
-Not built: §6.15.6's optional build check for internal links that resolve to nothing. It overlaps "weekly broken-link checks" on the do-not-build list, so it waits for Jeremy.
+Not built: §6.15.6's optional build check for internal links that resolve to nothing. It overlaps "weekly broken-link checks" on the do-not-build list, and moves already rewrite the links they break, so Jeremy decided on 2026-10-19 not to build it.
 
 ### 2026-10-18: `vesper:content` embeds each folder's order
 
@@ -570,7 +592,7 @@ What follows for Phase 2.7:
 
 **The integration installs it only where the site uses Astro's own Sharp service**: the one service, or either target of Astro 7.4's `{ build, runtime }`, keeping the service's `config`. A host's service (Cloudflare, Netlify, Vercel) or a site's own is left alone. The build log says the step is on and how to turn it off, and `vesper({ imageService: false })` turns it off. It's an integration option, not a `vesper.config.ts` key, because it changes Astro's own config in `astro:config:setup`, beside `image.service`, before Vesper reads `vesper.config.ts` at all.
 
-`sharp` is an optional peer dependency of `@vesper/astro`: the step loads the copy Astro's own service loads (Astro lists it as an optional dependency), and a strict installer such as pnpm only lets a package import what it declares.
+`sharp` is an optional peer dependency of `@vesper/astro`: the step loads the copy Astro's own service loads (Astro lists it as an optional dependency), and a strict installer such as pnpm only lets a package import what it declares. Confirmed by Jeremy, 2026-10-19.
 
 In this workspace the Astro 6 fixture's crop step loads the root's Astro 7 Sharp service, because `@vesper/astro` resolves `astro` from its own folder; a published install resolves the site's own Astro. The fixture test still proves what differs between majors: the service swap, Astro 6's hashing and build step calling `transform` with `crop`, and `<Img>` compiled by Astro 6.
 
@@ -605,21 +627,21 @@ The component ships as source (`components/Img.astro`, like the `/admin` page) f
 
 Rejected: running axe in the studio over a rendered preview. Local and GitHub modes have no rendered page of the entry (previews are Phase 7), and the content rules see what a rendered page hides, such as an alt that is a file name.
 
-### 2026-10-18: An empty alt in the body is decorative (open for Jeremy)
+### 2026-10-18: An empty alt in the body is decorative
 
-**`![](photo.jpg)` in a body is `alt=""`, which is HTML's mark for a decorative image, and it's exactly what the studio's image dialog writes for "Decorative image" (Phase 2). So it gets no note. `missing-alt` fires for an HTML or JSX `<img>` with no `alt` at all, and for an image field with no alt text that isn't marked decorative.** The fixture's empty Markdown alt is the decorative case, and an HTML `<img>` with no alt was added for `missing-alt`. The cost: content imported with forgotten alts written as `alt=""` (WordPress writes those) passes silently. The alternatives are a note on every empty alt (which can't be cleared for images that really are decorative) or a decorative marker in the body syntax (only Markdoc and MDX could carry one). Jeremy's call.
+**`![](photo.jpg)` in a body is `alt=""`, which is HTML's mark for a decorative image, and it's exactly what the studio's image dialog writes for "Decorative image" (Phase 2). So it gets no note. `missing-alt` fires for an HTML or JSX `<img>` with no `alt` at all, and for an image field with no alt text that isn't marked decorative.** The fixture's empty Markdown alt is the decorative case, and an HTML `<img>` with no alt was added for `missing-alt`. The cost: content imported with forgotten alts written as `alt=""` (WordPress writes those) passes silently. The alternatives are a note on every empty alt (which can't be cleared for images that really are decorative) or a decorative marker in the body syntax (only Markdoc and MDX could carry one). Confirmed by Jeremy, 2026-10-19.
 
 ### 2026-10-18: Embed names and captions come from the tag's own schema
 
 **A Markdoc tag or declared MDX component gets `tag-name-empty` when a required attribute named `title`, `alt`, `label` or `aria-label` is empty text, and `video-captions` when its schema has a `captions` attribute and the tag leaves it out or turns it off.** A missing required attribute is already a validation error; Markdoc's `required` accepts `""`, which is the case left. No new hint in vesper.config.ts: a site that names its attributes differently doesn't get these two checks, and an explicit hint can come later if one is asked for. A note's subject carries the block's summary value ("YouTube video “A campus walking tour”"), so two videos' notes can be told apart.
 
-### 2026-10-18: Text colours are opted in, and backgrounds are declared (open for Jeremy)
+### 2026-10-18: Text colours are opted in, and backgrounds are declared
 
-**`fields.color({ contrast: 'text' | 'large-text' | 'graphic' })` marks a colour for the check, and `vesper.config.ts` `a11y.backgrounds` names the colours the site draws text on. Each marked colour is checked against each background (4.5:1 for text, 3:1 otherwise), and a note names the background it fails on.** Not every colour field is text: the playground's map pin colour isn't. Reading backgrounds from the site's CSS was rejected: custom properties can be computed, themed or `light-dark()` pairs (the playground's are). With no backgrounds declared, nothing is checked, and the manifest warns once per marked field. Ratios are WCAG 2.1's, rounded down to one decimal in messages, so a failing colour never reads as passing ("2.3:1").
+**`fields.color({ contrast: 'text' | 'large-text' | 'graphic' })` marks a colour for the check, and `vesper.config.ts` `a11y.backgrounds` names the colours the site draws text on. Each marked colour is checked against each background (4.5:1 for text, 3:1 otherwise), and a note names the background it fails on.** Not every colour field is text: the playground's map pin colour isn't. Reading backgrounds from the site's CSS was rejected: custom properties can be computed, themed or `light-dark()` pairs (the playground's are). With no backgrounds declared, nothing is checked, and the manifest warns once per marked field. Ratios are WCAG 2.1's, rounded down to one decimal in messages, so a failing colour never reads as passing ("2.3:1"). Confirmed by Jeremy, 2026-10-19.
 
-### 2026-10-18: Each collection sets where its body's headings start (open for Jeremy)
+### 2026-10-18: Each collection sets where its body's headings start
 
-**`collections.<name>.headingStart` (1 to 6) is the level a body's top headings should have; 2 when absent, because a layout usually renders the title as the page's `h1`.** A heading above it is `heading-extra-top`, a second `h1` when it's 1 is too, and a heading more than one level below the previous (the title counts as `start − 1`) is `heading-skip`. A per-collection key fits sites where docs bodies hold their own `h1` and blog bodies don't. The alternatives are a site-wide `a11y.headingStart` with overrides, or a `.meta()` hint on the title field. Compact Markdown fields get no heading checks.
+**`collections.<name>.headingStart` (1 to 6) is the level a body's top headings should have; 2 when absent, because a layout usually renders the title as the page's `h1`.** A heading above it is `heading-extra-top`, a second `h1` when it's 1 is too, and a heading more than one level below the previous (the title counts as `start − 1`) is `heading-skip`. A per-collection key fits sites where docs bodies hold their own `h1` and blog bodies don't. The alternatives are a site-wide `a11y.headingStart` with overrides, or a `.meta()` hint on the title field. Compact Markdown fields get no heading checks. Confirmed by Jeremy, 2026-10-19.
 
 ### 2026-10-18: Notes sit under their field; the count opens a drawer
 
@@ -633,14 +655,15 @@ Rejected: running axe in the studio over a rendered preview. Local and GitHub mo
 
 **With `a11y.blockPublishOn`, a note on a listed rule refuses the save the way a body the build would fail on is refused (Phase 2.5): the error summary takes focus and links each blocking note to its field, and the count reads "3 accessibility notes, 1 blocks saving".** The spec says the gate "disables Publish, with the reason in text and a link to the field". A disabled button can't take focus, so a keyboard user couldn't reach it to learn why, and Ctrl+S would do nothing at all. The gate checks the values at the moment of saving, not the last debounced check. It runs in the studio only: the PDF rules need PDF.js, and the gate is a site's policy, not a file the build can't read. In local mode, publishing is Save, so the gate refuses saves there too; whether local mode should only warn is open for Jeremy.
 
-### 2026-10-18: PDFs are read with PDF.js, in the browser, on first use (open for Jeremy)
+### 2026-10-18: PDFs are read with PDF.js, in the browser, on first use
 
 **PDFs in file fields, and site PDFs linked from the body, are read with `pdfjs-dist`'s legacy build in the browser, so the check works in every mode. It loads the first time an entry has a PDF to check, its worker through a Vite `?url` import as MapLibre's is, and stays external in the studio's build. Each PDF is read once per session.** Tagged means the document marks itself tagged and its first page has a structure tree; the title comes from the info dictionary, else XMP; the language from the catalog.
 - Weight: 524 KB plus a 1,321 KB worker, minified, never in the first load. The modern build (459 KB plus 1,264 KB) needs `Uint8Array.prototype.toHex`, so Chrome 140, Firefox 133 or Safari 18.2. Installed, `pdfjs-dist` is 35 MB, and npm also installs its optional `@napi-rs/canvas` (37 MB on Windows) unless optional dependencies are skipped.
 - PDF.js 6 returns `getMarkInfo()` as a `Map`, though its types say an object, and an absent XMP block as `null`; both are read defensively.
 - The alternative is a small reader of Vesper's own for the three facts: a few KB, but a hand-written parser of an untrusted binary format (object streams, compression, encryption), and the spec names PDF.js.
+- Confirmed by Jeremy, 2026-10-19: the legacy build stays. The modern one saves about 120 KB but would shut out older Safari on locked-down college machines.
 
-### 2026-10-18: The build checks with axe-core in jsdom (open for Jeremy)
+### 2026-10-18: The build checks with axe-core in jsdom
 
 **In `astro:build:done`, every built page is loaded into jsdom with `runScripts: 'outside-only'` (the page's own scripts never run), axe-core is compiled once as a `vm.Script` and run in each page's context, and only the structure rules in `BUILD_RULES` run.** Measured on the playground's 38 built files with the same 60 rules, against axe in Chromium:
 
@@ -655,6 +678,7 @@ Without the shim, jsdom's page-level rules (`landmark-one-main`, `page-has-headi
 - axe's impact maps to `error` (critical, serious) or `warning` (moderate, minor), which is what `failBuildOn` compares against.
 - Astro's redirect pages fail four landmark and language rules by their template, and `/admin` fails landmark rules before its script runs; both are skipped and counted, as the e2e gate skips them.
 - The check runs at every build, as the spec has it; only failing is off by default. It adds about a tenth of a second a page plus loading jsdom, and `vesper({ a11y: false })` turns it off.
+- Confirmed by Jeremy, 2026-10-19: jsdom, and the check on by default.
 
 ### 2026-10-18: Built pages are traced to entries by URL
 
@@ -692,7 +716,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-18: Overlays are 93% glass; the check composites over black and white
 
-**The top bar's glass is 88% of `surface`, the design system's floor. Menus, popovers, dialogs and drawers are 93% of `surface-raised`.** `npm run a11y:contrast` composites each text pair on glass the way a browser does (in gamma-encoded sRGB) over pure black and pure white, the extremes of anything that can sit beneath, and the pair must pass over both. At 88% the dark theme's error text on an overlay is 4.18:1 and an input's boundary 2.57:1 over a white backdrop; at 93% they're 4.93:1 and 3.03:1. The top bar's pairs pass at 88%. Both fills are read from `tokens.css`, so the check follows the CSS. The afterglow is checked at its brightest point: `accent-subtle` in light, 22% of the accent over `surface` in dark.
+**The top bar's glass is 88% of `surface`, the design system's floor. Menus, popovers, dialogs and drawers are 93% of `surface-raised`.** `npm run a11y:contrast` composites each text pair on glass the way a browser does (in gamma-encoded sRGB) over pure black and pure white, the extremes of anything that can sit beneath, and the pair must pass over both. At 88% the dark theme's error text on an overlay is 4.18:1 and an input's boundary 2.57:1 over a white backdrop; at 93% they're 4.93:1 and 3.03:1. The top bar's pairs pass at 88%. Both fills are read from `tokens.css`, so the check follows the CSS. The afterglow is checked at its brightest point: `accent-subtle` in light, 22% of the accent over `surface` in dark. Confirmed by Jeremy, 2026-10-19.
 
 ### 2026-10-18: One type scale replaces Tailwind's sizes, and the budget test holds it
 
@@ -708,7 +732,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-18: Body headings stay headings, inside a region named "Body"
 
-**The body editor's headings are real `h1`–`h6` elements, so they join the studio page's heading outline (the Phase 2.8 follow-up). They stay that way, and the body is now a landmark named "Body", so a screen reader says where a heading belongs when heading navigation lands on one.** They're the body's own structure, and people editing it move through them. On a body that follows its collection's `headingStart` they sit under the entry's title, which is the page's `h1`, as they will on the site; a body that doesn't gets an accessibility note. Rejected: plain paragraphs styled as headings (editors would lose the structure they're writing), `role="heading"` with shifted levels (people would hear a level other than the one they chose), and a separate document such as an iframe, which takes them out of the outline but isn't cheap: the editor, its styles and focus handling would all have to cross the frame.
+**The body editor's headings are real `h1`–`h6` elements, so they join the studio page's heading outline (the Phase 2.8 follow-up). They stay that way, and the body is now a landmark named "Body", so a screen reader says where a heading belongs when heading navigation lands on one.** They're the body's own structure, and people editing it move through them. On a body that follows its collection's `headingStart` they sit under the entry's title, which is the page's `h1`, as they will on the site; a body that doesn't gets an accessibility note. Rejected: plain paragraphs styled as headings (editors would lose the structure they're writing), `role="heading"` with shifted levels (people would hear a level other than the one they chose), and a separate document such as an iframe, which takes them out of the outline but isn't cheap: the editor, its styles and focus handling would all have to cross the frame. Confirmed by Jeremy, 2026-10-19.
 
 ### 2026-10-18: Every focus outline is drawn solid
 

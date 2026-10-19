@@ -22,6 +22,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527); outcome and open questions in `PLAN.md` |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394); outcome and open questions in `PLAN.md` |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
+| 2.9 Site search | In progress. Every call confirmed by Jeremy (2026-10-19); design in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -76,7 +77,7 @@ e2e/               Playwright specs: static-site.spec.ts (the built site) and st
 scripts/           Repo tooling (contrast check, static server, dist check, studio test site).
 ```
 
-Later phases add `templates/oauth-relay` (Phase 3), `apps/cloud-api` and `apps/cloud-app` (Phase 4), `packages/create-vesper` and `apps/docs` (Phase 9).
+Later phases add `templates/oauth-relay` (Phase 3), `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (`cloud-api`, `cloud-app`) lives in its own private repository, never this one (spec §13.3, decided 2026-10-19).
 
 ## Constraints that are easy to violate
 

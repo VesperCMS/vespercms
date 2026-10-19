@@ -127,6 +127,7 @@ apps/
   cloud-api/       Worker: auth, git proxy, drafts, forms, comments, media, webhooks, queues.
   cloud-app/       Worker (Astro, server-rendered on Cloudflare): sign-in and /authorize,
                    agency dashboard, operator console. Never a second copy of the studio (D14).
+                   Both cloud apps live in a separate private repository, not this one (§13.3).
   docs/            Starlight docs site (Phase 9).
 templates/
   oauth-relay/     One-file Worker that performs the GitHub OAuth token exchange for github mode.
@@ -1600,10 +1601,10 @@ Confirm D13 and D15 before starting.
 
 ## 13. Open decisions
 
-1. **Name**: decided: **Vesper**. Still to do: claim the `@vesper` org on npmjs.com, and choose and register the cloud domain (replaces `{{domain}}`).
+1. **Name**: decided: **Vesper**. Still to do (Jeremy): claim the `@vesper` org on npmjs.com now, and register the cloud domain (replaces `{{domain}}`) before Phase 3, since the free OAuth relay, docs links and the cloud all need it. On October 19, 2026 no package was published under `@vesper`.
 2. **Headless primitives**: decided October 17, 2026: **React Aria Components**. Radix lacks the combobox, tree, table and date/time primitives the kit needs (DECISIONS.md).
-3. **Cloud license**: fully closed, source-available, or open with a hosted-only business model.
-4. **Plans and prices**: tiers, limits and annual-only versus monthly. Should agency billing be per site or per bundle of sites?
+3. **Cloud license**: decided October 19, 2026: **closed, in a separate private repository**. `cloud-api` and `cloud-app` (§5) live there, not in the MIT repo. A closed license can be opened later; an open one can't be closed.
+4. **Plans and prices**: decided October 19, 2026, as direction: **build entitlements on the proposed numbers below, price per site with the Agency bundle as proposed, and set the final numbers in Phase 5 from measured cost.** The original question: tiers, limits and annual-only versus monthly. Should agency billing be per site or per bundle of sites?
 
    **Plans and prices (proposed, not final).** Treat the numbers as **placeholders for building entitlements**, not as final prices.
 
@@ -1643,16 +1644,16 @@ Confirm D13 and D15 before starting.
 
    Entitlement keys to implement (§7.9): `sites`, `submissionsPerMonth`, `uploadStorageGB`, `mediaStorageGB`, `emailsPerMonth`, `a11yScanPages`, `a11yScanFrequency`, `whiteLabel`, `sso`, `retentionMonths`.
 
-5. **Pull-request mode** for teams that want GitHub review: Phase 9, or earlier for agencies that ask?
+5. **Pull-request mode** for teams that want GitHub review: decided October 19, 2026: **Phase 9, unless a paying agency asks for it sooner.** Cloud drafts and review (D13) cover most teams.
 6. **MDX props without declarations**: decided October 17, 2026: **always require a declared Zod schema**. Undeclared components stay protected source chips (§6.5.2).
-7. **Git Gateway–compatible API** so existing Decap sites can use the cloud without switching editors. It's a market wedge but adds maintenance. Decide before Phase 5.
-8. **Self-hosting the cloud** for agencies that want it (for example on Coolify). Likely never, or Enterprise only.
-9. **Map tiles and geocoding** for `fields.geo`: tiles decided October 17, 2026: **MapLibre GL JS with OpenFreeMap by default**, overridable in `vesper.config.ts`. Still open: which geocoding provider the cloud proxies for address search (decide before Phase 4; check usage terms and cost).
-10. **Alt text suggestions**: should the cloud ever offer machine-suggested alt text (clearly marked, never auto-applied, always human-confirmed), or stay strictly human-written?
-11. **Cloud-rendered previews for static-only hosts** (after launch): revisit if customers ask (D17). If built, it would be a paid add-on and the one exception to D9.
-12. **Conditional form fields**: support show/hide logic inside forms (with the accessibility work that requires), or keep forms static and rely on routing?
-13. **Scan engine and caps**: which rendering service runs full accessibility scans, and what page caps each plan gets, set from measured cost (Phase 8.5).
-14. **Custom sending domains** for confirmation emails: which plan includes them?
+7. **Git Gateway–compatible API** so existing Decap sites can use the cloud without switching editors: decided October 19, 2026: **no.** Content stays as files, so an Astro site on Decap switches by installing Vesper; the API would be maintenance for a wedge that's already open.
+8. **Self-hosting the cloud** for agencies that want it (for example on Coolify): decided October 19, 2026: **no.** At most, a term in an Institution contract later.
+9. **Map tiles and geocoding** for `fields.geo`: tiles decided October 17, 2026: **MapLibre GL JS with OpenFreeMap by default**, overridable in `vesper.config.ts`. Geocoding decided October 19, 2026: **OpenCage, called through the cloud with caching**, once its current terms and price are checked before Phase 4. Coordinates are saved into files, so the provider's terms must allow keeping results; Nominatim's public server forbids autocomplete.
+10. **Alt text suggestions**: decided October 19, 2026: **not for now; alt text stays human-written.** Machine suggestions sit close to "AI writing" on the list below. Revisit after launch. The original question: should the cloud ever offer machine-suggested alt text (clearly marked, never auto-applied, always human-confirmed)?
+11. **Cloud-rendered previews for static-only hosts**: decided October 19, 2026: **deferred until after launch (D17)**; revisit if customers ask. If built, it would be a paid add-on and the one exception to D9.
+12. **Conditional form fields**: decided October 19, 2026: **forms stay static, and routing covers the cases** (Phase 6). Show/hide fields move to "Considered, not adopted" below.
+13. **Scan engine and caps**: decided October 19, 2026, as direction: **measure Cloudflare Browser Rendering first**, and set each plan's page caps from measured cost in Phase 8.5.
+14. **Custom sending domains** for confirmation emails: decided October 19, 2026: **Agency and Institution.** The Site plan sends from Vesper's domain with reply-to set to the site owner.
 
 ### Considered, not adopted (do not build)
 
@@ -1666,5 +1667,5 @@ These came up in planning. Jeremy hasn't chosen them, so **don't build them** un
 | Uptime, SSL and domain-expiry alerts | Not adopted yet |
 | Free open-source conveniences: sitemap, RSS, social share images | Not adopted yet; likely free if adopted |
 | Cloud "search insights" (top searches and searches with no results, from an anonymous count of queries) | Not adopted yet; a natural paid extra to site search |
-| Conditional show/hide fields inside forms (as opposed to conditional routing) | Open question |
+| Conditional show/hide fields inside forms (as opposed to conditional routing) | Not adopted (October 19, 2026): forms stay static, and routing covers it (§13.12) |
 | Newsletter sending, payments, full analytics, machine translation, AI writing | Rejected for now: costly or support-heavy |

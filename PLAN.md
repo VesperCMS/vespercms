@@ -14,8 +14,28 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
-| 2.9 Site search | Design and the Component UI audit below (2026-10-19), waiting for Jeremy's confirmation. Nothing is built yet. |
+| 2.9 Site search | Design and the Component UI audit below (2026-10-19). Jeremy confirmed every call on 2026-10-19; in progress. |
 | 3 onward | Roadmap below |
+
+## Calls of 2026-10-19
+
+Jeremy took the recommendation on every open item on 2026-10-19: the earlier phases' "Open, for Jeremy" lists, the Phase 2.9 calls and spec §13. The spec's §13 records the product calls, and DECISIONS.md the reasons. What changes in the code:
+
+| Item | Call | Work |
+|---|---|---|
+| Unknown Markdoc tags (2.5) | Block in the dev API, which has the site's whole config; keep warning in the browser | Changed |
+| Publish gate in local mode (2.8) | Refuse, with "Save anyway" in local mode only | Changed |
+| Lowercase site name (design pass) | Lowercase only Vesper's own wordmark; a site's name shows as written | Changed |
+| React 18 sites (2) | Require React 19, with a plain message at build when the site has 18 | Changed |
+| Internal-link build check (2.6) | Not built | None |
+| HEIC outside Safari (2) | Kept for launch; `heic-to` as a separate chunk only if editors ask | None |
+| Vercel redirects, the outline's toggle, `role="application"`, `sharp` as a peer, jsdom, heading start, PDF.js legacy, empty alt, colours, layer 2 on, 93% glass, body headings | As built | None |
+| Custom Markdoc validators in GitHub mode (2.5) | The site's build is the last check | Phase 3 |
+| Free OAuth relay | The cloud runs one, and the template stays | Phase 3, needs the domain |
+| Phase 2.9 calls 1 to 10 and the smaller defaults | All (a), as recommended | Phase 2.9 |
+| Filing the audit's findings with Pagefind | Yes, once Jeremy's screen reader Part A confirms findings 1 and 2; posted only with his OK | Drafted in 2.9 |
+
+Still Jeremy's: claim the `@vesper` npm org, register the domain, and the screen reader passes (2.6, 2.7, 2.8, the design pass, then 2.9's Part B).
 
 ## Phase 0: Scaffold
 
@@ -112,7 +132,7 @@ The spec's three "Done when" criteria, with evidence:
 - Studio e2e tests on `astro dev` over a throwaway copy of the playground.
 - The Astro 6 fixture, its CI job, and the `astro:content` shim contract test for both majors.
 
-**Open, for Jeremy:**
+**Open, for Jeremy** (decided 2026-10-19; see "Calls of 2026-10-19"):
 - **HEIC conversion.** Converting HEIC outside Safari needs an LGPL-3.0 library (libheif-js or heic-to). Until that's decided, the studio converts where the browser can and otherwise explains what to do (DECISIONS.md).
 - **React 18 sites.** The studio needs React 19 (a peer dependency). A site already on React 18, through `@astrojs/react`, would get a peer conflict. Not tested yet: decide whether to support it (load the studio's own React) or document React 19.
 
@@ -154,7 +174,7 @@ The spec's five "Done when" criteria, with evidence:
 - Commits. The design's twelve became 25: fixes found by the corpus, fidelity and e2e suites landed as their own commits.
 - Found by the e2e suite on Windows: a save's rename could fail with `EPERM` while the dev server's watcher read the file. It's now retried briefly, as graceful-fs does (DECISIONS.md).
 
-**Open, for Jeremy:**
+**Open, for Jeremy** (decided 2026-10-19; see "Calls of 2026-10-19"):
 - **Unknown Markdoc tags warn instead of blocking a save.** That follows the spec's table ("a validation warning"), but Markdoc rates them critical, so Astro's build fails on them. The studio never inserts one; one can only come from the source view or an existing file. Options:
   - keep the warning;
   - block in the dev API only, which has the site's complete config, and keep warning in the browser;
@@ -195,7 +215,7 @@ The spec's five "Done when" criteria, with evidence:
 - `src/lib/pages.ts` in the playground is gone; its pages use the helpers.
 - Commits: the design's sixteen became 23. One ordering slip: the outline's commit (477c05b) imports the Redirects screen, which lands in the next commit, so that one commit doesn't build on its own. The branch builds at every later commit.
 
-**Open, for Jeremy:**
+**Open, for Jeremy** (decided 2026-10-19; see "Calls of 2026-10-19"):
 - **A screen reader pass.** The outline, the dialogs and the Redirects screen were checked with axe and driven by keyboard, but not heard. Worth ten minutes with NVDA in Chrome: reading rows (title, address, status), expanding, the menu, a move and its announcement.
 - **The internal-link build check** (spec §6.15.6, "optional build check") wasn't built. It overlaps "weekly broken-link checks" on the do-not-build list.
 - **Vercel's redirects** go into the site's `vercel.json` when the studio writes them, because Vercel reads it before the build (DECISIONS.md). Confirm that's acceptable, or prefer HTML redirect pages only on Vercel.
@@ -236,7 +256,7 @@ The spec's five "Done when" criteria, with evidence:
 - Every dialog now scrolls inside itself on a short screen, not only the wide one.
 - The Astro 6 fixture has no `vesper.config.ts` (it's the zero-config site), so its manual crop is on the built-in `og` ratio.
 
-**Open, for Jeremy:**
+**Open, for Jeremy** (decided 2026-10-19; see "Calls of 2026-10-19"):
 - **A screen reader pass.** The focal point and the crop dialog were driven by keys and checked with axe, not heard. Worth ten minutes with NVDA in Chrome: the focal point's description and announcements, the number fields, the crop box (`role="application"`, so NVDA should switch to focus mode on it) and its announcements.
 - **`role="application"` on the crop box** (DECISIONS.md) needs a lint exception. Confirm, or prefer number fields for the crop as well.
 - **`sharp` as an optional peer dependency of `@vesper/astro`** (DECISIONS.md). Confirm before the first publish.
@@ -279,7 +299,7 @@ The spec's four "Done when" criteria, with evidence:
 - The drawer's groups are `h3`: React Aria's dialog makes its title an `h2`.
 - The report lists only pages with issues, with the counts of pages checked and skipped.
 
-**Open, for Jeremy** (each built with the recommendation; DECISIONS.md has the detail):
+**Open, for Jeremy** (each built with the recommendation; decided 2026-10-19, see "Calls of 2026-10-19"):
 - **The publish gate in local mode**, where the button is Save: refuse the save as built (one rule in every mode, and the gate is opt-in), warn only in local mode, or refuse with "Save anyway".
 - **The DOM for axe at build**: jsdom as built (matched Chromium on every page, never runs the page's scripts, 25 MB, about 100 ms a page) or happy-dom (also matched, about 60 ms a page, 20 MB, but runs the page's inline scripts to load axe). linkedom can't run axe.
 - **Where the heading start is set**: `collections.<name>.headingStart` as built (default 2), a site-wide `a11y.headingStart` with overrides, or a hint on the title field.
@@ -332,7 +352,7 @@ Every studio screen now follows Vesper's design system (Pine) in both themes. Je
 
 **Commits:** twenty-one, from the decisions (5398cf6) to Vesper's mark, its record and its narrow-screen fix. The checkpoint's batch came first (tokens and kit, the font, the screens, the budget test), then the drawer, each remaining group of screens, the fixes above and the tests.
 
-**Open, for Jeremy:**
+**Open, for Jeremy** (decided 2026-10-19; see "Calls of 2026-10-19"):
 - **The lowercase site name.** Built as asked, with CSS, so screen readers read the name as written. It also lowercases a site that names itself ("Highlands College" shows as "highlands college"). Keep, or lowercase only Vesper's own wordmark?
 - **93% glass on overlays** instead of the design system's 88% (above).
 - **Body headings:** confirm keeping them as headings in a "Body" region, or prefer isolating the editor (an iframe; not cheap).
@@ -573,9 +593,9 @@ vesper({
 9. `test`: the integration test and the static e2e.
 10. `docs`: decisions (the audit), READMEs, the drafted upstream issues and the Phase 2.9 outcome.
 
-### Open, for Jeremy
+### The calls (confirmed 2026-10-19)
 
-Each call has a recommendation, and nothing gets built until you confirm.
+Jeremy confirmed every recommendation on 2026-10-19: 1a to 10a, and the smaller defaults.
 
 1. **The search UI (the audit's result).**
    - (a) Vesper's own small script on Pagefind's JS API, recommended: a native `<dialog>`, a list of links, fieldsets and a live region inside the dialog. It would be about 8 KB gzipped (an estimate), and every behaviour is tested here. A first query would be about 200 KB uncompressed, 170 KB of it Pagefind's.
@@ -770,7 +790,7 @@ Scope is spec §6.18 layers 1 and 2 and the §11 Phase 2.8 entry. Layer 3 (cloud
 10. `test`: the build integration test and the e2e specs.
 11. `docs`: decisions, READMEs and the Phase 2.8 outcome.
 
-**Open, for Jeremy** (built with the recommendation, each easy to change):
+**Open, for Jeremy** (built with the recommendation, each easy to change; decided 2026-10-19, see "Calls of 2026-10-19"):
 - **What the publish gate does in local mode, where the button is Save.** (a) Refuse the save, as a body the build would fail on is refused (built: one rule in every mode, and the gate is opt-in); (b) warn only in local mode and block only where saving publishes (GitHub, cloud); (c) refuse with a "Save anyway" for local mode.
 - **The DOM for axe at build.** (a) jsdom (built: matched Chromium on every page, never runs the page's scripts, axe's documented environment, already the repo's test DOM; 25 MB, about 100 ms a page); (b) happy-dom (also matched Chromium, about 60 ms a page and 1.6 s faster to load, 20 MB, but runs the page's inline scripts to load axe); (c) linkedom (can't run axe).
 - **Where the per-collection heading start is set.** (a) `collections.<name>.headingStart` in vesper.config.ts, default 2 (built); (b) a site-wide `a11y.headingStart` with per-collection overrides; (c) a `.meta()` hint on the title field saying it's the page's `h1`.
@@ -1236,20 +1256,20 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | 2.7 Images | Start by verifying how Astro forwards `position`/`fit` | `fields.image`, focal point and crops, `<Img>`, Sharp wrapper |
 | **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
 | **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done 2026-10-18, CI green in run 39169607328) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
-| **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above); confirm the design's calls | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
-| 3 GitHub mode | whether a free cloud relay exists (needs the §13.1 domain) | GitHub adapter passing the storage contract suite; OAuth relay template |
-| 4 Cloud foundation | D13, D15, §13.1 domain, §13.3 license (decides whether `apps/cloud-*` can live in this MIT repo) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
+| **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above). Calls confirmed 2026-10-19 | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
+| 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators | GitHub adapter passing the storage contract suite; OAuth relay template |
+| 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); the §13.1 domain; check OpenCage's terms and price (§13.9) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
 | **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
-| 5 Billing + ops | §13.4 (addendum prices are placeholders); §13.7 | Stripe, entitlement keys from addendum §8, operator console |
+| 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |
 | 6 Forms (expanded) | — | routing rules, private R2 uploads (D21), confirmation emails with the D20 protections |
 | **6.5 Integrations** (new) | — | event and delivery system, Queues with DLQ, five destinations |
 | 7 Previews · 8 Comments | accounts on at least two SSR hosts | per spec |
-| **8.5 A11y history** (new) | scan engine and caps (new §13 item 13) | report uploads, scans, exports |
-| 9 Polish | §13.5 | per spec |
+| **8.5 A11y history** (new) | §13.13: measure Cloudflare Browser Rendering first, then set caps | report uploads, scans, exports |
+| 9 Polish | §13.5 decided 2026-10-19 (pull-request mode here, unless a paying agency asks sooner) | per spec |
 
 ## Risks and early spikes
 - **S0:** the source-condition dev loop on Windows (Phase 0). Fallback: tsc watch.
 - **Astro internals drift.** Mitigation: use only public exports, plus a shim contract test per major.
-- **The `@vesper` npm scope may be taken (§13.1).** Packages stay private and unpublished through Phase 1, so a rename then is cheap. Check availability before the first publish.
+- **The `@vesper` npm scope may be taken (§13.1).** Packages stay private and unpublished through Phase 1, so a rename then is cheap. On 2026-10-19 no package was published under `@vesper`; Jeremy claims the org.
 - **Sample-file licensing.** Only CC0, public-domain or MIT-compatible files, with provenance recorded in the README.
 
