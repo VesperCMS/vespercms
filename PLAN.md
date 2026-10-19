@@ -15,7 +15,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
-| 3 GitHub mode | Design below (2026-10-19), waiting for Jeremy's calls. Nothing is built yet. |
+| 3 GitHub mode | Design below (2026-10-19). Jeremy confirmed every call on 2026-10-19; in progress. |
 | 4 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -470,9 +470,9 @@ From GitHub's docs and changelog, checked on 2026-10-19 (sources in DECISIONS.md
 7. `test`: the fake GitHub, the e2e project and CI.
 8. `docs`: decisions, READMEs, deployment notes and the Phase 3 outcome.
 
-### Open, for Jeremy
+### The calls (confirmed 2026-10-19)
 
-Each call has a recommendation, and nothing gets built until you confirm.
+Jeremy confirmed every recommendation on 2026-10-19: 1a to 9 as recommended, and the smaller defaults.
 
 1. **GitHub App or OAuth App.**
    - (a) A GitHub App, recommended. Its tokens reach only the repositories it's installed on, it asks for nothing but Contents and Metadata, and organizations install it like any app.

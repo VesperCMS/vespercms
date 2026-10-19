@@ -23,6 +23,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394); outcome and open questions in `PLAN.md` |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
+| 3 GitHub mode | In progress. Every call confirmed by Jeremy (2026-10-19); design in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
