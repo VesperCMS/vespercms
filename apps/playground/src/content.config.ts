@@ -29,6 +29,8 @@ const blog = defineCollection({
       publishedAt: z.coerce.date(),
       updatedAt: z.date().optional(),
       draft: z.boolean().default(false),
+      // Site search's switch (spec §6.19): the studio shows it in Details.
+      hideFromSearch: fields.hideFromSearch(),
       // Deliberately unmappable: the editor shows a raw YAML field for unions (spec §6.2).
       series: z
         .union([z.string(), z.object({ name: z.string(), part: z.number().int().positive() })])
@@ -72,6 +74,7 @@ const pages = defineCollection({
       )
       .default([]),
     brochure: fields.file({ accept: 'application/pdf' }).optional(),
+    hideFromSearch: fields.hideFromSearch(),
   }),
 });
 

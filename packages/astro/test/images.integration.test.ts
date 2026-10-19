@@ -59,8 +59,12 @@ beforeAll(() => {
   });
   const config = join(site, 'astro.config.mjs');
   const text = readFileSync(config, 'utf8');
-  if (!text.includes('vesper()')) throw new Error('astro.config.mjs no longer calls vesper()');
-  writeFileSync(config, text.replace('vesper()', 'vesper({ imageService: false })'));
+  if (!text.includes('vesper({ search })'))
+    throw new Error('astro.config.mjs no longer calls vesper({ search })');
+  writeFileSync(
+    config,
+    text.replace('vesper({ search })', 'vesper({ search, imageService: false })'),
+  );
   before = hashes(join(site, 'src'));
   build = spawnSync(
     process.execPath,
@@ -158,7 +162,10 @@ describe('the crop step on', () => {
     const config = join(site, 'astro.config.mjs');
     writeFileSync(
       config,
-      readFileSync(config, 'utf8').replace('vesper({ imageService: false })', 'vesper()'),
+      readFileSync(config, 'utf8').replace(
+        'vesper({ search, imageService: false })',
+        'vesper({ search })',
+      ),
     );
     rmSync(join(site, 'dist'), { recursive: true, force: true });
     on = spawnSync(

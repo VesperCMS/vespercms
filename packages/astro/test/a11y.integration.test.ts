@@ -69,8 +69,12 @@ beforeAll(() => {
 
   const config = join(site, 'astro.config.mjs');
   const text = readFileSync(config, 'utf8');
-  if (!text.includes('vesper()')) throw new Error('astro.config.mjs no longer calls vesper()');
-  writeFileSync(config, text.replace('vesper()', "vesper({ a11y: { failBuildOn: 'error' } })"));
+  if (!text.includes('vesper({ search })'))
+    throw new Error('astro.config.mjs no longer calls vesper({ search })');
+  writeFileSync(
+    config,
+    text.replace('vesper({ search })', "vesper({ search, a11y: { failBuildOn: 'error' } })"),
+  );
   rmSync(join(site, '.vesper'), { recursive: true, force: true });
   failing = astroBuild();
   failingReport = readReport();

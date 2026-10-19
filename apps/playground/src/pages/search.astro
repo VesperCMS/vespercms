@@ -1,0 +1,12 @@
+---
+// The site's own /search page, in its layout. Vesper injects a plain one
+// only when a site has none (spec §6.19); the e2e tests cover that one on a
+// copy of the playground without this file.
+import { Search } from '@vesper/astro/components';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Search">
+  <h1>Search</h1>
+  <Search variant="inline" />
+</BaseLayout>

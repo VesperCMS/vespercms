@@ -302,6 +302,20 @@
         },
         {
           "path": [
+            "hideFromSearch"
+          ],
+          "kind": "boolean",
+          "required": false,
+          "label": "Hide from site search",
+          "default": false,
+          "description": "The page stays on the site. It just won’t show up in the site’s own search.",
+          "placement": "details",
+          "search": "hide",
+          "inferredWidget": "switch",
+          "widget": "switch"
+        },
+        {
+          "path": [
             "series"
           ],
           "kind": "unknown",
@@ -352,7 +366,10 @@
               }
             ]
           ]
-        }
+        },
+        "searchHidden": [
+          "hideFromSearch"
+        ]
       }
     },
     {
@@ -601,12 +618,29 @@
             "accept": "application/pdf"
           },
           "inferredWidget": "text"
+        },
+        {
+          "path": [
+            "hideFromSearch"
+          ],
+          "kind": "boolean",
+          "required": false,
+          "label": "Hide from site search",
+          "default": false,
+          "description": "The page stays on the site. It just won’t show up in the site’s own search.",
+          "placement": "details",
+          "search": "hide",
+          "inferredWidget": "switch",
+          "widget": "switch"
         }
       ],
       "extraKeys": "strip",
       "presentation": {
         "tree": true,
-        "url": "/:path"
+        "url": "/:path",
+        "searchHidden": [
+          "hideFromSearch"
+        ]
       }
     },
     {
@@ -1766,5 +1800,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "85d144a69b1e354c416cd5fecd89e086b8defc70810e15d31ab1f986fe2e2d10"
+  "hash": "8b0029c134cd533b80f362b35bec8ad83c8db859bfd0ead474caefc7acaaedfe"
 }

@@ -104,6 +104,8 @@ describe('PageService.tree', () => {
       '  How to apply /admissions/apply/',
       '  Tuition and fees /admissions/tuition/',
       'Campus life /campus-life/',
+      // Unlisted in _order.yaml, so after the listed pages, by title.
+      'Thanks for getting in touch /contact-thanks/',
     ]);
     const academics = tree.nodes[2];
     expect(academics).toMatchObject({
@@ -129,7 +131,7 @@ describe('PageService.move: Nursing and its pages to the top level', () => {
       from: '/academics/nursing/',
       to: '/nursing/',
       parent: null,
-      position: { index: 5, of: 5 },
+      position: { index: 5, of: 6 },
     });
 
     expect(storage.commits).toHaveLength(1);
@@ -204,6 +206,8 @@ describe('PageService.move: Nursing and its pages to the top level', () => {
       'admissions',
       'campus-life',
       'nursing',
+      // Not in _order.yaml, so it stays after the listed pages.
+      'contact-thanks',
     ]);
   });
 
@@ -344,10 +348,10 @@ describe('PageService.reorder', () => {
     const { pages, text } = await setup();
     expect(await pages.reorder({ collection: 'pages', path: 'about', index: 2 })).toEqual({
       ok: true,
-      position: { index: 3, of: 4 },
+      position: { index: 3, of: 5 },
     });
     expect(await text(`${P}_order.yaml`)).toBe(
-      '# Top-level page order (spec §6.15.3). Unlisted pages sort by title after these.\n- academics\n- admissions\n- about\n- campus-life\n',
+      '# Top-level page order (spec §6.15.3). Unlisted pages sort by title after these.\n- academics\n- admissions\n- about\n- campus-life\n- contact-thanks\n',
     );
   });
 
@@ -355,7 +359,7 @@ describe('PageService.reorder', () => {
     const { pages, text } = await setup();
     await pages.reorder({ collection: 'pages', path: 'campus-life', direction: 'up' });
     expect(await text(`${P}_order.yaml`)).toBe(
-      '# Top-level page order (spec §6.15.3). Unlisted pages sort by title after these.\n- about\n- academics\n- campus-life\n- admissions\n',
+      '# Top-level page order (spec §6.15.3). Unlisted pages sort by title after these.\n- about\n- academics\n- campus-life\n- admissions\n- contact-thanks\n',
     );
   });
 

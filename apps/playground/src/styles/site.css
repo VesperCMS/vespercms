@@ -12,6 +12,10 @@
   --rule: light-dark(#d9dde6, #2e3445);
   --focus: light-dark(#1f5fd1, #8fb0ff);
   --panel: light-dark(#f4f6fa, #1b2030);
+  /* <Search> (spec §6.19) takes the site's own colours. */
+  --vesper-search-accent: var(--focus);
+  --vesper-search-surface: var(--bg);
+  --vesper-search-border: var(--muted);
 }
 
 *,

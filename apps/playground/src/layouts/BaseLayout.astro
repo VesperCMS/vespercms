@@ -1,4 +1,5 @@
 ---
+import { Search, SearchHead } from '@vesper/astro/components';
 import { getEntry } from 'vesper:content';
 import '../styles/site.css';
 
@@ -41,6 +42,7 @@ const current = Astro.url.pathname;
         <meta property="og:image" content={Astro.site ? new URL(image, Astro.site) : image} />
       )
     }
+    <SearchHead />
   </head>
   <body>
     <a class="skip-link" href="#main">
@@ -50,7 +52,7 @@ const current = Astro.url.pathname;
       <a class="site-name" href="/">
         {siteName}
       </a>
-      {/* <Search /> goes here in Phase 2.9, with blog tags as a filter (addendum §7). */}
+      <Search />
       <nav aria-label="Main">
         <ul>
           {nav.map((item) => (
