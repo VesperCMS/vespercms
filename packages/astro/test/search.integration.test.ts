@@ -53,10 +53,14 @@ type Fragment = {
   filters: Record<string, string[]>;
 };
 
-/** Every page in the index, by URL: Pagefind's fragments are gzipped JSON. */
+/**
+ * Every page in the index, by URL: Pagefind's fragments are gzipped JSON.
+ * Empty when there's no index, so a failed build shows its own error.
+ */
 function readIndex(dist: string): Map<string, Fragment> {
   const folder = join(dist, '_vesper/search/fragment');
   const pages = new Map<string, Fragment>();
+  if (!existsSync(folder)) return pages;
   for (const file of readdirSync(folder)) {
     const text = gunzipSync(readFileSync(join(folder, file)))
       .toString('utf8')
@@ -93,12 +97,16 @@ beforeAll(async () => {
   first = astroBuild();
   const dist = join(site, 'dist');
   firstIndex = readIndex(dist);
-  firstFiles = readdirSync(join(dist, '_vesper/search'));
+  firstFiles = existsSync(join(dist, '_vesper/search'))
+    ? readdirSync(join(dist, '_vesper/search'))
+    : [];
   deployed = readFileSync(join(dist, 'blog/harbor-at-dawn/index.html'), 'utf8');
   firstOpenSearch = existsSync(join(dist, 'opensearch.xml'));
   const harbor = firstIndex.get('/blog/harbor-at-dawn/');
+  // Read into memory: given a path, sharp keeps the file open on Windows,
+  // and the second build couldn't empty dist/.
   thumbnail = harbor?.meta.thumbnail
-    ? await sharp(join(dist, harbor.meta.thumbnail)).metadata()
+    ? await sharp(readFileSync(join(dist, harbor.meta.thumbnail))).metadata()
     : {};
 
   const config = join(site, 'astro.config.mjs');
