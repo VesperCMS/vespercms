@@ -5,7 +5,7 @@
  */
 export type Shortcut = { text: string; aria: string };
 
-const isMac =
+export const isMac =
   typeof navigator !== 'undefined' &&
   /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 

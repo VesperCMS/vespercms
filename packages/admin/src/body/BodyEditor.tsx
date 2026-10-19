@@ -1,7 +1,8 @@
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
-import { NodeSelection, type EditorState } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, TextSelection, type EditorState } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
@@ -61,7 +62,7 @@ import {
   type ContainerTypes,
 } from './nodes.ts';
 import { revealInEditor, revealInSource } from './reveal.ts';
-import { shortcut } from './shortcuts.ts';
+import { isMac, shortcut } from './shortcuts.ts';
 import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
 import { bodyChecks } from './checks.ts';
 import { BodyUiContext, type BodyUi } from './ui.ts';
@@ -287,7 +288,8 @@ type EditorActions = {
  * The body's keys: Escape inside a frame selects the frame, and on a
  * selected block (or in plain text) moves to the toolbar, so leaving the
  * editor never depends on Tab, which indents list items. Enter on a
- * selected block opens its settings; Alt+↑ and Alt+↓ move it.
+ * selected block opens its settings; Alt+↑ and Alt+↓ move it. On a Mac,
+ * ⇧⌘← and ⇧⌘→ beside a chip are left to the browser.
  */
 function bodyShortcuts(options: {
   containers: ContainerTypes;
@@ -340,7 +342,39 @@ function bodyShortcuts(options: {
         'Alt-ArrowDown': () => move(editor, 1),
       };
     },
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          props: {
+            handleDOMEvents: {
+              // True here leaves the key to the browser: ProseMirror neither
+              // handles it nor prevents its default.
+              keydown: (view, event) => selectsLineOverLeaf(view, event),
+            },
+          },
+        }),
+      ];
+    },
   });
+}
+
+/**
+ * Whether the key is ⇧⌘← or ⇧⌘→ on a Mac with a chip, or another leaf such
+ * as a line break, beside the caret on the side the key extends to. There
+ * ProseMirror extends the selection over that one node, whatever else is
+ * held, and stops the browser's own move to the visual line's end, which
+ * is the one that knows where a wrapped line ends (DECISIONS.md, "⇧⌘← and
+ * ⇧⌘→ beside a chip are the browser's").
+ */
+function selectsLineOverLeaf(view: EditorView, event: KeyboardEvent): boolean {
+  if (!isMac || !event.shiftKey || !event.metaKey || event.altKey || event.ctrlKey) return false;
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return false;
+  const { selection } = view.state;
+  if (!(selection instanceof TextSelection)) return false;
+  // The side ProseMirror reads the key as, the way it does in Chrome.
+  const backward = (event.key === 'ArrowLeft') !== (getComputedStyle(view.dom).direction === 'rtl');
+  const node = backward ? selection.$head.nodeBefore : selection.$head.nodeAfter;
+  return node !== null && !node.isText && node.isLeaf;
 }
 
 /** A name for the selected block, read out when the arrow keys land on it. */
