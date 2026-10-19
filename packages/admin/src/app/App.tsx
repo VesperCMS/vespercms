@@ -9,6 +9,7 @@ import { NotFound } from '../screens/NotFound.tsx';
 import { PageTree } from '../screens/PageTree.tsx';
 import { Redirects } from '../screens/Redirects.tsx';
 import { Unavailable } from '../screens/Unavailable.tsx';
+import { GitHubGate } from '../github/GitHubGate.tsx';
 import type { StudioOptions, WidgetComponent, WidgetLoader } from '../types.ts';
 import { StudioContext, VESPER_NAME, type Studio } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
@@ -24,6 +25,10 @@ export function App({
   loadMdxProps = NO_PROPS,
   siteName = VESPER_NAME,
   siteUrl,
+  github,
+  routes,
+  loadUrlFunctions,
+  account,
 }: StudioOptions) {
   const { route, pending, leave, stay } = useRouter();
   const navigation = useNavigationCount(route);
@@ -41,10 +46,29 @@ export function App({
       siteName,
       siteUrl,
       collection: (name) => byName.get(name),
+      ...(account ? { account } : {}),
     };
-  }, [manifest, api, widgets, loadMdxProps, siteName, siteUrl]);
+  }, [manifest, api, widgets, loadMdxProps, siteName, siteUrl, account]);
 
-  if (!studio) return <Unavailable siteName={siteName} />;
+  // Stable, so the gate keeps one GitHub API for the whole visit.
+  const gateOptions = useMemo(
+    () => ({
+      manifest,
+      widgets,
+      loadMdxProps,
+      siteName,
+      ...(siteUrl !== undefined ? { siteUrl } : {}),
+      ...(routes ? { routes } : {}),
+      ...(loadUrlFunctions ? { loadUrlFunctions } : {}),
+    }),
+    [manifest, widgets, loadMdxProps, siteName, siteUrl, routes, loadUrlFunctions],
+  );
+
+  if (!studio) {
+    // GitHub mode: sign in first, then this same App with GitHub as its back end.
+    if (github) return <GitHubGate settings={github} options={gateOptions} />;
+    return <Unavailable siteName={siteName} />;
+  }
 
   return (
     <StudioContext.Provider value={studio}>

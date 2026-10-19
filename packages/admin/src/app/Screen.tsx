@@ -1,4 +1,4 @@
-import { cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
+import { Button, cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useStudio, VESPER_NAME } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
@@ -114,7 +114,7 @@ export function Screen({
 
 /** The top bar on every screen but the editor: the Content menu and the site menu. */
 function DefaultBar() {
-  const { manifest, siteUrl } = useStudio();
+  const { manifest, siteUrl, account } = useStudio();
   const route = parseRoute(window.location.hash);
   const here = 'collection' in route ? route.collection : null;
   const items = manifest.collections.map((collection) => {
@@ -150,6 +150,22 @@ function DefaultBar() {
           if (id === 'view' && siteUrl) window.open(siteUrl, '_blank', 'noopener');
         }}
       />
+      {/* GitHub mode: who is signed in, and the way out (spec §6.9). */}
+      {account &&
+        (account.expired ? (
+          <Button variant="quiet" onPress={account.signInAgain}>
+            Sign in again
+          </Button>
+        ) : (
+          <Menu
+            label={`Signed in to GitHub as @${account.login}`}
+            triggerText={`@${account.login}`}
+            items={[{ id: 'sign-out', label: 'Sign out of GitHub' }]}
+            onAction={() => {
+              account.signOut();
+            }}
+          />
+        ))}
     </nav>
   );
 }

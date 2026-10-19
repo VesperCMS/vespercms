@@ -1,4 +1,5 @@
-import type { Manifest, WidgetProps } from '@vesper/core';
+import type { Manifest, UrlEntry, WidgetProps } from '@vesper/core';
+import type { GitHubStudioSettings } from './github/session.ts';
 import type { ComponentType } from 'react';
 import type { StudioApi } from './app/api.ts';
 
@@ -32,4 +33,26 @@ export type StudioOptions = {
   siteName?: string;
   /** The site's home page, for "View site". */
   siteUrl?: string;
+  /**
+   * GitHub mode in a built site (spec §6.8): with no `api`, the studio
+   * signs the editor in with GitHub and saves to this repository.
+   */
+  github?: GitHubStudioSettings | null;
+  /** The site's static routes at build, for GitHub mode's collision checks. */
+  routes?: readonly (readonly [string, string])[];
+  /** Function-form URL patterns from vesper.config.ts, for GitHub mode's moves and links. */
+  loadUrlFunctions?: () => Promise<Readonly<Record<string, (entry: UrlEntry) => unknown>>>;
+  /** Who is signed in, set by GitHub mode. */
+  account?: Account;
+};
+
+/** The signed-in editor, in GitHub mode. */
+export type Account = {
+  /** The GitHub login, shown as `@login`. */
+  login: string;
+  signOut: () => void;
+  /** Signs in again after the session expired, coming back to the same screen. */
+  signInAgain: () => void;
+  /** True once GitHub has said the session expired. */
+  expired: boolean;
 };

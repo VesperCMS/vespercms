@@ -1,6 +1,6 @@
 import type { CollectionManifest, Manifest } from '@vesper/core';
 import { createContext, useContext } from 'react';
-import type { WidgetComponent } from '../types.ts';
+import type { Account, WidgetComponent } from '../types.ts';
 import type { StudioApi } from './api.ts';
 
 export type Studio = {
@@ -13,6 +13,8 @@ export type Studio = {
   siteName: string;
   siteUrl: string | undefined;
   collection: (name: string) => CollectionManifest | undefined;
+  /** The signed-in editor, in GitHub mode. */
+  account?: Account;
 };
 
 /** The name the studio shows when the site gives none: Vesper's own, set lowercase as its wordmark. */

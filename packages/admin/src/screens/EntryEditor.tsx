@@ -32,6 +32,7 @@ import {
   type MenuItem,
 } from '@vesper/ui';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ApiError } from '../app/api.ts';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
@@ -113,7 +114,7 @@ export function EntryEditor({
 type Saved = { values: DataObject; body: string; raw: string };
 type Notice =
   | { kind: 'saved'; at: Date; reformatted: boolean }
-  | { kind: 'conflict' | 'error'; text: string }
+  | { kind: 'conflict' | 'error' | 'expired'; text: string }
   | null;
 
 function EntryForm({
@@ -127,7 +128,9 @@ function EntryForm({
   onReload: () => void;
   parent?: string;
 }) {
-  const { api, siteUrl, manifest, loadMdxProps } = useStudio();
+  const { api, siteUrl, manifest, loadMdxProps, account } = useStudio();
+  // GitHub mode publishes on save: the button and its words say so (spec §6.8).
+  const publishes = api.publishesOnSave();
   const isNew = doc === null;
   const status = doc?.status ?? 'editable';
   const editable = collection.editable && status !== 'read-only';
@@ -148,9 +151,11 @@ function EntryForm({
     [doc, collection.fields, bodyPrefix.length],
   );
 
-  const [values, setValues] = useState<DataObject>(initial.values);
-  const [body, setBody] = useState(initial.body);
-  const [raw, setRaw] = useState(initial.raw);
+  // Changes kept across a sign-in that expired mid-edit, put back once.
+  const [kept] = useState(() => takeKept(collection.name, doc?.id ?? null));
+  const [values, setValues] = useState<DataObject>(kept?.values ?? initial.values);
+  const [body, setBody] = useState(kept?.body ?? initial.body);
+  const [raw, setRaw] = useState(kept?.raw ?? initial.raw);
   const [saved, setSaved] = useState<Saved>(initial);
   const [version, setVersion] = useState<string | null>(doc?.version ?? null);
   const [entryId, setEntryId] = useState<string | null>(doc?.id ?? null);
@@ -447,7 +452,16 @@ function EntryForm({
           setNotice({ kind: result.reason, text: result.message });
         }
       } catch (error) {
-        setNotice({ kind: 'error', text: error instanceof Error ? error.message : String(error) });
+        if (error instanceof ApiError && error.status === 401 && account) {
+          // Kept for after the sign-in redirect, which would otherwise lose them.
+          keep(collection.name, entryId, { values, body, raw });
+          setNotice({ kind: 'expired', text: error.message });
+        } else {
+          setNotice({
+            kind: 'error',
+            text: error instanceof Error ? error.message : String(error),
+          });
+        }
       } finally {
         setSaving(false);
       }
@@ -474,6 +488,7 @@ function EntryForm({
       parent,
       blockOn,
       recheck,
+      account,
     ],
   );
 
@@ -524,11 +539,13 @@ function EntryForm({
   ];
 
   const statusText = saving
-    ? 'Saving…'
+    ? publishes
+      ? 'Publishing…'
+      : 'Saving…'
     : dirty
       ? 'Unsaved changes'
       : notice?.kind === 'saved'
-        ? `Saved ${formatRelative(notice.at.toISOString())}`
+        ? `${publishes ? 'Published' : 'Saved'} ${formatRelative(notice.at.toISOString())}`
         : isNew
           ? 'Not saved yet'
           : '';
@@ -586,7 +603,7 @@ function EntryForm({
               isPending={saving}
               pulse={savedPulse}
             >
-              Save
+              {publishes ? 'Publish' : 'Save'}
             </Button>
           )}
           {menuItems.length > 0 && (
@@ -643,7 +660,30 @@ function EntryForm({
           )}
           {notice?.kind === 'error' && (
             <p role="alert" className="rounded-md border border-danger bg-surface-raised p-4">
-              Nothing was saved. {notice.text}
+              {publishes ? 'Nothing was published.' : 'Nothing was saved.'} {notice.text}
+            </p>
+          )}
+          {notice?.kind === 'expired' && account && (
+            <div role="alert" className="rounded-md border border-danger bg-surface-raised p-4">
+              <p className="mb-3">{notice.text} Your changes are kept.</p>
+              <Button
+                onPress={() => {
+                  dirtyRef.current = false;
+                  account.signInAgain();
+                }}
+              >
+                Sign in again
+              </Button>
+            </div>
+          )}
+          {kept && dirty && !notice && (
+            <p className="text-small text-content-muted">
+              Your unsaved changes were kept while you signed in again.
+            </p>
+          )}
+          {notice?.kind === 'saved' && publishes && (
+            <p className="text-small text-content-muted">
+              Published. It will be live after the site is next built.
             </p>
           )}
           {notice?.kind === 'saved' && notice.reformatted && (
@@ -653,7 +693,7 @@ function EntryForm({
             </p>
           )}
           <ErrorSummary
-            title="The entry wasn’t saved"
+            title={publishes ? 'The entry wasn’t published' : 'The entry wasn’t saved'}
             errors={errors}
             focusKey={refusals}
             onGo={(fieldId) => {
@@ -903,4 +943,38 @@ function bodyFormat(doc: EntryDocument | null, collection: CollectionManifest): 
   const formats = collection.source.loader === 'glob' ? collection.source.formats : [];
   const first = formats.find((f) => f === 'md' || f === 'markdown' || f === 'mdx' || f === 'mdoc');
   return first === 'mdx' ? 'mdx' : first === 'mdoc' ? 'mdoc' : 'md';
+}
+
+const KEPT_KEY = 'vesper.kept';
+
+type Kept = { values: DataObject; body: string; raw: string };
+
+/** Keeps an entry's unsaved changes in this tab while the editor signs in again. */
+function keep(collection: string, id: string | null, changes: Kept): void {
+  try {
+    sessionStorage.setItem(
+      KEPT_KEY,
+      JSON.stringify({ collection, id, ...changes, values: encodeValue(changes.values) }),
+    );
+  } catch {
+    // Without sessionStorage they can't be kept; the notice still explains.
+  }
+}
+
+/** The kept changes for this entry, if any, removed as they're taken. */
+function takeKept(collection: string, id: string | null): Kept | null {
+  try {
+    const raw = sessionStorage.getItem(KEPT_KEY);
+    if (!raw) return null;
+    const found = JSON.parse(raw) as Omit<Kept, 'values'> & {
+      collection: string;
+      id: string | null;
+      values: Parameters<typeof decodeData>[0];
+    };
+    if (found.collection !== collection || found.id !== id) return null;
+    sessionStorage.removeItem(KEPT_KEY);
+    return { values: decodeData(found.values), body: found.body, raw: found.raw };
+  } catch {
+    return null;
+  }
 }

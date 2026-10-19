@@ -320,7 +320,8 @@ describe('the publish gate', () => {
     });
     const user = userEvent.setup();
     await screen.findByRole('button', { name: '3 accessibility notes, 1 blocks saving' });
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    // Where saving publishes, the button says so.
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
     await screen.findByRole('alert');
     expect(screen.queryByRole('button', { name: 'Save anyway' })).not.toBeInTheDocument();
     expect(api.saveEntry).not.toHaveBeenCalled();
