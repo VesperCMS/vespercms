@@ -16,7 +16,7 @@ import { useStudio } from '../app/context.tsx';
 import { useFileUrl } from '../app/file-url.tsx';
 import { useEditor } from '../editor/context.tsx';
 import { pathKey, type ValuePath } from '../editor/values.ts';
-import { FieldNotes } from '../a11y/FieldNotes.tsx';
+import { FieldNote, FieldNotes } from '../a11y/FieldNotes.tsx';
 import { MediaPicker } from '../media/MediaPicker.tsx';
 import type { WidgetProps } from '../types.ts';
 import { inputClass } from './basic.tsx';
@@ -30,6 +30,11 @@ import { FocalPointControl } from './focal-point.tsx';
  * image() resolves it. A `fields.image()` field also has a focal point and
  * crops per ratio, behind one "Focal point & crops" disclosure (§6.6.4).
  * They only ever change the entry: the image file is never touched.
+ *
+ * Replacing the image drops its focal point and crops, which were chosen for
+ * the old picture, but keeps its alt text and the decorative option, with a
+ * note beside them until the editor changes one (DECISIONS.md, "Replacing an
+ * image clears its geometry, not its words").
  */
 
 /** Where new uploads for this field go: beside the current file, else `src/assets/<collection>`. */
@@ -69,6 +74,8 @@ export function ImageWidget({
   const editor = useEditor();
   const [picking, setPicking] = useState(false);
   const [notes, setNotes] = useState<readonly string[]>([]);
+  // The image the editor replaced the old one with, while its alt text is unchecked.
+  const [replacedWith, setReplacedWith] = useState<string | null>(null);
 
   const objectShape = field.kind === 'object';
   const record = isPlainObject(value) ? value : {};
@@ -97,9 +104,22 @@ export function ImageWidget({
     setSize(null);
   }
 
+  const replaced = replacedWith === srcText;
+  const replacedNote = decorative
+    ? 'You replaced the image. Check that it’s still decorative.'
+    : 'You replaced the image. Check that the alt text still describes it.';
+
   const setSrc = (path: string) => {
+    // The same image again changes nothing, not even how its path is written.
+    if (path === sitePath) return;
     const reference = mediaReference(path, editor.entryPath);
-    onChange(objectShape ? { ...record, src: reference } : reference);
+    if (!objectShape) {
+      onChange(reference);
+      return;
+    }
+    const { focus: _focus, crops: _crops, ...rest } = record;
+    onChange({ ...rest, src: reference });
+    if (srcText && (alt !== '' || decorative)) setReplacedWith(reference);
   };
   const setRecord = (next: Record<string, DataValue>) => {
     onChange(next);
@@ -143,6 +163,7 @@ export function ImageWidget({
                 isDisabled={disabled}
                 onPress={() => {
                   setNotes([]);
+                  setReplacedWith(null);
                   onChange(
                     field.required ? (objectShape ? { ...record, src: '' } : '') : undefined,
                   );
@@ -183,11 +204,13 @@ export function ImageWidget({
             rows={2}
             value={alt}
             onChange={(event) => {
+              setReplacedWith(null);
               setRecord({ ...record, alt: event.target.value });
             }}
             aria-describedby={[
               `${id}-alt-help`,
               altNotes.length > 0 ? `${id}-alt-a11y` : '',
+              replaced ? `${id}-replaced` : '',
               describedBy,
             ]
               .filter(Boolean)
@@ -200,13 +223,16 @@ export function ImageWidget({
             Describe what this image communicates on this page.
           </p>
           {altNotes.length > 0 && <FieldNotes id={`${id}-alt-a11y`} notes={altNotes} />}
+          {replaced && <FieldNote id={`${id}-replaced`}>{replacedNote}</FieldNote>}
         </div>
       )}
       {hasDecorative && (
         <Checkbox
           isSelected={decorative}
           isDisabled={disabled}
+          aria-describedby={decorative && replaced ? `${id}-replaced` : undefined}
           onChange={(checked) => {
+            setReplacedWith(null);
             if (checked) {
               setRecord({ ...record, alt: '', decorative: true });
             } else {
@@ -217,6 +243,9 @@ export function ImageWidget({
         >
           Decorative image (it adds nothing a reader needs)
         </Checkbox>
+      )}
+      {hasDecorative && decorative && replaced && (
+        <FieldNote id={`${id}-replaced`}>{replacedNote}</FieldNote>
       )}
 
       {sitePath && (hasFocus || hasCrops) && (

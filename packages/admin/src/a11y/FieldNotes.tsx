@@ -1,5 +1,6 @@
 import type { A11yNote } from '@vesper/core';
 import { Icon } from '@vesper/ui';
+import type { ReactNode } from 'react';
 
 /** A note's words: what it's about, the problem, and why it matters (spec §6.18). */
 export function NoteText({ note }: { note: A11yNote }) {
@@ -21,13 +22,35 @@ export function FieldNotes({ id, notes }: { id: string; notes: readonly A11yNote
     <ul id={id} className="m-0 flex list-none flex-col gap-1 p-0">
       {notes.map((note, index) => (
         <li key={`${note.rule}:${String(index)}`} className="flex gap-2 text-small text-content">
-          <Icon name="warning" size={16} className="mt-0.5 text-warning" />
-          <span>
-            <span className="font-semibold">Accessibility note: </span>
+          <NoteLine>
             <NoteText note={note} />
-          </span>
+          </NoteLine>
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * One note the studio writes itself, not from a rule (a replaced image's alt
+ * text), in the same words and mark as the rules' notes beside a field.
+ */
+export function FieldNote({ id, children }: { id: string; children: ReactNode }) {
+  return (
+    <p id={id} className="flex gap-2 text-small text-content">
+      <NoteLine>{children}</NoteLine>
+    </p>
+  );
+}
+
+function NoteLine({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <Icon name="warning" size={16} className="mt-0.5 text-warning" />
+      <span>
+        <span className="font-semibold">Accessibility note: </span>
+        {children}
+      </span>
+    </>
   );
 }

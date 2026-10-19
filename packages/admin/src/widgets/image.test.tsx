@@ -1,16 +1,28 @@
 // @vitest-environment jsdom
-import { gitBlobSha, type EntryDocument, type MediaItem, type SaveRequest } from '@vesper/core';
+import {
+  gitBlobSha,
+  type EntryDocument,
+  type Manifest,
+  type MediaItem,
+  type SaveRequest,
+} from '@vesper/core';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
+import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
   cleanup();
   window.location.hash = '';
 });
+
+const harborHero = {
+  src: '../../assets/blog/harbor-at-dawn.jpg',
+  alt: 'An orange sun over a harbor',
+  focus: { x: 0.62, y: 0.35 },
+};
 
 const harbor: EntryDocument = {
   collection: 'blog',
@@ -22,11 +34,7 @@ const harbor: EntryDocument = {
   data: {
     title: 'Harbor at dawn',
     summary: 'Boats.',
-    hero: {
-      src: '../../assets/blog/harbor-at-dawn.jpg',
-      alt: 'An orange sun over a harbor',
-      focus: { x: 0.62, y: 0.35 },
-    },
+    hero: harborHero,
     author: 'ada',
     category: 'stories',
     publishedAt: { $date: '2026-09-14T00:00:00.000Z' },
@@ -45,14 +53,35 @@ const media: MediaItem[] = [
   { path: 'public/files/untagged-brochure.pdf', size: 4_000, hash: 'c'.repeat(64), usedBy: [] },
 ];
 
-function setup(extra: { media?: MediaItem[] } = {}) {
+/** Harbor at dawn with its hero (or no hero) as given. */
+function withHero(hero: unknown): EntryDocument {
+  const { hero: _hero, ...data } = harbor.data as Record<string, unknown>;
+  return { ...harbor, data: hero === undefined ? data : { ...data, hero } };
+}
+
+function setup(extra: { media?: MediaItem[]; doc?: EntryDocument; manifest?: Manifest } = {}) {
   const api = fakeApi({
-    documents: { 'blog/harbor-at-dawn': harbor },
+    documents: { 'blog/harbor-at-dawn': extra.doc ?? harbor },
     media: extra.media ?? media,
   });
-  renderStudio('#/c/blog/e/harbor-at-dawn', { api });
+  renderStudio('#/c/blog/e/harbor-at-dawn', {
+    api,
+    ...(extra.manifest && { manifest: extra.manifest }),
+  });
   return { api, user: userEvent.setup() };
 }
+
+/** Opens the picker from the hero's button and chooses one of the site's images. */
+async function choose(user: ReturnType<typeof userEvent.setup>, button: string, file: RegExp) {
+  await user.click(await screen.findByRole('button', { name: button }));
+  const dialog = await screen.findByRole('dialog', { name: 'Choose an image' });
+  await user.click(await within(dialog).findByRole('button', { name: file }));
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+}
+
+const REPLACED = 'You replaced the image. Check that the alt text still describes it.';
 
 async function lastSave(user: ReturnType<typeof userEvent.setup>, api: ReturnType<typeof fakeApi>) {
   await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -105,6 +134,97 @@ describe('the image field', () => {
     expect((await lastSave(user, api)).data.hero.src).toBe('../../assets/blog/winter-market.jpg');
   });
 
+  it('drops the old image’s focal point and crops on a replace, and asks about its alt text', async () => {
+    const { api, user } = setup({
+      doc: withHero({
+        ...harborHero,
+        crops: { square: { x: 0.2, y: 0, w: 0.5625, h: 1 } },
+      }),
+    });
+    const hero = await screen.findByRole('group', { name: 'Hero' });
+    expect(within(hero).queryByText(REPLACED)).not.toBeInTheDocument();
+    await choose(user, 'Replace image', /winter-market\.jpg/);
+
+    // Beside the alt text and in its description, never in the live status.
+    const alt = within(hero).getByRole('textbox', { name: 'Alt text (required)' });
+    expect(within(hero).getByText(REPLACED)).toBeInTheDocument();
+    expect(alt).toHaveAccessibleDescription(expect.stringContaining(REPLACED) as string);
+    expect(within(hero).queryByRole('status')).not.toBeInTheDocument();
+    await expectNoViolations();
+
+    expect((await lastSave(user, api)).data.hero).toEqual({
+      src: '../../assets/blog/winter-market.jpg',
+      alt: 'An orange sun over a harbor',
+    });
+
+    await user.type(alt, ', in winter');
+    expect(within(hero).queryByText(REPLACED)).not.toBeInTheDocument();
+    expect(alt).toHaveAccessibleDescription('Describe what this image communicates on this page.');
+  });
+
+  it('asks whether a replaced decorative image is still decorative', async () => {
+    const { api, user } = setup({
+      doc: withHero({ src: '../../assets/blog/harbor-at-dawn.jpg', alt: '', decorative: true }),
+    });
+    const hero = await screen.findByRole('group', { name: 'Hero' });
+    await choose(user, 'Replace image', /winter-market\.jpg/);
+    const checkbox = within(hero).getByRole('checkbox', { name: /Decorative image/ });
+    expect(checkbox).toHaveAccessibleDescription(
+      expect.stringContaining(
+        'You replaced the image. Check that it’s still decorative.',
+      ) as string,
+    );
+    expect((await lastSave(user, api)).data.hero).toEqual({
+      src: '../../assets/blog/winter-market.jpg',
+      alt: '',
+      decorative: true,
+    });
+    await user.click(checkbox);
+    expect(within(hero).queryByText(/You replaced the image/)).not.toBeInTheDocument();
+  });
+
+  it('chooses a first image with no note', async () => {
+    const { api, user } = setup({ doc: withHero(undefined) });
+    const hero = await screen.findByRole('group', { name: 'Hero' });
+    await choose(user, 'Choose image', /winter-market\.jpg/);
+    expect(within(hero).getByText('winter-market.jpg')).toBeInTheDocument();
+    expect(within(hero).queryByText(/You replaced the image/)).not.toBeInTheDocument();
+    expect((await lastSave(user, api)).data.hero).toEqual({
+      src: '../../assets/blog/winter-market.jpg',
+    });
+  });
+
+  it('changes nothing when the same image is chosen again', async () => {
+    const { user } = setup();
+    const hero = await screen.findByRole('group', { name: 'Hero' });
+    await choose(user, 'Replace image', /harbor-at-dawn\.jpg/);
+    expect(within(hero).queryByText(/You replaced the image/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+  });
+
+  it('replaces a plain image() path with no note', async () => {
+    const manifest = structuredClone(playgroundManifest);
+    const fields = manifest.collections.find((c) => c.name === 'blog')?.fields ?? [];
+    fields.splice(
+      fields.findIndex((f) => f.path.join('.') === 'hero'),
+      1,
+      {
+        path: ['hero'],
+        kind: 'image',
+        required: false,
+        label: 'Hero',
+        widget: 'image',
+      },
+    );
+    const { api, user } = setup({
+      doc: withHero('../../assets/blog/harbor-at-dawn.jpg'),
+      manifest,
+    });
+    await choose(user, 'Replace image', /winter-market\.jpg/);
+    expect(screen.queryByText(/You replaced the image/)).not.toBeInTheDocument();
+    expect((await lastSave(user, api)).data.hero).toBe('../../assets/blog/winter-market.jpg');
+  });
+
   it('uploads through hygiene into the image’s folder', async () => {
     const { api, user } = setup();
     const hero = await screen.findByRole('group', { name: 'Hero' });
@@ -122,7 +242,11 @@ describe('the image field', () => {
     expect(await within(hero).findByRole('status')).toHaveTextContent(
       'Added. Removed scripts and unsafe links from the SVG.',
     );
-    expect((await lastSave(user, api)).data.hero.src).toBe('../../assets/blog/Logo Mark.svg');
+    expect((await lastSave(user, api)).data.hero).toEqual({
+      src: '../../assets/blog/Logo Mark.svg',
+      alt: 'An orange sun over a harbor',
+    });
+    expect(within(hero).getByText(REPLACED)).toBeInTheDocument();
   });
 
   it('offers the existing copy when the same file is uploaded again', async () => {
