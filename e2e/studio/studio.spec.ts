@@ -58,7 +58,7 @@ test.afterEach(() => {
 test('every screen passes axe: home, list, editor, media', async ({ page }) => {
   await page.goto('/admin/');
   await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
-  await expect(page.getByText(/4 entries/)).toBeVisible();
+  await expect(page.getByText(/^4 entries/)).toBeVisible();
   await expectAccessible(page);
 
   await page.goto('/admin/#/c/blog');

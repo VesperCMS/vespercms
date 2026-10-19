@@ -25,7 +25,7 @@ export default defineConfig({
   projects: [
     {
       name: 'static',
-      testMatch: ['static-site.spec.ts', 'static-images.spec.ts'],
+      testMatch: ['static-site.spec.ts', 'static-images.spec.ts', 'static-search.spec.ts'],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${String(STATIC_PORT)}` },
     },
     {

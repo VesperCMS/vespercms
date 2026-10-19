@@ -326,6 +326,7 @@ test('the site helpers return the same in astro dev as in the static build', asy
     'Academics',
     'Admissions',
     'Campus life',
+    'Thanks for getting in touch',
   ]);
   expect(await dev.json()).toEqual(tree);
 });
@@ -346,9 +347,10 @@ test('drag and drop is offered on top, with React Aria’s keyboard mode', async
     'Insert between Academics and Admissions',
   );
   await page.keyboard.press('Enter');
-  await expect(announcement(page)).toHaveText('About the college moved, position 2 of 4.');
+  await expect(announcement(page)).toHaveText('About the college moved, position 2 of 5.');
+  // A reorder lists every sibling, so the unlisted thank-you page joins the file.
   expect(read(`${P}_order.yaml`)).toBe(
-    before.replace('- about\n- academics\n', '- academics\n- about\n'),
+    `${before.replace('- about\n- academics\n', '- academics\n- about\n')}- contact-thanks\n`,
   );
 
   // Dropping onto a page moves under it, through the same confirmation as Move to….
