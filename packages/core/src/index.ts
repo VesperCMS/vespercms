@@ -293,3 +293,15 @@ export {
   type SearchFieldSettings,
 } from './search/annotate.ts';
 export { isHiddenFromSearch, searchHiddenField } from './search/fields.ts';
+
+// GitHub mode's storage (spec §6.8): the branch through GitHub's API, with `fetch` alone.
+export {
+  GitHubError,
+  GitHubStorage,
+  commitMessage,
+  parseRepo,
+  toBase64,
+  type BlobCache,
+  type GitHubErrorKind,
+  type GitHubStorageOptions,
+} from './storage/github.ts';
