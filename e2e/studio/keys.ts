@@ -8,7 +8,7 @@
  * A Mac's line keys here are Control+A and Control+E, macOS's own text
  * bindings, which Tiptap's Mac keymap turns into selectTextblockStart and
  * End. ⌘← and ⌘→ go to the visual line's ends instead; markdoc.spec.ts
- * presses them beside chips in a test of their own.
+ * presses them, and ⇧⌘← and ⇧⌘→, beside chips in tests of their own.
  */
 const mac = process.platform === 'darwin';
 

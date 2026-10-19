@@ -274,6 +274,37 @@ test('abbreviations at both ends of a line: ⌘← and ⌘→ go past them', asy
   await selected(page, 'Abbreviation');
 });
 
+test('abbreviations mid-line: ⇧⌘← and ⇧⌘→ select past them to the ends of the line', async ({
+  page,
+}) => {
+  test.skip(process.platform !== 'darwin', '⇧⌘← and ⇧⌘→ are macOS line keys');
+  const abbr = '{% abbr title="content management system" %}CMS{% /abbr %}';
+  const line = `From ${abbr} to ${abbr} end.`;
+  const before = read(DOC).replace('\nLast line.\n', `\n${line}\n`);
+  write(DOC, before);
+  await openAtEnd(page);
+  const status = page.locator('p.sr-only[role="status"]');
+
+  // The caret right after the first chip, arrowed to through the text, then
+  // ⇧⌘←. A letter typed next replaces the selection, so the saved line shows
+  // how far it reached; ProseMirror's own step selected only the chip.
+  for (let i = 0; i < ' end.'.length; i++) await moveCaret(page, 'ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await selected(page, 'Abbreviation');
+  await page.keyboard.press('ArrowLeft');
+  for (let i = 0; i < ' to '.length; i++) await moveCaret(page, 'ArrowLeft');
+  await expect(status).toHaveText('');
+  await moveCaret(page, 'Shift+Meta+ArrowLeft');
+  await page.keyboard.type('X');
+
+  // The same the other way: right before the last chip, then ⇧⌘→.
+  for (let i = 0; i < ' to '.length; i++) await moveCaret(page, 'ArrowRight');
+  await expect(status).toHaveText('');
+  await moveCaret(page, 'Shift+Meta+ArrowRight');
+  await page.keyboard.type('Y');
+  await save(page, before.replace(line, 'X to Y'));
+});
+
 test('a partial: inserted pointing at the nearest partial file, moved and removed', async ({
   page,
 }) => {
