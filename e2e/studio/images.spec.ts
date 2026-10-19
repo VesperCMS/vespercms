@@ -11,7 +11,9 @@ import { keys } from './keys.ts';
  * - the focal point and the crop box can be set by keyboard alone, and
  *   every change is announced;
  * - the image file is byte-identical after any focal-point or crop edit:
- *   the entry is the only file that changes.
+ *   the entry is the only file that changes;
+ * - replacing the image drops its focal point and crops and keeps its alt
+ *   text, with a note beside it.
  */
 
 const site = fileURLToPath(new URL('../.studio-site/', import.meta.url));
@@ -172,4 +174,54 @@ test('a click sets the focal point, and Escape leaves a crop as it was', async (
   await expect(hero.getByRole('listitem').nth(1)).toContainText('Square · 1:1 · Custom crop');
   // Only the focal point changed; nothing is saved until Save.
   expect(read(entry)).toBe(before);
+});
+
+test('replacing the image drops its focal point and crops, and asks about its alt text', async ({
+  page,
+}) => {
+  touches(entry);
+  const before = read(entry);
+  const sourcesBefore = sourceHashes();
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  const hero = page.getByRole('group', { name: 'Hero' });
+  const replace = hero.getByRole('button', { name: 'Replace image' });
+  await replace.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Choose an image' });
+  await dialog.getByRole('button', { name: /field-notes\.jpg/ }).press('Enter');
+  await expect(dialog).toBeHidden();
+  await expect(replace).toBeFocused();
+
+  // Remove image, then the alt text, which the note describes.
+  const note = 'You replaced the image. Check that the alt text still describes it.';
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  const alt = hero.getByRole('textbox', { name: 'Alt text (required)' });
+  await expect(alt).toBeFocused();
+  await expect(alt).toHaveAccessibleDescription(
+    /You replaced the image\. Check that the alt text still describes it\./,
+  );
+  await expect(hero.getByText(note)).toBeVisible();
+  await expectAccessible(page);
+
+  await page.keyboard.press(keys.save);
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  // The new path, and no focal point or crops: every other byte is as it was.
+  const geometry =
+    '  focus: { x: 0.62, y: 0.35 }\n  crops:\n    square: { x: 0.40, y: 0.10, w: 0.45, h: 0.675 }\n';
+  expect(before).toContain(geometry);
+  expect(read(entry)).toBe(
+    before
+      .replace(
+        '  src: ../../assets/blog/harbor-at-dawn.jpg\n',
+        '  src: ../../assets/blog/field-notes.jpg\n',
+      )
+      .replace(geometry, ''),
+  );
+  const sourcesAfter = sourceHashes();
+  expect({ ...sourcesAfter, [entry]: '' }).toEqual({ ...sourcesBefore, [entry]: '' });
+
+  // Changing the alt text answers the note.
+  await page.keyboard.type(' ');
+  await expect(hero.getByText(note)).toBeHidden();
 });
