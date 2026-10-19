@@ -75,7 +75,9 @@ export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<Stu
       Promise.resolve({ ok: true, id: '', path: '', version: '', reformatted: false }),
     ),
     listPartials: vi.fn(() => Promise.resolve(data.partials ?? [])),
-    fileUrl: vi.fn((path: string) => `/_vesper/api/file?path=${encodeURIComponent(path)}`),
+    fileUrl: vi.fn((path: string) =>
+      Promise.resolve(`/_vesper/api/file?path=${encodeURIComponent(path)}`),
+    ),
     listPages: vi.fn(() => Promise.resolve(data.pages ?? [])),
     pageTree: vi.fn((collection: string) =>
       Promise.resolve(data.trees?.[collection] ?? { collection, nodes: [] }),

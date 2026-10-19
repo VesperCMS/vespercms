@@ -64,6 +64,7 @@ import {
 import { revealInEditor, revealInSource } from './reveal.ts';
 import { isMac, shortcut } from './shortcuts.ts';
 import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
+import { useFileUrl } from '../app/file-url.tsx';
 import { bodyChecks } from './checks.ts';
 import { BodyUiContext, type BodyUi } from './ui.ts';
 import { CardView, ContainerView, InlineView, SourceView } from './views.tsx';
@@ -411,7 +412,7 @@ function WritingView({
   partials = null,
   revealRef,
 }: BodyEditorProps & { revealRef: RefObject<((offset: number) => void) | null> }) {
-  const { api, manifest, loadMdxProps } = useStudio();
+  const { manifest, loadMdxProps } = useStudio();
   const model = useRef<{ built: BodyDocument; initial: Map<string, string> } | null>(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => {
@@ -420,6 +421,7 @@ function WritingView({
   const [linkOpen, setLinkOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const [imagePath, setImagePath] = useState<string | null>(null);
+  const previewUrl = useFileUrl(imagePath);
   const [settingsAt, setSettingsAt] = useState<number | null>(null);
   const slashIds = useSlashIds();
 
@@ -696,7 +698,7 @@ function WritingView({
         />
         <ImageAltDialog
           path={imagePath}
-          previewUrl={imagePath ? api.fileUrl(imagePath) : ''}
+          previewUrl={previewUrl}
           onCancel={() => {
             setImagePath(null);
             editor.commands.focus();

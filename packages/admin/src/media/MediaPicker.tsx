@@ -1,6 +1,7 @@
 import { extensionOf, isImagePath, type MediaItem } from '@vesper/core';
 import { Button, Dialog, Icon, TextField } from '@vesper/ui';
 import { useMemo, useRef, useState } from 'react';
+import { FileImage } from '../app/file-url.tsx';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';
 import { fileSize, megabytes } from './hygiene.ts';
@@ -183,7 +184,6 @@ function PickerBody({
 }
 
 function MediaChoice({ item, onChoose }: { item: MediaItem; onChoose: (path: string) => void }) {
-  const { api } = useStudio();
   const name = item.path.slice(item.path.lastIndexOf('/') + 1);
   return (
     <button
@@ -194,9 +194,8 @@ function MediaChoice({ item, onChoose }: { item: MediaItem; onChoose: (path: str
       className="flex w-full items-center gap-3 rounded-md border border-border p-2 text-left hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)"
     >
       {isImagePath(item.path) ? (
-        <img
-          src={api.fileUrl(item.path)}
-          alt=""
+        <FileImage
+          path={item.path}
           loading="lazy"
           className="size-12 shrink-0 rounded-md object-cover"
         />

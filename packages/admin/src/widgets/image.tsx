@@ -13,6 +13,7 @@ import {
 import { Button, Checkbox, Disclosure, cx } from '@vesper/ui';
 import { useState } from 'react';
 import { useStudio } from '../app/context.tsx';
+import { useFileUrl } from '../app/file-url.tsx';
 import { useEditor } from '../editor/context.tsx';
 import { pathKey, type ValuePath } from '../editor/values.ts';
 import { FieldNotes } from '../a11y/FieldNotes.tsx';
@@ -64,7 +65,7 @@ export function ImageWidget({
   disabled,
   path,
 }: WidgetProps<DataValue> & { path: ValuePath }) {
-  const { api, manifest } = useStudio();
+  const { manifest } = useStudio();
   const editor = useEditor();
   const [picking, setPicking] = useState(false);
   const [notes, setNotes] = useState<readonly string[]>([]);
@@ -74,6 +75,7 @@ export function ImageWidget({
   const src = objectShape ? record.src : value;
   const srcText = typeof src === 'string' ? src : '';
   const sitePath = srcText ? resolveMediaPath(srcText, editor.entryPath) : null;
+  const fileUrl = useFileUrl(sitePath);
   const hasAlt = objectShape && (field.children ?? []).some((c) => c.path.at(-1) === 'alt');
   const hasDecorative =
     objectShape && (field.children ?? []).some((c) => c.path.at(-1) === 'decorative');
@@ -108,11 +110,13 @@ export function ImageWidget({
       {srcText ? (
         <div className="flex flex-wrap items-start gap-4">
           {sitePath ? (
-            <img
-              src={api.fileUrl(sitePath)}
-              alt=""
-              className="max-h-48 max-w-full rounded-md border border-border object-contain"
-            />
+            fileUrl && (
+              <img
+                src={fileUrl}
+                alt=""
+                className="max-h-48 max-w-full rounded-md border border-border object-contain"
+              />
+            )
           ) : (
             <p className="text-small text-content-muted">
               The studio can’t show a preview of {srcText}.
@@ -218,10 +222,10 @@ export function ImageWidget({
       {sitePath && (hasFocus || hasCrops) && (
         <Disclosure title="Focal point & crops">
           <div className="flex flex-col gap-6">
-            {hasFocus && (
+            {hasFocus && fileUrl && (
               <FocalPointControl
                 id={id}
-                src={api.fileUrl(sitePath)}
+                src={fileUrl}
                 focus={imageValueOf(record).focus}
                 disabled={disabled}
                 onImageSize={setSize}
@@ -231,10 +235,10 @@ export function ImageWidget({
                 }}
               />
             )}
-            {hasCrops && (
+            {hasCrops && fileUrl && (
               <CropPreviews
                 id={id}
-                src={api.fileUrl(sitePath)}
+                src={fileUrl}
                 size={size}
                 value={imageValueOf(record)}
                 ratios={fieldRatios(field, siteRatios(manifest.site.images?.ratios))}
@@ -245,9 +249,9 @@ export function ImageWidget({
                 }}
               />
             )}
-            {hasCrops && !hasFocus && (
+            {hasCrops && !hasFocus && fileUrl && (
               <img
-                src={api.fileUrl(sitePath)}
+                src={fileUrl}
                 alt=""
                 hidden
                 onLoad={(event) => {
@@ -303,19 +307,19 @@ export function FileWidget({
   describedBy,
   disabled,
 }: WidgetProps<string>) {
-  const { api } = useStudio();
   const editor = useEditor();
   const [picking, setPicking] = useState(false);
   const current = typeof value === 'string' ? value : '';
   const sitePath = current ? resolveMediaPath(current, editor.entryPath) : null;
+  const fileUrl = useFileUrl(sitePath);
   const extensions = acceptedExtensions(field.widgetOptions?.accept);
   return (
     <div className="flex flex-col gap-2">
       {current && (
         <p id={`${id}-file`} className="text-small">
-          {sitePath ? (
+          {sitePath && fileUrl ? (
             <a
-              href={api.fileUrl(sitePath)}
+              href={fileUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent underline underline-offset-2"

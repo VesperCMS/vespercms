@@ -69,7 +69,7 @@ export function useEntryNotes(options: {
   /** The entry's file, which relative PDF paths are resolved against. */
   entryPath: string;
   /** Where the studio reads a site file from. */
-  fileUrl: (path: string) => string;
+  fileUrl: (path: string) => Promise<string>;
 }): EntryNotesResult {
   const { manifest, collection, values, body, format, entryPath, fileUrl } = options;
   const load = useMemo(() => {
@@ -104,7 +104,7 @@ export function useEntryNotes(options: {
         Promise.all(
           found.pdfs.map(async (pdf) => {
             const path = resolveMediaPath(pdf.href, entryPath);
-            const facts = path === null ? null : await factsFor(fileUrl(path));
+            const facts = path === null ? null : await factsFor(await fileUrl(path));
             return facts ? checks.pdfNotes(pdf, facts) : [];
           }),
         ),

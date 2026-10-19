@@ -33,8 +33,11 @@ export interface StudioApi {
   deleteMedia(path: string): Promise<SaveResponse>;
   /** Site-relative paths of the Markdoc and Markdown files a `{% partial %}` can point at. */
   listPartials(): Promise<string[]>;
-  /** A URL the studio can show a file from, given its site-relative path. */
-  fileUrl(path: string): string;
+  /**
+   * A URL the studio can show a file from, given its site-relative path.
+   * Asynchronous: GitHub mode fetches the blob and hands back an object URL.
+   */
+  fileUrl(path: string): Promise<string>;
   /** Every page with a URL, in every collection, for the link picker (spec §6.15.6). */
   listPages(): Promise<PageLink[]>;
   /** A tree collection's outline (spec §6.15.2). */
@@ -129,7 +132,7 @@ export function createLocalApi(base: string, fetcher: typeof fetch = fetch): Stu
       }),
     deleteMedia: (path) => call(`/media${query({ path })}`, { method: 'DELETE' }),
     listPartials: () => call('/partials'),
-    fileUrl: (path) => `${root}/file${query({ path })}`,
+    fileUrl: (path) => Promise.resolve(`${root}/file${query({ path })}`),
     listPages: () => call('/pages'),
     pageTree: (collection) => call(`/tree${query({ collection })}`),
     movePage: (request, options = {}) =>

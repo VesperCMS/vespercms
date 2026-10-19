@@ -1,6 +1,7 @@
 import { dirOf, extensionOf, isImagePath, type MediaItem } from '@vesper/core';
 import { Button, Dialog, Icon, Select, TextField } from '@vesper/ui';
 import { useMemo, useRef, useState } from 'react';
+import { FileImage } from '../app/file-url.tsx';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';
 import { hrefFor } from '../app/router.ts';
@@ -150,9 +151,8 @@ export function MediaBrowser() {
         {shown.map((item) => (
           <li key={item.path} className="flex flex-col gap-2 rounded-lg border border-border p-3">
             {isImagePath(item.path) ? (
-              <img
-                src={api.fileUrl(item.path)}
-                alt=""
+              <FileImage
+                path={item.path}
                 loading="lazy"
                 className="h-36 w-full rounded-md bg-surface-sunken object-contain"
               />
