@@ -14,7 +14,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
-| 2.9 Site search | Built (2026-10-19), every criterion met locally; waiting for CI on GitHub and Jeremy's screen reader pass. See "Phase 2.9: outcome" below. |
+| 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -383,7 +383,7 @@ Jeremy asked for icons, the body editor's toolbar first. His calls are in DECISI
 
 ## Phase 2.9: outcome
 
-Built 2026-10-19 on the design below, with every call as recommended (Jeremy, 2026-10-19). Unit, integration and static e2e tests pass locally on macOS; CI hasn't run yet.
+Built 2026-10-19 on the design below, with every call as recommended (Jeremy, 2026-10-19). CI green on GitHub (run 39264241554). The first run (39262767962) failed twice: on Windows, sharp kept the first build's thumbnail open, so the search test's second build couldn't empty `dist/`; and the move test's announcement now counts the new top-level page. Both were test fixes (e955539, 60e6fd8).
 
 | Criterion (spec §11) | How it's met |
 |---|---|
@@ -407,7 +407,6 @@ Measured on the playground: "Search: indexed 29 pages in 1 language, 19 KB of in
 **Open, for Jeremy:**
 - **A screen reader pass** with NVDA and VoiceOver: checklist Part B below. Part A first, if you want to confirm the audit's findings 1 and 2 before the issues go to Pagefind (the audit pages are on the Windows machine, in `C:\tmp\vesper-pagefind-audit`).
 - **Filing the audit's findings with Pagefind/pagefind**, drafted below. They're posted only with your OK.
-- **Push, and CI.** Nothing is pushed yet.
 - **Two studio e2e tests fail on this Mac** for macOS keyboard reasons, not this phase's code: `markdoc.spec.ts` (the abbreviation test presses `End`, which doesn't move the caret on macOS) and `pages.spec.ts` (moving Nursing presses `Control+a`, which doesn't select all there). CI runs on Linux and Jeremy on Windows. A follow-up could use `ControlOrMeta` and platform-aware caret keys.
 
 **Drafted for Pagefind/pagefind** (one issue each; reproduction: the audit pages, with axe-core 4.14 in Chromium):
