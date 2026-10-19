@@ -93,6 +93,8 @@ export class GitHubStorage implements StorageAdapter {
   private snapshot: Snapshot | null = null;
   private loading: Promise<Snapshot> | null = null;
   private readonly blobs = new Map<string, Promise<Uint8Array>>();
+  /** New files waiting for the next commit (`ChangeSet.defer`), by path. */
+  private readonly pending = new Map<string, { bytes: Uint8Array; sha: string }>();
 
   constructor(options: GitHubStorageOptions) {
     this.options = options;
@@ -118,8 +120,12 @@ export class GitHubStorage implements StorageAdapter {
     const prefix = options.prefix ?? '';
     const entries: StorageEntry[] = [];
     for (const [path, item] of snapshot.files) {
-      if (!path.startsWith(prefix)) continue;
+      if (!path.startsWith(prefix) || this.pending.has(path)) continue;
       entries.push({ path, version: item.sha, size: item.size ?? 0 });
+    }
+    for (const [path, file] of this.pending) {
+      if (path.startsWith(prefix))
+        entries.push({ path, version: file.sha, size: file.bytes.length });
     }
     entries.sort((a, b) => (a.path < b.path ? -1 : 1));
     this.prefetch(entries);
@@ -128,6 +134,8 @@ export class GitHubStorage implements StorageAdapter {
 
   async read(path: string): Promise<StoredFile | null> {
     const normalized = normalizePath(path);
+    const waiting = this.pending.get(normalized);
+    if (waiting) return { path: normalized, bytes: waiting.bytes.slice(), version: waiting.sha };
     const item = (await this.current()).files.get(normalized);
     if (!item) return null;
     const bytes = await this.blob(item.sha);
@@ -136,7 +144,30 @@ export class GitHubStorage implements StorageAdapter {
 
   async commit(changeSet: ChangeSet): Promise<CommitResult> {
     let snapshot = await this.current(true);
-    const checked = validateChangeSet(changeSet, (path) => snapshot.files.get(path)?.sha ?? null);
+    if (changeSet.defer && changeSet.changes.every((change) => change.op === 'put')) {
+      return this.hold(changeSet, snapshot);
+    }
+    // Files held for this commit go with it, unless this change set replaces or removes them.
+    const touched = new Set(
+      changeSet.changes.flatMap((c) => (c.op === 'move' ? [c.from, c.to] : [c.path])),
+    );
+    const carried = [...this.pending]
+      .filter(([path]) => !touched.has(path))
+      .map(([path, file]) => ({
+        op: 'put' as const,
+        path,
+        bytes: file.bytes,
+        expectedVersion: null,
+      }));
+    const own = changeSet.changes.filter((c) => !(c.op === 'delete' && this.pending.has(c.path)));
+    if (own.length === 0 && carried.length === 0) {
+      for (const path of touched) this.pending.delete(path);
+      return { ok: true, version: snapshot.commit };
+    }
+    const checked = validateChangeSet(
+      { ...changeSet, changes: [...carried, ...own] },
+      (path) => snapshot.files.get(path)?.sha ?? null,
+    );
     if (!checked.ok) return checked.result;
     const changes = checked.changes;
     const blobs = await this.uploadBlobs(changes);
@@ -155,6 +186,7 @@ export class GitHubStorage implements StorageAdapter {
       const moved = await this.updateRef(commit.sha);
       if (moved === 'ok') {
         this.snapshot = await this.applied(snapshot, changes, blobs, commit.sha, tree.sha);
+        this.pending.clear();
         return { ok: true, version: commit.sha };
       }
       if (moved !== 'not-fast-forward') return { ok: false, reason: 'rejected', message: moved };
@@ -180,6 +212,21 @@ export class GitHubStorage implements StorageAdapter {
         };
       }
     }
+  }
+
+  /** Holds new files for the next commit, checked as that commit would check them. */
+  private async hold(changeSet: ChangeSet, snapshot: Snapshot): Promise<CommitResult> {
+    const checked = validateChangeSet(
+      changeSet,
+      (path) => this.pending.get(path)?.sha ?? snapshot.files.get(path)?.sha ?? null,
+    );
+    if (!checked.ok) return checked.result;
+    for (const change of checked.changes) {
+      if (change.op !== 'put') continue;
+      const bytes = change.bytes.slice();
+      this.pending.set(change.path, { bytes, sha: await gitBlobSha(bytes) });
+    }
+    return { ok: true, version: snapshot.commit };
   }
 
   /** The branch as it is now: reused for a few seconds, or read again when `fresh`. */

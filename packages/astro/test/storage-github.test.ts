@@ -172,6 +172,70 @@ describe('GitHub storage', () => {
     expect(Object.keys(fake.files()).sort()).toEqual(['README.md', 'sites/college/src/b.md']);
   });
 
+  it('holds an upload for the next save, so the entry and its image are one commit', async () => {
+    const fake = fakeWith({ 'src/content/blog/a.md': '---\ntitle: A\n---\n' });
+    const store = storageFor(fake);
+    const before = fake.log().length;
+    const held = await store.commit({
+      changes: [
+        {
+          op: 'put',
+          path: 'src/assets/blog/b.png',
+          bytes: new Uint8Array([1, 2, 3]),
+          expectedVersion: null,
+        },
+      ],
+      message: { summary: 'Upload b.png' },
+      defer: true,
+    });
+    expect(held.ok).toBe(true);
+    expect(fake.log()).toHaveLength(before);
+    // Held, it's listed and readable, so previews and duplicate checks see it.
+    expect((await store.list({ prefix: 'src/assets/' })).map((e) => e.path)).toEqual([
+      'src/assets/blog/b.png',
+    ]);
+    expect([...((await store.read('src/assets/blog/b.png'))?.bytes ?? [])]).toEqual([1, 2, 3]);
+
+    const version = (await store.read('src/content/blog/a.md'))?.version ?? '';
+    await store.commit({
+      changes: [
+        {
+          op: 'put',
+          path: 'src/content/blog/a.md',
+          bytes: encode('---\ntitle: B\n---\n'),
+          expectedVersion: version,
+        },
+      ],
+      message: { summary: 'Update B' },
+    });
+    expect(fake.log()).toHaveLength(before + 1);
+    expect(fake.log()[0]?.changed.sort()).toEqual([
+      'A\tsrc/assets/blog/b.png',
+      'M\tsrc/content/blog/a.md',
+    ]);
+  });
+
+  it('forgets a held upload that’s deleted before the next save', async () => {
+    const fake = fakeWith({ 'a.md': 'a\n' });
+    const store = storageFor(fake);
+    await store.commit({
+      changes: [{ op: 'put', path: 'b.png', bytes: new Uint8Array([1]), expectedVersion: null }],
+      message: { summary: 'Upload b.png' },
+      defer: true,
+    });
+    const before = fake.log().length;
+    expect(
+      (
+        await store.commit({
+          changes: [{ op: 'delete', path: 'b.png' }],
+          message: { summary: 'Delete b.png' },
+        })
+      ).ok,
+    ).toBe(true);
+    expect(fake.log()).toHaveLength(before);
+    expect(await store.read('b.png')).toBeNull();
+  });
+
   it('reads a tree GitHub truncates folder by folder', async () => {
     const fake = fakeWith({ 'src/a.md': 'a\n', 'src/deep/b.md': 'b\n' });
     fake.state.truncate = true;

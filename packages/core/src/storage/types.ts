@@ -57,6 +57,13 @@ export type ChangeSet = {
   message: { summary: string; trailers?: Record<string, string> };
   /** The `head()` version the changes were prepared against, where the adapter can use it. */
   baseVersion?: string;
+  /**
+   * New files that may wait for the next change set: an upload from a field
+   * goes out with the entry that uses it, as one commit (spec §6.8).
+   * Adapters with history hold them and show them in `list` and `read`
+   * meanwhile; the others write at once.
+   */
+  defer?: boolean;
 };
 
 export type Conflict = { path: string; expected: string | null; actual: string | null };

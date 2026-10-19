@@ -35,7 +35,13 @@ export async function sendUpload(
   api: StudioApi,
   upload: PreparedUpload,
   folder: string,
+  options: { withNextSave?: boolean } = {},
 ): Promise<{ ok: true; path: string } | { ok: false; message: string }> {
-  const result = await api.upload(new Blob([upload.bytes as BlobPart]), upload.name, folder);
+  const result = await api.upload(
+    new Blob([upload.bytes as BlobPart]),
+    upload.name,
+    folder,
+    options,
+  );
   return result.ok ? { ok: true, path: result.path } : result;
 }

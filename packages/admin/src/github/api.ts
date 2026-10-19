@@ -150,9 +150,11 @@ export function createGitHubApi(options: GitHubApiOptions): StudioApi {
     deleteEntry: (collection, id, version) =>
       call(async () => (await services()).content.deleteEntry(collection, id, version)),
     listMedia: () => call(async () => (await services()).media.list()),
-    upload: (file, name, folder) =>
+    upload: (file, name, folder, uploadOptions) =>
       call(async () =>
-        (await services()).media.upload(new Uint8Array(await file.arrayBuffer()), name, folder),
+        (await services()).media.upload(new Uint8Array(await file.arrayBuffer()), name, folder, {
+          defer: uploadOptions?.withNextSave === true,
+        }),
       ),
     deleteMedia: (path) => call(async () => (await services()).media.remove(path)),
     listPartials: () => call(async () => (await services()).content.listPartials()),

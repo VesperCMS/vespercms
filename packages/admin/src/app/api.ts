@@ -29,7 +29,17 @@ export interface StudioApi {
   saveEntry(request: SaveRequest): Promise<SaveResponse>;
   deleteEntry(collection: string, id: string, version: string): Promise<SaveResponse>;
   listMedia(): Promise<MediaItem[]>;
-  upload(file: Blob, name: string, folder: string): Promise<UploadResponse>;
+  /**
+   * Stores an upload. `withNextSave`: where saving publishes, the file waits
+   * and goes out with the next save, so an entry and its image are one
+   * commit (spec §6.8). Local mode writes it at once either way.
+   */
+  upload(
+    file: Blob,
+    name: string,
+    folder: string,
+    options?: { withNextSave?: boolean },
+  ): Promise<UploadResponse>;
   deleteMedia(path: string): Promise<SaveResponse>;
   /** Site-relative paths of the Markdoc and Markdown files a `{% partial %}` can point at. */
   listPartials(): Promise<string[]>;

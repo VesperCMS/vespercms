@@ -134,7 +134,12 @@ export class MediaService {
    * reused; a different file with the same name gets a numbered name, so an
    * upload never replaces anything.
    */
-  async upload(bytes: Uint8Array, name: string, folder: string): Promise<UploadResponse> {
+  async upload(
+    bytes: Uint8Array,
+    name: string,
+    folder: string,
+    options: { defer?: boolean } = {},
+  ): Promise<UploadResponse> {
     if (bytes.length > UPLOAD_MAX_BYTES) {
       return {
         ok: false,
@@ -164,6 +169,7 @@ export class MediaService {
       const result = await this.storage.commit({
         changes: [{ op: 'put', path, bytes, expectedVersion: null }],
         message: { summary: `Upload ${path.slice(path.lastIndexOf('/') + 1)}` },
+        ...(options.defer ? { defer: true } : {}),
       });
       if (result.ok) return { ok: true, path, reused: false };
       if (result.reason === 'rejected') return { ok: false, message: result.message };

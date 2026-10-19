@@ -81,7 +81,8 @@ function PickerBody({
 
   const upload = async (ready: Extract<UploadStep, { upload: unknown }>) => {
     setStep({ step: 'working', text: 'Uploading…' });
-    const result = await sendUpload(api, ready.upload, folder);
+    // Chosen for a field: in GitHub mode it goes out with the entry's next publish.
+    const result = await sendUpload(api, ready.upload, folder, { withNextSave: true });
     if (result.ok) {
       reloadMedia();
       onChoose(result.path, ready.upload.notes);
