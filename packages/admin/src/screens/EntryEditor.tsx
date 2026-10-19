@@ -212,6 +212,8 @@ function EntryForm({
   }, [manifest, format, loadMdxProps, partials, entryPath]);
   const [bodyIssues, setBodyIssues] = useState<BodyIssue[]>([]);
   const [refusals, setRefusals] = useState(0);
+  /** The last save was refused by the publish gate alone. */
+  const [gateRefused, setGateRefused] = useState(false);
   useEffect(() => {
     if (!isContent) return;
     let live = true;
@@ -369,99 +371,111 @@ function EntryForm({
     ],
   );
 
-  const save = useCallback(async () => {
-    if (!editable || saving) return;
-    setSaving(true);
-    setNotice(null);
-    // The publish gate, on the values as they are now (spec §6.18). In local
-    // mode publishing is Save (DECISIONS.md).
-    if (blockOn.size > 0 && (await recheck()).some((note) => blockOn.has(note.rule))) {
-      setRefusals((n) => n + 1);
-      setSaving(false);
-      return;
-    }
-    const bodyChanged = body !== saved.body;
-    // A body the site couldn't be built with isn't saved (spec §6.5.1).
-    if (isContent && (bodyChanged || isNew)) {
-      const found = await checks.validate(body);
-      setBodyIssues(found);
-      if (found.some((issue) => issue.level === 'error')) {
+  const save = useCallback(
+    async ({ pastGate = false }: { pastGate?: boolean } = {}) => {
+      if (!editable || saving) return;
+      setSaving(true);
+      setNotice(null);
+      // The publish gate, on the values as they are now (spec §6.18). Where Save
+      // only writes the file on this computer, "Save anyway" goes past it
+      // (DECISIONS.md, "The publish gate refuses a save").
+      if (
+        !pastGate &&
+        blockOn.size > 0 &&
+        (await recheck()).some((note) => blockOn.has(note.rule))
+      ) {
+        setGateRefused(true);
         setRefusals((n) => n + 1);
         setSaving(false);
         return;
       }
-    }
-    const request: SaveRequest = {
-      collection: collection.name,
-      id: entryId ?? '',
-      version,
-      ...(sourceOnly
-        ? { rawFrontmatter: `\n${raw.endsWith('\n') ? raw : `${raw}\n`}` }
-        : { data: encodeValue(values) }),
-      ...(isContent && (bodyChanged || isNew)
-        ? { body: bodyPrefix + (bodyEol === '\r\n' ? body.replace(/\n/g, '\r\n') : body) }
-        : {}),
-      ...(isNew && parent !== undefined ? { parent } : {}),
-    };
-    try {
-      const result = await api.saveEntry(request);
-      if (result.ok) {
-        const snapshot = { values, body, raw };
-        setSaved(snapshot);
-        dirtyRef.current = false;
-        setVersion(result.version);
-        setEntryId(result.id);
-        setIssues([]);
-        setRefusals(0);
-        setNotice({ kind: 'saved', at: new Date(), reformatted: result.reformatted });
-        setSavedPulse((n) => n + 1);
-        if (isNew || result.id !== entryId) {
-          navigate(
-            { screen: 'edit', collection: collection.name, id: result.id },
-            { replace: true },
-          );
+      setGateRefused(false);
+      const bodyChanged = body !== saved.body;
+      // A body the site couldn't be built with isn't saved (spec §6.5.1).
+      if (isContent && (bodyChanged || isNew)) {
+        const found = await checks.validate(body);
+        setBodyIssues(found);
+        if (found.some((issue) => issue.level === 'error')) {
+          setRefusals((n) => n + 1);
+          setSaving(false);
+          return;
         }
-      } else if (result.reason === 'invalid') {
-        setIssues(result.issues);
-        // The dev API checks the body again with the site's real config.
-        if (result.bodyIssues) setBodyIssues(result.bodyIssues);
-        setRefusals((n) => n + 1);
-        // In the column, Details opens to show its errors. The drawer doesn't:
-        // it would take focus from the summary, whose links open it instead.
-        const detailKeys = new Set(arranged.details.map(keyOf));
-        if (!wide && result.issues.some((issue) => detailKeys.has(String(issue.path[0]))))
-          setDetailsOpen(true);
-      } else {
-        setNotice({ kind: result.reason, text: result.message });
       }
-    } catch (error) {
-      setNotice({ kind: 'error', text: error instanceof Error ? error.message : String(error) });
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    editable,
-    saving,
-    body,
-    saved.body,
-    collection.name,
-    entryId,
-    version,
-    sourceOnly,
-    raw,
-    values,
-    isContent,
-    isNew,
-    bodyPrefix,
-    bodyEol,
-    api,
-    arranged.details,
-    wide,
-    checks,
-    parent,
-    blockOn,
-    recheck,
-  ]);
+      const request: SaveRequest = {
+        collection: collection.name,
+        id: entryId ?? '',
+        version,
+        ...(sourceOnly
+          ? { rawFrontmatter: `\n${raw.endsWith('\n') ? raw : `${raw}\n`}` }
+          : { data: encodeValue(values) }),
+        ...(isContent && (bodyChanged || isNew)
+          ? { body: bodyPrefix + (bodyEol === '\r\n' ? body.replace(/\n/g, '\r\n') : body) }
+          : {}),
+        ...(isNew && parent !== undefined ? { parent } : {}),
+      };
+      try {
+        const result = await api.saveEntry(request);
+        if (result.ok) {
+          const snapshot = { values, body, raw };
+          setSaved(snapshot);
+          dirtyRef.current = false;
+          setVersion(result.version);
+          setEntryId(result.id);
+          setIssues([]);
+          setRefusals(0);
+          setNotice({ kind: 'saved', at: new Date(), reformatted: result.reformatted });
+          setSavedPulse((n) => n + 1);
+          // "Save anyway" goes with the summary, so focus moves to Save.
+          if (pastGate) focusWhenShown(SAVE_ID);
+          if (isNew || result.id !== entryId) {
+            navigate(
+              { screen: 'edit', collection: collection.name, id: result.id },
+              { replace: true },
+            );
+          }
+        } else if (result.reason === 'invalid') {
+          setIssues(result.issues);
+          // The dev API checks the body again with the site's real config.
+          if (result.bodyIssues) setBodyIssues(result.bodyIssues);
+          setRefusals((n) => n + 1);
+          // In the column, Details opens to show its errors. The drawer doesn't:
+          // it would take focus from the summary, whose links open it instead.
+          const detailKeys = new Set(arranged.details.map(keyOf));
+          if (!wide && result.issues.some((issue) => detailKeys.has(String(issue.path[0]))))
+            setDetailsOpen(true);
+        } else {
+          setNotice({ kind: result.reason, text: result.message });
+        }
+      } catch (error) {
+        setNotice({ kind: 'error', text: error instanceof Error ? error.message : String(error) });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [
+      editable,
+      saving,
+      body,
+      saved.body,
+      collection.name,
+      entryId,
+      version,
+      sourceOnly,
+      raw,
+      values,
+      isContent,
+      isNew,
+      bodyPrefix,
+      bodyEol,
+      api,
+      arranged.details,
+      wide,
+      checks,
+      parent,
+      blockOn,
+      recheck,
+    ],
+  );
 
   // Ctrl+S / ⌘S saves; unsaved changes are protected from navigation and reloads.
   useEffect(() => {
@@ -566,6 +580,7 @@ function EntryForm({
         <div className="flex items-center gap-2">
           {editable && (
             <Button
+              id={SAVE_ID}
               variant="primary"
               onPress={() => void save()}
               isPending={saving}
@@ -647,6 +662,15 @@ function EntryForm({
               focusWhenShown(fieldId);
             }}
           />
+          {gateRefused && blocking.length > 0 && !api.publishesOnSave() && (
+            <div className="flex flex-col items-start gap-3">
+              <p>
+                This site doesn’t publish an entry with these notes. Saving here only changes the
+                file on this computer, so you can save anyway and fix them before it’s published.
+              </p>
+              <Button onPress={() => void save({ pastGate: true })}>Save anyway</Button>
+            </div>
+          )}
           {isNew && parent !== undefined && <ParentNote collection={collection} parent={parent} />}
 
           {sourceOnly ? (
@@ -750,6 +774,8 @@ function EntryForm({
     </Screen>
   );
 }
+
+const SAVE_ID = 'entry-save';
 
 /**
  * Focuses an element as soon as it's on screen (a field inside Details

@@ -46,6 +46,11 @@ export interface StudioApi {
   createSection(collection: string, path: string): Promise<SaveResponse>;
   readRedirects(): Promise<RedirectsDocument>;
   saveRedirects(request: SaveRedirectsRequest): Promise<SaveRedirectsResult>;
+  /**
+   * Whether Save publishes (GitHub and cloud modes) or only writes the file on
+   * this computer (local mode), where the site's publish gate can be saved past.
+   */
+  publishesOnSave(): boolean;
 }
 
 export class ApiError extends Error {
@@ -108,6 +113,7 @@ export function createLocalApi(base: string, fetcher: typeof fetch = fetch): Stu
   const query = (params: Record<string, string>) => `?${new URLSearchParams(params).toString()}`;
 
   return {
+    publishesOnSave: () => false,
     summary: () => call('/summary'),
     listEntries: (collection) => call(`/entries${query({ collection })}`),
     readEntry: (collection, id) => call(`/entry${query({ collection, id })}`),

@@ -93,6 +93,7 @@ export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<Stu
     saveRedirects: vi.fn((request: { redirects: unknown[] }) =>
       Promise.resolve({ ok: true, version: 'v2', redirects: request.redirects, warnings: [] }),
     ),
+    publishesOnSave: vi.fn(() => false),
   } as never;
 }
 

@@ -285,6 +285,47 @@ describe('the publish gate', () => {
     await expectNoViolations(summary);
   });
 
+  it('offers Save anyway in local mode, then moves focus to Save', async () => {
+    const api = fakeApi({ documents: { 'fixtures/accessibility-mistakes': fixture } });
+    renderStudio('#/c/fixtures/e/accessibility-mistakes', {
+      api,
+      manifest: gated(['heading-skip']),
+    });
+    const user = userEvent.setup();
+    await screen.findByRole('button', { name: '3 accessibility notes, 1 blocks saving' });
+    expect(screen.queryByRole('button', { name: 'Save anyway' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByRole('alert');
+    expect(api.saveEntry).not.toHaveBeenCalled();
+    const anyway = screen.getByRole('button', { name: 'Save anyway' });
+    // The fixture's body skips a heading level on purpose, so axe looks at the gate's part only.
+    await expectNoViolations(anyway.parentElement as HTMLElement);
+    await user.click(anyway);
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
+    });
+    expect(screen.queryByRole('button', { name: 'Save anyway' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('has no Save anyway where saving publishes', async () => {
+    const api = fakeApi({ documents: { 'fixtures/accessibility-mistakes': fixture } });
+    api.publishesOnSave.mockReturnValue(true);
+    renderStudio('#/c/fixtures/e/accessibility-mistakes', {
+      api,
+      manifest: gated(['heading-skip']),
+    });
+    const user = userEvent.setup();
+    await screen.findByRole('button', { name: '3 accessibility notes, 1 blocks saving' });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByRole('alert');
+    expect(screen.queryByRole('button', { name: 'Save anyway' })).not.toBeInTheDocument();
+    expect(api.saveEntry).not.toHaveBeenCalled();
+  });
+
   it('checks the values as they are at the moment of saving', async () => {
     const api = fakeApi({ documents: { 'fixtures/accessibility-mistakes': fixture } });
     renderStudio('#/c/fixtures/e/accessibility-mistakes', { api, manifest: gated(['link-vague']) });
