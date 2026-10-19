@@ -16,6 +16,8 @@ e2e/.move-site/
 e2e/.images-site/
 # The accessibility integration test's copy of the playground, built twice.
 e2e/.a11y-site/
+# The search integration test's copy of the playground, built twice.
+e2e/.search-site/
 
 # Secrets: local Worker vars and env files.
 .dev.vars

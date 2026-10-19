@@ -87,6 +87,8 @@ export default defineConfig(
       // The redirects integration test's copy of the playground.
       'e2e/.move-site/**',
       'e2e/.images-site/**',
+      'e2e/.a11y-site/**',
+      'e2e/.search-site/**',
       // Byte-exact content fixtures: never linted, never formatted.
       'packages/core/test/corpus/**',
       'packages/core/test/fixtures/**',

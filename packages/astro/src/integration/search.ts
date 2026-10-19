@@ -101,6 +101,8 @@ export async function indexSearch(options: {
   routes: () => StaticRoutes;
   search: SearchOptions;
   now?: Date;
+  /** The first-search budget in bytes; tests set a small one. */
+  budget?: number;
 }): Promise<SearchResult> {
   const { root, dist, model, settings, search } = options;
   const result: SearchResult = { info: [], warnings: [], built: false };
@@ -210,9 +212,10 @@ export async function indexSearch(options: {
   result.info.push(
     `Search: indexed ${String(size.pages)} ${size.pages === 1 ? 'page' : 'pages'} in ${String(size.languages)} ${size.languages === 1 ? 'language' : 'languages'}, ${kb(size.index)} of index. A first search loads ${kb(size.firstQuery)}.`,
   );
-  if (size.firstQuery > FIRST_QUERY_BUDGET) {
+  const budget = options.budget ?? FIRST_QUERY_BUDGET;
+  if (size.firstQuery > budget) {
     result.warnings.push(
-      `Search: a first search loads ${kb(size.firstQuery)}, over the ${kb(FIRST_QUERY_BUDGET)} budget for a host without compression. Leave out pages with search: { exclude }, or turn on compression at the host.`,
+      `Search: a first search loads ${kb(size.firstQuery)}, over the ${kb(budget)} budget for a host without compression. Leave out pages with search: { exclude }, or turn on compression at the host.`,
     );
   }
   return result;

@@ -24,6 +24,8 @@ apps/playground/vesper.redirects.yaml
 e2e/.studio-site
 e2e/.move-site
 e2e/.images-site
+e2e/.a11y-site
+e2e/.search-site
 
 # Other sessions' git worktrees: separate checkouts, checked there.
 .claude/

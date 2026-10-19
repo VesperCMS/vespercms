@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   annotateHtml,
   hasNoindex,
+  indexSearch,
   indexSize,
   openSearchXml,
   pageLanguage,
@@ -153,5 +154,114 @@ describe('the index on disk', () => {
     expect(searchFile(dist, '../../etc/passwd')).toBeNull();
     expect(searchFile(dist, 'index')).toBeNull();
     expect(searchFile(dist, 'missing.js')).toBeNull();
+  });
+});
+
+describe('indexing a build', () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+  const model = {
+    manifest: {
+      manifestVersion: 1,
+      generator: { name: 'test', version: '0' },
+      hash: '',
+      site: { srcDir: 'src' },
+      collections: [],
+      forms: [],
+      diagnostics: [],
+    },
+    schemas: new Map(),
+    mdxProps: new Map(),
+    widgetNames: [],
+  } as const;
+  const settings = { base: '/', trailingSlash: 'ignore', buildFormat: 'directory' } as const;
+  const searchBox = '<div data-vesper-search="dialog"></div>';
+
+  function site(pages: Record<string, string>): { root: string; dist: string } {
+    const root = mkdtempSync(join(tmpdir(), 'vesper-index-'));
+    dirs.push(root);
+    const dist = join(root, 'dist');
+    for (const [file, html] of Object.entries(pages)) {
+      mkdirSync(join(dist, file, '..'), { recursive: true });
+      writeFileSync(join(dist, file), html);
+    }
+    return { root, dist };
+  }
+  const index = (where: { root: string; dist: string }, extra = {}) =>
+    indexSearch({
+      ...where,
+      model: { ...model, manifest: { ...model.manifest } } as never,
+      settings,
+      routes: () => new Map(),
+      search: {},
+      ...extra,
+    });
+
+  it('builds nothing when no page uses <Search>, and says how to add it', async () => {
+    const where = site({ 'index.html': page() });
+    const result = await index(where);
+    expect(result).toEqual({
+      built: false,
+      warnings: [],
+      info: [
+        'Search: no page uses <Search>, so no index was built. Add <Search /> from @vesper/astro/components to a layout, or set vesper({ search: false }).',
+      ],
+    });
+  });
+
+  it('indexes the site’s pages, leaving out 404, noindex, excluded and search pages', async () => {
+    const where = site({
+      'index.html': page(`<main>${searchBox}Welcome</main>`),
+      'about/index.html': page('<main>About us</main>'),
+      'tags/a/index.html': page('<main>Tag</main>'),
+      '404.html': page('<main>Not found</main>'),
+      'search/index.html': page('<main><div data-vesper-search="inline"></div></main>'),
+      'private/index.html': page('<main>Private</main>').replace(
+        '</head>',
+        '<meta name="robots" content="noindex"></head>',
+      ),
+    });
+    const result = await index(where, { search: { exclude: ['/tags/**'] } });
+    expect(result.built).toBe(true);
+    expect(result.warnings).toEqual([]);
+    expect(result.info).toEqual([
+      expect.stringMatching(
+        /^Search: indexed 2 pages in 1 language, \d+ KB of index\. A first search loads \d+ KB\.$/,
+      ),
+    ]);
+    const out = join(where.dist, '_vesper/search');
+    expect(existsSync(join(out, 'pagefind.js'))).toBe(true);
+    // Pagefind's own interfaces aren't used, so they aren't deployed.
+    expect(existsSync(join(out, 'pagefind-ui.js'))).toBe(false);
+    expect(existsSync(join(out, 'pagefind-component-ui.js'))).toBe(false);
+    // The deployed page is never changed.
+    expect(readFileSync(join(where.dist, 'about/index.html'), 'utf8')).toBe(
+      page('<main>About us</main>'),
+    );
+  });
+
+  it('respects a site’s own data-pagefind-body, and warns with the pages it leaves out', async () => {
+    const where = site({
+      'index.html': page(`<main data-pagefind-body>${searchBox}Welcome</main>`),
+      'about/index.html': page('<main>About us</main>'),
+    });
+    const result = await index(where);
+    expect(result.warnings).toEqual([
+      'Search: / uses data-pagefind-body, so Pagefind leaves out the 1 page without it: /about/. Add data-pagefind-body to their layout, or leave pages out with search: { exclude }.',
+    ]);
+    expect(result.info[0]).toMatch(/^Search: indexed 1 page in 1 language/);
+  });
+
+  it('warns when a first search is over the budget, and about settings it can’t use', async () => {
+    const where = site({ 'index.html': page(`<main>${searchBox}Welcome</main>`) });
+    const result = await index(where, { budget: 1024, search: { filters: { blog: ['tags'] } } });
+    expect(result.warnings).toEqual([
+      'Search: search.filters names "blog", but there\'s no collection by that name.',
+      expect.stringMatching(
+        /^Search: a first search loads \d+ KB, over the 1 KB budget for a host without compression\./,
+      ),
+    ]);
   });
 });
