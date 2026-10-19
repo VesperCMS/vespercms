@@ -141,6 +141,10 @@ Longer timeouts were rejected because slowness wasn't the cause. With nothing ed
 
 **The image integration tests run `astro build` without `NODE_ENV`, `DEV`, `PROD`, `MODE`, `SSR`, `BASE_URL`, `TEST` and `VITEST*` in the child's environment.** Vitest sets them, and Astro 6 read them as a development build: its `<Image>` wrote the dev-only `data-image-component` into the fixture's HTML. Without them the build is the one a site runs.
 
+### 2026-10-19: The studio test server stays attached under an AI agent
+
+**`scripts/studio-site.mjs` starts `astro dev` with `--ignore-lock`.** Astro 7 detects an AI agent (through `am-i-vibing`) and, on macOS and Linux, starts `astro dev` in the background and returns at once. Playwright then reads its web server as having exited, and the detached server keeps port 4401. `--ignore-lock` is Astro's documented way to run a one-off foreground server; it's the same server for a person in a terminal, where nothing backgrounds. Windows never backgrounds (Astro skips it there), which is why it didn't show before.
+
 ### 2026-10-17: axe gates on WCAG 2.1 A/AA and reports 2.2
 
 **Every built page must have zero axe violations for `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa`. `wcag22aa` findings are attached to the test as annotations but don't fail it.** D11 makes 2.1 AA the floor and 2.2 AA a goal "where it's cheap." Pages that are deliberately broken test fixtures are listed, with the reason, in `AXE_EXCLUDED` in `e2e/static-site.spec.ts`. They still have to load.
@@ -692,6 +696,60 @@ Without the shim, jsdom's page-level rules (`landmark-one-main`, `page-has-headi
 ### 2026-10-18: The report lives in `.vesper/`, never in `dist/`
 
 **The report is `.vesper/a11y-report.json` in the project root, and the integration writes `.vesper/.gitignore` (`*`) beside it, so it's never deployed and never committed by accident. If the output folder would contain `.vesper/` (an `outDir` of the project root), nothing is written and the build log says why.** It has no timestamp, so the same build writes the same bytes; a cloud upload (Phase 8.5) adds the time. `failBuildOn` throws after the report is written, so its reasons are there to read. CI checks that the report exists beside `dist/` and that nothing in `dist/` looks like one, and passes it to the e2e job as its own artifact.
+
+## Site search
+
+### 2026-10-19: Site search is Vesper's own UI on Pagefind's JS API
+
+**`<Search>` is a small, framework-free script of Vesper's (`components/search/ui.ts`) on Pagefind's JS API, not Pagefind's Component UI and not the studio's React kit. Jeremy chose this on 2026-10-19 (Phase 2.9, call 1).** Spec §6.19 made Component UI conditional on an accessibility audit. The audit (Chromium through Playwright, axe-core 4.14 on WCAG 2.0–2.2 A/AA, at 1280px, 200% zoom and 320px, in light, dark, forced colours and reduced motion; details in PLAN.md, "Audit of Pagefind's Component UI") found three failures of the spec's own criteria:
+- the modal never announces result counts: its live regions are appended to `<body>`, outside the `<dialog>`, and `showModal()` makes them inert (WCAG 4.1.3);
+- most results are `aria-hidden` placeholders until an IntersectionObserver sees them, so the list a screen reader reaches doesn't match the count (WCAG 1.3.1);
+- the filter group's name is 3.91:1 at 11px (WCAG 1.4.3).
+
+The first two sit in Pagefind's own code, so a theme or template can't fix them. Rejected: Component UI with workarounds (the fixes reach into Pagefind's internals and could break with any release), and the ui kit's React Aria components compiled for the site (React 19 alone is 75 KB gzipped, about 600 KB uncompressed with the components, over the whole 300 KB budget on a host without compression). Findings 1 to 9 are drafted for Pagefind/pagefind and go upstream only with Jeremy's OK, after his screen reader check of findings 1 and 2.
+
+What the script does instead: a native `<dialog>` opened with `showModal()`, whose polite live region is inside it; a labelled `type="search"` field; results as a `<ul>` of real links, ten at a time, with "Show more results" moving focus to the first new one; filters as checkboxes in a `<fieldset>` per filter; Escape closes from anywhere without clearing the field first, and focus returns to the button. Measured on the playground, a first search loads 164 KB of Pagefind, uncompressed.
+
+### 2026-10-19: Results are a list of links, not a combobox
+
+**The field and the results are separate: ArrowDown moves from the field to the first result, and the results are ordinary links. Jeremy chose this on 2026-10-19 (call 2).** Spec §6.19 asks both for "results as a real list of links" and, as a fallback, for "the combobox/listbox pattern", which conflict: a listbox's options can't be links. Pagefind's searchbox gives links `role="option"`, so screen readers stop treating them as links: they leave the links list and lose "open in new tab", and axe fails every one on `label-content-name-mismatch`.
+
+### 2026-10-19: Ctrl/⌘+K opens search, and there's no "/" shortcut
+
+**Ctrl+K (⌘K on a Mac) opens the dialog, named in the button's `aria-keyshortcuts` and its description. `<Search shortcut={false}>` turns it off. Jeremy chose this on 2026-10-19 (call 3).** Spec §6.19 names "/". WCAG 2.1.4 (A) requires a way for the visitor to turn off or remap a single-character shortcut, and a setting the site's developer controls doesn't count. A shortcut with a modifier is outside 2.1.4, so it needs no switch.
+
+### 2026-10-19: Hide from site search is a schema field
+
+**An entry is hidden from site search by a boolean its schema declares: `fields.hideFromSearch()` (marked with `.meta({ search: 'hide' })`), or a boolean named `noindex` at the top level or under `seo`, found by name. The manifest names it as `presentation.searchHidden`, and the studio shows the switch in Details only where the collection has pages and is searched. Jeremy chose this on 2026-10-19 (call 4).** Astro validates the value and the site's layout can reuse it for `<meta name="robots">`. Rejected: a key Vesper writes into frontmatter without a schema field (Zod strips unknown keys, so the site's code never sees it, and `.strict()` schemas fail the build), and a list of hidden entries in a file of Vesper's (a second place to keep in step when pages move).
+
+### 2026-10-19: The index leaves out entries outside their publish window
+
+**Until Phase 4.5 filters the build itself (D18), the indexer leaves out entries whose `publishAt` is in the future or whose `unpublishAt` has passed, with `isPublished` from `@vesper/core`. Phase 4.5's filtering will use the same function. Jeremy chose this on 2026-10-19 (call 5).** The playground's builds still produce `harvest-concert` before 31 October 2026, and search must never offer it. Because the playground's own dates go by, the integration test adds an event scheduled for 2099, and the e2e tests check only what stays true.
+
+### 2026-10-19: What the index knows about a page
+
+**The build hands Pagefind an annotated copy of each page; the file in `dist/` is never written.** Pagefind's Node API takes the HTML as a string (`addHTMLFile`), so the copy never touches disk.
+- **Content area.** With no `data-pagefind-body` anywhere, the copy marks the first `<main>` (or `<body>`). Without it Pagefind indexes the whole `<body>` except `<nav>` and `<footer>`, and every result began with the header's text. If any page has the attribute, the site's markup rules, and the build warns with the pages Pagefind then leaves out (Jeremy's call 6: it's Pagefind's documented behaviour, and some sites use it to choose their pages).
+- **Annotations** are `<meta data-pagefind-…>` tags before `</head>`: the entry's title, a date in words and as ISO for `<time datetime>`, `Section` (the collection's label) and the `search.filters` fields as filters, and the `search.sort` fields as sort keys, dates as ISO in UTC so they sort as text. A date with no time is that day everywhere; a `fields.datetime()` value shows its time in the site's time zone.
+- **Thumbnails** use Vesper's own `thumbnail` key, not Pagefind's `image`, which Pagefind fills from a page's first `<img>` and gave the blog listing one post's picture. Each is the first image field's square crop, cut as `<Img>` cuts it (`cropForRatio`, `pixelRect`), 128px WebP, named by a hash of the file and the rectangle.
+- **Left out:** Astro's redirect pages, `/admin`, `404`, any page with `<Search variant="inline">` (the search page itself), pages with `<meta name="robots" content="noindex">`, `search.exclude` patterns, and entries of collections with `search: false`, hidden entries and entries outside their publish window. With no page using `<Search>`, no index is built.
+- **Filter counts** come from Pagefind's `totalFilters` (counts for the query, ignoring the filters), so a label doesn't change under a checkbox as it's ticked, and the filters are drawn again only for a new query. Pagefind counts nothing until its filter index is loaded, so the script calls `filters()` once after `init()`.
+
+### 2026-10-19: Pagefind needs no MIME type
+
+**No host setting and no `.htaccess` line is needed for search.** Pagefind's files are `wasm.<lang>.pagefind`, `*.pf_meta`, `*.pf_index`, `*.pf_fragment` and `*.pf_filter`. Its script fetches each as bytes, gunzips them itself and instantiates the WebAssembly from memory, so `WebAssembly.instantiateStreaming`, the only path that needs `application/wasm`, is never taken. `scripts/static-server.mjs` serves them as `application/octet-stream`, as a host with no settings would, and the e2e tests search through it.
+
+### 2026-10-19: The /search page, and visitors without JavaScript
+
+**`/search` is injected with `injectRoute` unless the site has its own `src/pages/search.astro`, which wins. The injected page is plain, asks search engines not to index it, and reads `?q=`. Without JavaScript the header's button is a link to it, and its form explains "Search needs JavaScript." with a link to the home page (or `search.noJsLink`), plus the site map when `@astrojs/sitemap` makes one. `noJsFallback: 'duckduckgo'` makes the form search the site on DuckDuckGo instead, saying so. Jeremy chose these on 2026-10-19 (calls 7 and 8).** Generating a sitemap ourselves is on the do-not-build list. `opensearch.xml` needs an absolute URL, so it's written only when Astro's `site` is set, and `<SearchHead />` in the layout's `<head>` links it (`rel="search"` isn't allowed in `<body>`).
+
+### 2026-10-19: Pagefind is a dependency, and the budget counts uncompressed bytes
+
+**`pagefind` is a regular dependency of `@vesper/astro` (call 9), and the build warns when a first search loads more than 300 KB uncompressed (call 10). Jeremy chose both on 2026-10-19.** Search is on by default (D23), so the indexer must be there; it adds a 58 MB binary for the build machine's platform, as it does for Starlight. The budget counts what a host without compression sends: the script, its worker, and the heaviest language's WebAssembly, metadata and largest index chunk. Pagefind's three bundled interfaces and its highlighter (about 420 KB) are removed from the output, since `<Search>` uses none of them.
+
+### 2026-10-19: Search's words are English, with the site's own for other languages
+
+**`<Search>` ships English words and takes others from `vesper({ search: { strings: { fr: { … } } } })`, keyed by the page's `<html lang>` and filled in one by one.** The design proposed seeding them from Pagefind's MIT-licensed translations where the messages match. That isn't done: Pagefind's translations live inside its bundled interfaces, which aren't shipped, and its messages differ from Vesper's. It's a follow-up if a site asks.
 
 ## Studio design
 

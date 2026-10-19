@@ -14,7 +14,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
-| 2.9 Site search | Design and the Component UI audit below (2026-10-19). Jeremy confirmed every call on 2026-10-19; in progress. |
+| 2.9 Site search | Built (2026-10-19), every criterion met locally; waiting for CI on GitHub and Jeremy's screen reader pass. See "Phase 2.9: outcome" below. |
 | 3 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -380,6 +380,48 @@ Jeremy asked for icons, the body editor's toolbar first. His calls are in DECISI
 - **React Aria closes a tooltip when the page scrolls,** so a tooltip shown as focus scrolls a toolbar into view can vanish at once. That's React Aria's behaviour, kept; the screenshot script settles the scroll first.
 
 **Commits:** the decisions (6acbf46), the kit (13e20f3), the formatting tools (057f787), icons beside words (95a9978), the Shift+F10 fix (1c21e3f), collection icons (b09ddb9) and this note. The first-Tab fix (de40775) came just before.
+
+## Phase 2.9: outcome
+
+Built 2026-10-19 on the design below, with every call as recommended (Jeremy, 2026-10-19). Unit, integration and static e2e tests pass locally on macOS; CI hasn't run yet.
+
+| Criterion (spec §11) | How it's met |
+|---|---|
+| Searching the playground finds pages from every searchable collection, and filtering by collection and tag works | `packages/astro/test/search.integration.test.ts` builds a copy of the playground and reads the index back: blog, pages, docs and events, each with its title, Section, tags, date and a 128px square thumbnail. `e2e/static-search.spec.ts`: a query per collection finds its page; ticking Events, then a tag, narrows the results and the count is announced. |
+| Hidden, draft and scheduled entries never appear | The integration test: the hidden `contact-thanks` page, an event scheduled for 2099, the expired `summer-orientation`, the fixtures collection (`search: false`), a `noindex` page, `/search`, `/admin` and `404` are absent; draft files (`_unpublished-idea.md`) are never built. The e2e checks hidden, unpublished and unsearched entries. The playground's own scheduled events go live as the dates pass, so only the 2099 event tests scheduling. |
+| Search works from `dist/` on the plain static test host | The e2e runs on `scripts/static-server.mjs` with its default MIME types (DECISIONS.md, "Pagefind needs no MIME type"). The integration test builds again with `base: '/sub/'` and a `site`: every result, thumbnail and the bundle carry the base, the injected `/search` page appears, and so does `opensearch.xml`. |
+| The audit is recorded in `DECISIONS.md`, and the shipped UI passes the standing accessibility criteria with keyboard and screen readers | DECISIONS.md, "Site search". axe passes with the dialog closed, open with results, filtered, in dark mode and on `/search`; keys alone open (Ctrl/⌘+K and Enter), type, ArrowDown and Tab through results, close with Escape and return focus; the live region is inside the dialog; matches stay visible in forced colours; nothing scrolls sideways at 640×400 or 320×640; without JavaScript the button is a link and `/search` explains. Manual keyboard pass in the browser pane: the same path, plus a filter ticked by keyboard keeping its focus and "Show more results" moving focus to result 11. **Not done: a pass with a real screen reader** (checklist Part B, below). |
+
+Measured on the playground: "Search: indexed 29 pages in 1 language, 19 KB of index. A first search loads 164 KB." `<Search>`'s own script is 9.9 KB minified (3.7 KB gzipped), so a first search is about 174 KB uncompressed, under the 300 KB budget.
+
+**Built as designed, with these differences:**
+- The thumbnail travels as Vesper's own `thumbnail` meta, not Pagefind's `image`, which Pagefind fills from a page's first `<img>`. A `datetime` meta gives `<time>` its machine-readable date.
+- Filter counts are Pagefind's `totalFilters` (the query's counts, ignoring filters), so labels don't change under a ticked box, and the filters are drawn again only for a new query. Pagefind returns no counts until its filter index is loaded, so the script calls `filters()` once after `init()`. A filter appears only when it narrows the results.
+- `<Search>` takes `lang` and `id` props as well, for a page's language and a second instance. A click on the backdrop closes the dialog.
+- Words in other languages come only from `search.strings`; seeding them from Pagefind's translations wasn't done (DECISIONS.md).
+- In the studio, the switch is left out where the collection isn't searched when the field is at the top level; a `fields.hideFromSearch()` nested inside an object still shows there.
+- `scripts/studio-site.mjs` now passes `--ignore-lock`: under an AI agent on macOS and Linux, Astro 7 backgrounds `astro dev` and Playwright read that as the server exiting (DECISIONS.md).
+
+**Also in this stretch (the calls of 2026-10-19):** unknown Markdoc tags block in the dev API; "Save anyway" past the publish gate in local mode; a site's name shows as written; React 19 is required with a plain message.
+
+**Open, for Jeremy:**
+- **A screen reader pass** with NVDA and VoiceOver: checklist Part B below. Part A first, if you want to confirm the audit's findings 1 and 2 before the issues go to Pagefind (the audit pages are on the Windows machine, in `C:\tmp\vesper-pagefind-audit`).
+- **Filing the audit's findings with Pagefind/pagefind**, drafted below. They're posted only with your OK.
+- **Push, and CI.** Nothing is pushed yet.
+- **Two studio e2e tests fail on this Mac** for macOS keyboard reasons, not this phase's code: `markdoc.spec.ts` (the abbreviation test presses `End`, which doesn't move the caret on macOS) and `pages.spec.ts` (moving Nursing presses `Control+a`, which doesn't select all there). CI runs on Linux and Jeremy on Windows. A follow-up could use `ControlOrMeta` and platform-aware caret keys.
+
+**Drafted for Pagefind/pagefind** (one issue each; reproduction: the audit pages, with axe-core 4.14 in Chromium):
+1. *Component UI modal: result counts are never announced.* The announcer's live regions are appended to `<body>`; `showModal()` makes everything outside the `<dialog>` inert, so they're removed from the accessibility tree while it's open. Rendering the live region inside the dialog fixes it (WCAG 4.1.3).
+2. *Results are `aria-hidden` until scrolled into view.* Each result is a hidden placeholder until an IntersectionObserver sees it, so screen readers announce N results but reach only the few on screen (WCAG 1.3.1).
+3. *Filter group name contrast.* `#767676` on `#eeeeee` is 3.91:1 at 11px; 4.5:1 is needed (WCAG 1.4.3).
+4. *Matches vanish in dark forced-colours themes.* `mark { background: transparent }` lets forced colours draw MarkText on Canvas; the search field also loses its border.
+5. *Trigger name doesn't contain its visible text.* The button is named "search" while showing "search Ctrl K"; axe `label-content-name-mismatch` (WCAG 2.5.3). The dialog is also named "search" and the mobile close button "close".
+6. *Searchbox and filter dropdown variants fail axe.* The searchbox field has only a placeholder; its options are links with `role="option"`; the dropdowns fail `label-content-name-mismatch` and one trigger `button-name`.
+7. *Sub-result link names start with "#",* from a CSS `::before`.
+8. *Thumbnails repeat the title as alt text;* a result thumbnail beside its title link should be decorative.
+9. *No close button above 640px,* so a touch screen reader user on a tablet has no control to close the modal.
+
+**Not built** (as planned): search insights (do-not-build list), search in the studio's ⌘K palette, ranking controls beyond headings, custom result templates, anything in the cloud.
 
 ## Phase 2.9: Site search (design)
 

@@ -22,7 +22,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527); outcome and open questions in `PLAN.md` |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394); outcome and open questions in `PLAN.md` |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
-| 2.9 Site search | In progress. Every call confirmed by Jeremy (2026-10-19); design in `PLAN.md` |
+| 2.9 Site search | Built (2026-10-19); waiting for CI on GitHub and the screen reader pass. Outcome and open questions in `PLAN.md` |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -46,6 +46,8 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 
 **Don't edit `packages/` or the playground's config while `npm run e2e` runs in the same checkout, from this session or another.** The studio tests run `astro dev` from source, so Vite reloads `/admin` mid-test and the test's unsaved edits are lost. `markdoc.spec.ts` fails such a test with "The studio reloaded mid-test".
 
+**Under an AI agent on macOS or Linux, `astro dev` starts in the background and returns; a script that needs it attached passes `--ignore-lock`.** Astro 7 detects agents and detaches the server, so a test runner reads it as exited and the port stays taken (DECISIONS.md, "The studio test server stays attached under an AI agent").
+
 **On Windows, stopping a background `npm run dev` leaves `astro dev` running, and it locks native modules so `npm ci` fails with EPERM.** Find the tree's root shell and stop it with `taskkill /PID <pid> /T /F`. Never kill Node processes that belong to other projects.
 
 | Command | What it does |
@@ -68,7 +70,7 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 
 ```
 packages/core      Schema introspection, manifest, serializers, storage interface, URL and image geometry, accessibility rules. No framework imports.
-packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling, <Img>, the crop step and the build's accessibility check.
+packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling, <Img>, the crop step, the build's accessibility check, and site search (the Pagefind index, <Search>, /search).
 packages/ui        Design tokens and the accessible component kit. Tokens enforce the §10.4 budget.
 packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene. Precompiled for sites.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
@@ -150,6 +152,16 @@ Later phases add `templates/oauth-relay` (Phase 3), `packages/create-vesper` and
 **A built page is traced to its entry only through the collection's `url`, never by recording reads at build.** Production `vesper:content` stays a plain re-export (spec §6.10, §6.11).
 
 **Notes are text beside their field: no badges, no panel, and the count stays outside the live status.** Spec §10.4; an announcement on every keystroke would drown the editor.
+
+### Site search
+
+**Annotate a page for Pagefind in the copy handed to `addHTMLFile`, never in `dist/`.** The deployed page must stay the one Astro built (DECISIONS.md, "What the index knows about a page").
+
+**`<Search>` loads no framework on public pages: its script is Vesper's own, on Pagefind's JS API.** Pagefind's Component UI failed the spec's criteria, and React alone would break the 300 KB first-search budget (DECISIONS.md, "Site search is Vesper's own UI on Pagefind's JS API").
+
+**The dialog's live region stays inside the `<dialog>`.** `showModal()` makes everything outside it inert, live regions included, which is how Pagefind's modal lost its announcements.
+
+**Leave entries out of the index with `isPublished` and `isHiddenFromSearch` from `@vesper/core`, never a date check of your own.** Phase 4.5's build filtering uses the same window, so search and the site can't disagree.
 
 ### Studio and cloud
 

@@ -2,7 +2,7 @@
 
 The Vesper integration for Astro.
 
-**Status:** Phases 2 to 2.8 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, renders images with their focal points and crops, and checks every built page's accessibility structure.
+**Status:** Phases 2 to 2.9 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, renders images with their focal points and crops, checks every built page's accessibility structure, and builds the site's search.
 
 ## The integration
 
@@ -22,12 +22,14 @@ Zero config. It:
 - when the site uses Astro's own Sharp image service, wraps it so each image's stored crop is cut before Astro resizes it (see "Images" below). The build log says so.
 - writes `dist/_vesper/manifest.json` after `astro build`, which is how the cloud learns the schema.
 - after `astro build`, checks every page's accessibility structure and writes `.vesper/a11y-report.json` beside `dist/` (see "Accessibility checks at build" below).
+- after `astro build`, when a page uses `<Search>`, indexes the site with Pagefind into `dist/_vesper/search/`, and injects a plain `/search` page unless the site has its own (see "Site search" below).
 
 | Option | Default | |
 |---|---|---|
 | `studio.deploy` | `true` | `false` leaves `/admin` out of production builds, for sites edited only locally. |
 | `siteName` | the host of Astro's `site`, then the package name | Shown in the studio's top bar and page titles. |
 | `a11y` | `{}` | Accessibility checks at build. `{ failBuildOn: 'error' }` (or `'warning'`) fails the build on an issue at that level; `false` turns the check off. |
+| `search` | `{}` | Site search. `filters` and `sort` name each collection's fields, `exclude` leaves pages out by URL, `noJsLink` and `noJsFallback` decide what `/search` offers without JavaScript, `strings` gives other languages' words. `false` turns search off. |
 | `imageService` | `true` | `false` leaves Astro's image service alone. `<Img>` then uses Astro's own server crop for each ratio, with the focal point as `object-position`, and manual crops aren't applied. |
 
 The studio comes precompiled from `@vesper/admin`. React and React DOM are peer dependencies, shared with any custom widgets.
@@ -83,6 +85,7 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 | `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | Markdown string |
 | `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | relative path |
+| `fields.hideFromSearch()` | `z.boolean().default(false).meta({ label: 'Hide from site search', description, placement: 'details', search: 'hide' })` | `true` / `false` |
 
 A test checks that each helper equals its raw equivalent, so this table can't drift. `fields.color({ contrast: 'text' })` (or `'large-text'`, `'graphic'`) adds `widgetOptions: { contrast }`: the studio then checks the colour against the site's `a11y.backgrounds`, at 4.5:1 for text and 3:1 otherwise.
 
@@ -257,3 +260,49 @@ const og = await getImg({ image: post.data.hero, ratio: 'og', width: 1200 }); //
 **With the wrapper off** (`vesper({ imageService: false })`) or **with a host's image service** (Cloudflare, Netlify, Vercel), `<Img>` still works: it asks for the ratio's size, which is Astro's own server crop (at the nearest of Sharp's anchors on Astro's Sharp service), and keeps the focal point as `object-position`. Manual crop rectangles are only applied with the wrapper, on Astro's default build-time Sharp service.
 
 Never pass a focal point as Astro's `position`: Sharp accepts only its own keywords there, and `"62% 35%"` fails the build (DECISIONS.md).
+
+## Site search (`@vesper/astro/components`)
+
+Search is free and static (D23): after every build, the integration indexes the site with [Pagefind](https://pagefind.app) into `dist/_vesper/search/`. It's plain files, so it works on any host, with no MIME type or rewrite to set.
+
+```astro
+---
+// In your layout
+import { Search, SearchHead } from '@vesper/astro/components';
+---
+<head>
+  <SearchHead />  <!-- opensearch.xml, when Astro's `site` is set -->
+</head>
+<header>
+  <Search />      <!-- a "Search" button; Ctrl/⌘+K opens it too -->
+</header>
+```
+
+```js
+// astro.config.mjs
+vesper({
+  search: {
+    filters: { blog: ['tags', 'author'] }, // text, lists of text, selects, references
+    sort: { blog: ['publishedAt'] },       // dates, numbers, text
+    exclude: ['/tags/**'],
+  },
+});
+```
+
+- **`<Search />`** is a button that opens a dialog: the field, filters as checkboxes (every entry's `Section` is its collection's label, then your `filters`), "Sort" once a section with a sort field is chosen, and results as a list of links with the date, an excerpt and a thumbnail of the entry's first image (its square crop). The count is announced once typing pauses. `<Search variant="inline" />` puts the same in the page; `<Search shortcut={false} />` drops Ctrl/⌘+K.
+- **What's indexed:** every built page except Astro's redirect pages, `/admin`, `404`, the search page itself, pages with `<meta name="robots" content="noindex">`, and `exclude` patterns; and of entry pages, none from a collection with `search: false` in vesper.config.ts, none hidden with `fields.hideFromSearch()` (or a boolean `noindex`, at the top level or under `seo`), and none outside their publish window. The index reads each page's `<main>`, unless your pages mark their own content with `data-pagefind-body`. The deployed HTML is never changed.
+- **`/search`** is injected as a plain page unless the site has `src/pages/search.astro` (put `<Search variant="inline" />` in your layout there). It reads `?q=`. Without JavaScript it says search needs JavaScript and links to the home page (or `noJsLink`); `noJsFallback: 'duckduckgo'` makes its form search the site on DuckDuckGo instead.
+- **In `astro dev`**, search uses the last build's index; before the first build it says so.
+- **The build log** says how many pages it indexed and what a first search loads, and warns above 300 KB (uncompressed, as a host without compression sends it).
+- **Other languages:** Pagefind keeps an index per `<html lang>`. `<Search>`'s words are English; give others with `search: { strings: { fr: { button: 'Rechercher', label: 'Rechercher sur ce site' } } }` (the keys are in `components/search/strings.ts`).
+
+**Theming.** `<Search>` inherits the site's font and colours. Four custom properties do the rest:
+
+```css
+:root {
+  --vesper-search-accent: #1f5fd1;   /* focus ring and the tint of matches */
+  --vesper-search-surface: #ffffff;  /* the dialog's background (default: Canvas) */
+  --vesper-search-border: #4d566b;   /* borders: keep 3:1 against the surface */
+  --vesper-search-radius: 0.5rem;
+}
+```
