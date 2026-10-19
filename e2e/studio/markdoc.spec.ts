@@ -59,16 +59,21 @@ test.afterEach(({ page }) => {
   expect(reloaded.has(page), 'The studio reloaded mid-test and lost its edits').toBe(false);
 });
 
-/** Opens the writing-callouts guide on a new, empty line at the end of its body. */
-async function openOnNewLine(page: Page) {
+/** Opens the writing-callouts guide with the caret at the end of its body. */
+async function openAtEnd(page: Page) {
   await page.goto('/admin/#/c/docs/e/guides%2Fwriting-callouts');
   const body = page.getByRole('textbox', { name: 'Body' });
   await expect(body).toBeVisible();
   // Focus the text, as Tab would; from here on, keys only.
   await body.focus();
   await moveCaret(page, keys.textEnd);
-  await page.keyboard.press('Enter');
   page.on('load', () => reloaded.add(page));
+}
+
+/** Opens the writing-callouts guide on a new, empty line at the end of its body. */
+async function openOnNewLine(page: Page) {
+  await openAtEnd(page);
+  await page.keyboard.press('Enter');
 }
 
 async function save(page: Page, expected: string) {
@@ -235,6 +240,38 @@ test('an abbreviation: inserted inline, configured, moved with cut and paste, an
   await selected(page, 'Abbreviation');
   await page.keyboard.press('Delete');
   await save(page, `${before}\nUse it in the\n`);
+});
+
+test('abbreviations at both ends of a line: ⌘← and ⌘→ go past them', async ({ page }) => {
+  test.skip(process.platform !== 'darwin', '⌘← and ⌘→ are macOS line keys');
+  // Written to the file: "/" on an empty line inserts the tag as a block.
+  const abbr = '{% abbr title="content management system" %}CMS{% /abbr %}';
+  write(DOC, read(DOC).replace('\nLast line.\n', `\n${abbr} and ${abbr}\n`));
+  await openAtEnd(page);
+  // An empty status means no chip is selected, so `selected` below can't
+  // pass on what an earlier key announced.
+  const status = page.locator('p.sr-only[role="status"]');
+
+  // The caret right after the first chip, put there the way the browser
+  // moves it (inside the text that follows), then ⌘←. The right arrow then
+  // selects the chip only if the caret went before it.
+  await moveCaret(page, keys.lineEnd);
+  await page.keyboard.press('ArrowLeft');
+  await selected(page, 'Abbreviation');
+  await page.keyboard.press('ArrowLeft');
+  for (let i = 0; i < ' and '.length; i++) await moveCaret(page, 'ArrowLeft');
+  await expect(status).toHaveText('');
+  await moveCaret(page, 'Meta+ArrowLeft');
+  await page.keyboard.press('ArrowRight');
+  await selected(page, 'Abbreviation');
+
+  // The same at the other end: right before the last chip, then ⌘→.
+  await page.keyboard.press('ArrowRight');
+  for (let i = 0; i < ' and '.length; i++) await moveCaret(page, 'ArrowRight');
+  await expect(status).toHaveText('');
+  await moveCaret(page, 'Meta+ArrowRight');
+  await page.keyboard.press('ArrowLeft');
+  await selected(page, 'Abbreviation');
 });
 
 test('a partial: inserted pointing at the nearest partial file, moved and removed', async ({

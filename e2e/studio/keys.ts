@@ -5,11 +5,10 @@
  * are on Command. Off a Mac these are the keys an editor presses there.
  * The check matches the one Playwright uses to resolve `ControlOrMeta`.
  *
- * A Mac's line keys are Control+A and Control+E, macOS's own text bindings,
- * which Tiptap's Mac keymap turns into selectTextblockStart and End. Not
- * ⌘←: after an inline chip that starts a line, ProseMirror's handling of
- * it (skipIgnoredNodesBefore) moves the DOM caret before the browser does,
- * so it never sees the move and puts the caret back after the chip.
+ * A Mac's line keys here are Control+A and Control+E, macOS's own text
+ * bindings, which Tiptap's Mac keymap turns into selectTextblockStart and
+ * End. ⌘← and ⌘→ go to the visual line's ends instead; markdoc.spec.ts
+ * presses them beside chips in a test of their own.
  */
 const mac = process.platform === 'darwin';
 
