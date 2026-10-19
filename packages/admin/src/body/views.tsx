@@ -203,8 +203,10 @@ export function InlineView({ node, selected }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper
       as="span"
-      // One piece to the browser too: a caret can't land inside it.
-      contentEditable={false}
+      // No contentEditable={false}: ProseMirror sets it on the node view's own
+      // element, which keeps the caret out. A second one in here looks to
+      // ProseMirror like a widget to step over, and ⌘← or ⌘→ next to a chip
+      // at either end of a line then does nothing (DECISIONS.md).
       className={cx(
         'mx-0.5 rounded-sm border border-border-strong bg-surface-sunken px-1 py-0.5 text-small',
         !known && 'font-mono',

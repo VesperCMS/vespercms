@@ -121,6 +121,18 @@ describe('Markdoc tags in the writing view', () => {
     await expectNoViolations();
   });
 
+  it('marks nothing non-editable inside a chip, so ⌘← and ⌘→ can move past it', async () => {
+    setup();
+    await editorOf();
+    // ProseMirror makes the chip's own element non-editable. A second
+    // non-editable element inside looks to it like a widget to step over,
+    // which stopped ⌘← and ⌘→ beside a chip at either end of a line
+    // (DECISIONS.md); the e2e test presses the keys on a Mac.
+    const chip = screen.getByText('Abbreviation · CMS').closest('.node-vesperInline');
+    expect(chip).not.toBeNull();
+    expect(chip?.querySelectorAll('[contenteditable]')).toHaveLength(0);
+  });
+
   it('by keyboard: Escape selects the frame, Enter opens its settings, a change rewrites only the opening', async () => {
     const { api, user } = setup();
     const editor = await editorOf();
