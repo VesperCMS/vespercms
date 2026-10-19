@@ -43,11 +43,15 @@ export default defineConfig({
     },
     {
       // GitHub mode (spec §6.8): a built site, the real relay and a fake
-      // GitHub over one repository, so these run one at a time too.
+      // GitHub over one repository, so these run one at a time too. No
+      // retries: a serial file reruns from its first test, against a
+      // repository the first attempt already published to, so a retry can
+      // only fail on what the first attempt changed and hide the real error.
       name: 'github',
       testMatch: 'github/*.spec.ts',
       fullyParallel: false,
       workers: 1,
+      retries: 0,
       use: {
         ...devices['Desktop Chrome'],
         baseURL: `http://127.0.0.1:${String(GITHUB_SITE_PORT)}`,

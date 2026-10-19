@@ -34,7 +34,9 @@ async function axe(page: Page): Promise<void> {
 async function signIn(page: Page, route = ''): Promise<void> {
   await page.goto(`/admin/${route}`);
   await page.getByRole('button', { name: 'Sign in with GitHub' }).click();
-  await expect(page.getByRole('button', { name: '@editor' })).toBeVisible();
+  // Only the signed-in studio has a skip link; the gate's screens don't. Not the
+  // user menu: an editor's own bar has none, and it shows only while the entry loads.
+  await expect(page.getByRole('link', { name: 'Skip to content' })).toBeAttached();
 }
 
 test('signs in through the relay, and every screen on the way passes axe', async ({ page }) => {
@@ -62,6 +64,7 @@ test('signs in through the relay, and every screen on the way passes axe', async
 
 test('a deep link survives a reload while signed in', async ({ page }) => {
   await signIn(page, '#/c/blog');
+  await expect(page.getByRole('button', { name: '@editor' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Blog posts' })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Blog posts' })).toBeVisible();
