@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-import type { EntryDocument, MediaItem, SaveRequest } from '@vesper/core';
+import { gitBlobSha, type EntryDocument, type MediaItem, type SaveRequest } from '@vesper/core';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { sha256 } from '../media/upload.ts';
 import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
@@ -128,7 +127,7 @@ describe('the image field', () => {
 
   it('offers the existing copy when the same file is uploaded again', async () => {
     const pdf = new TextEncoder().encode('%PDF-1.7\nsame');
-    const hash = await sha256(pdf);
+    const hash = await gitBlobSha(pdf);
     const api = fakeApi({
       documents: {
         'pages/campus-life': {

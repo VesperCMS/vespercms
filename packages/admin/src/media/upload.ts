@@ -1,4 +1,4 @@
-import type { MediaItem } from '@vesper/core';
+import { gitBlobSha, type MediaItem } from '@vesper/core';
 import type { StudioApi } from '../app/api.ts';
 import { prepareUpload, type HygieneOptions, type PreparedUpload } from './hygiene.ts';
 
@@ -16,11 +16,6 @@ export type UploadStep =
   | { step: 'confirm-large'; upload: PreparedUpload }
   | { step: 'ready'; upload: PreparedUpload };
 
-export async function sha256(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 export async function checkUpload(
   file: File,
   media: readonly MediaItem[],
@@ -28,7 +23,8 @@ export async function checkUpload(
 ): Promise<UploadStep> {
   const prepared = await prepareUpload(file, options);
   if (!prepared.ok) return { step: 'refused', message: prepared.message };
-  const hash = await sha256(prepared.upload.bytes);
+  // The site's files are keyed by git blob SHA (MediaItem.hash), so the upload is too.
+  const hash = await gitBlobSha(prepared.upload.bytes);
   const existing = media.find((item) => item.hash === hash);
   if (existing) return { step: 'duplicate', upload: prepared.upload, existing: existing.path };
   if (prepared.upload.large) return { step: 'confirm-large', upload: prepared.upload };

@@ -1,3 +1,4 @@
+import { gitBlobSha } from '../storage/git-blob-sha.ts';
 import { normalizePath } from '../storage/paths.ts';
 import type { StorageAdapter, StorageEntry } from '../storage/types.ts';
 import { slugify, type ContentService } from './service.ts';
@@ -92,11 +93,6 @@ export function mediaReference(mediaPath: string, entryPath: string): string {
   return relativePath(dirOf(entryPath), mediaPath);
 }
 
-async function sha256(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 export type MediaServiceOptions = {
   /** Folders media lives in, site-relative: `src/assets` and `public` by default. */
   roots?: string[];
@@ -118,12 +114,11 @@ export class MediaService {
     const entries = await this.content.scanEntries();
     const items: MediaItem[] = [];
     for (const file of files) {
-      const stored = await this.storage.read(file.path);
-      if (!stored) continue;
+      // The version is the git blob SHA, a hash of the bytes: nothing needs reading.
       items.push({
         path: file.path,
         size: file.size,
-        hash: await sha256(stored.bytes),
+        hash: file.version,
         version: file.version,
         ...(file.modifiedAt !== undefined ? { modifiedAt: file.modifiedAt } : {}),
         usedBy: entries
@@ -157,12 +152,13 @@ export class MediaService {
       return { ok: false, message: 'That folder isn’t inside the site.' };
     }
     const base = slugify(name.slice(0, name.length - extension.length - 1)) || 'file';
-    const hash = await sha256(bytes);
+    const hash = await gitBlobSha(bytes);
+    const taken = new Map((await this.storage.list({ prefix: `${dir}/` })).map((e) => [e.path, e]));
     for (let n = 1; n < 1000; n++) {
       const path = `${dir}/${n === 1 ? base : `${base}-${String(n)}`}.${extension}`;
-      const existing = await this.storage.read(path);
+      const existing = taken.get(path);
       if (existing) {
-        if ((await sha256(existing.bytes)) === hash) return { ok: true, path, reused: true };
+        if (existing.version === hash) return { ok: true, path, reused: true };
         continue;
       }
       const result = await this.storage.commit({

@@ -101,7 +101,9 @@ describe('MediaService', () => {
       'src/assets/blog/harbor.jpg': ['Market', 'Harbor'],
       'src/assets/blog/unused.webp': [],
     });
-    expect(items[1]?.hash).toMatch(/^[0-9a-f]{64}$/);
+    // The git blob SHA, which every storage mode has without reading the file.
+    expect(items[1]?.hash).toMatch(/^[0-9a-f]{40}$/);
+    expect(items[1]?.hash).toBe(items[1]?.version);
   });
 
   it('reuses an identical file and never overwrites a different one', async () => {

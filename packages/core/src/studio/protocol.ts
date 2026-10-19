@@ -127,7 +127,10 @@ export type MediaItem = {
   /** Site-relative POSIX path. */
   path: string;
   size: number;
-  /** SHA-256 of the file's bytes, for duplicate detection on upload (spec §6.6.6). */
+  /**
+   * The file's git blob SHA, for duplicate detection on upload (spec §6.6.6):
+   * a content hash every storage mode already has, so listing media reads no file.
+   */
   hash: string;
   /** The file's version (git blob SHA), for a delete that must not race an edit. */
   version?: string;
