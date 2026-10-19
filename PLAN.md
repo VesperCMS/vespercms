@@ -583,6 +583,8 @@ Measured on the playground: "Search: indexed 29 pages in 1 language, 19 KB of in
 - In the studio, the switch is left out where the collection isn't searched when the field is at the top level; a `fields.hideFromSearch()` nested inside an object still shows there.
 - `scripts/studio-site.mjs` now passes `--ignore-lock`: under an AI agent on macOS and Linux, Astro 7 backgrounds `astro dev` and Playwright read that as the server exiting (DECISIONS.md).
 
+**After the phase (2026-10-19): the index is written by Vesper, not Pagefind.** Windows CI run 39297706062 failed `search.test.ts` with an empty `pagefind-entry.json`. Pagefind 1.5.2 answers `writeFiles` before its writes reach the disk, and `close()` kills the writes still queued (Pagefind/pagefind#1271, fixed on `main` by #1272 but not released). It isn't Windows-only: on a Mac under load, 4 of 300 runs left files empty for good, so a real build could have deployed broken search. The build now takes the bytes with `getFiles` and writes them itself (DECISIONS.md, "Vesper writes Pagefind's files itself"); `search-write.test.ts` fails the old code with CI's error.
+
 **Also in this stretch (the calls of 2026-10-19):** unknown Markdoc tags block in the dev API; "Save anyway" past the publish gate in local mode; a site's name shows as written; React 19 is required with a plain message.
 
 **Open, for Jeremy:**

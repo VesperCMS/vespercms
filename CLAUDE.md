@@ -165,6 +165,8 @@ Later phases add `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (
 
 **Leave entries out of the index with `isPublished` and `isHiddenFromSearch` from `@vesper/core`, never a date check of your own.** Phase 4.5's build filtering uses the same window, so search and the site can't disagree.
 
+**Take the index from Pagefind with `getFiles` and write it with `writeBundle`; never call `writeFiles`.** Pagefind 1.5.2 answers `writeFiles` before its writes land, and `close()` then leaves files empty (DECISIONS.md, "Vesper writes Pagefind's files itself").
+
 ### Studio and cloud
 
 **The studio only ever runs from the site itself at `/admin`. `app.{{domain}}` never hosts a second copy of the editor.** Cloud features are reached by signing in to the cloud from the studio (D14).
