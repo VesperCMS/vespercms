@@ -287,10 +287,11 @@ describe('the entry editor', () => {
 
       await user.click(within(summary).getByRole('link', { name: /Enter a valid date\./ }));
       const drawer = await screen.findByRole('dialog', { name: 'Details' });
+      // The drawer takes focus as it opens, then hands it to the field once it's rendered.
       await waitFor(() => {
         expect(drawer).toContainElement(document.activeElement as HTMLElement);
+        expect(document.activeElement).toHaveAttribute('aria-invalid', 'true');
       });
-      expect(document.activeElement).toHaveAttribute('aria-invalid', 'true');
       expect(window.location.hash).toBe('#/c/blog/e/harbor-at-dawn');
     });
   });
