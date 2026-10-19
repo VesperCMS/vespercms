@@ -14,9 +14,11 @@ import type { BodyBlock, MarkdocParseOptions } from './types.ts';
  * Markdoc errors at `error` or `critical` level, except undefined variables
  * (Astro ignores them, because pages can pass variables in) and Markdoc's own
  * partial check (Astro resolves partial files itself, and fails when one is
- * missing, which is checked here instead). Unknown tags and functions are
- * warnings: the studio may know less of the config than the build does.
- * MDX components' props are checked with their own Zod schema.
+ * missing, which is checked here instead). Unknown tags and functions fail
+ * the build too, but they block only with `siteConfig`: the browser's config
+ * is rebuilt from the manifest and may know less than the build does (an
+ * `extends` it couldn't read), so there they warn. MDX components' props are
+ * checked with their own Zod schema.
  */
 
 export type BodyIssue = {
@@ -41,6 +43,11 @@ export type MarkdocValidateOptions = {
   tags?: readonly MarkdocTagManifest[];
   /** Whether a partial's `file`, as written in this entry, exists. Unchecked when absent. */
   partialExists?: (file: string) => boolean;
+  /**
+   * The config is the site's own, merged as @astrojs/markdoc merges it (the
+   * dev API's), so unknown tags and functions block as the build would.
+   */
+  siteConfig?: boolean;
 };
 
 type Node = {
@@ -51,7 +58,7 @@ type Node = {
   children: Node[];
 };
 
-const WARNING_ONLY = new Set(['tag-undefined', 'function-undefined']);
+const UNKNOWN = new Set(['tag-undefined', 'function-undefined']);
 /** Untransformed HTML and comment nodes: Astro turns them into its own tags before validating. */
 const ASTRO_HANDLES = new Set(['html_block', 'html_inline', 'comment']);
 
@@ -70,6 +77,7 @@ export function validateMarkdocBody(body: string, options: MarkdocValidateOption
     ];
   }
   const tags = new Map((options.tags ?? []).map((tag) => [tag.name, tag]));
+  const warnOnly = options.siteConfig ? new Set<string>() : UNKNOWN;
   const nodes = [...walk(ast)];
   const issues: BodyIssue[] = [];
 
@@ -82,15 +90,21 @@ export function validateMarkdocBody(body: string, options: MarkdocValidateOption
     const nested = /^Can't nest '([^']+)'/.exec(error.message)?.[1];
     if (error.id === 'child-invalid' && nested && ASTRO_HANDLES.has(nested)) continue;
     const blocking =
-      (error.level === 'error' || error.level === 'critical') && !WARNING_ONLY.has(error.id);
-    if (!blocking && error.level !== 'warning' && !WARNING_ONLY.has(error.id)) continue;
+      (error.level === 'error' || error.level === 'critical') && !warnOnly.has(error.id);
+    if (!blocking && error.level !== 'warning' && !warnOnly.has(error.id)) continue;
     const node = nodeFor(nodes, type, lines, error.message);
     const name = node?.tag;
     issues.push({
       line: (lines[0] ?? 0) + 1,
       level: blocking ? 'error' : 'warning',
       code: error.id,
-      message: plainMessage(error.id, error.message, name, name ? tags.get(name) : undefined),
+      message: plainMessage(
+        error.id,
+        error.message,
+        name,
+        name ? tags.get(name) : undefined,
+        blocking,
+      ),
       ...(name ? { name } : {}),
       ...(error.id.startsWith('attribute-') && attributeOf(error.message)
         ? { attribute: attributeOf(error.message) }
@@ -175,6 +189,7 @@ function plainMessage(
   message: string,
   name: string | undefined,
   tag: MarkdocTagManifest | undefined,
+  blocking: boolean,
 ): string {
   const label = tag?.label ?? (name ? humanize(name) : 'This block');
   const attribute = /'([^']+)'/.exec(message)?.[1];
@@ -194,7 +209,9 @@ function plainMessage(
     case 'attribute-undefined':
       return `${label}: “${attribute ?? ''}” isn’t one of its settings. Remove it, or ask a developer to add it.`;
     case 'tag-undefined':
-      return `The site doesn’t define a “${attribute ?? name ?? ''}” tag, so it may not show on the page. A developer can add it to markdoc.config.`;
+      return blocking
+        ? `The site doesn’t define a “${attribute ?? name ?? ''}” tag, so the site can’t be built. Remove it, or ask a developer to add it to markdoc.config.`
+        : `The site doesn’t define a “${attribute ?? name ?? ''}” tag, so it may not show on the page. A developer can add it to markdoc.config.`;
     case 'tag-placement-invalid':
       return tag?.inline
         ? `${label} goes inside a line of text, not on a line of its own.`

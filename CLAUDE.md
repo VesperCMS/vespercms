@@ -165,7 +165,7 @@ Later phases add `templates/oauth-relay` (Phase 3), `packages/create-vesper` and
 
 **Never transition what changes as focus moves (focus rings, the halo, chevrons): hover colours only, and nothing under reduced motion.** After a screen reader's or a script's click, React Aria moves focus only once every running transition has ended, and focus sits on the page meanwhile (DECISIONS.md, "Transitions never touch focus").
 
-**A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
+**A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning. Unknown tags and functions block only in the dev API (`siteConfig`), which has the site's whole config.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
 
 ## Accessibility is an acceptance criterion
 

@@ -111,6 +111,7 @@ export function bodyValidator(
         parse: manifest.markdoc.options,
         tags: manifest.markdoc.tags,
         partialExists: partialChecker(path, await listPartials()),
+        siteConfig: true,
       });
     }
     if (format === 'mdx' && checks.size > 0) return validateMdxBody(body, checks);

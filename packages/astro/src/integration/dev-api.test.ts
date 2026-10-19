@@ -225,6 +225,10 @@ describe('the dev API', () => {
     });
     const partial = await save('\n{% partial file="_gone.mdoc" /%}\n');
     expect(await partial.json()).toMatchObject({ bodyIssues: [{ code: 'partial-missing' }] });
+    const unknown = await save('\n{% gallery /%}\n');
+    expect(await unknown.json()).toMatchObject({
+      bodyIssues: [{ level: 'error', code: 'tag-undefined', name: 'gallery' }],
+    });
     expect(readFileSync(join(root, 'src/content/docs/intro.mdoc'), 'utf8')).toBe(
       '---\ntitle: Intro\n---\nHi.\n',
     );

@@ -68,6 +68,20 @@ describe('validateMarkdocBody', () => {
     ]);
   });
 
+  it('blocks on unknown tags with the site’s own config, as the build would', () => {
+    const body = '{% gallery /%}\n';
+    expect(validateMarkdocBody(body, { ...options, siteConfig: true })).toEqual([
+      {
+        line: 1,
+        level: 'error',
+        code: 'tag-undefined',
+        name: 'gallery',
+        message:
+          'The site doesn’t define a “gallery” tag, so the site can’t be built. Remove it, or ask a developer to add it to markdoc.config.',
+      },
+    ]);
+  });
+
   it('ignores undefined variables, as Astro does, and HTML when the site allows it', () => {
     const body = 'Hi {% $who %}.\n\n<div>raw</div>\n';
     expect(validateMarkdocBody(body, { ...options, parse: { allowHTML: true } })).toEqual([]);
