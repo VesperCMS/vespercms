@@ -181,6 +181,8 @@ Later phases add `templates/oauth-relay` (Phase 3), `packages/create-vesper` and
 
 **An inline node view sets no `contentEditable` inside itself; ProseMirror already makes the view's own element non-editable.** ProseMirror's caret handling steps over a non-editable element inside a node view as if it were a widget, and on a Mac ⌘← and ⌘→ beside a chip at either end of a line then did nothing (DECISIONS.md, "A chip is non-editable once, on its own element").
 
+**On a Mac, ⇧⌘← and ⇧⌘→ beside a chip are left to the browser through `handleDOMEvents`, and no line key is bound to a textblock command.** ProseMirror's own Shift step selected only the chip, and a textblock command goes to the paragraph's ends, which breaks wrapped lines (DECISIONS.md, "⇧⌘← and ⇧⌘→ beside a chip are the browser's").
+
 ## Accessibility is an acceptance criterion
 
 **WCAG 2.1 AA is the floor for the studio, the dashboard and every component shipped onto customer sites. Meet 2.2 AA where it's cheap (D11).** Agencies sell to colleges and public bodies.
