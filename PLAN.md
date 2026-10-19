@@ -14,7 +14,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.7 Focal points, crops and `<Img>` | Done (2026-10-18). CI green on GitHub (run 39141980527). See "Phase 2.7: outcome" below. |
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
-| 2.9 onward | Roadmap below |
+| 2.9 Site search | Design and the Component UI audit below (2026-10-19), waiting for Jeremy's confirmation. Nothing is built yet. |
+| 3 onward | Roadmap below |
 
 ## Phase 0: Scaffold
 
@@ -359,6 +360,299 @@ Jeremy asked for icons, the body editor's toolbar first. His calls are in DECISI
 - **React Aria closes a tooltip when the page scrolls,** so a tooltip shown as focus scrolls a toolbar into view can vanish at once. That's React Aria's behaviour, kept; the screenshot script settles the scroll first.
 
 **Commits:** the decisions (6acbf46), the kit (13e20f3), the formatting tools (057f787), icons beside words (95a9978), the Shift+F10 fix (1c21e3f), collection icons (b09ddb9) and this note. The first-Tab fix (de40775) came just before.
+
+## Phase 2.9: Site search (design)
+
+Scope is spec §6.19 (D23) and the §11 Phase 2.9 entry. Search is free and lives in the open-source integration (D23, §13.4). Nothing here touches the cloud. Search insights stays on the do-not-build list.
+
+**What was found first.** Pagefind 1.5.2 (the current release, MIT) was installed in a scratch folder, not the repo, and measured on a copy of the playground's static build (33 pages):
+- **The Node API works as the spec describes:** `createIndex()`, then `addHTMLFile({ url, content })` for each page, then `writeFiles({ outputPath })`. With the service start, 33 pages take 0.1–0.2 s. `addHTMLFile` takes the HTML as a string, so the annotated copy never touches disk and the deployed file is never written.
+- **`data-pagefind-body` drops pages silently, as documented.** With the attribute on one page, the index held 1 page of 33. `addHTMLFile` returned no error or warning for the 32 it would leave out, so Vesper has to look for the attribute itself to warn.
+- **Without that attribute, Pagefind indexes all of `<body>` except `<nav>` and `<footer>`.** The header stays in, so every playground result began "Skip to contentVesper playground…". With `data-pagefind-body` on `<main>`, results hold only the page's content.
+- **`<meta>` tags in the head can carry the annotations.** `<meta data-pagefind-meta="title[content]" content="…">` sets a result's title, date or image. The same form with `data-pagefind-filter` and `data-pagefind-sort` sets filters and sort keys. Values may contain commas, and two tags with one filter name give two values. Without them, Pagefind uses the first `<h1>` as the title and the page's first `<img>` as the image, which gave the blog listing one post's picture.
+- **Headings already outrank body text.** For "harbor", the post titled "Harbor at dawn" scored 15.4 and the next page 5.3. When the title is the page's `<h1>` inside `<main>`, no extra weighting is needed.
+- **Languages need nothing from Vesper.** Pagefind writes one index per `<html lang>`: a docs page set to `es` got its own `es` index and wasm. The browser loads the index for the page's language.
+- **Sorting drops pages that lack the sort key.** "campus" found 10 pages by relevance and 5 sorted by date: the 5 pages without a date were left out.
+- **The WebAssembly needs no MIME type.** Pagefind's files are `wasm.<lang>.pagefind`, `*.pf_meta`, `*.pf_index`, `*.pf_fragment` and `*.pf_filter`. Its script fetches each as bytes, gunzips it itself and instantiates the wasm from memory, so `WebAssembly.instantiateStreaming`, the only path that needs `application/wasm`, is never taken. `scripts/static-server.mjs` serves these files as `application/octet-stream`, as a host with no MIME settings would, and search worked. No `.wasm` file exists to map.
+- **Size.** The index of 33 pages is 22 KB; the rest is fixed cost. From a page using Component UI, a first query loaded 389 KB uncompressed (about 155 KB with gzip):
+  - 219 KB of Component UI's JS and CSS, on every page load, before anyone searches;
+  - then `pagefind.js` (46 KB), its worker (41 KB), the English wasm (72 KB, already gzipped), an 8 KB index chunk and the fragments.
+  - Without Component UI, Pagefind's part of a first query is about 170 KB uncompressed.
+- **Install size.** `pagefind` is 37 KB, plus a 58 MB binary for the build machine's platform (an optional dependency such as `@pagefind/linux-x64`). `writeFiles` also writes Pagefind's three bundled UIs and its highlighter into the output: about 420 KB that a site using none of them doesn't need.
+
+### Audit of Pagefind's Component UI (the gate)
+
+The audit ran in Chromium through Playwright, with axe-core 4.14 on WCAG 2.0–2.2 A and AA plus best practice. It covered:
+- **sizes:** 1280×800; 200% zoom (640×400 CSS pixels); 320×640 and 320×256;
+- **modes:** light, dark, forced colours and reduced motion;
+- **five pages:** the default modal, the modal with a filter pane and images, the searchbox (combobox) variant, an inline search page, and the filter dropdowns.
+
+Screen readers are Jeremy's (checklist at the end of this section). The audit pages are in `C:\tmp\vesper-pagefind-audit` and the scripts and log in `C:\tmp\vesper-pagefind-audit-scripts`.
+
+What it does well:
+- **The modal is a native `<dialog>` opened with `showModal()`.** The page behind is inert, Tab stays inside, Escape closes it from anywhere and focus returns to the trigger. The trigger has `aria-haspopup="dialog"`, `aria-expanded` and `aria-controls`, and Ctrl/⌘+K opens the dialog (`aria-keyshortcuts`).
+- **The field is properly labelled.** It's `type="search"`, with a real but visually hidden `<label>` ("Search this site"), inside a `search` landmark and described by "Results will appear as you type".
+- **Results are a real list.** They're a `<ul>` named "Search results", the title is each link's text, and sub-results are a nested list.
+- **Filters are checkboxes in a `<fieldset>` with a legend,** inside a `<details>` disclosure. Each label includes its count.
+- **On the inline page the count is announced,** politely ("10 results for nursing"); "No results for …" is announced assertively.
+- **Focus is visible everywhere:** a 2px ring on result cards through `:focus-within`, and a CanvasText outline in forced colours.
+- **Nothing scrolls sideways at 200% or 320px.** Below 640px the modal fills the screen and gains a close button.
+
+Where it falls short:
+
+| # | Finding | Where | Measure |
+|---|---|---|---|
+| 1 | **The modal never announces result counts.** The announcer's live regions are appended to `<body>`, outside the `<dialog>`, and `showModal()` makes them inert. Chromium's accessibility tree has four status regions while the modal is closed and none while it's open. Filter changes in the modal go unannounced too. | The modal, which is what `<Search />` opens | WCAG 4.1.3 (AA); the spec's "polite live announcement of the result count" |
+| 2 | **Screen readers can't reach most results until they scroll into view.** Each result is an `aria-hidden` placeholder until an IntersectionObserver sees it. For "the", 27 results were announced and 20 of the 27 list items were hidden, so the list a screen reader reports doesn't match the count. | Results, every variant | WCAG 1.3.1 (A) (to confirm with the checklist) |
+| 3 | The filter group's name fails contrast: #767676 on #eeeeee is 3.91:1, at 11px (4.5:1 is needed). | Filter pane | WCAG 1.4.3 (AA) |
+| 4 | **In dark high-contrast themes, matched words vanish from excerpts.** `mark` has `background: transparent`, and forced colours then draw its text in MarkText, the same colour as the Canvas. The search field loses its border too. | Excerpts, every variant | No WCAG criterion; a real barrier with Windows contrast themes |
+| 5 | The trigger is named "search" in lower case (from the shortcut hints' strings), and axe fails it on `label-content-name-mismatch` (serious) because the visible text is "search Ctrl K". The dialog is also named "search", and the mobile close button "close". | Trigger, modal | WCAG 2.5.3 (A), per axe |
+| 6 | **The other two variants fail axe.** The searchbox's field has only a placeholder for a label. Its options are links with `role="option"`, so screen readers no longer treat them as links, and axe fails every one on `label-content-name-mismatch`. The filter dropdowns fail that rule on every option, and `button-name` (critical) on one trigger. | Searchbox, dropdowns | WCAG 1.3.1, 2.5.3, 4.1.2 |
+| 7 | Sub-result links' names start with "#", which comes from a CSS `::before` ("#In this section"). | Sub-results | Quality |
+| 8 | Thumbnails repeat the page's alt text, or the title when it's empty, right beside the title link. A result thumbnail should be decorative. | Results with images | Quality |
+| 9 | Above 640px the modal has no close button, only Escape or a click on the backdrop. A touch screen reader user on a tablet has no control to close it. | Modal | Quality (the spec only asks for Escape) |
+| 10 | Smaller issues. The hint says "esc clear" while Escape closes the dialog. A query of spaces announces "No results for" assertively. Focus-ring transitions still run under reduced motion. Excerpts are cut to one line at every width: about four words at 320px, though screen readers get the whole excerpt. The theme ignores `prefers-color-scheme`; dark needs `data-pf-theme="dark"`. | Various | Quality |
+
+**Findings 1 to 3 fail the criteria the spec sets for search.** Findings 1 and 2 sit in Pagefind's own code: where the announcer is placed, and how results load. They're not in its CSS or templates, so a site can't fix them from outside without depending on Pagefind's internals.
+
+**Recommendation: build `<Search>` on Pagefind's JS API, as the gate prescribes,** and file findings 1 to 9 upstream at Pagefind/pagefind. Filing is outward-facing: the issues get drafted with the audit page as a reproduction, and they're posted only with Jeremy's OK. Which UI to build is the first call below.
+
+### What gets indexed
+
+Indexing lives in `packages/astro/src/integration/search.ts` and runs in `astro:build:done`, after the accessibility check.
+
+**Pages.** The indexer walks the same HTML files as the build's accessibility check (`builtPages`). It leaves out:
+- Astro's redirect pages, `/admin`, `404.html` and Vesper's `/search` page;
+- pages with `<meta name="robots" content="noindex">` (a default below);
+- URL patterns in `vesper({ search: { exclude: ['/tags/**'] } })`;
+- entry pages, traced through the collection's `url` exactly as the accessibility report does (`PageService.pageEntries`, `urlKey`), when:
+  - the collection has `search: false`; or
+  - the entry is hidden from search; or
+  - the entry is outside its publish window. Until Phase 4.5 filters the build itself, this check keeps scheduled and unpublished entries out (a call below).
+
+Static pages in `src/pages` are indexed (spec §6.19).
+
+**When indexing is skipped.** With no built page using `<Search>` (the component renders a `data-vesper-search` marker), the integration skips indexing and logs one line saying so. `vesper({ search: false })` turns search off.
+
+**The annotated copy.** It's what Vesper hands `addHTMLFile`; the file in `dist/` is never written.
+- **Content area.**
+  - If no page in the build has `data-pagefind-body`, the copy adds it to each page's first `<main>`, or to `<body>` for a page with no `<main>`. One build note lists those pages.
+  - If any page has the attribute, the site's own markup rules. The build then warns when that leaves out pages Vesper would otherwise index: "Search: /landing/ uses data-pagefind-body, so Pagefind leaves out the 31 pages without it: /about/, /blog/welcome/ and 29 more. Add data-pagefind-body to their layout, or leave pages out with search: { exclude }."
+  - `data-pagefind-ignore` is Pagefind's and works as documented.
+- **Meta, in `<head>`.**
+  - `title` is the entry's title (`titleOf`); a static page gets Pagefind's own default, its first `<h1>`.
+  - `date` is the entry's first `search.sort` field, or else its first date field. It's formatted in the page's language and the site's `timeZone`.
+  - `image` is the search thumbnail, with `image_alt` empty. The UI renders thumbnails with `alt=""`.
+- **Filters.**
+  - `Section` is always set to the collection's label.
+  - Then each field in `search.filters[collection]`:
+    - strings and lists of strings as they are;
+    - `fields.select` values by their labels;
+    - references by the referenced entry's title.
+  - Other kinds warn once and are skipped.
+- **Sort keys.** Each field in `search.sort[collection]` becomes a key of the same name, written as an ISO date and time so the keys sort correctly as text.
+- **Thumbnails.**
+  - Each comes from the entry's first `fields.image()` value, cut with the **square** crop through `cropForRatio` and `pixelRect`: the stored crop when there is one, otherwise the focal crop. That's how focal points carry through.
+  - Sharp writes it as a 128px WebP (shown at 64px) to `dist/_vesper/search/images/<hash>.webp`. The hash covers the source file and the rectangle, so unchanged images keep their names across builds.
+  - Without Sharp there are no thumbnails, and one log line says why.
+
+**Output.**
+- `writeFiles` writes into `dist/_vesper/search/`. Pagefind's bundled UIs and highlighter are then removed.
+- The build logs one line, for example: "Search: indexed 31 pages in 2 languages, 48 KB of index. A first search loads 214 KB."
+- It warns above the 300 KB first-query budget. That's measured as the uncompressed bytes of the script, the worker, the largest language's wasm, its meta and its largest index chunk.
+
+### `<Search>` and the pages around it
+
+**`<Search>`** ships in `@vesper/astro/components` as source `.astro`, like `<Img>`. It comes with a small, framework-free script (the design for call 1a).
+- **`<Search />`** renders a "Search" button.
+  - Without JavaScript, the button is a link to `/search/`.
+  - With JavaScript, it opens a native `<dialog>` with `showModal()`.
+- **The dialog** holds, in order: a visible close button "Close"; a labelled `type="search"` field ("Search this site"); the filters; and the results.
+  - Its polite live region sits **inside the dialog**. It says "12 results for “nursing”" or "No results for “nursing”" once typing pauses, never on every keystroke.
+  - Escape closes it from anywhere and returns focus to the button; the query is kept for the next opening. There are no keyboard traps.
+- **Results** are a `<ul>` of links: the title as the link's text, a `<time>` with the date, the excerpt with `<mark>`, and the thumbnail with `alt=""`.
+  - The first 10 results are real list items. "Show more results" adds 10 more and moves focus to the first new one; nothing is `aria-hidden`.
+  - ArrowDown from the field moves to the first result, and Tab goes through the results in order.
+  - `mark` keeps the system's Mark colours in forced colours.
+- **Filters** are a `<fieldset>` with a legend per filter ("Section", "Tags"). They're checkboxes whose labels hold their counts ("Events (5)"), and each change re-announces the count.
+- **Sort** is a `<select>` named "Sort", offered once a section with a sort field is chosen (a default below).
+- **`<Search variant="inline" />`** puts the same field, filters and results in the page, with no dialog.
+- **Look.** The UI inherits the site's font and colours (`font: inherit`, `currentColor` borders, `Canvas` and `CanvasText` fallbacks, so dark sites stay dark). A few custom properties cover the rest: `--vesper-search-accent`, `-surface`, `-border` and `-radius`. The README shows the lines that theme it.
+- **Loading.** Pagefind's `pagefind.js` loads only when the dialog first opens or the inline field first gets focus, from `<base>_vesper/search/`.
+- **In `astro dev`**, Vesper's dev middleware serves the last build's `dist/_vesper/search/`. With no build yet, the dialog says "Search works after `astro build`."
+- **Strings.** English is built in. Other languages come from `vesper({ search: { strings: { fr: {…} } } })`, keyed by the page's `lang` and seeded from Pagefind's MIT-licensed translations where the messages match, with credit.
+
+**`/search`** is injected with `injectRoute` and prerendered, respecting `base`, `trailingSlash` and `build.format`. It holds `<Search variant="inline" />`, reads `?q=` and runs the query on load. A site's own `src/pages/search.astro` wins (call 7).
+
+**`opensearch.xml`** goes at the site root. Its template URL must be absolute, so it needs Astro's `site`; without one it's skipped with one log line. `<SearchHead />` goes in the layout's `<head>` and emits the `<link rel="search">`, because that link type isn't allowed in `<body>`.
+
+**Without JavaScript,** `/search` is a plain form that submits `?q=` to itself, and a `<noscript>` explains that search needs JavaScript (call 8). `search: { noJsFallback: 'duckduckgo' }` makes the form's action DuckDuckGo, with `sites=<host>` (which needs `site`). The script takes the form over when it runs, so only visitors without JavaScript send their queries to DuckDuckGo.
+
+**Static hosts (D16).**
+- The static e2e runs search against `scripts/static-server.mjs`, which already serves `.pagefind` files as `application/octet-stream`.
+- `static-server.test.mjs` pins that.
+- No `.htaccess` line is added, because Pagefind needs no MIME type. DECISIONS.md records why, so nobody adds one later.
+
+### Hide from site search, and the studio
+
+**The studio's only search control is a "Hide from site search" switch in Details.**
+- Its description: "The page stays on the site. It just won't show up in the site's own search."
+- It's the existing switch widget over a boolean field (call 4). The manifest gains `presentation.searchHidden` with the field's path.
+- The switch is absent, not disabled, when the collection has no `url`, has `search: false`, or has no such field.
+
+Nothing else: no search screen, no index status, no badge, and the one primary button is still Save. The spec's ⌘K palette (§10.3) is a different feature and isn't built here.
+
+### Config, playground and dependency
+
+**Config:**
+
+```js
+vesper({
+  search: {
+    filters: { blog: ['tags', 'author'] },
+    sort: { blog: ['publishedAt'] },
+    exclude: ['/tags/**'],
+    noJsFallback: 'duckduckgo',
+  },
+});
+```
+
+- `search: false` turns it all off.
+- Unknown collections and fields warn at build.
+- `collections.<name>.search: false` in `vesper.config.ts` already exists (Phase 1), and the playground's fixtures use it.
+
+**Playground:**
+- `<Search />` replaces the header's reserved slot.
+- Search settings:
+  - `filters.blog: ['tags']`, which addendum §7 asks for;
+  - `sort.blog: ['publishedAt']` and `sort.events: ['startsAt']`.
+- The hide field goes on blog and pages, with one new page hidden as a fixture.
+- The playground gets its own `src/pages/search.astro` in `BaseLayout`. The injected page is tested on a copy without it.
+
+**Dependency:** `pagefind` (MIT) in `@vesper/astro`, since it's the indexer D23 names. It's imported only inside `astro:build:done`. Call 9 covers its install size.
+
+### Tests, mapped to the "Done when" criteria
+
+**Searching the playground finds pages from every searchable collection, and filtering by collection and tag works:**
+- unit tests for the annotations (each field kind as a filter, sort keys, meta, the content-area choice, every exclusion rule), thumbnails (the cut rectangle equals `cropForRatio`'s), and result URLs under `base`, both `trailingSlash` settings and `build.format: 'file'`;
+- `packages/astro/test/search.integration.test.ts`, which builds a copy of the playground and reads the index back (Pagefind's fragments are gzipped JSON). It checks the pages from blog, pages, docs and events, each with its title, Section, tags and thumbnail;
+- `e2e/static-search.spec.ts` on the static server: a query for each collection finds its page, and the Section and Tags filters narrow the results.
+
+**Hidden, draft and scheduled entries never appear:** the integration test and the e2e both check that these are absent:
+- the hidden fixture page;
+- `_unpublished-idea.md` (never built);
+- `harvest-concert` (publishes on 31 October);
+- `summer-orientation` (unpublished in July);
+- the fixtures collection (`search: false`).
+
+**Search works from `dist/` on the plain static test host:** the e2e above runs on `scripts/static-server.mjs` with its default MIME types. The integration test also builds once with `base: '/sub/'` and checks that the bundle path and every result URL carry it.
+
+**The audit is recorded in `DECISIONS.md`, and the shipped UI passes the standing accessibility criteria with keyboard and screen readers:**
+- The `DECISIONS.md` entry, once Jeremy confirms.
+- In `e2e/static-search.spec.ts`:
+  - axe on the dialog closed, open with results, and with a filter checked, plus the `/search` page;
+  - keys only: open, type, ArrowDown, Tab through results and filters, Escape, and focus back on the button;
+  - the count's text in the dialog's own live region;
+  - 640×400 and 320×640 with no sideways scrolling;
+  - `/search/?q=nursing` running on load;
+  - JavaScript off showing the form and the message.
+- A manual keyboard pass, noted.
+- Jeremy's pass with NVDA and VoiceOver, using Part B of the checklist.
+
+**Also tested:** the `data-pagefind-body` warning, skipping indexing when no page uses `<Search>`, the size warning, and the dev note.
+
+**Commits, in order:**
+1. `docs`: this design and the audit.
+2. `feat(core)`: search annotations from an entry and its manifest (meta, filters, sort keys), and the publish-window check that Phase 4.5 will share.
+3. `feat(astro)`: the `search` options, the hide field and the manifest's `searchHidden`.
+4. `feat(astro)`: the Pagefind index at build, with thumbnails, warnings and the size line.
+5. `feat(astro)`: `<Search>`, `<SearchHead>`, the `/search` page, `opensearch.xml` and the no-JavaScript fallback.
+6. `feat(astro)`: the last build's index in `astro dev`.
+7. `feat(admin)`: "Hide from site search" in Details.
+8. `feat(playground)`: search in the header, filters and sort, a hidden page, and its own `/search` page.
+9. `test`: the integration test and the static e2e.
+10. `docs`: decisions (the audit), READMEs, the drafted upstream issues and the Phase 2.9 outcome.
+
+### Open, for Jeremy
+
+Each call has a recommendation, and nothing gets built until you confirm.
+
+1. **The search UI (the audit's result).**
+   - (a) Vesper's own small script on Pagefind's JS API, recommended: a native `<dialog>`, a list of links, fieldsets and a live region inside the dialog. It would be about 8 KB gzipped (an estimate), and every behaviour is tested here. A first query would be about 200 KB uncompressed, 170 KB of it Pagefind's.
+   - (b) The ui kit's React Aria Dialog, ComboBox and ListBox, compiled into a bundle loaded on first open. That brings the studio's tested behaviour, but puts React on public pages. Measured, React 19.3 alone is 75 KB gzipped and 149 KB with those components, about 600 KB uncompressed. That alone breaks the 300 KB budget on a host without compression.
+   - (c) Component UI, themed, with Vesper's workarounds for findings 1 to 3 and custom templates for 7 and 8. It's the least code now, but the fixes for 1 and 2 reach into Pagefind's internals and could break with any release.
+2. **A list of links, or a combobox.** The spec asks for "results as a real list of links", and for the fallback "the combobox/listbox pattern". The two conflict, because a listbox's options can't be links.
+   - (a) A labelled search field and a list of links, with ArrowDown from the field to the first result. Recommended.
+   - (b) A combobox whose options are links with `role="option"`, as Pagefind's searchbox does. Screen readers then don't treat them as links, so they leave the links list and lose "open in new tab".
+3. **The "/" shortcut.** WCAG 2.1.4 (A) requires that a visitor can turn a one-character shortcut off, remap it, or have it work only on focus. A setting the site's developer controls doesn't count.
+   - (a) Ctrl/⌘+K, recommended. It has a modifier, so 2.1.4 doesn't apply. It's in the button's `aria-keyshortcuts` and description, and `<Search shortcut={false}>` turns it off. No "/" in v1.
+   - (b) "/" as the spec says, plus a "Use / to open search" switch in the dialog, remembered in the visitor's browser.
+   - (c) Both, with (b)'s switch for "/".
+4. **Where "Hide from site search" is stored.**
+   - (a) In a field the schema declares, recommended: `fields.hideFromSearch()` (a boolean, default false), or a boolean SEO field named `noindex` (at the top level or under `seo`), found by name. Astro validates it, and the site's layout can use the same value for `<meta name="robots">`. With neither field, there's no switch.
+   - (b) In a key Vesper writes into the frontmatter without a schema field. That needs no setup, but Zod strips unknown keys, so the site's code never sees it, and `.strict()` schemas fail the build.
+   - (c) In a list of hidden entries in a file of Vesper's. That needs no schema change, but it's a second place to keep in step when entries move.
+5. **Scheduled entries before Phase 4.5.** Builds still produce them today: the playground's `harvest-concert` publishes on 31 October and showed up in the probe's results.
+   - (a) The indexer leaves out entries outside their publish window, using a check in core that 4.5's filtering will reuse. Recommended.
+   - (b) Bring 4.5's build-time filtering forward into this phase.
+   - (c) Move "scheduled entries never appear" to 4.5's criteria.
+6. **`data-pagefind-body` on some pages.**
+   - (a) Respect Pagefind's rule, and warn with the pages it leaves out. Recommended: it's Pagefind's documented behaviour, and some sites use it to choose their pages.
+   - (b) Use the site's attribute where a page has it and `<main>` everywhere else, so no page drops. That's friendlier, but it differs from Pagefind's docs.
+7. **The `/search` page.**
+   - (a) Inject a plain page unless the site has `src/pages/search.astro`, which then wins. Recommended; the playground has its own page.
+   - (b) Inject it inside a layout named in the config. The layout would have to take a `title` prop and a slot.
+   - (c) Never inject it, and have the docs show the five-line page.
+8. **Where `/search` sends visitors without JavaScript.** Generating a sitemap is on the do-not-build list.
+   - (a) "Search needs JavaScript." with a link to the home page, or to a page the site names (`search: { noJsLink: '/site-map/' }`), plus `sitemap-index.xml` when the build has one. Recommended.
+   - (b) Only the message, plus the DuckDuckGo option.
+9. **Pagefind's install size:** a 58 MB binary for the build machine's platform.
+   - (a) A dependency of `@vesper/astro`, as D23's "on by default" implies. Recommended; Starlight does the same.
+   - (b) An optional peer, which the build asks for when a page uses `<Search>`.
+10. **The first-query budget.**
+    - (a) Count uncompressed bytes, what a host without compression sends, and warn above 300 KB. Recommended; call 1a comes to about 200 KB.
+    - (b) Count gzip-estimated bytes.
+
+**Smaller defaults, built as written unless you say otherwise:**
+- The collection filter is called "Section" ("Blog posts", "Events", "Pages", "Docs"). Static pages have no section.
+- Sorting is offered only once a section with a sort field is chosen, because Pagefind drops pages without the key.
+- `filters` and `sort` live in `vesper({ search })` as the spec shows, not in `vesper.config.ts` beside `search: false`.
+- Pages with `<meta name="robots" content="noindex">` are left out.
+- A site's own `draft: true` field is just data: Vesper indexes what the build produces. The playground builds `notes-from-the-field` and shows "Draft" on it.
+- Pagefind's unused bundled UIs (about 420 KB) are removed from the output.
+- Tier: nothing is unclear. §13.4 lists site search as free, and search insights stays on the do-not-build list.
+
+**Not in this phase:** search insights (do-not-build); search in the studio's ⌘K palette (§10.3); ranking controls beyond headings (`data-pagefind-weight` is Pagefind's and still works); custom result templates; anything in the cloud.
+
+### Screen reader checklist (for Jeremy)
+
+Use NVDA with Firefox and with Chrome on Windows, VoiceOver with Safari on macOS, and VoiceOver on an iPhone or iPad.
+
+**Part A, now (optional):** confirms the audit's screen reader findings before you choose. Serve the audit pages from the repo root, then open `http://127.0.0.1:4412/pf-audit/modal/`:
+
+```bash
+npm exec -- node scripts/static-server.mjs C:/tmp/vesper-pagefind-audit --port 4412
+```
+
+1. **Tab to the header's search button.** Expected: "search, button, collapsed", in lower case. Note whether Ctrl+K is announced.
+2. **Press Enter, type "nursing" and wait.** Finding 1 predicts that no count is announced; the page shows "10 results for nursing".
+3. **Go to the results list (NVDA: L; VoiceOver: the rotor's lists).** Note the item count. Then search for "the": the page says 27 results. Finding 2 predicts a list of about 7 that grows only as you move down, if at all.
+4. **Open `/pf-audit/page/` and repeat step 2.** Here the count should be announced, since there's no dialog.
+5. **Press Escape in the modal.** The dialog should close, with focus back on the button and the button announced.
+6. **On an iPad in landscape (wider than 640px), with VoiceOver,** open the modal. Try to close it without a keyboard; finding 9 predicts no close button. Note whether the two-finger scrub closes it.
+
+**Part B, once `<Search>` is built:** the phase's screen reader criterion. Expected announcements are approximate; what matters is the content and that each comes once.
+
+1. **Tab to Search.** Expected: "Search, button, has pop-up dialog", with "Ctrl+K" (or ⌘K) in its description.
+2. **Press Enter.** Expected: "Search this site, dialog", then the field: "Search this site, search edit".
+3. **Type "nursing" and pause.** Expected: "10 results for “nursing”", announced once, not per keystroke. Type more letters and confirm it updates once each pause.
+4. **ArrowDown, or Tab to the results.** Expected: "list, 10 items", "Nursing information session, link", then the date and the excerpt as text. Every result reachable in browse mode matches the count.
+5. **Press "Show more results".** Expected: focus moves to result 11, and the list is now 20 items, or the rest.
+6. **Filters: Tab to "Section, grouping", then "Events (5), checkbox, not checked".** Press Space. Expected: "checked", then "5 results for “nursing”".
+7. **Press Escape from any result.** Expected: the dialog closes and "Search, button" is announced. Reopening keeps the query.
+8. **Open `/search/?q=nursing` directly.** Expected: the heading, the search landmark, and the count once results load.
+9. **At 200% zoom and on a phone:** the close button is reachable and named "Close", and the VoiceOver rotor lists the result links.
+10. **In a Windows contrast theme (Night sky):** matched words stay visible in excerpts, and the focus ring shows on every control.
 
 ## Studio design pass (plan)
 
@@ -942,7 +1236,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | 2.7 Images | Start by verifying how Astro forwards `position`/`fit` | `fields.image`, focal point and crops, `<Img>`, Sharp wrapper |
 | **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
 | **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done 2026-10-18, CI green in run 39169607328) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
-| **2.9 Search** (new) | Pagefind Component UI accessibility audit | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
+| **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above); confirm the design's calls | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | 3 GitHub mode | whether a free cloud relay exists (needs the §13.1 domain) | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13, D15, §13.1 domain, §13.3 license (decides whether `apps/cloud-*` can live in this MIT repo) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
 | **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
