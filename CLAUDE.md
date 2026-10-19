@@ -179,6 +179,8 @@ Later phases add `templates/oauth-relay` (Phase 3), `packages/create-vesper` and
 
 **A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning. Unknown tags and functions block only in the dev API (`siteConfig`), which has the site's whole config.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
 
+**An inline node view sets no `contentEditable` inside itself; ProseMirror already makes the view's own element non-editable.** ProseMirror's caret handling steps over a non-editable element inside a node view as if it were a widget, and on a Mac ⌘← and ⌘→ beside a chip at either end of a line then did nothing (DECISIONS.md, "A chip is non-editable once, on its own element").
+
 ## Accessibility is an acceptance criterion
 
 **WCAG 2.1 AA is the floor for the studio, the dashboard and every component shipped onto customer sites. Meet 2.2 AA where it's cheap (D11).** Agencies sell to colleges and public bodies.
