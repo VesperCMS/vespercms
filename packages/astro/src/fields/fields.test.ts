@@ -1,7 +1,19 @@
 import { IMAGE_MARKER, VESPER_META_KEY, walkSchema } from '@vesper/core';
 import { z } from 'astro/zod';
 import { describe, expect, it } from 'vitest';
-import { color, datetime, email, file, geo, image, markdown, select, slug, url } from './index.ts';
+import {
+  color,
+  datetime,
+  email,
+  file,
+  geo,
+  hideFromSearch,
+  image,
+  markdown,
+  select,
+  slug,
+  url,
+} from './index.ts';
 
 const model = (schema: z.ZodType) => walkSchema(z.object({ x: schema })).fields?.[0];
 
@@ -83,6 +95,16 @@ describe('fields helpers: each equals its documented raw Zod', () => {
       'file',
       file({ accept: 'application/pdf' }),
       z.string().meta({ widget: 'file', widgetOptions: { accept: 'application/pdf' } }),
+    ],
+    [
+      'hideFromSearch',
+      hideFromSearch(),
+      z.boolean().default(false).meta({
+        label: 'Hide from site search',
+        description: 'The page stays on the site. It just won’t show up in the site’s own search.',
+        placement: 'details',
+        search: 'hide',
+      }),
     ],
   ] as [string, z.ZodType, z.ZodType][])('%s', (_name, helper, raw) => {
     expect(model(helper)).toEqual(model(raw));

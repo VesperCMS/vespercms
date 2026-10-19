@@ -195,6 +195,23 @@ export function image<Src extends z.ZodType>(
     .meta(withOptions('image', { ratios: options.ratios ? [...options.ratios] : undefined }));
 }
 
+/**
+ * Keeps the entry's page out of the site's own search (spec §6.19). The page
+ * stays on the site; the studio shows a "Hide from site search" switch in
+ * Details. The site's layout can read the same value for
+ * `<meta name="robots">` if it wants search engines to skip the page too.
+ *
+ * Raw equivalent: `z.boolean().default(false).meta({ label: 'Hide from site search', description: 'The page stays on the site. It just won’t show up in the site’s own search.', placement: 'details', search: 'hide' })`.
+ */
+export function hideFromSearch() {
+  return z.boolean().default(false).meta({
+    label: 'Hide from site search',
+    description: 'The page stays on the site. It just won’t show up in the site’s own search.',
+    placement: 'details',
+    search: 'hide',
+  });
+}
+
 /** `{ widget }`, plus `widgetOptions` only when an option was given, matching the documented raw Zod. */
 function withOptions(widget: string, options: Record<string, unknown>): Record<string, unknown> {
   const defined = Object.fromEntries(
@@ -203,4 +220,16 @@ function withOptions(widget: string, options: Record<string, unknown>): Record<s
   return Object.keys(defined).length > 0 ? { widget, widgetOptions: defined } : { widget };
 }
 
-export const fields = { color, geo, slug, url, email, datetime, select, markdown, file, image };
+export const fields = {
+  color,
+  geo,
+  slug,
+  url,
+  email,
+  datetime,
+  select,
+  markdown,
+  file,
+  image,
+  hideFromSearch,
+};

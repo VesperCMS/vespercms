@@ -7,6 +7,9 @@ import { keyOf } from './values.ts';
  * secondary frontmatter in the Details section at the bottom. A field's
  * `placement` (from `.meta()` or vesper.config.ts) always wins; otherwise
  * slugs, dates, tags, ordering, SEO fields and scheduling go to Details.
+ * "Hide from site search" is absent, not disabled, where the collection
+ * isn't searched or has no pages (spec §6.19): the manifest then names no
+ * `searchHidden` field.
  */
 
 const TITLE_KEYS = ['title', 'name', 'heading', 'label'];
@@ -40,7 +43,10 @@ export type ArrangedFields = {
 };
 
 export function arrangeFields(collection: CollectionManifest): ArrangedFields {
-  const fields = (collection.fields ?? []).filter((field) => !field.hidden);
+  const searched = collection.presentation.searchHidden !== undefined;
+  const fields = (collection.fields ?? []).filter(
+    (field) => !field.hidden && (searched || field.search !== 'hide'),
+  );
   const title = fields.find(
     (field) =>
       field.kind === 'string' && TITLE_KEYS.includes(keyOf(field)) && field.placement !== 'details',
