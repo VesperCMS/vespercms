@@ -15,7 +15,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.8 Accessibility checks, studio and build | Done (2026-10-18). CI green on GitHub (run 39152989394). See "Phase 2.8: outcome" below. |
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
-| 3 onward | Roadmap below |
+| 3 GitHub mode | Design below (2026-10-19), waiting for Jeremy's calls. Nothing is built yet. |
+| 4 onward | Roadmap below |
 
 ## Calls of 2026-10-19
 
@@ -380,6 +381,141 @@ Jeremy asked for icons, the body editor's toolbar first. His calls are in DECISI
 - **React Aria closes a tooltip when the page scrolls,** so a tooltip shown as focus scrolls a toolbar into view can vanish at once. That's React Aria's behaviour, kept; the screenshot script settles the scroll first.
 
 **Commits:** the decisions (6acbf46), the kit (13e20f3), the formatting tools (057f787), icons beside words (95a9978), the Shift+F10 fix (1c21e3f), collection icons (b09ddb9) and this note. The first-Tab fix (de40775) came just before.
+
+## Phase 3: GitHub mode (design)
+
+Scope is spec §6.8 (GitHub mode), the GitHub half of §6.9 (signing in), §6.16 (how a published change reaches the site) and the §11 Phase 3 entry: "an editor with a GitHub account can edit and publish, with an image, from a deployed static site." Two calls are already made (2026-10-19): the cloud will run a free relay, and in GitHub mode the site's build is the last check for custom Markdoc validators. Nothing here touches the cloud, and GitHub mode is free (§4).
+
+**What was found first.** In the code:
+- **The storage interface was built for this.** A file's version is its git blob SHA in every mode, a `ChangeSet` is applied whole or not at all, a stale `expectedVersion` is a conflict, and `runStorageContract` is the suite every adapter must pass.
+- **The dev API is a thin shell over core.** `ContentService`, `PageService` and `MediaService` do the work, over a storage adapter. GitHub mode can run the same services in the browser over a GitHub adapter, so every screen, check and splice stays the same code. Only five inputs are Node-only today: the collections' Zod schemas, the real Markdoc config, declared MDX props, function-form URLs and the site's static routes.
+- **The studio already ships `vesper.config.ts` to the browser** (custom widgets, MDX props), so function-form URLs and MDX props are available there. Static routes can be written into the studio at build.
+- **Two things would be slow over the API.** `MediaService.list` reads every media file to hash it, which would download every image, and the studio's `fileUrl()` is synchronous, while a private repo's `src/assets` image has no URL a browser can load without a token.
+
+From GitHub's docs and changelog, checked on 2026-10-19 (sources in DECISIONS.md once confirmed):
+- **CORS.** `api.github.com` (REST and GraphQL) answers cross-origin requests with an `Authorization` header from any origin. `github.com/login/oauth/access_token` and the device-flow endpoints don't, so **a relay is needed for any sign-in.**
+- **PKCE** (S256) works for OAuth Apps and GitHub Apps since July 2025, but the token endpoint **still requires `client_secret`** for the web flow, so **the relay must hold the secret**.
+- **An OAuth App can't be limited to one repository.** Writing to a private repo needs the `repo` scope, which reaches every private repo the editor can reach. New organizations also block OAuth Apps until an owner approves them, which colleges will hit.
+- **A GitHub App's user token reaches only the repositories the app is installed on, intersected with the editor's own access.** It needs only Contents (read and write) and Metadata (read), and no webhook or server beyond the relay. Tokens last 8 hours; refresh tokens last 6 months, rotate, and need the secret. An app can list 10 callback URLs.
+- **Commits.** The Git Data API (blobs, tree, commit, then a ref update with `force: false`) refuses a ref update that isn't a fast-forward, so a race is caught. Text can go inline in the tree; each binary needs its own blob request. `createCommitOnBranch` (GraphQL) is one request with a true compare-and-swap and Verified commits, but its practical request limit is about 16 MB of base64, and a 20 MB upload is about 27 MB.
+- **Reading.** One recursive tree call lists every path and blob SHA (up to 100,000 entries). Batched GraphQL `object(expression:)` queries read many text files in one request. `raw.githubusercontent.com` can't be read from a browser for a private repo; the Contents API's raw media type can.
+- **Limits.** 5,000 REST requests an hour per editor, and content-creating requests are capped at 80 a minute and 500 an hour.
+- **Hosts.** A commit through the API is a push: GitHub Actions and git-connected hosts build on it. But on private repos **Vercel builds only for commit authors on the team, and Netlify holds unknown authors for approval**, and in GitHub mode each editor is the author. No such rule was found for Cloudflare Pages.
+- Decap, Sveltia and Keystatic do much the same. Sveltia is closest to this design: browser-only, with a one-file Worker relay holding an OAuth App's secret.
+
+### How it works
+
+**Turning it on.**
+- `vesper({ github: { relay: 'https://vesper-auth.example.workers.dev' } })` in `astro.config`, plus optional `repo: 'owner/name'`, `branch` and `apiUrl` (GitHub Enterprise Server, and the tests' fake GitHub).
+- Without `repo`, the build reads it from git: `origin`'s URL, the default branch, and the site's folder inside the repository (`git rev-parse --show-prefix`), so a monorepo's site saves to the right paths. With none, the build says so in one line and `/admin` is the "Editing isn't available here yet" screen it is today.
+- `astro dev` stays local mode. GitHub mode runs in built sites only, which is also how the tests run it.
+
+**Signing in** (a top-level redirect, no popup, no third-party cookies, as D14 does for the cloud):
+1. "Sign in with GitHub" saves a random `state` and a PKCE verifier in `sessionStorage` and goes to the relay's `/authorize`, with the site's origin, the state and the code challenge.
+2. The relay checks the origin against its allowlist and sends the browser to GitHub with its own client ID and its `/callback`.
+3. GitHub returns to the relay, which sends the browser back to `<site>/admin/?github=<code>&state=…`. The code is useless without the verifier, which never left the studio's tab.
+4. The studio checks the state and posts the code and verifier to the relay's `/token`. The relay adds the secret, asks GitHub, and answers with the token (CORS for allowlisted origins only). The studio removes the code from the address with `history.replaceState`.
+5. The studio reads the repository's permissions. An editor who can't push sees "Your GitHub account can't change this site. Ask its owner to add you." and Sign out.
+
+**Reading.** `GitHubStorage` implements `StorageAdapter`:
+- `head()` is the branch's commit SHA. `list()` comes from one recursive tree at that head.
+- `read()` goes through an IndexedDB cache keyed by blob SHA. A SHA always means the same bytes, so the cache never goes stale, and only changed files are fetched again. Misses are fetched in batches, text through GraphQL and binaries one at a time through the Contents API's raw media type.
+- A tree GitHub truncates (over 100,000 entries) falls back to one tree per collection folder.
+
+**Saving.** `commit(changeSet)` is one commit on the branch, by the Git Data API (spec §6.8):
+- It reads the head's tree and checks every `expectedVersion` against it. A file someone else changed is a conflict, reported as local mode reports it.
+- Binaries go up as blobs, one request each. Text goes inline in a tree built on the head's tree. Then it makes the commit and moves the branch with `force: false`.
+- If the branch moved in between (GitHub answers 422), it reads the new head, checks the same files again and retries once if none of them changed.
+- The editor is the commit's author. The message is plain, from the change set's summary ("Update “Harbor at dawn” in Blog posts"), with its trailers.
+- A branch rule that refuses the push (pull requests required, signed commits required, status checks) is said plainly: "This site's GitHub settings don't allow publishing straight to main." Pull-request mode is Phase 9 (§13.5).
+- After a publish, the status reads "Published. It will be live after the site is next built." (spec §6.16). Deploy status is cloud-only (§6.16).
+
+**Checks in the browser.**
+- **Schemas.** Validation runs the real Zod schemas in GitHub mode too (spec §6.3.1), shipped as a separate bundle (call 3).
+- **Bodies.** Markdoc is checked with the manifest's config, as the studio does now; custom attribute types and `validate` functions are left to the site's build (decided 2026-10-19). MDX props use the declared schemas from `vesper.config.ts`, which the studio already loads.
+- **Pages.** Moves, route collisions and link rewriting use `PageService` as in local mode. Static routes are written into the studio at build, and function-form URLs come from the bundled `vesper.config.ts`.
+
+**Files in the studio.** `fileUrl(path)` becomes asynchronous, `fileUrl(path): Promise<string>`. In GitHub mode it's an object URL for the blob, cached by SHA and revoked when the screen closes; in local mode it stays the dev API's `/file` URL. Media de-duplication compares git blob SHAs instead of SHA-256, so listing Media reads the tree and downloads nothing.
+
+**Expiry and failures.**
+- A token lasts 8 hours and is kept in `sessionStorage` (call 4).
+- On a 401 the studio keeps the open entry's unsaved changes in `sessionStorage`, says "Your GitHub sign-in has expired. Sign in again to publish; your changes are kept.", and puts them back after the redirect.
+- Rate limits and network failures are said in plain words, with the time to try again.
+
+**The relay** is `templates/oauth-relay/` (spec §5): one dependency-free Worker file, a `wrangler.toml` and a README.
+- **Secrets:** `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and `ALLOWED_ORIGINS`.
+- **Endpoints:** `GET /authorize`, `GET /callback` and `POST /token`.
+- **It never stores anything.** The README walks through creating the GitHub App, installing it on the repository and running `wrangler deploy`. A `workers.dev` address works, so no domain is needed.
+- **The cloud's free relay** is this same Worker, deployed by Vesper once the §13.1 domain exists. Its own rules (which sites may use it) are a call for then.
+
+**In the interface (spec §10.4).**
+- The sign-in screen has one primary button, "Sign in with GitHub", and one line on what that means: "You'll publish to owner/name on GitHub. Changes go live after the site rebuilds."
+- Signed in, the top bar gains the design system's user menu (call 6).
+- In GitHub mode the editor's main button reads Publish instead of Save (call 5). Nothing else changes, and cloud-only features stay absent (§6.9).
+
+### Tests, mapped to "Done when"
+
+- **The adapter:** `GitHubStorage` passes `runStorageContract` against a fake GitHub: `scripts/github-fake.mjs`, a small server for the endpoints Vesper uses, backed by a real bare git repository through the `git` CLI, so blob SHAs, trees, fast-forward refusals and conflicts are git's own. Unit tests cover the race retry, truncated trees, branch-rule refusals, 401 and rate limits.
+- **The relay:** unit tests for the allowlist, state, PKCE pass-through and CORS, with GitHub's token endpoint faked.
+- **The studio:** a new e2e project, `github`, serves a GitHub-mode build of the playground on `scripts/static-server.mjs` with the fake GitHub and a fake relay. It signs in, edits a post, uploads an image and publishes, then checks the bare repository for one commit with both files and nothing else changed (byte-for-byte, as local mode's tests do). It also covers a conflict, a move, axe on the sign-in screen and the user menu, and a keyboard pass.
+- **The real thing** (the criterion's "deployed static site"): a checklist in the outcome, run once with a real GitHub App, a deployed relay, a test repository and a host. Jeremy signs in to GitHub himself; the rest can be driven from the browser pane.
+
+**Commits, in order:**
+1. `docs`: this design.
+2. `feat(core)`: blob-SHA media de-duplication, async file reads for the studio, and the change-set message format.
+3. `feat(admin)`: GitHub storage, cache and API client (`createGitHubApi`), with the contract suite against the fake.
+4. `feat(astro)`: `github` options, repo detection, routes and the schema bundle at build.
+5. `feat(admin)`: sign-in, the user menu, Publish, expiry and errors.
+6. `feat(templates)`: the OAuth relay.
+7. `test`: the fake GitHub, the e2e project and CI.
+8. `docs`: decisions, READMEs, deployment notes and the Phase 3 outcome.
+
+### Open, for Jeremy
+
+Each call has a recommendation, and nothing gets built until you confirm.
+
+1. **GitHub App or OAuth App.**
+   - (a) A GitHub App, recommended. Its tokens reach only the repositories it's installed on, it asks for nothing but Contents and Metadata, and organizations install it like any app.
+   - (b) An OAuth App, as Decap and Sveltia use. Simpler to create, but `repo` reaches every private repository the editor can, and new organizations block it until an owner approves.
+2. **Who makes the app, for self-hosted relays.**
+   - (a) Each site owner, or an agency once for all its sites, creates its own GitHub App, deploys the relay, and installs the app on each repository. Recommended: no shared secret, and the consent screen shows the owner's name.
+   - (b) Only Vesper's shared app, through the free relay. That needs the domain first, so Phase 3 couldn't ship without it.
+3. **Validating with the real schemas in the browser.**
+   - (a) A separate build of `content.config.ts` for the browser at `astro build`, with client shims for `astro:content` and `astro/loaders`, written to `_vesper/` and loaded on first save. Recommended. If that build fails (a config that imports Node-only code), the site still builds, the log says why, and the studio falls back to (b).
+   - (b) Checks from the manifest's field model only (required, types, patterns, options, lengths), with the site's build as the last check, as for custom Markdoc validators. Simpler, but misses refinements such as the image field's "Describe this image, or mark it decorative."
+   - Either way the schemas' code ships with `/admin`, as `vesper.config.ts` already does. Their shapes are already public in `_vesper/manifest.json`.
+4. **Where the token is kept.**
+   - (a) `sessionStorage`, only the 8-hour access token, recommended. It's gone when the tab closes; signing in again is one redirect, since GitHub remembers the approval. No refresh token is kept, so the relay needs no `/refresh`.
+   - (b) `localStorage` with the refresh token, so editors stay signed in for months. Any script on the site's origin could read a long-lived token, and `/admin` shares its origin with the public site and whatever scripts the site loads.
+   - (c) Memory only. The safest, but a reload signs the editor out, which breaks deep links after a reload (CLAUDE.md).
+5. **The editor's button in GitHub mode.**
+   - (a) "Publish", recommended. Saving is publishing here: it commits to the default branch and the site rebuilds. Local mode keeps "Save".
+   - (b) "Save" everywhere, with "Published" in the status after it.
+6. **Where signed-in state and Sign out live.**
+   - (a) The design system's user menu at the right of the top bar: a quiet button with the editor's GitHub login, opening "Signed in to GitHub as @login" and "Sign out". Recommended; it's where the cloud's account will go in Phase 4.
+   - (b) Two items at the end of the Site menu. No new control, but signing out sits among site settings.
+7. **Editors who can't push.**
+   - (a) A plain message and Sign out, recommended.
+   - (b) A read-only studio. More to build and test, and roles and review are cloud features (§4).
+8. **Commit method.**
+   - (a) The Git Data API for every save, as spec §6.8 says, recommended: one path for text and 20 MB uploads alike, with the race retry above.
+   - (b) `createCommitOnBranch` for text-only saves (Verified commits, a true compare-and-swap) and the Git Data API when a save carries an upload. Two paths to test. It would matter for repositories that require signed commits, which (a) can't publish to.
+9. **The real-world check.** Recommended:
+   - a private test repository holding a copy of the playground;
+   - a "Vesper (test)" GitHub App you create;
+   - the relay on your Cloudflare account at a `workers.dev` address;
+   - the site on **Cloudflare Pages**, the one git-connected host with no commit-author rule found.
+
+   Vercel's and Netlify's author rules go in the deployment notes.
+
+**Smaller defaults, built as written unless you say otherwise:**
+- Saves go to the repository's default branch; `github.branch` overrides it.
+- The editor is the commit author; commit messages are plain and end with a `Vesper-Collection` trailer.
+- The relay's allowlist holds whole origins (`https://example.edu`), and preview hosts can be added one by one.
+- GitHub Enterprise Server works through `github.apiUrl`.
+- Tier: nothing is unclear. GitHub mode is free (§4), and so are the relay template and the free relay.
+
+**Not in this phase:** pull-request mode (Phase 9); deploy status and build logs (cloud, §6.16); cloud sign-in and drafts (Phase 4); the free relay's deployment and rules (when the domain exists); a read-only studio; GitLab or Bitbucket.
 
 ## Phase 2.9: outcome
 
@@ -1298,7 +1434,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | **2.8 A11y checks** (new) | — (design above; its product calls are listed for Jeremy there) | layer-1 studio rules and notes drawer; publish gate; layer-2 axe at `astro:build:done` writing `.vesper/a11y-report.json`, never into `dist` |
 | **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done 2026-10-18, CI green in run 39169607328) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above). Calls confirmed 2026-10-19 | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
-| 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators | GitHub adapter passing the storage contract suite; OAuth relay template |
+| 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators. Design above (2026-10-19); its calls are listed for Jeremy there | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); the §13.1 domain; check OpenCage's terms and price (§13.9) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
 | **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
 | 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |
