@@ -278,3 +278,18 @@ export * from './images/index.ts';
 
 // Accessibility checks (spec §6.18): layer-1 content rules, shared by every mode.
 export * from './a11y/index.ts';
+
+// Scheduling (spec §6.17): the publish window the search index and Phase 4.5's build filtering share.
+export { dateOf, isPublished, publishWindow } from './schedule/window.ts';
+
+// Site search (spec §6.19): what the build tells Pagefind about each entry's page.
+export {
+  SECTION_FILTER,
+  firstImage,
+  searchAnnotations,
+  searchSettingsProblems,
+  type SearchAnnotationInput,
+  type SearchAnnotations,
+  type SearchFieldSettings,
+} from './search/annotate.ts';
+export { isHiddenFromSearch, searchHiddenField } from './search/fields.ts';

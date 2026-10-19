@@ -392,6 +392,7 @@ A test runs `astro sync` on the playground and checks Vesper's entry IDs and fil
 - `nullable`, `format`, `coerce`, `defaultDynamic`;
 - `inferredWidget`, `unknownReason`, `extraKeys`;
 - `hidden`, `readOnly`, `placeholder`, `autocomplete`, `safeToEcho`;
+- `search` (Phase 2.9): `'hide'` marks the boolean from `fields.hideFromSearch()`;
 - constraint details: `patternFlags`, `step`, `integer` and inclusive bounds.
 
 The studio needs each of them to render the right control or message. They stay optional, so the spec's shape is still a valid model.

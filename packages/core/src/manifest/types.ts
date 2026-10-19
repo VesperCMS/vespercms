@@ -96,6 +96,13 @@ export type CollectionPresentation = {
   newEntryPath?: string;
   schedule?: SchedulePresentation;
   search?: boolean;
+  /**
+   * The boolean that hides an entry from site search (spec §6.19): a field
+   * from `fields.hideFromSearch()`, or one named `noindex` at the top level
+   * or under `seo`. Absent when the collection has none, has no URL, or
+   * isn't searched; the studio then shows no switch.
+   */
+  searchHidden?: string[];
   /** For tree collections: how many folders deep pages may go (spec §6.15.4). No limit when absent. */
   maxDepth?: number;
   /** The level the body's top headings should have (spec §6.18). 2 when absent: the title is the page's h1. */

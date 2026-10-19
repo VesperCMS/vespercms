@@ -18,6 +18,7 @@ import { globMatcher } from '../collections/entries.ts';
 import type { NativeTarget } from '../urls/hosts.ts';
 import { DEFAULT_URL_SETTINGS, type UrlSettings } from '../urls/pattern.ts';
 import { walkSchema } from '../schema/walk.ts';
+import { searchHiddenField } from '../search/fields.ts';
 import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
 import { manifestHash } from './hash.ts';
 import type {
@@ -372,6 +373,13 @@ function buildCollection(
   }
 
   diagnostics.push(...urlDiagnostics(input.name, source, config));
+  const presentation = presentationOf(config, icons);
+  // A page that isn't searched, or an entry with no page, has nothing to hide.
+  const searchHidden =
+    presentation.url !== undefined && presentation.search !== false
+      ? searchHiddenField(fields)
+      : undefined;
+  if (searchHidden) presentation.searchHidden = searchHidden;
 
   return {
     name: input.name,
@@ -382,7 +390,7 @@ function buildCollection(
     entryKind: source.loader === 'file' ? 'data' : entryKindOf(formats),
     fields,
     ...(extraKeys ? { extraKeys } : {}),
-    presentation: presentationOf(config, icons),
+    presentation,
   };
 }
 

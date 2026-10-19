@@ -77,6 +77,8 @@ export type FieldModel = {
   placement?: 'main' | 'details';
   /** Forms: the value may be repeated in a confirmation email (D20). */
   safeToEcho?: boolean;
+  /** `hide`: the boolean from `fields.hideFromSearch()`, which keeps the entry out of site search (spec §6.19). */
+  search?: 'hide';
 };
 
 export type DiagnosticLevel = 'error' | 'warning' | 'info';

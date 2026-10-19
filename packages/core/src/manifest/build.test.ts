@@ -338,3 +338,44 @@ describe('buildManifest: collection icons', () => {
     }
   });
 });
+
+describe('buildManifest: hide from site search', () => {
+  const pages = (schema: z.ZodType) => ({
+    name: 'pages',
+    loader: { kind: 'glob', base: './src/content/pages', pattern: '**/*.md', customId: false },
+    schema,
+  });
+  const hide = z
+    .boolean()
+    .default(false)
+    .meta({ label: 'Hide from site search', search: 'hide', placement: 'details' });
+
+  it('names the switch for searched collections with pages', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [
+        pages(z.object({ title: z.string(), hidden: hide })),
+      ] as ManifestInput['collections'],
+      config: { collections: { pages: { url: '/:id' } } },
+    });
+    expect(manifest.collections[0]?.presentation.searchHidden).toEqual(['hidden']);
+    expect(manifest.collections[0]?.fields?.[1]).toMatchObject({ search: 'hide', default: false });
+  });
+
+  it('has none without a URL, with search: false, or without the field', async () => {
+    const build = async (schema: z.ZodType, config: object) =>
+      (
+        await buildManifest({
+          site: { srcDir: 'src' },
+          collections: [pages(schema)] as ManifestInput['collections'],
+          config: { collections: { pages: config } },
+        })
+      ).collections[0]?.presentation.searchHidden;
+    expect(await build(z.object({ hidden: hide }), {})).toBeUndefined();
+    expect(await build(z.object({ hidden: hide }), { url: '/:id', search: false })).toBeUndefined();
+    expect(await build(z.object({ title: z.string() }), { url: '/:id' })).toBeUndefined();
+    expect(
+      await build(z.object({ seo: z.object({ noindex: z.boolean() }) }), { url: '/:id' }),
+    ).toEqual(['seo', 'noindex']);
+  });
+});

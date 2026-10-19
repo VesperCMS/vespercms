@@ -43,6 +43,7 @@ const META_KEYS = [
   'autocomplete',
   'placement',
   'safeToEcho',
+  'search',
 ] as const;
 
 /** Marker meta Vesper puts on the `image()` it hands to schema functions. Never copied out. */
