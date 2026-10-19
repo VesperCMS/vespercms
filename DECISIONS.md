@@ -192,7 +192,7 @@ Geocoding (cloud address search) is still open. It is decided before Phase 4.
 - A studio compiled per site from TypeScript and Tailwind would be slow and fragile, so the heavy part ships ready-made.
 - The site needs no `@astrojs/react` and no Tailwind, and Astro's `base` and `studio.deploy: false` keep working.
 
-Open risk, tested with a fixture site: a site that already depends on React 18 must not make the studio load the wrong React.
+A site on React 18 can't run the studio: it resolves the site's React. Jeremy chose on 2026-10-19 to require React 19 rather than ship the studio its own copy (see "The studio needs React 19").
 
 ### 2026-10-17: MDX components need a declared schema (spec §13.6)
 
@@ -341,6 +341,10 @@ Every change is announced in a polite live region: "Nursing moved under Academic
 **The crop dialog's box is one focusable element with `role="application"`, named "Crop box for Wide (16:9)" and described by its position and its keys.** A two-way box has no ARIA widget role, and `application` is the role that makes screen readers pass the arrow keys through to it. jsx-a11y counts it as non-interactive, so that one element carries a lint exception with the reason (confirmed by Jeremy, 2026-10-19; his screen reader pass can still send it back to number fields). The box takes focus as the dialog opens, in a layout effect: React's `autoFocus` works only on form controls, and React Aria's dialog focuses itself unless focus is already inside. Arrows move it 1%, Shift+→ and Shift+↓ grow it and Shift+← and Shift+↑ shrink it around its centre, Enter applies and Escape cancels; each change is announced. The corner handles are for the pointer and hidden from assistive technology.
 
 **Where it lives (spec §10.4):** inside the image field, behind one "Focal point & crops" disclosure, and only for fields that store a focal point or crops. The crop tools are behind each preview's "Adjust crop" button, in a dialog in a new wide size whose one primary action is "Apply crop". No icon-only buttons, no tabs, hairline borders; the image outside the crop is dimmed with the `content` token at half strength.
+
+### 2026-10-19: The studio needs React 19
+
+**When `/admin` is part of the build (always in `astro dev`, and in builds unless `studio.deploy: false`), the integration reads the version of `react` that `@vesper/admin` resolves, and stops with a plain message if it's older than 19 or missing: "Vesper's studio needs React 19, and this site has React 18.3.1. Install React 19 with `npm install react@19 react-dom@19`, then restart."** The studio is bundled by the site's Vite with the site's custom widgets, so it runs on the site's React, and React 18 would fail in the browser instead of at build. npm already refuses the peer conflict at install; pnpm and Yarn only warn, so this is the backstop. Rejected: loading the studio's own React beside the site's. Two Reacts on one page break hooks in custom widgets, which must share the studio's React, and React 19 is nearly two years old.
 
 ## Schema introspection
 

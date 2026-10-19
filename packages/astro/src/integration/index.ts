@@ -8,6 +8,7 @@ import { withCropStep } from '../images/register.ts';
 import { checkBuild, summaryLine, type A11yBuildOptions } from './a11y.ts';
 import { siteConfigFiles } from '../node/load-site.ts';
 import { writeManifest } from '../node/manifest.ts';
+import { reactProblem, reactVersionFrom } from './react-check.ts';
 import { buildRedirects, urlSettings, writeHostRules, type BuildRedirects } from './redirects.ts';
 import { staticRoutesFromFiles, staticRoutesOf, type ResolvedRoute } from './routes.ts';
 import { checkSite, withRoutes } from './site-check.ts';
@@ -129,6 +130,11 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         if (files.vesperConfig) addWatchFile(files.vesperConfig);
 
         const adminEntry = fileURLToPath(import.meta.resolve('@vesper/admin'));
+        // The studio runs on the React its own package resolves, which is the site's.
+        if (command === 'dev' || options.studio?.deploy !== false) {
+          const problem = reactProblem(reactVersionFrom(adminEntry));
+          if (problem) throw new Error(problem);
+        }
         const adminCss = fileURLToPath(import.meta.resolve('@vesper/admin/studio.css'));
         const studioFromSource = adminCss.endsWith(`${sep}src${sep}studio.css`);
         const plugins: PluginOption[] = [
