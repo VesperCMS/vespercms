@@ -305,3 +305,4 @@ export {
   type GitHubErrorKind,
   type GitHubStorageOptions,
 } from './storage/github.ts';
+export { fieldModelIssues } from './studio/field-checks.ts';

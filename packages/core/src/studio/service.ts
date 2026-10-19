@@ -283,6 +283,7 @@ export class ContentService {
       [change, ...extra],
       `Delete "${titleOf(collection, entry.data, id)}" from ${collection.label}`,
       { id, path: entry.path, version: '', reformatted: false },
+      collection.name,
     );
   }
 
@@ -333,6 +334,7 @@ export class ContentService {
       [{ op: 'put', path: entry.path, bytes: result.bytes, expectedVersion: entry.file.version }],
       `Update "${title}" in ${collection.label}`,
       { id, path: entry.path, version: '', reformatted: result.reformatted },
+      collection.name,
     );
     if (!response.ok) return response;
     // The version the editor continues from: re-locate, since a slug edit can change the id.
@@ -370,6 +372,7 @@ export class ContentService {
         [{ op: 'put', path: source.path, bytes: next.bytes, expectedVersion: existing.version }],
         `Add "${titleOf(collection, values, slug)}" to ${collection.label}`,
         { id: slug, path: source.path, version: '', reformatted: next.reformatted },
+        collection.name,
       );
       if (!response.ok) return response;
       const after = await this.locate(collection, slug);
@@ -414,6 +417,7 @@ export class ContentService {
       [...placement, { op: 'put', path, bytes, expectedVersion: null }],
       `Add "${titleOf(collection, values, id)}" to ${collection.label}`,
       { id, path, version: await gitBlobSha(bytes), reformatted: false },
+      collection.name,
     );
     return response;
   }
@@ -432,13 +436,23 @@ export class ContentService {
     return { ok: false, reason: 'invalid', issues: [], bodyIssues };
   }
 
-  /** Commits a change set, answering in the studio's terms. */
+  /**
+   * Commits a change set, answering in the studio's terms. Adapters with
+   * history record the collection as a `Vesper-Collection` trailer.
+   */
   async commit(
     changes: FileChange[],
     summary: string,
     success: { id: string; path: string; version: string; reformatted: boolean },
+    collection?: string,
   ): Promise<SaveResponse> {
-    const result = await this.storage.commit({ changes, message: { summary } });
+    const result = await this.storage.commit({
+      changes,
+      message: {
+        summary,
+        ...(collection ? { trailers: { 'Vesper-Collection': collection } } : {}),
+      },
+    });
     if (result.ok) {
       const put = changes.find(
         (c): c is Extract<FileChange, { op: 'put' }> => c.op === 'put' && c.path === success.path,
