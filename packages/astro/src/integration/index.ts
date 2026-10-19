@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { humanize } from '@vesper/core';
@@ -9,9 +9,12 @@ import { checkBuild, summaryLine, type A11yBuildOptions } from './a11y.ts';
 import { siteConfigFiles } from '../node/load-site.ts';
 import { writeManifest } from '../node/manifest.ts';
 import { reactProblem, reactVersionFrom } from './react-check.ts';
+import { indexSearch, openSearchXml, type SearchOptions } from './search.ts';
+import { searchPlugin } from './search-plugin.ts';
 import { buildRedirects, urlSettings, writeHostRules, type BuildRedirects } from './redirects.ts';
 import { staticRoutesFromFiles, staticRoutesOf, type ResolvedRoute } from './routes.ts';
 import { checkSite, withRoutes } from './site-check.ts';
+import { formatUrl } from '@vesper/core';
 import { SiteModelCache } from './site-model.ts';
 import { studioPlugin } from './vite-plugin.ts';
 import { widgetJsxPlugin } from './widget-jsx.ts';
@@ -45,6 +48,14 @@ export type VesperOptions = {
    * by default the build never fails. `false` turns the check off.
    */
   a11y?: false | A11yBuildOptions;
+  /**
+   * Site search (spec §6.19, D23). When a page uses `<Search>`, every build
+   * indexes the site with Pagefind into `_vesper/search/`: plain files that
+   * work on any host. `filters` and `sort` name each collection's fields
+   * (`{ blog: ['tags'] }`), `exclude` leaves pages out by URL
+   * (`['/tags/**']`). `false` turns search off.
+   */
+  search?: false | SearchOptions;
 };
 
 /** A file in ../runtime: TypeScript in this workspace, JavaScript once built. */
@@ -59,6 +70,8 @@ const TOOLBAR_ICON =
 
 /** The studio page, shipped beside src/ and dist/ so both resolve it the same way. */
 const ADMIN_PAGE = new URL('../../pages/admin.astro', import.meta.url);
+/** The /search page, injected unless the site has its own (spec §6.19). */
+const SEARCH_PAGE = new URL('../../pages/search.astro', import.meta.url);
 
 /**
  * The Vesper integration (spec §6.1). Zero config:
@@ -78,6 +91,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
   /** The build's cleaned redirects, written as host rules when the build is done. */
   let redirects: BuildRedirects | null = null;
   const logged = new Set<string>();
+  let siteName = 'Your site';
   const staticRoutes = () =>
     resolved ? staticRoutesOf(resolved, root) : staticRoutesFromFiles(root, srcDir);
 
@@ -113,8 +127,12 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         );
 
         const base = config.base.endsWith('/') ? config.base : `${config.base}/`;
+        siteName = options.siteName ?? siteNameOf(config.site, root);
         if (command === 'dev' || options.studio?.deploy !== false) {
           injectRoute({ pattern: '/admin', entrypoint: ADMIN_PAGE, prerender: true });
+        }
+        if (options.search !== false && !staticRoutesFromFiles(root, srcDir).has('/search')) {
+          injectRoute({ pattern: '/search', entrypoint: SEARCH_PAGE, prerender: true });
         }
         if (command === 'dev') {
           // "Edit this page": which entries each page reads (spec §6.10). Dev only.
@@ -139,6 +157,20 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         const studioFromSource = adminCss.endsWith(`${sep}src${sep}studio.css`);
         const plugins: PluginOption[] = [
           widgetJsxPlugin(files.vesperConfig),
+          searchPlugin({
+            cache,
+            search: options.search || {},
+            settings: {
+              base: config.base,
+              trailingSlash: config.trailingSlash,
+              buildFormat: config.build.format,
+              ...(config.site ? { site: config.site } : {}),
+            },
+            siteName,
+            dist: fileURLToPath(config.outDir),
+            sitemap: config.integrations.some((i) => i.name === '@astrojs/sitemap'),
+            dev: command === 'dev' && options.search !== false,
+          }),
           studioPlugin({
             root,
             cache,
@@ -147,7 +179,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             apiBase: `${base}_vesper/api/`,
             routes: staticRoutes,
             helpersEntry: fileURLToPath(runtimeFile('helpers')),
-            siteName: options.siteName ?? siteNameOf(config.site, root),
+            siteName,
             siteUrl: base,
             command,
             adminEntry,
@@ -255,6 +287,31 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
           else logger.warn(summaryLine(result));
           // Thrown after the report is written, so the reasons are there to read.
           if (result.failed) throw new Error(result.failed);
+        }
+        if (options.search !== false) {
+          const settings = urlSettings(model);
+          const dist = fileURLToPath(dir);
+          const result = await indexSearch({
+            root,
+            dist,
+            model,
+            settings,
+            routes: staticRoutes,
+            search: options.search ?? {},
+          });
+          for (const line of result.info) logger.info(line);
+          for (const line of result.warnings) logger.warn(line);
+          if (result.built && settings.site) {
+            writeFileSync(
+              join(dist, 'opensearch.xml'),
+              openSearchXml({
+                siteName,
+                site: settings.site,
+                searchPage: formatUrl('/search', settings),
+              }),
+            );
+            logger.info('Wrote opensearch.xml');
+          }
         }
       },
     },

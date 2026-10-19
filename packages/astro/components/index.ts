@@ -1,7 +1,8 @@
 /*
- * `@vesper/astro/components` (spec §6.6.5): `<Img>`, and `getImg()` for the
- * places an `<img>` can't go, such as `og:image`. Shipped as source, like the
- * `/admin` page, for the site's own Astro to compile.
+ * `@vesper/astro/components`: `<Img>`, and `getImg()` for the places an
+ * `<img>` can't go, such as `og:image` (spec §6.6.5); `<Search>` and
+ * `<SearchHead>` (spec §6.19). Shipped as source, like the `/admin` page,
+ * for the site's own Astro to compile.
  */
 import type { GetImageResult } from 'astro';
 import { getImage, imageConfig } from 'astro:assets';
@@ -9,6 +10,8 @@ import { imageContext, planImg, type CroppedImageProps } from '@vesper/astro/ima
 import { ratios } from 'virtual:vesper/images';
 
 export { default as Img } from './Img.astro';
+export { default as Search } from './Search.astro';
+export { default as SearchHead } from './SearchHead.astro';
 export type {
   CroppedImageProps,
   ImageFieldValue,

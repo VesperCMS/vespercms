@@ -1,0 +1,46 @@
+---
+/*
+ * The /search page (spec §6.19), injected unless the site has its own
+ * src/pages/search.astro. Deliberately plain, since it can't know the
+ * site's layout: a site that wants its own look adds that page with
+ * <Search variant="inline" /> in its layout. It reads ?q= and searches on
+ * load. Search engines are asked not to index it.
+ */
+import Search from '../components/Search.astro';
+import SearchHead from '../components/SearchHead.astro';
+import { search } from 'virtual:vesper/search';
+import { stringsFor } from '../components/search/strings.ts';
+
+const lang = Astro.currentLocale ?? 'en';
+const t = stringsFor(search.strings, lang);
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{`${t.pageTitle} · ${search.siteName}`}</title>
+    <SearchHead />
+    <style is:global>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        max-width: 46rem;
+        margin: 0 auto;
+        padding: 1rem;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <p><a href={search.home}>{search.siteName}</a></p>
+    <main>
+      <h1>{t.pageTitle}</h1>
+      <Search variant="inline" lang={lang} />
+    </main>
+  </body>
+</html>

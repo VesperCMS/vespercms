@@ -1,0 +1,18 @@
+---
+/*
+ * <SearchHead /> goes in the layout's <head>: it tells browsers about the
+ * site's search (opensearch.xml), so they can offer it from the address
+ * bar. `rel="search"` isn't allowed in <body>, which is why it's separate
+ * from <Search>. Renders nothing without Astro's `site`.
+ */
+import { search } from 'virtual:vesper/search';
+---
+
+{search.openSearch && (
+  <link
+    rel="search"
+    type="application/opensearchdescription+xml"
+    title={search.siteName}
+    href={search.openSearch}
+  />
+)}
