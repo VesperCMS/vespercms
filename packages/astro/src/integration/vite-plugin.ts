@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { DEFAULT_URL_SETTINGS, folderKey, readDataFile, siteRatios } from '@vesper/core';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createDevApi } from './dev-api.ts';
-import type { StaticRoutes } from '@vesper/core';
+import type { CloudStudioSettings, StaticRoutes } from '@vesper/core';
 import type { SiteModel } from '../node/manifest.ts';
 import type { HelperData } from '../runtime/helpers.ts';
 import type { GitHubSettings } from '../node/github.ts';
@@ -41,6 +41,8 @@ export type StudioPluginOptions = {
   studioFromSource: boolean;
   /** GitHub mode's settings in a built site, or null (spec §6.8). */
   github?: () => GitHubSettings | null;
+  /** The cloud's settings in a built site, or null (spec §6.9). */
+  cloud?: () => CloudStudioSettings | null;
   /** The site's static routes, for the dev API's collision checks. */
   routes?: () => StaticRoutes;
   /** The `vesper:content` helpers' runtime (runtime/helpers): TypeScript here, JavaScript once built. */
@@ -181,8 +183,12 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       }
       if (name === STUDIO) {
         const github = options.command === 'build' ? (options.github?.() ?? null) : null;
+        const cloud = options.command === 'build' ? (options.cloud?.() ?? null) : null;
         const { manifest } = await options.cache.get();
-        const routes = github ? [...(options.routes?.() ?? new Map<string, string>())] : [];
+        const routes =
+          github || cloud ? [...(options.routes?.() ?? new Map<string, string>())] : [];
+        // Built for the browser with the manifest's hash, so a new build is fetched anew.
+        const schemas = `${options.siteUrl}_vesper/schemas.js?v=${manifest.hash.slice(0, 12)}`;
         return [
           `import { createLocalApi, mountStudio } from ${JSON.stringify(toPosix(options.adminEntry))};`,
           `import ${JSON.stringify(toPosix(options.adminCss))};`,
@@ -194,20 +200,13 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           '    manifest,',
           '    widgets,',
           '    loadMdxProps,',
-          // Local mode only while astro dev runs; GitHub and cloud modes arrive in Phases 3 and 4.
+          // Local mode while astro dev runs; GitHub and cloud modes in built sites.
           `    api: import.meta.env.DEV ? createLocalApi(${JSON.stringify(options.apiBase)}) : null,`,
           `    siteName: ${JSON.stringify(options.siteName)},`,
           `    siteUrl: ${JSON.stringify(options.siteUrl)},`,
-          // GitHub mode in a built site (spec §6.8): the schemas built for the
-          // browser carry the manifest's hash, so a new build is fetched anew.
-          `    github: import.meta.env.DEV ? null : ${JSON.stringify(
-            github
-              ? {
-                  ...github,
-                  schemas: `${options.siteUrl}_vesper/schemas.js?v=${manifest.hash.slice(0, 12)}`,
-                }
-              : null,
-          )},`,
+          // GitHub mode (spec §6.8) and the cloud (spec §6.9) in a built site.
+          `    github: import.meta.env.DEV ? null : ${JSON.stringify(github ? { ...github, schemas } : null)},`,
+          `    cloud: import.meta.env.DEV ? null : ${JSON.stringify(cloud ? { ...cloud, schemas } : null)},`,
           `    routes: ${JSON.stringify(routes)},`,
           '    loadUrlFunctions,',
           '  });',

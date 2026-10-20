@@ -1,11 +1,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { humanize } from '@vesper/core';
+import { humanize, type CloudStudioSettings } from '@vesper/core';
 import type { AstroIntegration } from 'astro';
 import type { PluginOption } from 'vite';
 import { withCropStep } from '../images/register.ts';
 import { checkBuild, summaryLine, type A11yBuildOptions } from './a11y.ts';
+import { cloudSettings, type CloudOptions } from '../node/cloud.ts';
 import { siteConfigFiles } from '../node/load-site.ts';
 import {
   buildSchemaBundle,
@@ -70,6 +71,13 @@ export type VesperOptions = {
    * git when absent. `astro dev` stays local mode.
    */
   github?: GitHubOptions;
+  /**
+   * The cloud (spec §6.9): editors sign in to Vesper on the deployed site,
+   * and their saves are drafts until someone publishes them. `true` reads the
+   * project ID and the cloud's addresses from `VESPER_PROJECT`,
+   * `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`. `astro dev` stays local mode.
+   */
+  cloud?: CloudOptions | boolean;
 };
 
 /** A file in ../runtime: TypeScript in this workspace, JavaScript once built. */
@@ -108,6 +116,8 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
   let siteName = 'Your site';
   /** GitHub mode's settings for built sites, or null. */
   let github: GitHubSettings | null = null;
+  /** The cloud's settings for built sites, or null. */
+  let cloud: CloudStudioSettings | null = null;
   let contentConfig: string | undefined;
   const staticRoutes = () =>
     resolved ? staticRoutesOf(resolved, root) : staticRoutesFromFiles(root, srcDir);
@@ -137,6 +147,11 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             github = found.settings;
             for (const note of found.notes) logger.warn(note);
           }
+        }
+        if (options.cloud && command === 'build') {
+          const found = cloudSettings(options.cloud);
+          if ('problem' in found) logger.warn(found.problem);
+          else cloud = found.settings;
         }
         cache = new SiteModelCache(
           {
@@ -212,6 +227,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             adminCss,
             studioFromSource,
             github: () => github,
+            cloud: () => cloud,
           }),
         ];
         // In this workspace the studio's stylesheet is its Tailwind source,
@@ -315,20 +331,28 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
           // Thrown after the report is written, so the reasons are there to read.
           if (result.failed) throw new Error(result.failed);
         }
-        if (github && contentConfig) {
+        if ((github || cloud) && contentConfig) {
           // The real schemas for the studio in the browser (spec §6.3.1), or why not.
           const built = await buildSchemaBundle({
             root,
             contentConfig,
             outFile: fileURLToPath(new URL('_vesper/schemas.js', dir)),
           });
+          const modes = [
+            github
+              ? `GitHub mode: publishing to ${github.owner}/${github.repo} (${github.branch}).`
+              : '',
+            cloud ? `Cloud: editors sign in to Vesper for project ${cloud.project}.` : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
           if (built.ok) {
             logger.info(
-              `GitHub mode: publishing to ${github.owner}/${github.repo} (${github.branch}). The studio checks entries with your content schemas (_vesper/schemas.js, ${String(Math.round(built.bytes / 1024))} KB).`,
+              `${modes} The studio checks entries with your content schemas (_vesper/schemas.js, ${String(Math.round(built.bytes / 1024))} KB).`,
             );
           } else {
             logger.warn(
-              `GitHub mode: your content schemas couldn't be built for the browser (${built.reason}). The studio checks entries from the manifest instead, and the site's build is the last check.`,
+              `${modes} Your content schemas couldn't be built for the browser (${built.reason}). The studio checks entries from the manifest instead, and the site's build is the last check.`,
             );
           }
         }

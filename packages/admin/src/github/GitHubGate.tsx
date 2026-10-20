@@ -20,7 +20,7 @@ import {
  * GitHub as its back end. One primary action per screen (spec §10.4).
  */
 
-type GateOptions = Omit<StudioOptions, 'api' | 'github' | 'account'>;
+type GateOptions = Omit<StudioOptions, 'api' | 'github' | 'account' | 'cloud'>;
 
 const defaultFetch: typeof fetch = (input, init) => fetch(input, init);
 const noProps = () => Promise.resolve({});
@@ -132,7 +132,14 @@ export function GitHubGate({
   const account = useMemo<Account | null>(
     () =>
       state.kind === 'ready'
-        ? { login: state.login, signOut: leave, signInAgain: signIn, expired }
+        ? {
+            label: `@${state.login}`,
+            description: `Signed in to GitHub as @${state.login}`,
+            signOutLabel: 'Sign out of GitHub',
+            signOut: leave,
+            signInAgain: signIn,
+            expired,
+          }
         : null,
     [state, leave, signIn, expired],
   );

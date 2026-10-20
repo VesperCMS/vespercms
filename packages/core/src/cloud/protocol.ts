@@ -116,6 +116,7 @@ export type SaveDraftRequest = {
 export type SaveDraftResponse =
   | { ok: true; version: string; draft: Draft | null }
   | { ok: false; reason: 'conflict'; conflicts: Conflict[] }
+  | { ok: false; reason: 'rejected'; message: string }
   | { ok: false; reason: 'forbidden'; path: string; message: string };
 
 /** `POST /sites/{site}/publish`: drafts committed as one commit. */

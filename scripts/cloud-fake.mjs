@@ -340,7 +340,7 @@ export function createCloudFake(options) {
         { changes, message: body.message },
         by(p),
       );
-      if (!saved.ok) return json(request, 409, saved);
+      if (!saved.ok) return json(request, saved.reason === 'conflict' ? 409 : 400, saved);
       return json(request, 200, {
         ok: true,
         version: String(state.drafts.version),

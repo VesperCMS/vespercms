@@ -73,6 +73,14 @@ export type CloudClientOptions = {
   /** Renew this long before the access token expires. */
   marginMs?: number;
   now?: () => number;
+  /**
+   * Runs a renewal alone across the browser's tabs (a Web Lock). Refresh
+   * tokens rotate, and a used one coming back ends the sign-in, so two tabs
+   * renewing at once would sign each other out.
+   */
+  exclusive?: <T>(work: () => Promise<T>) => Promise<T>;
+  /** The newest tokens another tab may have stored, read inside `exclusive`. */
+  latest?: () => Promise<CloudTokens | null>;
 };
 
 const isErrorBody = (body: unknown): body is CloudErrorBody =>
@@ -93,6 +101,8 @@ export class CloudClient {
   private readonly onTokens: ((tokens: CloudTokens | null) => void) | undefined;
   private readonly margin: number;
   private readonly now: () => number;
+  private readonly exclusive: <T>(work: () => Promise<T>) => Promise<T>;
+  private readonly latest: (() => Promise<CloudTokens | null>) | undefined;
   private renewing: Promise<void> | null = null;
 
   constructor(options: CloudClientOptions) {
@@ -103,6 +113,8 @@ export class CloudClient {
     this.onTokens = options.onTokens;
     this.margin = options.marginMs ?? 30_000;
     this.now = options.now ?? (() => Date.now());
+    this.exclusive = options.exclusive ?? ((work) => work());
+    this.latest = options.latest;
   }
 
   get signedIn(): boolean {
@@ -169,14 +181,24 @@ export class CloudClient {
     this.onTokens?.(null);
   }
 
+  /** Renews unless another tab already has, adopting its tokens. */
+  private renew(): Promise<void> {
+    return this.exclusive(async () => {
+      const stored = await this.latest?.();
+      if (stored && stored.refresh !== this.tokens?.refresh) {
+        this.tokens = stored;
+        if (stored.expiresAt - this.margin > this.now()) return;
+      }
+      await this.refresh();
+    });
+  }
+
   private async fresh(): Promise<string> {
     if (!this.tokens) throw new CloudError(401, 'invalid_token', 'Sign in to Vesper again.');
     if (this.tokens.expiresAt - this.margin <= this.now()) {
-      this.renewing ??= this.refresh()
-        .then(() => undefined)
-        .finally(() => {
-          this.renewing = null;
-        });
+      this.renewing ??= this.renew().finally(() => {
+        this.renewing = null;
+      });
       // A failed renewal throws, so past here the tokens are fresh.
       await this.renewing;
     }
@@ -209,7 +231,7 @@ export class CloudClient {
     };
     let response = await send();
     if (response.status === 401 && this.tokens) {
-      await this.refresh();
+      await this.renew();
       response = await send();
     }
     const answer = (await response.json().catch(() => null)) as unknown;

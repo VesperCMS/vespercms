@@ -150,7 +150,7 @@ function DefaultBar() {
           if (id === 'view' && siteUrl) window.open(siteUrl, '_blank', 'noopener');
         }}
       />
-      {/* GitHub mode: who is signed in, and the way out (spec §6.9). */}
+      {/* GitHub mode and the cloud: who is signed in, and the way out (spec §6.9). */}
       {account &&
         (account.expired ? (
           <Button variant="quiet" onPress={account.signInAgain}>
@@ -158,11 +158,17 @@ function DefaultBar() {
           </Button>
         ) : (
           <Menu
-            label={`Signed in to GitHub as @${account.login}`}
-            triggerText={`@${account.login}`}
-            items={[{ id: 'sign-out', label: 'Sign out of GitHub' }]}
-            onAction={() => {
-              account.signOut();
+            label={account.description}
+            triggerText={account.label}
+            items={[
+              ...(account.dashboardUrl ? [{ id: 'dashboard', label: 'Open dashboard' }] : []),
+              { id: 'sign-out', label: account.signOutLabel },
+            ]}
+            onAction={(id) => {
+              if (id === 'dashboard' && account.dashboardUrl) {
+                window.open(account.dashboardUrl, '_blank', 'noopener');
+              }
+              if (id === 'sign-out') account.signOut();
             }}
           />
         ))}

@@ -9,7 +9,9 @@ import { NotFound } from '../screens/NotFound.tsx';
 import { PageTree } from '../screens/PageTree.tsx';
 import { Redirects } from '../screens/Redirects.tsx';
 import { Unavailable } from '../screens/Unavailable.tsx';
+import { CloudGate } from '../cloud/CloudGate.tsx';
 import { GitHubGate } from '../github/GitHubGate.tsx';
+import { readSession } from '../github/session.ts';
 import type { StudioOptions, WidgetComponent, WidgetLoader } from '../types.ts';
 import { StudioContext, VESPER_NAME, type Studio } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
@@ -29,6 +31,8 @@ export function App({
   routes,
   loadUrlFunctions,
   account,
+  cloud,
+  connection,
 }: StudioOptions) {
   const { route, pending, leave, stay } = useRouter();
   const navigation = useNavigationCount(route);
@@ -47,8 +51,9 @@ export function App({
       siteUrl,
       collection: (name) => byName.get(name),
       ...(account ? { account } : {}),
+      ...(connection ? { cloud: connection } : {}),
     };
-  }, [manifest, api, widgets, loadMdxProps, siteName, siteUrl, account]);
+  }, [manifest, api, widgets, loadMdxProps, siteName, siteUrl, account, connection]);
 
   // Stable, so the gate keeps one GitHub API for the whole visit.
   const gateOptions = useMemo(
@@ -65,7 +70,10 @@ export function App({
   );
 
   if (!studio) {
-    // GitHub mode: sign in first, then this same App with GitHub as its back end.
+    // Sign in first, then this same App with the cloud or GitHub as its back end.
+    // The cloud's gate offers GitHub too; once GitHub is chosen, its own gate takes over.
+    if (cloud && !(github && gitHubChosen()))
+      return <CloudGate settings={cloud} github={github ?? null} options={gateOptions} />;
     if (github) return <GitHubGate settings={github} options={gateOptions} />;
     return <Unavailable siteName={siteName} />;
   }
@@ -163,4 +171,10 @@ function useNavigationCount(route: Route): { count: number } {
     setCount((n) => n + 1);
   }, [key]);
   return useMemo(() => ({ count }), [count]);
+}
+
+/** True when the editor signed in with GitHub, or is on the way back from doing so. */
+function gitHubChosen(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  return params.has('github') || params.has('github_error') || readSession() !== null;
 }

@@ -1,4 +1,6 @@
 import type { Manifest, UrlEntry, WidgetProps } from '@vesper/core';
+import type { CloudConnection } from './cloud/connection.ts';
+import type { CloudSettings } from './cloud/session.ts';
 import type { GitHubStudioSettings } from './github/session.ts';
 import type { ComponentType } from 'react';
 import type { StudioApi } from './app/api.ts';
@@ -42,14 +44,27 @@ export type StudioOptions = {
   routes?: readonly (readonly [string, string])[];
   /** Function-form URL patterns from vesper.config.ts, for GitHub mode's moves and links. */
   loadUrlFunctions?: () => Promise<Readonly<Record<string, (entry: UrlEntry) => unknown>>>;
-  /** Who is signed in, set by GitHub mode. */
+  /** Who is signed in, set by GitHub mode and the cloud. */
   account?: Account;
+  /**
+   * The cloud in a built site (spec §6.9): with no `api`, the studio signs
+   * the editor in to Vesper, and saves become drafts.
+   */
+  cloud?: CloudSettings | null;
+  /** The studio connected to the cloud, set by the cloud's gate once signed in. */
+  connection?: CloudConnection;
 };
 
-/** The signed-in editor, in GitHub mode. */
+/** The signed-in editor, in GitHub mode or the cloud: the user menu shows it. */
 export type Account = {
-  /** The GitHub login, shown as `@login`. */
-  login: string;
+  /** The user menu's button: `@login` on GitHub, the person's name on Vesper. */
+  label: string;
+  /** The menu's name: "Signed in to GitHub as @login". */
+  description: string;
+  /** The menu's way out: "Sign out of GitHub", "Sign out of Vesper". */
+  signOutLabel: string;
+  /** The cloud's dashboard, for "Open dashboard". */
+  dashboardUrl?: string;
   signOut: () => void;
   /** Signs in again after the session expired, coming back to the same screen. */
   signInAgain: () => void;

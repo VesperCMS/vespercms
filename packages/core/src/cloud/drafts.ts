@@ -1,4 +1,6 @@
 import { gitBlobSha } from '../storage/git-blob-sha.ts';
+import { normalizePath } from '../storage/paths.ts';
+import { validateChangeSet } from '../storage/validate.ts';
 import type {
   ChangeSet,
   Conflict,
@@ -84,12 +86,14 @@ type Pending = { path: string; bytes: Uint8Array | null };
 
 export type SaveResult =
   | { ok: true; draft: StoredDraft | null }
-  | { ok: false; reason: 'conflict'; conflicts: Conflict[] };
+  | { ok: false; reason: 'conflict'; conflicts: Conflict[] }
+  | { ok: false; reason: 'rejected'; message: string };
 
 /**
- * Saves a change set as a draft. Expected versions are checked against the
- * site as its drafts show it, exactly as a storage adapter checks them, so
- * two editors on one entry get a conflict rather than an overwrite.
+ * Saves a change set as a draft. Paths and expected versions are checked
+ * by `validateChangeSet` against the site as its drafts show it, exactly as
+ * every storage adapter checks them, so two editors on one entry get a
+ * conflict rather than an overwrite.
  *
  * Files already in a draft keep their draft: a save touching files of
  * several drafts joins them into one, since a move and the links it
@@ -103,40 +107,44 @@ export async function saveDraft(
   by: { id: string; name: string },
   options: { now?: Date; newId?: () => string } = {},
 ): Promise<SaveResult> {
-  const current = async (path: string) =>
-    (await readOverlay(state, published, path))?.version ?? null;
-  const conflicts: Conflict[] = [];
-  const check = async (path: string, expected: string | null | undefined) => {
-    if (expected === undefined) return;
-    const actual = await current(path);
-    if (actual !== expected) conflicts.push({ path, expected, actual });
-  };
-  const pending: Pending[] = [];
+  // The current version of every path the change set names, for the synchronous check.
+  const versions = new Map<string, string | null>();
   for (const change of changeSet.changes) {
-    if (change.op === 'put') {
-      await check(change.path, change.expectedVersion);
-      pending.push({ path: change.path, bytes: change.bytes });
-    } else if (change.op === 'delete') {
-      await check(change.path, change.expectedVersion);
-      pending.push({ path: change.path, bytes: null });
-    } else {
-      await check(change.from, change.expectedVersion);
-      const bytes = change.bytes ?? (await readOverlay(state, published, change.from))?.bytes;
-      if (!bytes) {
-        conflicts.push({
-          path: change.from,
-          expected: change.expectedVersion ?? null,
-          actual: null,
-        });
+    for (const raw of change.op === 'move' ? [change.from, change.to] : [change.path]) {
+      let path: string;
+      try {
+        path = normalizePath(raw);
+      } catch {
         continue;
       }
-      if ((await current(change.to)) !== null) {
-        conflicts.push({ path: change.to, expected: null, actual: await current(change.to) });
+      if (!versions.has(path)) {
+        versions.set(path, (await readOverlay(state, published, path))?.version ?? null);
       }
+    }
+  }
+  const checked = validateChangeSet(changeSet, (path) => versions.get(path) ?? null);
+  if (!checked.ok) {
+    const result = checked.result;
+    if (result.ok) return { ok: false, reason: 'rejected', message: 'Nothing to save.' };
+    return result.reason === 'conflict'
+      ? { ok: false, reason: 'conflict', conflicts: result.conflicts }
+      : { ok: false, reason: 'rejected', message: result.message };
+  }
+  const pending: Pending[] = [];
+  for (const change of checked.changes) {
+    if (change.op === 'put') pending.push({ path: change.path, bytes: change.bytes });
+    else if (change.op === 'delete') pending.push({ path: change.path, bytes: null });
+    else {
+      const bytes = change.bytes ?? (await readOverlay(state, published, change.from))?.bytes;
+      if (!bytes)
+        return {
+          ok: false,
+          reason: 'conflict',
+          conflicts: [{ path: change.from, expected: null, actual: null }],
+        };
       pending.push({ path: change.from, bytes: null }, { path: change.to, bytes });
     }
   }
-  if (conflicts.length > 0) return { ok: false, reason: 'conflict', conflicts };
 
   // The drafts this save touches become one.
   const touched = new Set(pending.map((p) => p.path));

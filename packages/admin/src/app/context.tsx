@@ -1,6 +1,7 @@
 import type { CollectionManifest, Manifest } from '@vesper/core';
 import { createContext, useContext } from 'react';
 import type { Account, WidgetComponent } from '../types.ts';
+import type { CloudConnection } from '../cloud/connection.ts';
 import type { StudioApi } from './api.ts';
 
 export type Studio = {
@@ -13,8 +14,10 @@ export type Studio = {
   siteName: string;
   siteUrl: string | undefined;
   collection: (name: string) => CollectionManifest | undefined;
-  /** The signed-in editor, in GitHub mode. */
+  /** The signed-in editor, in GitHub mode or the cloud. */
   account?: Account;
+  /** The cloud, when the studio is connected to it. Absent, every cloud feature is absent (spec §6.9). */
+  cloud?: CloudConnection;
 };
 
 /** The name the studio shows when the site gives none: Vesper's own, set lowercase as its wordmark. */
