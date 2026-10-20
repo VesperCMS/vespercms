@@ -51,4 +51,9 @@ export function createCloudFake(options: {
   base?: string;
 }): CloudFake;
 
-export function serveCloudFake(fake: CloudFake, port: number, host?: string): Promise<Server>;
+export function serveCloudFake(
+  fake: CloudFake,
+  port: number,
+  host?: string,
+  options?: { control?: boolean },
+): Promise<Server>;

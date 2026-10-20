@@ -16,6 +16,8 @@ const STATIC_PORT = 4400;
 const STUDIO_PORT = 4401;
 /** GitHub mode's site; 4403 and 4404 are its fake GitHub and relay (scripts/github-site.mjs). */
 const GITHUB_SITE_PORT = 4405;
+/** The cloud's site; 4406 is the fake cloud (scripts/cloud-site.mjs). */
+const CLOUD_SITE_PORT = 4407;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -57,6 +59,20 @@ export default defineConfig({
         baseURL: `http://127.0.0.1:${String(GITHUB_SITE_PORT)}`,
       },
     },
+    {
+      // The cloud (spec §6.9): a built site and a fake cloud publishing to a
+      // fake GitHub over one repository: one at a time, and no retries, for
+      // the same reasons as GitHub mode.
+      name: 'cloud',
+      testMatch: 'cloud/*.spec.ts',
+      fullyParallel: false,
+      workers: 1,
+      retries: 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${String(CLOUD_SITE_PORT)}`,
+      },
+    },
   ],
   webServer: [
     {
@@ -73,6 +89,12 @@ export default defineConfig({
     {
       command: 'node scripts/github-site.mjs --serve',
       url: `http://127.0.0.1:${String(GITHUB_SITE_PORT)}/admin/`,
+      reuseExistingServer: false,
+      timeout: 180_000,
+    },
+    {
+      command: 'node scripts/cloud-site.mjs --serve',
+      url: `http://127.0.0.1:${String(CLOUD_SITE_PORT)}/admin/`,
       reuseExistingServer: false,
       timeout: 180_000,
     },

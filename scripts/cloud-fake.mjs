@@ -511,16 +511,60 @@ export function createCloudFake(options) {
   };
 }
 
-/** Serves a fake cloud over HTTP. While `state.down`, every connection is dropped. */
-export function serveCloudFake(fake, port, host = '127.0.0.1') {
+/**
+ * Serves a fake cloud over HTTP. While `state.down`, every connection is
+ * dropped. With `control`, the end-to-end tests drive it at `/__test/…`,
+ * which answers even while it's down:
+ * - `POST /__test/sign-in-as` `{ id }`: who the app signs in next;
+ * - `POST /__test/down` `{ down }`;
+ * - `POST /__test/deploy` `{ commit, state, url? }`: what the host reports;
+ * - `GET /__test/state`: drafts, reviews and emails.
+ */
+export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
   const server = createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined;
+    if (options.control && req.url?.startsWith('/__test/')) {
+      const input = body ? JSON.parse(body.toString('utf8')) : {};
+      const answer = (value) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(value));
+      };
+      if (req.url === '/__test/sign-in-as') {
+        fake.state.signedIn = input.id ?? null;
+        return answer({ ok: true });
+      }
+      if (req.url === '/__test/down') {
+        fake.state.down = input.down === true;
+        return answer({ ok: true });
+      }
+      if (req.url === '/__test/deploy') {
+        fake.setDeploy(input.commit, {
+          state: input.state,
+          ...(input.url ? { url: input.url } : {}),
+        });
+        return answer({ ok: true });
+      }
+      if (req.url === '/__test/state') {
+        return answer({
+          drafts: fake.state.drafts.drafts.map((d) => ({
+            id: d.id,
+            summary: d.summary,
+            files: d.files.map((f) => f.path),
+            review: d.review ?? null,
+          })),
+          reviews: fake.state.reviews,
+          emails: fake.state.emails,
+        });
+      }
+      res.statusCode = 404;
+      return answer({ ok: false });
+    }
     if (fake.state.down) {
       req.socket.destroy();
       return;
     }
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined;
     const request = new Request(`http://${req.headers.host}${req.url}`, {
       method: req.method,
       headers: Object.entries(req.headers).flatMap(([key, value]) =>

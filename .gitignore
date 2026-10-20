@@ -21,6 +21,9 @@ e2e/.search-site/
 # GitHub mode's e2e site and its repository (scripts/github-site.mjs).
 e2e/.github-site/
 e2e/.github-site-repo.git/
+# The cloud's e2e site and its repository (scripts/cloud-site.mjs).
+e2e/.cloud-site/
+e2e/.cloud-site-repo.git/
 
 # Secrets: local Worker vars and env files.
 .dev.vars
