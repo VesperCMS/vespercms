@@ -224,4 +224,14 @@ describe('accessibility', () => {
       },
     ]);
   });
+
+  it('points a leftover roles key to the dashboard, where grants are set', () => {
+    expect(checkConfig({ roles: { admissions: {} } })).toEqual([
+      {
+        level: 'warning',
+        message:
+          '"roles" in vesper.config.ts is ignored. Site admins give each person a role and what they can edit in the dashboard.',
+      },
+    ]);
+  });
 });

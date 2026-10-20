@@ -68,8 +68,6 @@ export type VesperConfig = {
    * (spec §6.17). Defaults to each editor's own time zone.
    */
   timeZone?: string;
-  /** Role grants (spec §7.5). Cloud only, Phase 4. */
-  roles?: Record<string, unknown>;
   /**
    * How redirects from `vesper.redirects.yaml` reach the live site (spec
    * §6.15.5). By default Astro writes an HTML redirect page at each old URL,
@@ -100,7 +98,6 @@ const KNOWN_TOP_LEVEL = new Set([
   'images',
   'markdoc',
   'mdx',
-  'roles',
   'timeZone',
   'redirects',
   'a11y',
@@ -141,7 +138,14 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
   }
   const record = config as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    if (!KNOWN_TOP_LEVEL.has(key))
+    if (key === 'roles') {
+      // Grants left the config on 2026-10-20 (DECISIONS.md, "Grants are set in the dashboard").
+      problems.push({
+        level: 'warning',
+        message:
+          '"roles" in vesper.config.ts is ignored. Site admins give each person a role and what they can edit in the dashboard.',
+      });
+    } else if (!KNOWN_TOP_LEVEL.has(key))
       problems.push({
         level: 'warning',
         message: `Unknown setting "${key}" in vesper.config.ts is ignored.`,
