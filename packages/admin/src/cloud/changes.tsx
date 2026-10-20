@@ -201,7 +201,7 @@ function ChangesDrawer() {
               Waiting for your review
             </h3>
             {toReview.map((review) => (
-              <ReviewItem key={review.id} review={review} drafts={drafts} />
+              <ReviewItem key={review.id} review={review} drafts={drafts} onOutcome={setOutcome} />
             ))}
           </section>
         )}
@@ -329,7 +329,16 @@ function ChangesDrawer() {
 }
 
 /** One review waiting for this approver: who asked, what they said, and the answers. */
-function ReviewItem({ review, drafts }: { review: Review; drafts: readonly Draft[] }) {
+function ReviewItem({
+  review,
+  drafts,
+  onOutcome,
+}: {
+  review: Review;
+  drafts: readonly Draft[];
+  /** Published, the review closes, so the drawer says what happened. */
+  onOutcome: (outcome: Outcome) => void;
+}) {
   const cloud = useStudio().cloud;
   const [asking, setAsking] = useState(false);
   const [text, setText] = useState('');
@@ -344,11 +353,16 @@ function ReviewItem({ review, drafts }: { review: Review; drafts: readonly Draft
     setBusy(true);
     try {
       const result = await cloud.drafts.publish(review.drafts);
-      setOutcome(
-        result.ok
-          ? 'Published.'
-          : `Nothing was published. ${'message' in result ? result.message : 'Someone published these files since. Open them to compare.'}`,
-      );
+      if (result.ok)
+        onOutcome({ kind: 'published', commit: result.commit, count: review.drafts.length });
+      else if (result.reason === 'conflict') {
+        onOutcome({
+          kind: 'refused',
+          text: `Someone published ${result.conflicts.map((c) => c.path).join(', ')} since its draft began. Open it to compare the two.`,
+        });
+      } else onOutcome({ kind: 'refused', text: result.message });
+    } catch (error) {
+      onOutcome({ kind: 'refused', text: error instanceof Error ? error.message : String(error) });
     } finally {
       setBusy(false);
     }

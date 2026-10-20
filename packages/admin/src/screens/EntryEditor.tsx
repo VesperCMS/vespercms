@@ -590,8 +590,11 @@ function EntryForm({
   const keptAt = cloud
     ? keptKey(cloud.client.settings.project, collection.name, doc?.id ?? null)
     : null;
+  // Until the kept copy has been looked for, nothing is written or cleared:
+  // the editor opens clean, and clearing then would lose what it's about to restore.
+  const [keptChecked, setKeptChecked] = useState(false);
   useEffect(() => {
-    if (!keptAt) return;
+    if (!keptAt || !keptChecked) return;
     if (!dirty) {
       void keptChanges().delete(keptAt);
       return;
@@ -602,18 +605,21 @@ function EntryForm({
     return () => {
       clearTimeout(timer);
     };
-  }, [keptAt, dirty, values, body, raw]);
+  }, [keptAt, keptChecked, dirty, values, body, raw]);
   useEffect(() => {
-    if (!keptAt || kept) return;
+    if (!keptAt) return;
     let live = true;
     void keptChanges()
       .get(keptAt)
       .then((found) => {
-        if (!live || !found) return;
-        setValues(decodeData(found.values));
-        setBody(found.body);
-        setRaw(found.raw);
-        setRestored(true);
+        if (!live) return;
+        if (found && !kept) {
+          setValues(decodeData(found.values));
+          setBody(found.body);
+          setRaw(found.raw);
+          setRestored(true);
+        }
+        setKeptChecked(true);
       });
     return () => {
       live = false;
