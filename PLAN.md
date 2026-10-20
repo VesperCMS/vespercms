@@ -16,7 +16,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
-| 4 Cloud foundation | Design written (2026-10-20); waiting for Jeremy's calls and the domain. See "Phase 4: Cloud foundation (design)" below. |
+| 4 Cloud foundation | In progress. Design and calls confirmed 2026-10-20; building this repository's half first. The domain and accounts are still to come. See "Phase 4: Cloud foundation (design)" below. |
 | 4.5 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -566,7 +566,9 @@ Every new screen in the studio and the dashboard passes axe, and each gets a key
 12. Cloud: `runCloudContract` and e2e against the real API; a staging deploy on `workers.dev`, then production on the domain.
 13. The real-world check.
 
-### The calls
+### The calls (confirmed 2026-10-20)
+
+Jeremy confirmed every recommendation on 2026-10-20: 1a to 9a, and the smaller defaults. DECISIONS.md records each, under "The cloud", and the spec's §6.4, §7.2, §7.3 and §7.5 are changed to match.
 
 1. **How the cloud's repository gets this one's packages.**
    - (a) This repository as a git submodule inside the cloud's, with its `packages/*` in the cloud's npm workspaces. Recommended. Through Phase 4 the studio and the cloud change together, and this way there's no release in between. The cloud pins an exact commit of this repository. Its CI needs a read-only token for this repository until it goes public.

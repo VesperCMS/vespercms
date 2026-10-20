@@ -24,6 +24,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
+| 4 Cloud foundation | In progress (design and calls confirmed 2026-10-20); this repository's half first. Design in `PLAN.md`, decisions in `DECISIONS.md` ("The cloud") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 

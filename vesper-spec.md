@@ -322,7 +322,7 @@ It must not validate. The editor validates with the Zod schema and shows errors 
 
 **Where custom widget code runs.** Custom widgets are bundled into the site's `/admin` studio by Vite at build, in every mode. They always run on the site's own origin, never on `{{domain}}` (D14), so no sandboxing is needed.
 
-### 6.4 Optional `vesper.config.ts` (presentation, URLs and permissions; never field definitions)
+### 6.4 Optional `vesper.config.ts` (presentation and URLs; never field definitions or permissions)
 
 ```ts
 import { defineConfig } from '@vesper/astro/config';
@@ -333,11 +333,12 @@ export default defineConfig({
     authors: { label: 'People' },                                                 // no url: data-only
     settings:{ singleton: true, label: 'Site settings' },
   },
-  roles: { /* §7.5, cloud only */ },
 });
 ```
 
 Every key is optional, and everything has a sensible default derived from the manifest.
+
+Roles and grants aren't set here. Site admins set them per member in the dashboard (§7.5), so a change needs no developer and no deploy (decided October 20, 2026).
 
 ### 6.5 Files and serialization
 
@@ -1079,7 +1080,11 @@ Storage
     - audience-restricted to that one site
     - carrying the user's site role and grants
     - held in memory only, never in localStorage
-  - **Staying signed in.** When a token expires, or the page reloads, the studio silently repeats the redirect. While the dashboard session is valid, it completes in about a second with no prompt. Unsaved edits are kept in IndexedDB across the redirect, so nothing is lost.
+  - **Staying signed in** (decided October 20, 2026). Tokens are bound to a key the browser can't export (DPoP):
+    - The studio makes a non-extractable key pair and keeps it in IndexedDB. Every token is bound to it, so a copied token is useless anywhere else.
+    - The access token is renewed in the background with a refresh token that rotates on every use. The refresh token is bound to the same key, and lapses after 12 hours unused or 7 days at most.
+    - Only then does the studio repeat the redirect. While the dashboard session is valid, that completes in about a second with no prompt.
+    - Unsaved edits are kept in IndexedDB across it, so nothing is lost.
   - **Registered origins.** Each site registers its allowed studio origins (production domain, preview domains, `localhost` for dev). Codes are only issued to those origins.
   - **Defense in depth.** Tokens are visible to scripts on the customer's domain, so they stay short-lived and site-scoped, and the docs recommend a CSP for `/admin` (§6.16). The API re-checks every grant server-side. The token is never trusted for permissions on its own.
 - **Invites:** agency admins and site admins invite people by email. An invite carries the account, the site and the role.
@@ -1093,7 +1098,7 @@ Storage
 - **Writes:** one atomic commit per publish using the Git Data API.
   - The commit author is the App bot.
   - Each editor is attributed with a `Co-authored-by:` trailer and a `Vesper-Editor:` trailer carrying their user ID.
-- If branch protection rejects a direct push, fall back to opening a pull request and tell the editor plainly.
+- If a branch rule refuses a direct push, say so plainly. The dashboard checks the branch's rules when the repository is connected, so the agency hears about it before an editor does. Opening a pull request instead comes with pull-request mode (§13.5), not before (decided October 20, 2026).
 - Keep the git host behind an adapter interface in `core`. GitLab is a later phase.
 
 ### 7.4 Drafts, review and publish (cloud)
@@ -1122,10 +1127,10 @@ Storage
 
 **Grants** scope a site role to a collection and, optionally, an entry-ID glob. For example: Admissions may edit `pages` entries matching `admissions/**` and needs approval to publish.
 
+Site admins set grants per member in the dashboard, picking the collection and folder from the site's manifest (decided October 20, 2026). Stored with the member, that grant reads:
+
 ```ts
-roles: {
-  admissions: { collections: { pages: { match: 'admissions/**', publish: false } } },
-}
+{ collection: 'pages', match: 'admissions/**', publish: false }
 ```
 
 Permission evaluation lives in `core` and is shared by the API and the UI. The UI hides what a user can't do instead of showing it disabled, except where a short explanation helps ("Publishing needs approval").

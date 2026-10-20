@@ -787,6 +787,68 @@ Rejected: waiting before `close()` until no file is empty (Starlight's workaroun
 
 **`<Search>` ships English words and takes others from `vesper({ search: { strings: { fr: { … } } } })`, keyed by the page's `<html lang>` and filled in one by one.** The design proposed seeding them from Pagefind's MIT-licensed translations where the messages match. That isn't done: Pagefind's translations live inside its bundled interfaces, which aren't shipped, and its messages differ from Vesper's. It's a follow-up if a site asks.
 
+## The cloud
+
+Phase 4's design is in PLAN.md. Jeremy took every recommendation on 2026-10-20 (calls 1 to 9, and the smaller defaults). The facts behind the calls were checked that day, with the sources below.
+
+### 2026-10-20: The split: the studio's half here, the cloud's in a private repository
+
+**Anything that ships in `/admin` or runs on a customer's site is MIT and lives in this repository. Anything that holds a secret, stores customer data or runs at the cloud's domain lives in a private `vesper-cloud` repository (§13.3).** The studio speaks the cloud's API, so that API's types and its contract suite (`runCloudContract`) live here in `@vesper/core`, and the studio is built and tested against a fake cloud (`scripts/cloud-fake.mjs`), never against the private code. Grant evaluation lives in core too, as §7.5 asks: the API and the studio use the same function.
+
+### 2026-10-20: The cloud's repository builds on this one as a submodule
+
+**`vesper-cloud` holds this repository as a git submodule and lists its `packages/*` in its own npm workspaces, pinned to one commit (call 1).** Through Phase 4 the studio and the cloud change together, and a submodule needs no release in between. Rejected: prereleases on npm (every studio change would need a release first, and the `@vesper` org isn't claimed yet) and GitHub Packages (the same release step, plus a registry). Until this repository goes public, the cloud's CI reads it with a read-only token.
+
+### 2026-10-20: The studio stays signed in with tokens bound to a key (DPoP)
+
+**The studio makes a non-extractable key pair, keeps it in IndexedDB, and binds every token to it. A 10-minute access token is renewed in the background with a rotating refresh token, bound to the same key, which lapses after 12 hours unused or 7 days at most. Only then does the studio redirect to sign in again (call 2; spec §7.2 changed).** The spec's first version redirected whenever the 10-minute token expired and on every reload, which would send an editor away and back every 10 minutes while working. A copied token is useless without the key, which can't leave the browser. A script on the site's own pages could still use the key while `/admin` is open, so tokens stay short, and the API checks membership and grants again on every write. Rejected: a 1-hour token in `sessionStorage` (a copied token works anywhere for an hour).
+
+### 2026-10-20: Grants are set in the dashboard, not in `vesper.config.ts`
+
+**A site admin gives each member a role and, optionally, grants (a collection, an entry glob, and whether publishing needs approval), picked in the dashboard from the site's manifest. The unused `roles` key leaves `vesper.config.ts` (call 3; spec §6.4 and §7.5 changed).** A college's web office changes who can edit what without a developer or a deploy, and the API holds the grants it enforces instead of trusting a deployed file. Rejected: named roles in the config (every change waits for a deploy) and both (two places to look when someone can't edit).
+
+### 2026-10-20: Drafts, reviews and Publish live behind a Changes button
+
+**In cloud mode the top bar gains a Changes button with its count in words ("3 changes"). It opens a drawer listing your drafts, each with a checkbox, and "Publish 3 changes", and for approvers what's waiting for their review. Home's "drafts waiting" line links to it (call 4).** It's one quiet control with no new level of navigation, and the drawer is the pattern Details and the accessibility notes already use. Rejected: a Changes screen in the sidebar, a navigation item that isn't content.
+
+### 2026-10-20: A draft is the file the save would write
+
+**A cloud draft is the bytes a local save would have written, made by the same services, splices and checks, kept with the git version it was based on. Publishing commits those bytes.** Spec §8.2's sketch stored parsed data and a body; the file's own text keeps round-trip fidelity (§6.5) in one place, and publishing is exactly what local mode would have written. Uploads from a field wait in R2 under the site's prefix and go out in the publish's commit, as `ChangeSet.defer` does in GitHub mode.
+
+### 2026-10-20: The app's bot is the author, and its commits are Verified
+
+**Cloud publishes are committed with an installation token and no author, committer or signature of their own, so GitHub signs them and shows them as Verified, and they pass a rule requiring signed commits. The editor is named in `Co-authored-by` (with a no-reply address at the domain, never their email) and `Vesper-Editor` trailers (§7.3).** GitHub signs a bot's commit only when the request "contains no custom author information, custom committer information, and no custom signature information" (docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification#signature-verification-for-bots). A public repository's history is public forever, so an editor's email never goes into it.
+
+Hosts that check authors: Netlify holds a private repository's deploys from authors it doesn't recognize, except GitHub Marketplace bots, auto-approve or a build hook (docs.netlify.com/deploy/deploy-overview/#deploy-permissions). Vercel deploys a private repository's commit only when its author has access to the project, and its docs don't mention app bots (vercel.com/docs/git#deploying-private-git-repositories). Cloud editors have no GitHub accounts, so no author of theirs would pass either rule. The deployment notes cover both hosts, and a Marketplace listing is for launch.
+
+### 2026-10-20: A branch rule that refuses a push is said plainly
+
+**If a branch rule refuses a cloud publish, the studio says so plainly, as GitHub mode does. The dashboard reads the branch's rules when the repository is connected and warns then. Opening a pull request instead waits for pull-request mode in Phase 9 (call 5; spec §7.3 changed).** Rulesets come from `GET /repos/{owner}/{repo}/rules/branches/{branch}` (Metadata read) and classic protection from `GET /repos/{owner}/{repo}/branches/{branch}` (Contents read); a refused push is a 422 whose message isn't documented, so it isn't parsed (docs.github.com/en/rest/repos/rules; docs.github.com/en/rest/branches/branches). A pull-request fallback would add a third state, published but not merged, across the studio, deploy status and drafts.
+
+### 2026-10-20: Connecting a repository confirms who installed the app
+
+**After the app is installed, the person connecting signs in to GitHub once, and the cloud keeps the installation only if `GET /user/installations` lists it for them.** GitHub warns that the `installation_id` returned to the app's setup page can be spoofed, and recommends exactly this check (docs.github.com/en/apps/creating-github-apps/registering-a-github-app/about-the-setup-url). The app has "Request user authorization during installation" on, and the install link carries a `state` back (docs.github.com/en/apps/sharing-github-apps/sharing-your-github-app). Only the person connecting needs a GitHub account; editors never do.
+
+### 2026-10-20: A Vesper organization owns the public GitHub App
+
+**A new GitHub organization for Vesper owns the app, which is public and asks for Contents read and write plus Metadata, Commit statuses, Checks and Deployments read-only, with webhooks for installation changes only (call 8).** The app moves with the product rather than with ThoseGeeks or a personal account, and an organization can have several owners. Deploy status reads statuses, check runs and deployments, which hosts use in different mixes (docs.github.com/en/rest/authentication/permissions-required-for-github-apps).
+
+### 2026-10-20: No sign-up before billing
+
+**In Phase 4 an operator script creates each account, and everyone else joins by invite (call 6).** There's no billing until Phase 5, and the first sites are ThoseGeeks' own. Open sign-up with the 30-day trial (§13.4) comes with billing.
+
+### 2026-10-20: Email Service, with Resend for sign-in links
+
+**Cloudflare Email Service sends the cloud's email, and Resend sends sign-in links as well, as a fallback (call 7, as §7.8 says).** Email Service is still in beta (public since 2026-04-16), needs Workers Paid and the sending domain on Cloudflare's DNS, includes 3,000 emails a month then $0.35 per 1,000, and gives new accounts an unpublished daily quota that grows with reputation (developers.cloudflare.com/email-service/; /platform/pricing/; /platform/limits/). A sign-in link that never arrives locks a client out.
+
+### 2026-10-20: The free relay waits for launch
+
+**The cloud's free relay for GitHub mode (decided 2026-10-19) waits for launch preparation in Phase 9 (call 9).** An open relay would let any website ask for tokens to repositories where Vesper's app is installed, so it needs a list of registered sites, which means deciding whether a free dashboard account exists. That's a tier decision for launch; GitHub mode works today with the template.
+
+### 2026-10-20: Microsoft sign-in checks the tenant, and Vesper gets verified before colleges
+
+**Microsoft sign-in accepts any organization and personal accounts, and checks each token's issuer against its own tenant (`tid`). Vesper's app gets publisher verification before a college is onboarded.** Verification isn't required for sign-in alone, but a tenant that lets people consent only to verified publishers blocks an unverified app (learn.microsoft.com/en-us/entra/identity-platform/access-tokens#validate-the-issuer; /publisher-verification-overview; learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent).
+
 ## GitHub mode
 
 ### 2026-10-19: GitHub mode runs core's services in the browser
