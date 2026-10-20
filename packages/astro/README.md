@@ -327,3 +327,18 @@ vesper({ github: { relay: 'https://vesper-github-relay.your-account.workers.dev'
 
 **A Content Security Policy for `/admin`**, if your host sets headers, needs `connect-src` for `https://api.github.com` and your relay, and `img-src blob:` for previews.
 
+## The cloud (spec §6.9)
+
+Editors sign in to Vesper on the deployed site's `/admin`. Their saves are drafts, kept by the cloud until someone who may publish does, as one commit by Vesper's GitHub App. Editors need no GitHub account.
+
+```js
+// astro.config.mjs
+vesper({ cloud: { project: 'site_…' } })
+```
+
+- **The project ID** is the site's, from its settings in the dashboard: an identifier, not a secret. `VESPER_PROJECT` works too.
+- **The cloud's addresses** are `app` and `api` (or `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`). They're required until Vesper's domain exists, then default to it.
+- **The schemas** are built for the browser as in GitHub mode, so drafts are checked with your real schemas.
+
+`astro dev` stays local mode; the cloud is on in built sites. A site can have GitHub mode too: the sign-in screen then offers both. Roles and grants are set per person in the dashboard, not in `vesper.config.ts`.
+

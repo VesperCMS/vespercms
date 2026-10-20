@@ -40,6 +40,18 @@ With `api: null` and `github` set (a built site in GitHub mode), the studio sign
 - `github/cache.ts`: file bytes by git blob SHA in IndexedDB, so a later visit reads only what changed.
 - Signed in, the top bar has the user menu (`@login`, Sign out of GitHub). The editor's button reads Publish, and an expired sign-in keeps the open entry's unsaved changes across the sign-in.
 
+## The cloud (spec §6.9, §7.4)
+
+- `cloud/session.ts`: the sign-in. A top-level redirect to the app's `/authorize` with PKCE, back to `/admin/#/callback` with a one-time code, exchanged for tokens bound to a non-extractable key (DPoP). The key and tokens are kept together in IndexedDB, so a reload stays signed in; renewals run one tab at a time (a Web Lock), since a rotated refresh token used twice ends the sign-in.
+- `cloud/CloudGate.tsx`: before the studio. "Sign in with Vesper", with "Sign in with GitHub" too when the site has GitHub mode, and "Vesper couldn't be reached" with Try again.
+- `cloud/storage.ts`: `CloudStorage`, the site as its drafts show it, read through the cloud's git proxy, with bytes checked against their blob SHA and cached by it. Every save is a draft. It keeps the storage contract.
+- `cloud/connection.ts`: the back end over it (`app/browser-api.ts`, shared with GitHub mode), the drafts store screens subscribe to, and what the member may do (`access`, `draftAccess`).
+- `cloud/editor.tsx`, in the editor: a draft saves itself a moment after typing stops, after the same checks as a save; Publish (or Request review, for those who don't publish) sends it on, with the publish gate applying there; a conflict shows both versions side by side; deploy status follows a publish; unsaved changes are kept in IndexedDB until the cloud has them.
+- `cloud/changes.tsx`: Changes, a top-bar button with its count in words, opening a drawer with the site's drafts, "Publish 3 changes" and the reviews waiting for an approver. Home says how many drafts wait.
+- `cloud/access.ts`: what a member sees: the collections and entries they can edit (viewers see all), a folder grant's branches in a page tree, and Redirects only with the whole site.
+
+None of it shows unless the studio is connected (spec §6.9). The tests run against `scripts/cloud-fake.mjs`, never the cloud's own code.
+
 ## Routes
 
 Hash routes, so deep links and reloads work on any static host without rewrite rules (D16):

@@ -16,7 +16,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
-| 4 Cloud foundation | In progress. Design and calls confirmed 2026-10-20; building this repository's half first. The domain and accounts are still to come. See "Phase 4: Cloud foundation (design)" below. |
+| 4 Cloud foundation | In progress. This repository's half built 2026-10-20 (steps 1 to 5); next, the cloud's own repository (with Jeremy's OK), the domain and the accounts. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | 4.5 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -427,6 +427,35 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 - **A screen reader pass** of the sign-in screen, the user menu and Publish, with the earlier phases' passes.
 
 **Not built** (as planned): pull-request mode (Phase 9), deploy status (cloud), the cloud's free relay (when the domain exists), a read-only studio, GitLab and Bitbucket.
+
+## Phase 4: progress
+
+**This repository's half is built (2026-10-20):** steps 1 to 5 of the design's order of work. Unit tests (4,241) and every e2e project (118 tests, now four projects with `cloud`) pass locally on macOS. Nothing is pushed yet, so CI hasn't run it.
+
+| Criterion (spec §11) | Where it stands |
+|---|---|
+| ThoseGeeks can onboard one real client site | Needs the cloud's repository (steps 6 to 12), the domain and the accounts. Not started. |
+| An editor with no GitHub account drafts, requests review and is published by an approver | Here, against the fake cloud: `packages/admin/src/cloud/cloud.test.tsx` (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server). A contributor's review is published by an approver from Changes, as one commit by the app's bot. The real API: the cloud's repository runs `runCloudContract`. |
+| A folder grant is enforced in the API and the UI | Core's `changeAccess` (unit tests), the fake API (the contract suite's grant tests), and the studio, which hides collections, entries and page-tree branches outside it (tests). The real API runs the same contract. |
+| The site works from an FTP-style host: sign-in, drafts, publishing, deploy status | The `cloud` e2e project serves the build from `scripts/static-server.mjs` (no rewrites, headers or functions): sign-in, a reload staying signed in, drafting, publishing and deploy status. A real plain host is the real-world check. |
+| With the cloud unreachable, unsaved work is kept; signed out, no cloud UI | Unit and e2e: the cloud goes down mid-edit, the page reloads, and once it's back the changes return and are saved. The signed-out screen shows nothing of the cloud's features. |
+
+**Built as designed, with these differences:**
+- **A draft passes the same checks as a save,** and a new entry's first draft is saved by hand (DECISIONS.md). The design didn't say what an invalid draft does.
+- **Approvers answer reviews in Changes.** There's no separate review screen: Changes lists what waits for an approver, with Publish and Ask for changes.
+- **Drafts belong to the site,** not to one person: everyone who can see a file sees its draft, and two editors on one entry get a conflict rather than two drafts.
+- **New media** can be added by anyone who edits; replacing or removing media needs the whole site.
+- **Renewals run one tab at a time** (a Web Lock), which the design missed: rotating refresh tokens would otherwise end the sign-in when two tabs renew together.
+
+**Open, for Jeremy:**
+- **Page moves with a folder grant are refused,** because a move rewrites the site's redirects file, which needs the whole site. Options:
+  - (a) As built. Recommended for now: moves stay with site admins and whole-site editors.
+  - (b) The API checks each redirect a move adds against the grant. It needs pages' URLs on the server, and function-form URLs can't run there.
+- **`Co-authored-by` names whoever published,** not every draft's author: core's commit trailers hold one value per name. Options:
+  - (a) As built.
+  - (b) Trailers as lists in core's commit message, crediting each draft's author. Recommended, with the cloud's repository, since it's small.
+
+**Next:** step 6, the cloud's repository (`jeremybise/vesper-cloud`, private, this repository as its submodule), which I create once you OK it. Then steps 7 to 12 there, and the accounts listed in the design as their steps arrive.
 
 ## Phase 4: Cloud foundation (design)
 

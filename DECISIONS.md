@@ -849,6 +849,26 @@ Hosts that check authors: Netlify holds a private repository's deploys from auth
 
 **Microsoft sign-in accepts any organization and personal accounts, and checks each token's issuer against its own tenant (`tid`). Vesper's app gets publisher verification before a college is onboarded.** Verification isn't required for sign-in alone, but a tenant that lets people consent only to verified publishers blocks an unverified app (learn.microsoft.com/en-us/entra/identity-platform/access-tokens#validate-the-issuer; /publisher-verification-overview; learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent).
 
+### 2026-10-20: A draft passes the same checks as a save, and a new entry waits for its first save
+
+**A cloud draft is saved only when it passes everything a local save checks: the site's schemas, the body's build checks. Until then the editor's status says "Not saved yet: some fields need attention", and the work stays on this device. A new entry isn't autosaved: its first draft is saved by hand ("Save draft", Ctrl+S, or Publish), and after that it saves itself a moment after typing stops.** A draft is then always a file the site could build, so publishing never has to check again in a place the schemas can't run (the cloud can't run the site's Zod schemas). A new entry's file name comes from its title at the first save, and a half-typed title would make a poor one. The publish gate (§6.18) applies to Publish, never to a draft.
+
+### 2026-10-20: Unsaved changes are kept on this device until the cloud has them
+
+**In the cloud, the editor writes its unsaved changes to IndexedDB as they're typed, puts them back when the entry opens again, and clears them once a draft is saved. While the cloud can't be reached, saving tries again, waiting longer each time (5 seconds, doubling, up to a minute).** Spec §6.9: with the cloud unreachable, nothing is lost. Nothing is written or cleared until the kept copy has been looked for: an entry opens clean, and clearing it then deleted what was about to be restored (the browser tests found it).
+
+### 2026-10-20: Token renewals run one tab at a time
+
+**The studio renews its tokens inside a Web Lock named for the project, and first adopts tokens another tab already stored.** Refresh tokens rotate, and a used one coming back ends the whole sign-in, which is what makes a stolen one useless. Two tabs renewing at once would sign each other out.
+
+### 2026-10-20: What a grant shows in the studio
+
+**The studio hides what a member can't change (spec §7.5): their menus and home screen list the collections they edit, lists show the entries their grants cover, and Redirects appear only with the whole site. A folder grant's page tree shows its branches and the pages above them, which open but don't change. Viewers see everything, read-only.** Reordering a page needs its parent's folder too, since the order file lives there. A page move by someone with a folder grant is refused, because a move rewrites the site's redirects file, which needs the whole site; whether the API should check a move's redirects instead is open (PLAN.md).
+
+### 2026-10-20: The studio is tested against a fake cloud that keeps the contract
+
+**`scripts/cloud-fake.mjs` answers the studio as the cloud does, publishing through `GitHubStorage` to the fake GitHub over real git, and passes `runCloudContract` from `@vesper/core/cloud-testing`, which the real cloud runs too.** The studio's unit tests (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server, ports 4406 and 4407) never touch the private repository. The browser tests found two bugs the jsdom tests didn't: the kept copy cleared before its restore, and a review's confirmation vanishing with it.
+
 ## GitHub mode
 
 ### 2026-10-19: GitHub mode runs core's services in the browser

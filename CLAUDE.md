@@ -24,7 +24,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
-| 4 Cloud foundation | In progress (design and calls confirmed 2026-10-20); this repository's half first. Design in `PLAN.md`, decisions in `DECISIONS.md` ("The cloud") |
+| 4 Cloud foundation | In progress. This repository's half built (2026-10-20); the cloud's repository, the domain and the real-world check are next. Progress and design in `PLAN.md`, decisions in `DECISIONS.md` ("The cloud") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -42,7 +42,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 
 Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `node`. The `.npmrc` sets `--conditions=@vesper/source`, and it only applies inside npm.
 
-**Preview the playground on port 4402 (`.claude/launch.json`), never 4321 or 4400–4405.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files. The e2e tests own 4400 (static build), 4401 (studio) and 4403–4405 (GitHub mode: the fake GitHub, the relay and the built site) and never reuse a running server, so a preview can't stand in for what they test.
+**Preview the playground on port 4402 (`.claude/launch.json`), never 4321 or 4400–4407.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files. The e2e tests own 4400 (static build), 4401 (studio), 4403–4405 (GitHub mode: the fake GitHub, the relay and the built site) and 4406–4407 (the cloud: the fake cloud and the built site), and never reuse a running server, so a preview can't stand in for what they test.
 
 **Never serve `scripts/studio-site.mjs` yourself while `npm run e2e` runs.** Both use the one copy in `e2e/.studio-site`, and two dev servers over the same files make the tests' saves fail.
 
@@ -64,21 +64,21 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
 | `npm run build` | `dist/` for every package: tsc for the libraries, Vite for the studio bundle and its CSS. |
 | `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`, and its accessibility report into `apps/playground/.vesper/`. |
-| `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). `github`: a GitHub-mode build, the real relay and a fake GitHub over real git (`scripts/github-site.mjs`). |
+| `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). `github`: a GitHub-mode build, the real relay and a fake GitHub over real git (`scripts/github-site.mjs`). `cloud`: a cloud-mode build and the fake cloud over a fake GitHub (`scripts/cloud-site.mjs`). |
 | `npm run manifest` | Print the playground's manifest, generated from source. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
 ## Layout
 
 ```
-packages/core      Schema introspection, manifest, serializers, storage interface and GitHub storage, URL and image geometry, accessibility rules. No framework imports.
+packages/core      Schema introspection, manifest, serializers, storage interface and GitHub storage, URL and image geometry, accessibility rules, and the cloud's shared pieces (grants, DPoP, drafts, the API's types, client and contract). No framework imports.
 packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:content), fields helpers, defineConfig, Node tooling, <Img>, the crop step, the build's accessibility check, and site search (the Pagefind index, <Search>, /search).
 packages/ui        Design tokens and the accessible component kit. Tokens enforce the §10.4 budget.
-packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene, GitHub mode's sign-in and back end. Precompiled for sites.
+packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene, GitHub mode's and the cloud's sign-in and back ends. Precompiled for sites.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
 fixtures/          astro6-site: an Astro 6 site, installed on its own, for the Astro 6 CI job.
-e2e/               Playwright specs: static-*.spec.ts (the built site), studio/ (local mode) and github/ (GitHub mode).
-scripts/           Repo tooling (contrast check, static server, dist check, studio and GitHub-mode test sites, the fake GitHub).
+e2e/               Playwright specs: static-*.spec.ts (the built site), studio/ (local mode), github/ (GitHub mode) and cloud/ (the cloud).
+scripts/           Repo tooling (contrast check, static server, dist check, the studio, GitHub-mode and cloud test sites, the fake GitHub and the fake cloud).
 templates/         oauth-relay: the GitHub sign-in relay, one Worker a site owner deploys (GitHub mode).
 ```
 
@@ -174,6 +174,20 @@ Later phases add `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (
 
 **Cloud-only features are absent, not disabled, when the studio isn't connected.** No upsell banners (spec §6.9).
 
+**The accent is Pine, and fixed: no picker, setting or config key chooses another.** Choosing an accent is white-label, the higher paid tier, in Phase 9 (DECISIONS.md, 2026-10-18).
+
+**The studio's font is Figtree 400 and 600, self-hosted in `@vesper/admin`; `/admin` never requests anything from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree").
+
+**Pair every `outline-2` with `outline-solid` (`data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid`).** Tailwind 4's `outline-none` sets the outline style to `none` through a variable `outline-2` reuses, so the ring otherwise isn't drawn; the budget test checks it (DECISIONS.md, "Every focus outline is drawn solid").
+
+**Never transition what changes as focus moves (focus rings, the halo, chevrons): hover colours only, and nothing under reduced motion.** After a screen reader's or a script's click, React Aria moves focus only once every running transition has ended, and focus sits on the page meanwhile (DECISIONS.md, "Transitions never touch focus").
+
+**A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning. Unknown tags and functions block only in the dev API (`siteConfig`), which has the site's whole config.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
+
+**An inline node view sets no `contentEditable` inside itself; ProseMirror already makes the view's own element non-editable.** ProseMirror's caret handling steps over a non-editable element inside a node view as if it were a widget, and on a Mac ⌘← and ⌘→ beside a chip at either end of a line then did nothing (DECISIONS.md, "A chip is non-editable once, on its own element").
+
+**On a Mac, ⇧⌘← and ⇧⌘→ beside a chip are left to the browser through `handleDOMEvents`, and no line key is bound to a textblock command.** ProseMirror's own Shift step selected only the chip, and a textblock command goes to the paragraph's ends, which breaks wrapped lines (DECISIONS.md, "⇧⌘← and ⇧⌘→ beside a chip are the browser's").
+
 ### GitHub mode
 
 **GitHub mode runs core's services over `GitHubStorage`; never give a screen a GitHub-only path.** Local and GitHub mode then save, check and splice with the same code (DECISIONS.md, "GitHub mode runs core's services in the browser").
@@ -188,19 +202,17 @@ Later phases add `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (
 
 **The relay stays one dependency-free file that stores nothing, and checks the site's origin on the way out and back.** Site owners deploy it themselves, and PKCE is what makes a stateless relay safe.
 
-**The accent is Pine, and fixed: no picker, setting or config key chooses another.** Choosing an accent is white-label, the higher paid tier, in Phase 9 (DECISIONS.md, 2026-10-18).
+### The cloud
 
-**The studio's font is Figtree 400 and 600, self-hosted in `@vesper/admin`; `/admin` never requests anything from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree").
+**The studio's half of the cloud lives here, under MIT; anything that holds a secret, stores customer data or runs at the cloud's domain lives in the private `vesper-cloud` repository, never this one.** Spec §13.3; the API the studio speaks is public by nature (DECISIONS.md, "The split").
 
-**Pair every `outline-2` with `outline-solid` (`data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid`).** Tailwind 4's `outline-none` sets the outline style to `none` through a variable `outline-2` reuses, so the ring otherwise isn't drawn; the budget test checks it (DECISIONS.md, "Every focus outline is drawn solid").
+**The studio talks to the cloud only through `@vesper/core`'s protocol and `CloudClient`, and is tested against `scripts/cloud-fake.mjs`.** The fake and the real cloud both pass `runCloudContract`; a behaviour the studio needs goes into the contract first.
 
-**Never transition what changes as focus moves (focus rings, the halo, chevrons): hover colours only, and nothing under reduced motion.** After a screen reader's or a script's click, React Aria moves focus only once every running transition has ended, and focus sits on the page meanwhile (DECISIONS.md, "Transitions never touch focus").
+**Evaluate grants with core's `fileAccess` / `changeAccess`, matched on file paths, never entry IDs.** The API and the studio must refuse and hide the same things, and an ID can come from a `slug` field the editor controls.
 
-**A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning. Unknown tags and functions block only in the dev API (`siteConfig`), which has the site's whole config.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
+**Keep the DPoP key and its tokens in IndexedDB, never a cloud token in localStorage or sessionStorage, and renew inside the Web Lock.** The key can't be exported, so a copied token is useless; two tabs renewing at once would end the sign-in (DECISIONS.md, "Token renewals run one tab at a time").
 
-**An inline node view sets no `contentEditable` inside itself; ProseMirror already makes the view's own element non-editable.** ProseMirror's caret handling steps over a non-editable element inside a node view as if it were a widget, and on a Mac ⌘← and ⌘→ beside a chip at either end of a line then did nothing (DECISIONS.md, "A chip is non-editable once, on its own element").
-
-**On a Mac, ⇧⌘← and ⇧⌘→ beside a chip are left to the browser through `handleDOMEvents`, and no line key is bound to a textblock command.** ProseMirror's own Shift step selected only the chip, and a textblock command goes to the paragraph's ends, which breaks wrapped lines (DECISIONS.md, "⇧⌘← and ⇧⌘→ beside a chip are the browser's").
+**A cloud draft passes the same checks as a save; the publish gate applies to Publish, never to a draft.** A draft is then always a file the site could build (DECISIONS.md, "A draft passes the same checks as a save").
 
 ## Accessibility is an acceptance criterion
 
