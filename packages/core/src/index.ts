@@ -306,3 +306,6 @@ export {
   type GitHubStorageOptions,
 } from './storage/github.ts';
 export { fieldModelIssues } from './studio/field-checks.ts';
+
+// The cloud: grants, DPoP, drafts and the API the studio speaks (spec §6.9, §7).
+export * from './cloud/index.ts';
