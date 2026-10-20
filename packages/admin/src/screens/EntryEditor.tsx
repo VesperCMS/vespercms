@@ -16,7 +16,9 @@ import {
   type FieldIssue,
   type FieldModel,
   type Manifest,
+  type Draft,
   type PageTreeNode,
+  type Review,
   type SaveRequest,
 } from '@vesper/core';
 import {
@@ -55,6 +57,14 @@ import {
 import type { BodyChecks } from '../body/checks.ts';
 import type { BodyApi } from '../body/BodyEditor.tsx';
 import { useEntryNotes } from '../a11y/useNotes.ts';
+import {
+  ConflictCompare,
+  DeployLine,
+  RequestReviewDialog,
+  keptChanges,
+  keptKey,
+  useEntryDraft,
+} from '../cloud/editor.tsx';
 import { NotesDrawer, notesCount, type NoteGroup } from '../a11y/NotesDrawer.tsx';
 
 // Tiptap and the Markdown tooling are most of the studio's weight, and only
@@ -116,6 +126,12 @@ type Notice =
   | { kind: 'saved'; at: Date; reformatted: boolean }
   | { kind: 'conflict' | 'error' | 'expired'; text: string }
   | null;
+/** What happened when the entry's draft was published, or sent for review (the cloud). */
+type CloudNotice =
+  | { kind: 'published'; commit: string }
+  | { kind: 'conflict'; path: string; published: string | null }
+  | { kind: 'refused' | 'kept' | 'nothing' | 'review-requested'; text: string }
+  | null;
 
 function EntryForm({
   collection,
@@ -128,12 +144,18 @@ function EntryForm({
   onReload: () => void;
   parent?: string;
 }) {
-  const { api, siteUrl, manifest, loadMdxProps, account } = useStudio();
+  const { api, siteUrl, manifest, loadMdxProps, account, cloud } = useStudio();
   // GitHub mode publishes on save: the button and its words say so (spec §6.8).
   const publishes = api.publishesOnSave();
   const isNew = doc === null;
   const status = doc?.status ?? 'editable';
-  const editable = collection.editable && status !== 'read-only';
+  /** The entry's file: known once it's saved, guessed for a new one. */
+  const [savedPath, setSavedPath] = useState<string | null>(doc?.path ?? null);
+  const pathRef = useRef(savedPath);
+  const filePath = savedPath ?? likelyPath(collection, parent);
+  // In the cloud, the member's grants decide what they may change (spec §7.5).
+  const access = cloud ? cloud.access(filePath) : null;
+  const editable = collection.editable && status !== 'read-only' && (access?.edit ?? true);
   const sourceOnly = status === 'source-only';
   const isContent = collection.entryKind === 'content';
 
@@ -163,6 +185,18 @@ function EntryForm({
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [notice, setNotice] = useState<Notice>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The cloud (spec §7.4): drafts save themselves, and Publish or Request review sends them on.
+  const { draft: entryDraft, review } = useEntryDraft(filePath);
+  const [cloudNotice, setCloudNotice] = useState<CloudNotice>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  /** The last draft save was refused by the entry's own checks: the status says so, quietly. */
+  const [draftBlocked, setDraftBlocked] = useState(false);
+  /** The cloud couldn't be reached: changes are kept on this device, and saving tries again. */
+  const [offline, setOffline] = useState(false);
+  const [retries, setRetries] = useState(0);
+  const [restored, setRestored] = useState(false);
   /**
    * Details (spec §10.3): a drawer from the top bar on a wide screen, the
    * closing section of the column on a narrow one. One state for both, so
@@ -181,6 +215,7 @@ function EntryForm({
   }, [dirty]);
 
   const arranged = useMemo(() => arrangeFields(collection), [collection]);
+  // As local mode has always had it; the cloud's draft lookups use `filePath`.
   const entryPath = doc?.path ?? likelyPath(collection);
   const format = bodyFormat(doc, collection);
 
@@ -376,15 +411,23 @@ function EntryForm({
     ],
   );
 
+  /**
+   * Saves the entry, and says whether it was. In the cloud a save is a
+   * draft: `auto` is the save a moment after typing stops, which is quiet
+   * about problems (the status names them) and tries again while the cloud
+   * can't be reached.
+   */
   const save = useCallback(
-    async ({ pastGate = false }: { pastGate?: boolean } = {}) => {
-      if (!editable || saving) return;
+    async ({ pastGate = false, auto = false }: { pastGate?: boolean; auto?: boolean } = {}) => {
+      if (!editable || saving) return false;
       setSaving(true);
-      setNotice(null);
+      if (!auto) setNotice(null);
       // The publish gate, on the values as they are now (spec §6.18). Where Save
       // only writes the file on this computer, "Save anyway" goes past it
-      // (DECISIONS.md, "The publish gate refuses a save").
+      // (DECISIONS.md, "The publish gate refuses a save"). A cloud draft isn't
+      // published, so the gate waits for Publish.
       if (
+        !cloud &&
         !pastGate &&
         blockOn.size > 0 &&
         (await recheck()).some((note) => blockOn.has(note.rule))
@@ -392,7 +435,7 @@ function EntryForm({
         setGateRefused(true);
         setRefusals((n) => n + 1);
         setSaving(false);
-        return;
+        return false;
       }
       setGateRefused(false);
       const bodyChanged = body !== saved.body;
@@ -401,9 +444,10 @@ function EntryForm({
         const found = await checks.validate(body);
         setBodyIssues(found);
         if (found.some((issue) => issue.level === 'error')) {
-          setRefusals((n) => n + 1);
+          if (auto) setDraftBlocked(true);
+          else setRefusals((n) => n + 1);
           setSaving(false);
-          return;
+          return false;
         }
       }
       const request: SaveRequest = {
@@ -420,16 +464,21 @@ function EntryForm({
       };
       try {
         const result = await api.saveEntry(request);
+        setOffline(false);
         if (result.ok) {
           const snapshot = { values, body, raw };
           setSaved(snapshot);
           dirtyRef.current = false;
           setVersion(result.version);
           setEntryId(result.id);
+          setSavedPath(result.path);
+          pathRef.current = result.path;
           setIssues([]);
           setRefusals(0);
+          setDraftBlocked(false);
+          setRetries(0);
           setNotice({ kind: 'saved', at: new Date(), reformatted: result.reformatted });
-          setSavedPulse((n) => n + 1);
+          if (!auto) setSavedPulse((n) => n + 1);
           // "Save anyway" goes with the summary, so focus moves to Save.
           if (pastGate) focusWhenShown(SAVE_ID);
           if (isNew || result.id !== entryId) {
@@ -438,6 +487,9 @@ function EntryForm({
               { replace: true },
             );
           }
+        } else if (result.reason === 'invalid' && auto) {
+          // A draft is a file the site could build: until it is, it stays on this device.
+          setDraftBlocked(true);
         } else if (result.reason === 'invalid') {
           setIssues(result.issues);
           // The dev API checks the body again with the site's real config.
@@ -451,8 +503,14 @@ function EntryForm({
         } else {
           setNotice({ kind: result.reason, text: result.message });
         }
+        return result.ok;
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401 && account) {
+        if (cloud && error instanceof ApiError && error.status === 0) {
+          // The cloud can't be reached: the changes are kept on this device, and saving tries again.
+          setOffline(true);
+          setRetries((n) => n + 1);
+          if (!auto) setNotice({ kind: 'error', text: error.message });
+        } else if (error instanceof ApiError && error.status === 401 && account) {
           // Kept for after the sign-in redirect, which would otherwise lose them.
           keep(collection.name, entryId, { values, body, raw });
           setNotice({ kind: 'expired', text: error.message });
@@ -462,11 +520,13 @@ function EntryForm({
             text: error instanceof Error ? error.message : String(error),
           });
         }
+        return false;
       } finally {
         setSaving(false);
       }
     },
     [
+      cloud,
       editable,
       saving,
       body,
@@ -512,6 +572,134 @@ function EntryForm({
   }, [save]);
   useEffect(() => setLeaveGuard(() => dirtyRef.current), []);
 
+  // The cloud: a draft saves itself a moment after typing stops (spec §7.4).
+  // A new entry waits for its first save by hand, since its file name comes
+  // from the title, and a half-typed title would make a poor one. While the
+  // cloud can't be reached, saving tries again, waiting longer each time.
+  useEffect(() => {
+    if (!cloud || isNew || !editable || !dirty || saving) return;
+    const wait = offline ? Math.min(60_000, 5_000 * 2 ** Math.max(0, retries - 1)) : 1_000;
+    const timer = setTimeout(() => void save({ auto: true }), wait);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [cloud, isNew, editable, dirty, saving, save, offline, retries]);
+
+  // Unsaved changes are kept on this device as they're typed (spec §6.9), and
+  // put back if the page reloads before they reach the cloud.
+  const keptAt = cloud
+    ? keptKey(cloud.client.settings.project, collection.name, doc?.id ?? null)
+    : null;
+  useEffect(() => {
+    if (!keptAt) return;
+    if (!dirty) {
+      void keptChanges().delete(keptAt);
+      return;
+    }
+    const timer = setTimeout(() => {
+      void keptChanges().put(keptAt, { values: encodeValue(values), body, raw });
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [keptAt, dirty, values, body, raw]);
+  useEffect(() => {
+    if (!keptAt || kept) return;
+    let live = true;
+    void keptChanges()
+      .get(keptAt)
+      .then((found) => {
+        if (!live || !found) return;
+        setValues(decodeData(found.values));
+        setBody(found.body);
+        setRaw(found.raw);
+        setRestored(true);
+      });
+    return () => {
+      live = false;
+    };
+    // Once, when the entry opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keptAt]);
+
+  /** Publishes the entry's draft, saving it first (spec §7.4). The publish gate applies here. */
+  const publishDraft = async () => {
+    if (!cloud || publishing) return;
+    setCloudNotice(null);
+    if (blockOn.size > 0 && (await recheck()).some((note) => blockOn.has(note.rule))) {
+      setGateRefused(true);
+      setRefusals((n) => n + 1);
+      return;
+    }
+    if ((dirtyRef.current || isNew) && !(await save())) return;
+    setPublishing(true);
+    try {
+      await cloud.drafts.refresh();
+      const path = pathRef.current ?? filePath;
+      const draft = cloud.drafts.draftOf(path);
+      if (!draft) {
+        setCloudNotice({ kind: 'nothing', text: 'There’s nothing new to publish.' });
+        return;
+      }
+      const result = await cloud.drafts.publish([draft.id]);
+      if (result.ok) setCloudNotice({ kind: 'published', commit: result.commit });
+      else if (result.reason === 'conflict') {
+        const conflict = result.conflicts.find((c) => c.path === path) ?? result.conflicts[0];
+        setCloudNotice({
+          kind: 'conflict',
+          path: conflict?.path ?? path,
+          published: conflict?.actual ?? null,
+        });
+      } else setCloudNotice({ kind: 'refused', text: result.message });
+    } catch (error) {
+      setCloudNotice({
+        kind: 'refused',
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  /** Saves the draft, then asks for review: for those who edit but don't publish (spec §7.4). */
+  const startReview = async () => {
+    if (!cloud) return;
+    setCloudNotice(null);
+    if ((dirtyRef.current || isNew) && !(await save())) return;
+    setReviewOpen(true);
+  };
+  const sendForReview = async (note: string) => {
+    if (!cloud) return;
+    try {
+      await cloud.drafts.refresh();
+      const draft = cloud.drafts.draftOf(pathRef.current ?? filePath);
+      if (!draft) {
+        setCloudNotice({ kind: 'nothing', text: 'There’s nothing new to review.' });
+        return;
+      }
+      await cloud.drafts.requestReview([draft.id], note);
+      setCloudNotice({
+        kind: 'review-requested',
+        text: 'Sent for review. An approver will publish it or ask for changes.',
+      });
+    } catch (error) {
+      setCloudNotice({
+        kind: 'refused',
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setReviewOpen(false);
+    }
+  };
+  const discardDraft = async () => {
+    setConfirmDiscard(false);
+    if (!cloud || !entryDraft) return;
+    await cloud.drafts.discard(entryDraft.id);
+    dirtyRef.current = false;
+    if (keptAt) await keptChanges().delete(keptAt);
+    onReload();
+  };
+
   const deleteEntry = async () => {
     if (!entryId || !version) return;
     const result = await api.deleteEntry(collection.name, entryId, version);
@@ -533,22 +721,37 @@ function EntryForm({
       : null;
   const menuItems: MenuItem[] = [
     ...(viewUrl ? [{ id: 'view', label: 'View on site', icon: 'view-on-site' as const }] : []),
+    ...(cloud && entryDraft && editable
+      ? [{ id: 'discard', label: 'Discard draft…', isDanger: true, icon: 'delete' as const }]
+      : []),
     ...(!isNew && editable && !collection.presentation.singleton
       ? [{ id: 'delete', label: 'Delete…', isDanger: true, icon: 'delete' as const }]
       : []),
   ];
 
-  const statusText = saving
-    ? publishes
-      ? 'Publishing…'
-      : 'Saving…'
-    : dirty
-      ? 'Unsaved changes'
-      : notice?.kind === 'saved'
-        ? `${publishes ? 'Published' : 'Saved'} ${formatRelative(notice.at.toISOString())}`
-        : isNew
-          ? 'Not saved yet'
-          : '';
+  const statusText = cloud
+    ? cloudStatus({
+        saving,
+        publishing,
+        offline,
+        dirty,
+        draftBlocked,
+        isNew,
+        draft: entryDraft,
+        reviewState: review?.state,
+        published: cloudNotice?.kind === 'published',
+      })
+    : saving
+      ? publishes
+        ? 'Publishing…'
+        : 'Saving…'
+      : dirty
+        ? 'Unsaved changes'
+        : notice?.kind === 'saved'
+          ? `${publishes ? 'Published' : 'Saved'} ${formatRelative(notice.at.toISOString())}`
+          : isNew
+            ? 'Not saved yet'
+            : '';
   const draft = values.draft === true;
   const back = collection.presentation.singleton
     ? { href: hrefFor({ screen: 'home' }), label: 'Content' }
@@ -595,7 +798,7 @@ function EntryForm({
           </Button>
         )}
         <div className="flex items-center gap-2">
-          {editable && (
+          {editable && !cloud && (
             <Button
               id={SAVE_ID}
               variant="primary"
@@ -606,6 +809,23 @@ function EntryForm({
               {publishes ? 'Publish' : 'Save'}
             </Button>
           )}
+          {/* The cloud: a new entry's first save is by hand; after that drafts save themselves. */}
+          {editable && cloud && isNew && (
+            <Button onPress={() => void save()} isPending={saving}>
+              Save draft
+            </Button>
+          )}
+          {editable && cloud && (dirty || isNew || entryDraft) && !review && (
+            <Button
+              id={SAVE_ID}
+              variant="primary"
+              onPress={() => void (access?.publish ? publishDraft() : startReview())}
+              isPending={publishing}
+              pulse={savedPulse}
+            >
+              {access?.publish ? 'Publish' : 'Request review'}
+            </Button>
+          )}
           {menuItems.length > 0 && (
             <Menu
               label={`More actions for ${titleText}`}
@@ -613,6 +833,7 @@ function EntryForm({
               onAction={(action) => {
                 if (action === 'view' && viewUrl) window.open(viewUrl, '_blank', 'noopener');
                 if (action === 'delete') setConfirmDelete(true);
+                if (action === 'discard') setConfirmDiscard(true);
               }}
             />
           )}
@@ -681,6 +902,25 @@ function EntryForm({
               Your unsaved changes were kept while you signed in again.
             </p>
           )}
+          {cloud && (
+            <CloudNotices
+              notice={cloudNotice}
+              restored={restored && dirty}
+              offline={offline}
+              canEdit={editable}
+              review={review}
+              onKeep={async () => {
+                if (!entryDraft || cloudNotice?.kind !== 'conflict') return;
+                await cloud.drafts.keepMine(entryDraft.id, [cloudNotice.path]);
+                setCloudNotice({
+                  kind: 'kept',
+                  text: 'Your draft is kept, now based on the published version. Publish it when you’re ready.',
+                });
+              }}
+              onDiscard={() => void discardDraft()}
+              draft={entryDraft}
+            />
+          )}
           {notice?.kind === 'saved' && publishes && (
             <p className="text-small text-content-muted">
               Published. It will be live after the site is next built.
@@ -702,7 +942,7 @@ function EntryForm({
               focusWhenShown(fieldId);
             }}
           />
-          {gateRefused && blocking.length > 0 && !api.publishesOnSave() && (
+          {gateRefused && blocking.length > 0 && !api.publishesOnSave() && !cloud && (
             <div className="flex flex-col items-start gap-3">
               <p>
                 This site doesn’t publish an entry with these notes. Saving here only changes the
@@ -795,8 +1035,9 @@ function EntryForm({
         onOpenChange={setConfirmDelete}
       >
         <p className="mb-6">
-          This deletes {doc?.path ?? 'the file'}. In local mode the file is removed from disk; git
-          can bring it back.
+          {cloud
+            ? `This deletes ${doc?.path ?? 'the file'} in a draft. It leaves the site when the draft is published.`
+            : `This deletes ${doc?.path ?? 'the file'}. In local mode the file is removed from disk; git can bring it back.`}
         </p>
         <div className="flex flex-wrap justify-end gap-3">
           <Button
@@ -811,7 +1052,131 @@ function EntryForm({
           </Button>
         </div>
       </Dialog>
+      {cloud && (
+        <>
+          <Dialog
+            title="Discard this draft?"
+            role="alertdialog"
+            isOpen={confirmDiscard}
+            onOpenChange={setConfirmDiscard}
+          >
+            <p className="mb-6">
+              The changes that haven’t been published are thrown away, and the entry goes back to
+              the published version.
+            </p>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button
+                onPress={() => {
+                  setConfirmDiscard(false);
+                }}
+              >
+                Keep the draft
+              </Button>
+              <Button variant="danger" onPress={() => void discardDraft()}>
+                Discard draft
+              </Button>
+            </div>
+          </Dialog>
+          <RequestReviewDialog
+            isOpen={reviewOpen}
+            onOpenChange={setReviewOpen}
+            onSend={sendForReview}
+          />
+        </>
+      )}
     </Screen>
+  );
+}
+
+/** The editor's status in the cloud, in words (spec §10.4: status is text). */
+function cloudStatus(state: {
+  saving: boolean;
+  publishing: boolean;
+  offline: boolean;
+  dirty: boolean;
+  draftBlocked: boolean;
+  isNew: boolean;
+  draft: Draft | undefined;
+  reviewState: Review['state'] | undefined;
+  published: boolean;
+}): string {
+  if (state.publishing) return 'Publishing…';
+  if (state.saving) return 'Saving draft…';
+  if (state.offline) return 'Can’t reach Vesper. Kept on this device';
+  if (state.dirty && state.draftBlocked) return 'Not saved yet: some fields need attention';
+  if (state.dirty) return state.isNew ? 'Not saved yet' : 'Unsaved changes';
+  if (state.reviewState === 'open') return 'Waiting for review';
+  if (state.reviewState === 'changes-requested') return 'Changes requested';
+  if (state.draft) return `Draft saved ${formatRelative(state.draft.updatedAt)}`;
+  if (state.published) return 'Published';
+  return state.isNew ? 'Not saved yet' : '';
+}
+
+/** What happened with the entry's draft, under the bar (the cloud). */
+function CloudNotices({
+  notice,
+  restored,
+  offline,
+  canEdit,
+  review,
+  draft,
+  onKeep,
+  onDiscard,
+}: {
+  notice: CloudNotice;
+  restored: boolean;
+  offline: boolean;
+  canEdit: boolean;
+  review: Review | undefined;
+  draft: Draft | undefined;
+  onKeep: () => Promise<void>;
+  onDiscard: () => void;
+}) {
+  const asked = review?.state === 'changes-requested' ? review.comments.at(-1) : undefined;
+  return (
+    <>
+      {!canEdit && (
+        <p className="text-small text-content-muted">You can view this entry, not change it.</p>
+      )}
+      {restored && (
+        <p className="text-small text-content-muted">
+          Your unsaved changes were kept on this device, and are back.
+        </p>
+      )}
+      {offline && (
+        <p className="text-small text-content-muted">
+          Vesper can’t be reached. Your changes are kept on this device, and they’ll be saved when
+          it’s back.
+        </p>
+      )}
+      {asked && (
+        <div className="rounded-md border border-warning bg-surface-raised p-4">
+          <p className="m-0">
+            {asked.by.name} asked for changes: {asked.body}
+          </p>
+        </div>
+      )}
+      {notice?.kind === 'published' && <DeployLine commit={notice.commit} />}
+      {notice?.kind === 'conflict' && draft && (
+        <ConflictCompare
+          path={notice.path}
+          draft={draft}
+          publishedVersion={notice.published}
+          onKeep={() => void onKeep()}
+          onDiscard={onDiscard}
+        />
+      )}
+      {notice?.kind === 'refused' && (
+        <p role="alert" className="rounded-md border border-danger bg-surface-raised p-4">
+          Nothing was published. {notice.text}
+        </p>
+      )}
+      {(notice?.kind === 'kept' ||
+        notice?.kind === 'nothing' ||
+        notice?.kind === 'review-requested') && (
+        <p className="text-small text-content-muted">{notice.text}</p>
+      )}
+    </>
   );
 }
 
@@ -928,11 +1293,14 @@ function pageUrl(
  * Where a new entry will most likely be saved, so uploads can be referenced
  * relative to it before it exists: the collection's folder, or its file.
  */
-function likelyPath(collection: CollectionManifest): string {
+function likelyPath(collection: CollectionManifest, parent?: string): string {
   const { source } = collection;
   if (source.loader === 'file') return source.path;
-  if (source.loader === 'glob')
-    return `${source.base === '.' ? '' : `${source.base}/`}new-entry.${source.formats[0] ?? 'md'}`;
+  if (source.loader === 'glob') {
+    // A new page in a tree goes in its parent's folder (spec §6.15.2), which a folder grant can cover.
+    const folder = [source.base === '.' ? '' : source.base, parent ?? ''].filter(Boolean).join('/');
+    return `${folder ? `${folder}/` : ''}new-entry.${source.formats[0] ?? 'md'}`;
+  }
   return 'new-entry.md';
 }
 

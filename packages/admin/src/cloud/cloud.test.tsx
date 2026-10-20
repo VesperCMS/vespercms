@@ -195,4 +195,160 @@ describe('the studio and the cloud', () => {
       expect(cloud.state.log.some((line) => line.startsWith('POST /api/sign-out'))).toBe(true);
     });
   });
+
+  it('saves a draft a moment after typing stops, and publishes it as one commit by the app', async () => {
+    await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
+    render(gate());
+    const user = userEvent.setup();
+    const title = await screen.findByRole(
+      'textbox',
+      { name: 'Title (required)' },
+      { timeout: 10_000 },
+    );
+    await user.type(title, ', drafted');
+    expect(
+      await screen.findByText(/^Draft saved/, undefined, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    const before = new TextDecoder().decode(github.files()['src/content/blog/harbor-at-dawn.md']);
+    expect(before).toContain('title: Harbor at dawn\n');
+    expect(cloud.state.drafts.drafts).toHaveLength(1);
+
+    const commits = github.log().length;
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    expect(
+      await screen.findByText(
+        'Published. It will be live after the site is next built.',
+        undefined,
+        {
+          timeout: 10_000,
+        },
+      ),
+    ).toBeInTheDocument();
+    expect(github.log()).toHaveLength(commits + 1);
+    const [latest] = github.log();
+    expect(latest?.author).toBe('vesper[bot]');
+    expect(latest?.message).toBe(
+      'Update "Harbor at dawn, drafted" in Blog posts\n\nVesper-Collection: blog\nVesper-Editor: u_admin\nCo-authored-by: Ada Admin <u_admin@users.noreply.vesper.test>',
+    );
+    expect(latest?.changed).toEqual(['M\tsrc/content/blog/harbor-at-dawn.md']);
+    expect(cloud.state.drafts.drafts).toEqual([]);
+  });
+
+  it('lets a contributor request review instead of publishing', async () => {
+    await returnFromSignIn('u_contributor', '#/c/blog/e/harbor-at-dawn');
+    render(gate());
+    const user = userEvent.setup();
+    const title = await screen.findByRole(
+      'textbox',
+      { name: 'Title (required)' },
+      { timeout: 10_000 },
+    );
+    await user.type(title, ', please');
+    expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Request review' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Request review' });
+    await expectNoViolations(dialog);
+    await user.type(
+      screen.getByRole('textbox', { name: 'Note for the approver (optional)' }),
+      'New photo next week',
+    );
+    await user.click(screen.getByRole('button', { name: 'Send for review' }));
+    expect(
+      await screen.findByText(
+        'Sent for review. An approver will publish it or ask for changes.',
+        undefined,
+        {
+          timeout: 10_000,
+        },
+      ),
+    ).toBeInTheDocument();
+    expect(cloud.state.reviews).toHaveLength(1);
+    expect(cloud.state.reviews[0]?.comments[0]?.body).toBe('New photo next week');
+    expect(cloud.state.emails.map((e) => e.to)).toContain('ada@example.edu');
+    expect(await screen.findByText('Waiting for review')).toBeInTheDocument();
+  });
+
+  it('shows a viewer the entry, with nothing to change it', async () => {
+    await returnFromSignIn('u_viewer', '#/c/blog/e/harbor-at-dawn');
+    render(gate());
+    expect(
+      await screen.findByText('You can view this entry, not change it.', undefined, {
+        timeout: 10_000,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Request review' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Title (required)' })).toBeDisabled();
+  });
+
+  it('compares both versions when someone published since the draft began, and keeps the draft on request', async () => {
+    await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
+    render(gate());
+    const user = userEvent.setup();
+    const title = await screen.findByRole(
+      'textbox',
+      { name: 'Title (required)' },
+      { timeout: 10_000 },
+    );
+    await user.type(title, ', mine');
+    await screen.findByText(/^Draft saved/, undefined, { timeout: 10_000 });
+    const path = 'src/content/blog/harbor-at-dawn.md';
+    const current = new TextDecoder().decode(github.files()[path]);
+    github.commitFiles(
+      { [path]: current.replace('title: Harbor at dawn', 'title: Harbor at dusk') },
+      'Elsewhere',
+      'someone-else',
+    );
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    const compare = await screen.findByRole(
+      'region',
+      { name: 'Someone published this entry since your draft began' },
+      { timeout: 10_000 },
+    );
+    expect(await screen.findByLabelText('Published now')).toHaveTextContent(
+      'title: Harbor at dusk',
+    );
+    expect(screen.getByLabelText('Your draft')).toHaveTextContent('title: Harbor at dawn, mine');
+    await expectNoViolations(compare);
+    await user.click(screen.getByRole('button', { name: 'Keep my draft' }));
+    expect(await screen.findByText(/Your draft is kept/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    expect(
+      await screen.findByText(
+        'Published. It will be live after the site is next built.',
+        undefined,
+        { timeout: 10_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(new TextDecoder().decode(github.files()[path])).toContain(
+      'title: Harbor at dawn, mine\n',
+    );
+  });
+
+  it('keeps changes on this device while the cloud can’t be reached, and saves them when it’s back', async () => {
+    await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
+    let down = false;
+    const fetcher: typeof fetch = (input, init) =>
+      down ? Promise.reject(new TypeError('Failed to fetch')) : cloud.fetch(input, init);
+    render(<CloudGate settings={settings} options={options} fetcher={fetcher} store={store} />);
+    const user = userEvent.setup();
+    const title = await screen.findByRole(
+      'textbox',
+      { name: 'Title (required)' },
+      { timeout: 10_000 },
+    );
+    down = true;
+    await user.type(title, ', offline');
+    expect(
+      await screen.findByText('Can’t reach Vesper. Kept on this device', undefined, {
+        timeout: 10_000,
+      }),
+    ).toBeInTheDocument();
+    expect(cloud.state.drafts.drafts).toEqual([]);
+    down = false;
+    expect(
+      await screen.findByText(/^Draft saved/, undefined, { timeout: 15_000 }),
+    ).toBeInTheDocument();
+    expect(cloud.state.drafts.drafts).toHaveLength(1);
+  }, 30_000);
 });
