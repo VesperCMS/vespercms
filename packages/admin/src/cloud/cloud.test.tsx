@@ -2,8 +2,8 @@
 import { cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { authorizeUrl, createPkce } from '@vesper/core';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { CloudClient, authorizeUrl, createDpopKey, createPkce, encodeChange } from '@vesper/core';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createCloudFake, type CloudFake } from '../../../../scripts/cloud-fake.mjs';
@@ -64,6 +64,13 @@ beforeEach(() => {
         email: 'cal@example.edu',
         role: 'contributor',
       },
+      {
+        id: 'u_nurse',
+        name: 'Nia Nursing',
+        email: 'nia@example.edu',
+        role: 'editor',
+        grants: [{ collection: 'pages', match: 'academics/nursing/**' }],
+      },
       { id: 'u_viewer', name: 'Vi Viewer', email: 'vi@example.edu', role: 'viewer' },
     ],
   });
@@ -95,6 +102,35 @@ async function returnFromSignIn(person: string, route = '#/'): Promise<void> {
   );
   const location = answer.headers.get('location') ?? '';
   window.history.replaceState(null, '', location.slice(location.indexOf('/admin/')));
+}
+
+/** A client signed in as `person`, for setting up drafts and reviews outside the studio. */
+async function clientAs(person: string): Promise<CloudClient> {
+  cloud.state.signedIn = person;
+  const { verifier, challenge } = await createPkce();
+  const redirectUri = `${ORIGIN}/admin/`;
+  const answer = await cloud.fetch(
+    authorizeUrl(settings, { redirectUri, state: 'st_api', challenge }),
+  );
+  const location = answer.headers.get('location') ?? '';
+  const code = new URLSearchParams(location.slice(location.indexOf('?') + 1)).get('code') ?? '';
+  const client = new CloudClient({ settings, key: await createDpopKey(), fetch: cloud.fetch });
+  await client.exchangeCode({ code, verifier, redirectUri });
+  return client;
+}
+
+/** A draft of a file, its text changed by `edit`. */
+async function draftOf(
+  client: CloudClient,
+  path: string,
+  edit: (text: string) => string,
+  summary: string,
+): Promise<void> {
+  const text = new TextDecoder().decode(github.files()[path]);
+  await client.saveDraft({
+    changes: [encodeChange({ op: 'put', path, bytes: new TextEncoder().encode(edit(text)) })],
+    message: { summary },
+  });
 }
 
 const gate = () => (
@@ -351,4 +387,108 @@ describe('the studio and the cloud', () => {
     ).toBeInTheDocument();
     expect(cloud.state.drafts.drafts).toHaveLength(1);
   }, 30_000);
+  it('shows an editor only the collections they edit, and no redirects', async () => {
+    await returnFromSignIn('u_editor');
+    render(gate());
+    const user = userEvent.setup();
+    expect(
+      await screen.findByRole('link', { name: 'Blog posts' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Pages' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Site' }));
+    expect(await screen.findByRole('menuitem', { name: 'Media' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Redirects' })).not.toBeInTheDocument();
+  });
+
+  it('shows a folder grant its branch, with the pages above it to open but not change', async () => {
+    await returnFromSignIn('u_nurse', '#/c/pages');
+    render(gate());
+    const user = userEvent.setup();
+    const tree = await screen.findByRole('treegrid', undefined, { timeout: 10_000 });
+    expect(within(tree).getByRole('row', { name: 'Academics' })).toBeInTheDocument();
+    expect(within(tree).queryByRole('row', { name: 'About the college' })).not.toBeInTheDocument();
+    expect(within(tree).queryByRole('row', { name: 'How to apply' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New page' })).not.toBeInTheDocument();
+    await user.click(within(tree).getByRole('button', { name: 'More actions for Academics' }));
+    expect(await screen.findByRole('menuitem', { name: 'Open' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Add child page' })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await user.click(within(tree).getByRole('button', { name: 'Expand Academics' }));
+    await user.click(await within(tree).findByRole('button', { name: 'More actions for Nursing' }));
+    expect(await screen.findByRole('menuitem', { name: 'Add child page' })).toBeInTheDocument();
+    // Nursing's place among Academics' pages lives in Academics' folder, outside the grant.
+    expect(screen.queryByRole('menuitem', { name: 'Move up' })).not.toBeInTheDocument();
+  });
+
+  it('publishes chosen drafts from Changes as one commit', async () => {
+    const admin = await clientAs('u_admin');
+    await draftOf(
+      admin,
+      'src/content/blog/harbor-at-dawn.md',
+      (t) => t.replace('title: Harbor at dawn', 'title: Harbor at noon'),
+      'Update “Harbor at noon” in Blog posts',
+    );
+    await draftOf(
+      admin,
+      'src/content/pages/about.md',
+      (t) => `${t}\nOne more line.\n`,
+      'Update “About the college” in Pages',
+    );
+    await returnFromSignIn('u_admin');
+    render(gate());
+    const user = userEvent.setup();
+    expect(
+      await screen.findByText('2 drafts are waiting to be published.', undefined, {
+        timeout: 10_000,
+      }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '2 changes' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Changes' });
+    await expectNoViolations(drawer);
+    expect(
+      within(drawer).getByRole('checkbox', { name: 'Update “Harbor at noon” in Blog posts' }),
+    ).toBeChecked();
+    const commits = github.log().length;
+    await user.click(within(drawer).getByRole('button', { name: 'Publish 2 changes' }));
+    expect(
+      await within(drawer).findByText('Published 2 changes.', undefined, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(github.log()).toHaveLength(commits + 1);
+    expect(github.log()[0]?.changed.sort()).toEqual([
+      'M\tsrc/content/blog/harbor-at-dawn.md',
+      'M\tsrc/content/pages/about.md',
+    ]);
+    expect(within(drawer).getByText('Nothing is waiting to be published.')).toBeInTheDocument();
+  });
+
+  it('lets an approver ask for changes on a review from Changes', async () => {
+    const contributor = await clientAs('u_contributor');
+    await draftOf(
+      contributor,
+      'src/content/blog/harbor-at-dawn.md',
+      (t) => t.replace('title: Harbor at dawn', 'title: Harbor, please'),
+      'Update “Harbor, please” in Blog posts',
+    );
+    const id = (await contributor.drafts()).drafts[0]?.id ?? '';
+    await contributor.requestReview({ drafts: [id], note: 'Ready when you are' });
+    await returnFromSignIn('u_admin');
+    render(gate());
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: '1 change, 1 to review' }, { timeout: 10_000 }),
+    );
+    const drawer = await screen.findByRole('dialog', { name: 'Changes' });
+    const review = within(drawer).getByRole('article', { name: /^Cal Contributor asked/ });
+    expect(within(review).getByText('Ready when you are')).toBeInTheDocument();
+    await user.click(within(review).getByRole('button', { name: 'Ask for changes' }));
+    await user.type(
+      within(review).getByRole('textbox', { name: 'What should change?' }),
+      'Keep the original title.',
+    );
+    await user.click(within(review).getByRole('button', { name: 'Send' }));
+    expect(await within(review).findByText('Sent to Cal Contributor.')).toBeInTheDocument();
+    expect(cloud.state.reviews[0]?.state).toBe('changes-requested');
+    expect(cloud.state.emails.map((e) => e.to)).toContain('cal@example.edu');
+    await expectNoViolations(drawer);
+  });
 });

@@ -9,6 +9,7 @@ import { NotFound } from '../screens/NotFound.tsx';
 import { PageTree } from '../screens/PageTree.tsx';
 import { Redirects } from '../screens/Redirects.tsx';
 import { Unavailable } from '../screens/Unavailable.tsx';
+import { ChangesProvider } from '../cloud/changes.tsx';
 import { CloudGate } from '../cloud/CloudGate.tsx';
 import { GitHubGate } from '../github/GitHubGate.tsx';
 import { readSession } from '../github/session.ts';
@@ -78,10 +79,12 @@ export function App({
     return <Unavailable siteName={siteName} />;
   }
 
+  const screen = <CurrentScreen route={route} studio={studio} key={routeKey(route)} />;
   return (
     <StudioContext.Provider value={studio}>
       <NavigationContext.Provider value={navigation}>
-        <CurrentScreen route={route} studio={studio} key={routeKey(route)} />
+        {/* The cloud's Changes drawer, reachable from every screen (spec §7.4). */}
+        {connection ? <ChangesProvider>{screen}</ChangesProvider> : screen}
         <Dialog
           title="Leave without saving?"
           role="alertdialog"

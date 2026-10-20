@@ -1,5 +1,6 @@
 import {
   CloudError,
+  changeAccess,
   editsAnything,
   fileAccess,
   wholeSite,
@@ -35,6 +36,8 @@ export type CloudConnection = {
   drafts: DraftsStore;
   /** What the member may do to a file. */
   access: (path: string) => { edit: boolean; publish: boolean };
+  /** What the member may do with a whole draft: the API refuses the same (spec §7.5). */
+  draftAccess: (draft: Draft) => { edit: boolean; publish: boolean };
   /** True when the member's grants cover the whole site (the redirects, settings outside collections). */
   wholeSite: boolean;
   /** True when the member may change anything at all. */
@@ -182,6 +185,18 @@ export function connect(options: ConnectOptions): { api: StudioApi; connection: 
     storage,
     drafts: store,
     access: (path) => fileAccess(member, options.manifest, path),
+    draftAccess: (draft) => {
+      const result = changeAccess(
+        member,
+        options.manifest,
+        draft.files.map((file) =>
+          file.op === 'delete'
+            ? { op: 'delete', path: file.path, expectedVersion: file.base }
+            : { op: 'put', path: file.path, bytes: new Uint8Array(), expectedVersion: file.base },
+        ),
+      );
+      return result.ok ? { edit: true, publish: result.publish } : { edit: false, publish: false };
+    },
     wholeSite: wholeSite(member),
     editsAnything: editsAnything(member),
   };

@@ -6,23 +6,32 @@ import { useLoad } from '../app/load.ts';
 import { hrefFor } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
 import { Screen } from '../app/Screen.tsx';
+import { shownTo } from '../cloud/access.ts';
+import { DraftsWaiting } from '../cloud/changes.tsx';
 
 /**
  * The home screen (spec §10.3): a plain list of collections and singletons,
  * with entry counts and when each was last edited. Nothing else.
  */
 export function Home() {
-  const { manifest, api } = useStudio();
+  const { manifest, api, cloud } = useStudio();
   const [summary] = useLoad(() => api.summary());
   const byName = new Map<string, CollectionSummary>(
     summary.state === 'ready' ? summary.value.map((s) => [s.collection, s]) : [],
   );
 
-  const collections = manifest.collections.filter((c) => !c.presentation.singleton);
-  const singletons = manifest.collections.filter((c) => c.presentation.singleton);
+  // In the cloud, only what the member can edit (spec §7.5).
+  const shown = manifest.collections.filter((c) => shownTo(cloud, c.name));
+  const collections = shown.filter((c) => !c.presentation.singleton);
+  const singletons = shown.filter((c) => c.presentation.singleton);
 
   return (
     <Screen title="Content" afterglow>
+      {cloud && (
+        <div className="mb-8 max-w-2xl">
+          <DraftsWaiting />
+        </div>
+      )}
       {summary.state === 'failed' && (
         <p className="mb-6 text-danger" role="alert">
           Couldn’t load entry counts: {summary.message}

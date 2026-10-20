@@ -1,5 +1,7 @@
 import { Button, cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
+import { shownTo } from '../cloud/access.ts';
+import { ChangesButton } from '../cloud/changes.tsx';
 import { useStudio, VESPER_NAME } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
 import { collectionIcon } from './collection-icon.ts';
@@ -114,18 +116,20 @@ export function Screen({
 
 /** The top bar on every screen but the editor: the Content menu and the site menu. */
 function DefaultBar() {
-  const { manifest, siteUrl, account } = useStudio();
+  const { manifest, siteUrl, account, cloud } = useStudio();
   const route = parseRoute(window.location.hash);
   const here = 'collection' in route ? route.collection : null;
-  const items = manifest.collections.map((collection) => {
-    const icon = collectionIcon(collection);
-    return {
-      id: collection.name,
-      label: collection.label,
-      isCurrent: collection.name === here,
-      icon: 'node' in icon ? icon.node : icon.name,
-    };
-  });
+  const items = manifest.collections
+    .filter((c) => shownTo(cloud, c.name))
+    .map((collection) => {
+      const icon = collectionIcon(collection);
+      return {
+        id: collection.name,
+        label: collection.label,
+        isCurrent: collection.name === here,
+        icon: 'node' in icon ? icon.node : icon.name,
+      };
+    });
   return (
     <nav aria-label="Studio" className="ml-auto flex items-center gap-2">
       <Menu
@@ -141,7 +145,10 @@ function DefaultBar() {
         triggerText="Site"
         items={[
           { id: 'media', label: 'Media', icon: 'media' as const },
-          { id: 'redirects', label: 'Redirects', icon: 'redirects' as const },
+          // Redirects belong to the whole site (spec §7.5): a folder grant doesn't reach them.
+          ...(!cloud || cloud.wholeSite
+            ? [{ id: 'redirects', label: 'Redirects', icon: 'redirects' as const }]
+            : []),
           ...(siteUrl ? [{ id: 'view', label: 'View site', icon: 'view-on-site' as const }] : []),
         ]}
         onAction={(id) => {
@@ -150,6 +157,7 @@ function DefaultBar() {
           if (id === 'view' && siteUrl) window.open(siteUrl, '_blank', 'noopener');
         }}
       />
+      <ChangesButton />
       {/* GitHub mode and the cloud: who is signed in, and the way out (spec §6.9). */}
       {account &&
         (account.expired ? (

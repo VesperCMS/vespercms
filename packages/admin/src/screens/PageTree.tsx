@@ -14,6 +14,7 @@ import {
 } from '@vesper/ui';
 import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
 import { useStudio } from '../app/context.tsx';
+import { mayCreateIn, treeCovered } from '../cloud/access.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
@@ -42,7 +43,7 @@ type Moving = { row: Row; parent: string };
 const TOP = '/';
 
 export function PageTree({ collection }: { collection: CollectionManifest }) {
-  const { api } = useStudio();
+  const { api, cloud } = useStudio();
   const [load, reload] = useLoad(() => api.pageTree(collection.name), collection.name);
   const [expanded, setExpanded] = useState<Set<Key>>(() => new Set());
   const [announcement, setAnnouncement] = useState('');
@@ -50,7 +51,18 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
   const [moving, setMoving] = useState<Moving | null>(null);
   const [deleting, setDeleting] = useState<Row | null>(null);
 
-  const rows = useMemo(() => (load.state === 'ready' ? toRows(load.value.nodes) : []), [load]);
+  // In the cloud a folder grant shows its branches, and the pages above them for context,
+  // which the member can open but not change (spec §6.15.2, §7.5).
+  const covered = useCallback(
+    (path: string) => treeCovered(cloud, collection.name, path),
+    [cloud, collection.name],
+  );
+  const prunes = cloud !== undefined && cloud.member.role !== 'viewer' && !cloud.wholeSite;
+  const rows = useMemo(() => {
+    if (load.state !== 'ready') return [];
+    const all = toRows(load.value.nodes);
+    return prunes ? pruneRows(all, covered) : all;
+  }, [load, prunes, covered]);
   const byPath = useMemo(() => new Map(flatten(rows).map((row) => [row.path, row])), [rows]);
   const byKey = useMemo(() => new Map(flatten(rows).map((row) => [row.id, row])), [rows]);
   const maxDepth = load.state === 'ready' ? load.value.maxDepth : undefined;
@@ -129,7 +141,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
       }
       return;
     }
-    if (!editable || !event.altKey || row.path === '') return;
+    if (!editable || !event.altKey || row.path === '' || !covered(parentOf(row.path))) return;
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault();
       event.stopPropagation();
@@ -196,7 +208,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
           moves it or changes its order. From a page, the right arrow or Shift+F10 reaches its menu,
           and Alt+↑ and Alt+↓ move it.
         </p>
-        {editable && (
+        {editable && mayCreateIn(cloud, collection) && (
           // The screen's one primary action.
           <ButtonLink
             variant="primary"
@@ -226,7 +238,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
             if (row.entryId !== undefined) onMenu(row, 'open');
           }}
           onRowKeyDown={onRowKeyDown}
-          {...(editable ? { dragAndDropHooks } : {})}
+          {...(editable && covered('') ? { dragAndDropHooks } : {})}
           emptyState="No pages yet."
           renderRow={(row) => (
             <>
@@ -239,7 +251,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
               <span className="shrink-0 text-small text-content-muted">{statusOf(row)}</span>
               <Menu
                 label={`More actions for ${row.title}`}
-                items={menuItems(row, rows, byPath, { editable, maxDepth })}
+                items={menuItems(row, rows, byPath, { editable, maxDepth, covered })}
                 onAction={(action) => {
                   onMenu(row, action);
                 }}
@@ -486,11 +498,16 @@ function menuItems(
   row: Row,
   rows: Row[],
   byPath: Map<string, Row>,
-  options: { editable: boolean; maxDepth: number | undefined },
+  options: {
+    editable: boolean;
+    maxDepth: number | undefined;
+    /** Whether the member may change pages at a tree path (the cloud's grants). */
+    covered: (path: string) => boolean;
+  },
 ): MenuItem[] {
   const items: MenuItem[] = [];
   if (row.entryId !== undefined) items.push({ id: 'open', label: 'Open', icon: 'open' });
-  if (!options.editable) return items;
+  if (!options.editable || !options.covered(row.path)) return items;
   const siblings = siblingsOf(row, rows, byPath);
   const index = siblings.indexOf(row);
   const canHaveChild = options.maxDepth === undefined || row.depth < options.maxDepth;
@@ -500,13 +517,16 @@ function menuItems(
     items.push({ id: 'section', label: 'Create section page', icon: 'add-child' });
   if (row.path !== '') {
     items.push({ id: 'move', label: 'Move to…', icon: 'move-to' });
-    items.push({ id: 'up', label: 'Move up', icon: 'move-up', isDisabled: index <= 0 });
-    items.push({
-      id: 'down',
-      label: 'Move down',
-      icon: 'move-down',
-      isDisabled: index === siblings.length - 1,
-    });
+    // The order of siblings lives in their parent's folder, which the grant must cover too.
+    if (options.covered(parentOf(row.path))) {
+      items.push({ id: 'up', label: 'Move up', icon: 'move-up', isDisabled: index <= 0 });
+      items.push({
+        id: 'down',
+        label: 'Move down',
+        icon: 'move-down',
+        isDisabled: index === siblings.length - 1,
+      });
+    }
   }
   if (row.entryId !== undefined && row.path !== '') {
     items.push({ id: 'delete', label: 'Delete…', icon: 'delete', isDanger: true });
@@ -533,6 +553,14 @@ function toRows(nodes: PageTreeNode[]): Row[] {
 function siblingsOf(row: Row, rows: Row[], byPath: Map<string, Row>): Row[] {
   const parent = parentOf(row.path);
   return parent === '' ? rows.filter((r) => r.path !== '') : (byPath.get(parent)?.children ?? []);
+}
+
+/** Pages a grant covers, and the pages above them, so each branch keeps its place. */
+function pruneRows(rows: Row[], covered: (path: string) => boolean): Row[] {
+  return rows.flatMap((row) => {
+    const children = pruneRows(row.children, covered);
+    return covered(row.path) || children.length > 0 ? [{ ...row, children }] : [];
+  });
 }
 
 function flatten(rows: Row[]): Row[] {

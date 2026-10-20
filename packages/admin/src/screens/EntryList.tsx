@@ -3,6 +3,7 @@ import { ButtonLink, Select, Table, TextField, type TableColumn } from '@vesper/
 import { useEffect, useMemo, useState } from 'react';
 import type { SortDescriptor } from 'react-aria-components';
 import { useStudio } from '../app/context.tsx';
+import { entryShownTo, mayCreateIn } from '../cloud/access.ts';
 import { formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
@@ -17,12 +18,16 @@ type Filter = 'all' | 'drafts' | 'attention';
  * words. One search box and one status filter; sort by column header.
  */
 export function EntryList({ collection }: { collection: CollectionManifest }) {
-  const { api } = useStudio();
+  const { api, cloud } = useStudio();
   const [load] = useLoad(() => api.listEntries(collection.name), collection.name);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<SortDescriptor>(() => defaultSort(collection));
-  const entries = useMemo(() => (load.state === 'ready' ? load.value : []), [load]);
+  // In the cloud, only the entries the member can edit (spec §7.5); viewers see all.
+  const entries = useMemo(
+    () => (load.state === 'ready' ? load.value.filter((e) => entryShownTo(cloud, e.path)) : []),
+    [load, cloud],
+  );
 
   // A singleton has no list: open its one entry, or start it.
   const singleton = collection.presentation.singleton === true;
@@ -103,7 +108,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
             className="w-48"
           />
         )}
-        {collection.editable && !singleton && (
+        {collection.editable && !singleton && mayCreateIn(cloud, collection) && (
           // The screen's one primary action.
           <ButtonLink
             variant="primary"
