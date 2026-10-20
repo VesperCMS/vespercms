@@ -16,7 +16,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
-| 4 onward | Roadmap below |
+| 4 Cloud foundation | Design written (2026-10-20); waiting for Jeremy's calls and the domain. See "Phase 4: Cloud foundation (design)" below. |
+| 4.5 onward | Roadmap below |
 
 ## Calls of 2026-10-19
 
@@ -426,6 +427,220 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 - **A screen reader pass** of the sign-in screen, the user menu and Publish, with the earlier phases' passes.
 
 **Not built** (as planned): pull-request mode (Phase 9), deploy status (cloud), the cloud's free relay (when the domain exists), a read-only studio, GitLab and Bitbucket.
+
+## Phase 4: Cloud foundation (design)
+
+Scope is the §11 Phase 4 entry, the cloud half of §6.9 (connecting the studio), §7.1 to §7.5 (services, identity, the git proxy, drafts and review, roles), §7.8 and §7.10 (email, security), the Phase 4 tables of §8, and §9.1's Phase 4 dashboard. D13 (drafts live in the cloud) and D15 (a Durable Object per site) were confirmed on 2026-10-17, and §13.3 on 2026-10-19: the cloud lives in its own private repository. Everything the cloud does is paid (§4). What the studio needs to talk to it ships in the MIT `/admin` bundle, which is one bundle for every mode (§5).
+
+**Done when** (§11):
+1. ThoseGeeks can onboard one real client site.
+2. A client editor with no GitHub account can draft, request review and get published by an approver.
+3. A grant scoped to a folder is enforced in both the API and the UI.
+4. The same client site works from an FTP-style plain static host: sign-in, drafting, publishing and deploy status, with no host features.
+5. With the cloud unreachable, the studio keeps unsaved work and falls back cleanly. Signed-out users see no cloud UI at all.
+
+**Before it can be finished (Jeremy):**
+- **The domain (§13.1).** The cloud's addresses, its cookies, the sign-in providers' redirect addresses, the email sending domain and the GitHub App's URLs all need it. Building can start on `workers.dev` and `localhost`; criterion 1 can't be met without it.
+- **The accounts listed after the calls.** Each is created by you, under the domain, when its milestone arrives.
+
+**What was found first.** In the code:
+- **Storage was built for this.** The interface already has a `cloud` kind, and a file's version is its git blob SHA in every mode, so a draft can record the version it was based on and find conflicts later.
+- **The cloud can run GitHub mode's adapter.** `GitHubStorage` needs only `fetch` and a token (DECISIONS.md, 2026-10-19), so the git proxy in a Worker can read and commit with an installation token through the same code GitHub mode uses and tests.
+- **GitHub mode's pieces carry over:** sign-in by top-level redirect with PKCE, the gate before the studio, the user menu, kept changes when a sign-in expires, asynchronous file URLs, and field uploads that wait for the publish (`ChangeSet.defer`).
+- **Hooks waiting for this phase:** `vesper.config.ts` accepts a `roles` key that nothing reads yet, and every build writes `/_vesper/manifest.json` for the cloud.
+- **From Taproot:** opaque session tokens stored as their SHA-256, 30-day sessions refreshed at half their life, and sign-in throttling counted in the database by email and by IP (10 failures in 15 minutes). Ideas only, not its code.
+
+From GitHub's, Cloudflare's, Microsoft's and OpenCage's docs, checked on 2026-10-20 (sources go into DECISIONS.md with the calls):
+- **The app's commits are Verified.** A commit made with an installation token is signed by GitHub and shown as Verified, as long as it sets no author, committer or signature of its own. That satisfies a rule requiring signed commits. Setting the editor as the author would lose it, which settles §7.3's bot author. Phase 3's open item about unsigned commits is GitHub mode's alone.
+- **Connecting a repository needs the installer's own GitHub sign-in.** GitHub warns that the `installation_id` it returns after an install can be spoofed. The fix is a user token for whoever installed the app, then `GET /user/installations` to confirm the installation is theirs. The install link carries a `state` through. Only the person connecting the repository (usually the agency's developer) needs a GitHub account, never the editors.
+- **Branch rules can be read before publishing.** Rulesets come from `GET /rules/branches/{branch}`, with Metadata read. Classic protection comes from `GET /branches/{branch}`, with Contents read. A refused push is a 422 whose message isn't stable enough to parse.
+- **Deploy status** needs three read-only permissions: commit statuses, checks and deployments. Some hosts report through deployments.
+- **Hosts and bot authors.** Netlify holds a private repository's deploys from authors it doesn't recognize. It recognizes GitHub Marketplace bots, and auto-approve or a build hook gets round the hold. Vercel deploys a private repository's commit only when its author has access to the project. Its docs don't mention app bots, and a 2024 forum thread shows a bot's commits blocked. Cloud editors have no GitHub accounts, so no author would be recognized anyway. The bot at least is one identity a team can approve.
+- **Email Service is still in beta** (public since April 2026):
+  - it needs Workers Paid, and the sending domain must use Cloudflare's DNS;
+  - 3,000 emails a month are included, then $0.35 per 1,000;
+  - new accounts get a daily quota that isn't published and grows with reputation.
+- **Limits are far away:** 10 GB per Durable Object and per D1 database.
+- **Microsoft sign-in** for any organization needs the issuer checked against the token's own tenant. Publisher verification isn't required for sign-in alone. But a tenant that lets people consent only to verified publishers blocks an unverified app, and colleges often set that. Verification is free through Microsoft's partner program.
+- **OpenCage passes §13.9's check.** Results may be stored for good, even after cancelling, with OpenStreetMap's attribution. Calling it from a server is what OpenCage recommends. The free trial isn't for production, and the smallest plan is $50 a month for 10,000 requests a day.
+
+### What lives where
+
+**The rule:** anything that ships in `/admin` or runs on a customer's site is MIT and lives here. Anything that holds a secret, stores customer data or runs at the domain is private and lives in the cloud's repository. The API the studio speaks is public by nature, so its contract lives here too.
+
+| Here (MIT) | The cloud's repository (private) |
+|---|---|
+| **`@vesper/core`:** grant evaluation (§7.5: "lives in core, shared by the API and the UI"); the cloud API's request and response types; `runCloudContract`, the behaviour the studio relies on, which the cloud runs against its real API. | **`apps/cloud-api`** (a Worker): sign-in, sessions and throttling; `/token`; invites; the GitHub App (connecting, tokens, the git proxy); the site Durable Object (drafts, reviews, the repository cache); deploy status; email; the audit log. |
+| **`@vesper/astro`:** `vesper({ cloud: { project } })` and `VESPER_PROJECT`, plus the cloud's addresses (overridable for staging and tests), written into the studio at build. | **`apps/cloud-app`** (Astro on Workers): sign-in pages, `/authorize`, and dashboard v1. |
+| **`@vesper/admin`:** "Sign in with Vesper", the redirect and callback, tokens; `CloudStorage` over the git proxy; drafts and autosave; Changes and Publish; request review and the review screen; conflicts; grants in the studio; deploy status; offline handling. | **D1 schema and migrations** for Phase 4's tables (§8.1), operator scripts, Wrangler configuration, secrets, deployment notes. |
+| **`@vesper/ui`:** components the dashboard needs that the studio lacks (a table, an invite form's pieces), in the kit with axe and keyboard tests. | **Tests:** the Workers test pool for the API and the Durable Object; `runCloudContract` against the real API; end-to-end with this repository's playground and fake GitHub. |
+| **`scripts/cloud-fake.mjs`:** a fake cloud that keeps the contract over the fake GitHub's real git, for a new e2e project, `cloud`, here (ports 4406 and 4407). | |
+
+The studio never depends on the private repository: everything here is built and tested against the fake cloud. The private repository depends on this one (call 1).
+
+### How it works
+
+**Accounts and sessions** (cloud-app and cloud-api, §7.2).
+- People sign in with an email link, Google or Microsoft. Identities join on a verified email address.
+- Dashboard sessions follow Taproot: a random 32-byte token in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie on `app.`, stored as its SHA-256 in D1, 30 days, extended at half life, replaced when someone's role changes. Every form that changes something checks a CSRF token.
+- Email links and code exchanges are throttled by email and by IP in D1.
+- Nobody signs up in Phase 4 (call 6): an operator script creates the account, and everyone else joins by invite.
+
+**The studio's connection** (§6.9, §7.2).
+1. The build writes the project ID and the cloud's addresses into the studio.
+2. The sign-in screen offers "Sign in with Vesper", and "Sign in with GitHub" too when GitHub mode is set up.
+3. A top-level redirect goes to `app.<domain>/authorize` with the site, a state and a PKCE challenge. The page signs the person in if needed, checks that they belong to the site and that the return address is one of the site's registered origins, and sends them back to `/admin/#/callback` with a one-time code. In the hash, the code never reaches the host's logs.
+4. The studio exchanges the code and its verifier at `api.<domain>/token` for an access token: about 10 minutes, for that one site, carrying the person's role and grants. How it stays signed in is call 2.
+5. The API checks membership and grants again from D1 on every write. A token alone is never trusted for permissions.
+
+Registered origins are the site's production and preview addresses, plus `localhost` ports for development. Codes go only to them, and the API answers CORS only for them.
+
+**Reading the repository** (the git proxy, §7.3). `CloudStorage` in the studio lists and reads through the API, which reads GitHub with an installation token through `GitHubStorage`. The studio never sees that token. The API caches the tree per commit in the site's Durable Object, and the studio keeps GitHub mode's IndexedDB cache by blob SHA, so a warm visit fetches only what changed.
+
+**Drafts** (§7.4). One Durable Object per site (D15) holds drafts, reviews and the repository cache in SQLite.
+- A draft is the file the save would write: the same splice and the same checks as a local save, kept with the version it was based on. Publishing is then exactly what local mode would have written. §8.2's sketch stores parsed data and a body instead; the file's own text keeps round-trip fidelity (§6.5) in one place.
+- The studio autosaves a second after typing stops. The status is text: "Draft saved", or "Saving…".
+- Uploads from a field wait in R2 under the site's own prefix until the draft is published, then go into the same commit, as `ChangeSet.defer` does in GitHub mode. A discarded draft deletes them.
+
+**Publishing.**
+- Someone who may publish chooses drafts and publishes them. The API checks the publish grant on every file, builds one change set with each draft's base version as the expected version, and commits it through `GitHubStorage`: one commit for any number of drafts. Then it clears them.
+- The commit's author is the app's bot (§7.3). The editor appears in a `Co-authored-by:` trailer and a `Vesper-Editor:` trailer with their user ID, plus `Vesper-Collection` as today.
+- If a file changed on GitHub since its draft began, the studio shows the published version and the draft side by side (§7.4). The editor keeps theirs, now based on the new version, or discards it. Nothing is overwritten silently.
+- A branch rule that refuses the push is call 5.
+- The accessibility publish gate (§6.18, `a11y.blockPublishOn`) applies to Publish as in local mode. Request review isn't gated: reviewers see the same notes.
+
+**Review** (§7.4). Someone who can edit but not publish sees "Request review" instead of Publish. It sends the chosen drafts to the site's approvers by email and in the studio. An approver opens the review, sees each change beside the published version, and publishes, asks for changes with a comment, or comments only. Editing a draft that's under review updates the review.
+
+**Grants** (§7.5, call 3). A member has a site role (admin, editor, contributor or viewer) and, optionally, grants: a collection, an entry glob, and whether publishing needs approval. `@vesper/core` evaluates them for both sides:
+- the API refuses drafts, publishes and reviews outside them, and a move needs a grant at both its old and new place (§6.15.4);
+- the studio hides what someone can't do, except where a line helps ("Publishing needs approval").
+
+**Deploy status** (§6.16). After a publish, the studio and dashboard read the commit's statuses and check runs through the API and show "Publishing…", "Live" or "Build failed", with a link to the host's log. With no status at all (a host built by hand), the studio says "Published. It will be live after the site is next built."
+
+**When the cloud is unreachable.** Unsaved changes are written to IndexedDB as they're typed. The studio says "Can't reach Vesper. Your changes are kept on this device, and they'll be saved when it's back." and retries with backoff. A reload with the cloud down keeps them. Signed out, the studio shows no cloud wording at all.
+
+**The dashboard, v1** (§9.1), at `app.<domain>`:
+- **Sites:** the list, and Add site (name, production address, preview addresses).
+- **Connect repository:** install the GitHub App and choose the repository. The person connecting signs in to GitHub once, so the cloud can confirm the installation is theirs. The page checks the branch's rules and says plainly if publishing straight to it won't work.
+- **People:** invite by email with a role and grants; change or remove them.
+- **Open studio:** a link to the site's `/admin`.
+
+It's built with `@vesper/ui` and the same tokens and budget as the studio, and every screen passes axe with a keyboard pass.
+
+**Email** (§7.8): sign-in links, invites and review requests, as plain accessible HTML with a text version. The provider is call 7.
+
+**The audit log** (§7.10) records every write from the first day: who, what, which site, when.
+
+**Operator scripts** (§9.2, before the Phase 5 console): create an account, add a site, suspend, and list, run with `wrangler d1 execute`.
+
+### In the interface (§10.4)
+
+- **Sign-in screen:** one primary button, "Sign in with Vesper". "Sign in with GitHub" is secondary when GitHub mode is set up.
+- **User menu** (where GitHub mode's is): "Signed in as Name", "Open dashboard", "Sign out".
+- **The editor's bar:** the status is text ("Draft saved"). The primary button is Publish for editors and Request review for contributors. Viewers get no button, and the fields are read-only.
+- **Drafts, reviews and Publish N changes:** call 4.
+- Nothing about billing, forms, comments or the dashboard's settings appears in the studio, and a signed-out studio shows nothing of the cloud (§6.9).
+
+### Tests, mapped to "Done when"
+
+1. **Onboarding a real client site:** the real-world check, with a checklist in the outcome. You onboard one ThoseGeeks client: an account, the site, the repository, one editor invited.
+2. **Draft, review, publish without GitHub:** in the cloud's repository, end-to-end against the real API under `wrangler dev`, with the fake GitHub standing in for GitHub and this repository's playground as the site. Here, the `cloud` e2e project does the same against the fake cloud, checking the bare repository for one commit with the drafts' files and nothing else changed.
+3. **A folder grant, in both places:** unit tests for the evaluation in core; API tests that a request outside the grant is refused even when the studio is bypassed; studio tests that entries and actions outside it are hidden.
+4. **A plain static host:** both e2e suites serve the site from `scripts/static-server.mjs`. The real-world check also runs once from a plain host with no CI, uploaded by hand.
+5. **The cloud unreachable:** studio tests stop the fake cloud mid-edit, reload, and check the changes are kept and saved when it returns. Signed-out runs check that no cloud wording appears.
+
+Every new screen in the studio and the dashboard passes axe, and each gets a keyboard pass.
+
+**Order of work** (each step small commits, each repository green):
+1. Here: this design, then the decisions once the calls are made.
+2. Here: grant evaluation, the API's types and `runCloudContract` in core; the fake cloud.
+3. Here: the `cloud` option; sign-in, tokens and the callback in the studio.
+4. Here: `CloudStorage`, drafts and autosave, Changes and Publish, conflicts, deploy status, offline.
+5. Here: Request review and the review screen; grants in the studio; the `cloud` e2e project and CI.
+6. Cloud: the repository with this one as its source (call 1), Wrangler, D1 migrations, CI.
+7. Cloud: sign-in, sessions, throttling, email, invites, the audit log.
+8. Cloud: `/authorize` and `/token`.
+9. Cloud: the GitHub App, connecting a repository (with the installer check), tokens, the git proxy, deploy status.
+10. Cloud: the site Durable Object, with drafts, reviews and publishing.
+11. Cloud: dashboard v1.
+12. Cloud: `runCloudContract` and e2e against the real API; a staging deploy on `workers.dev`, then production on the domain.
+13. The real-world check.
+
+### The calls
+
+1. **How the cloud's repository gets this one's packages.**
+   - (a) This repository as a git submodule inside the cloud's, with its `packages/*` in the cloud's npm workspaces. Recommended. Through Phase 4 the studio and the cloud change together, and this way there's no release in between. The cloud pins an exact commit of this repository. Its CI needs a read-only token for this repository until it goes public.
+   - (b) Prereleases of `@vesper/*` on npm. Needs the `@vesper` org claimed, and every studio change needs a release before the cloud can use it.
+   - (c) GitHub Packages as a private registry. The same release step, and one more registry to look after.
+2. **How the studio stays signed in.**
+   - (a) As §7.2 says: a 10-minute access token in memory, and a top-level redirect whenever it expires or the page reloads. Simple, with no long-lived secret in the browser. But an editor is sent away and back every 10 minutes while working, and on every reload.
+   - (b) Tokens bound to a key the browser can't export (DPoP). Recommended.
+     - The studio makes a key pair it can't read back out and keeps it in IndexedDB. Every token is bound to that key, so a copied token is useless anywhere else.
+     - The 10-minute access token is renewed in the background with a refresh token that rotates on every use. That token is bound to the same key, and lapses after 12 hours unused or 7 days at most.
+     - The redirect happens only when the refresh token lapses. A script on the site's own pages could still use the key while `/admin` is open, so the API's checks and the short lives still matter.
+   - (c) A 1-hour token in `sessionStorage`, the way GitHub mode keeps its 8-hour one. Simple, but a copied token works from anywhere for an hour.
+3. **Where grants are defined.**
+   - (a) In the dashboard, per member. Recommended.
+     - A site admin picks a collection and a folder from the site's manifest, and whether publishing needs approval.
+     - A change takes effect at once, with no developer and no deploy, which is what a college's web office needs.
+     - The unused `roles` key leaves `vesper.config.ts`.
+   - (b) Named in `vesper.config.ts`, as §6.4 shows, and assigned in the dashboard. Grants get reviewed in git, but every change waits for a developer and a deploy, and the API has to trust the deployed manifest for them.
+   - (c) Both: names in the config as presets, and grants in the dashboard. Two places to look when someone can't edit.
+4. **Where drafts, reviews and "Publish 3 changes" live in the studio.** CLAUDE.md asks for this before building.
+   - (a) A Changes button in the top bar with its count in words ("3 changes"), opening a drawer. Recommended.
+     - The drawer lists your drafts, each with a checkbox, and "Publish 3 changes". For approvers it also lists what's waiting for their review.
+     - Home's "drafts waiting" line, from the design system, links to it.
+     - It's one quiet control and no new level of navigation, and the drawer is the pattern Details and the accessibility notes already use.
+   - (b) A Changes screen in the sidebar, beside the collections. Easier to find, but it adds a navigation item that isn't content.
+5. **A branch rule that refuses a direct push** (pull requests or status checks required).
+   - (a) Refuse plainly, as GitHub mode does, and check the rules when the repository is connected, so the agency hears about it before an editor does. Recommended. The pull-request fallback comes with pull-request mode in Phase 9 (§13.5), where its "waiting on GitHub" state belongs.
+   - (b) Open a pull request and tell the editor, as §7.3 says. A college with protected branches can publish from the first day. But Phase 4 gains a third state, published but not merged, across the studio, deploy status and drafts.
+6. **Sign-up in Phase 4.**
+   - (a) None. You create each account with an operator script, and everyone else joins by invite. Recommended: there's no billing until Phase 5, and the first sites are ThoseGeeks' own.
+   - (b) Open sign-up with a 30-day trial (§13.4), with nothing to pay when it ends yet.
+7. **Email.**
+   - (a) Email Service for everything, plus a second provider for sign-in links only, as §7.8 says. Recommended. Email Service is in beta with an unpublished quota for new accounts, and a sign-in link that never arrives locks a client out.
+   - (b) Email Service alone. One provider, but that beta quota stands between your clients and signing in.
+   - (c) The second provider for everything until Email Service leaves beta. The simplest to trust, with a monthly bill from the start.
+   - The second provider is Resend, as §7.8 suggests, unless you prefer another.
+8. **Who owns the GitHub App.**
+   - (a) A new GitHub organization for Vesper. Recommended: the app moves with the product rather than with ThoseGeeks or your personal account, and an organization can have several owners.
+   - (b) The ThoseGeeks organization.
+   - (c) Your own account.
+
+   With any owner, the app is set up the same way:
+   - it's public;
+   - it asks for contents read and write, plus metadata, commit statuses, checks and deployments read-only;
+   - "Request user authorization during installation" is on, so connecting a repository checks who installed it;
+   - its webhooks cover installation changes only.
+
+   Call 9's relay could later use the same app, so a site that changes modes keeps one installation.
+9. **The free relay for GitHub mode.** It was decided on 2026-10-19 that the cloud runs one, but not who may use it. An open relay would let any website ask for tokens to repositories where Vesper's app is installed, so it needs a list of sites.
+   - (a) Leave it until launch preparation (Phase 9). GitHub mode works today with the template. Recommended: it keeps Phase 4 on the paid path.
+   - (b) Build it now, for sites registered in the dashboard. That means a free cloud account that can register GitHub-mode sites, and that's a tier decision for you: do you want a free dashboard account at all?
+
+**Smaller defaults, built as written unless you say otherwise:**
+- The cloud's repository is `jeremybise/vesper-cloud`, private, with the same tooling as this one (npm workspaces, TypeScript strict, Vitest, ESLint, Prettier).
+- `Co-authored-by` uses the editor's name and a no-reply address at the domain, never their real email: a public repository's history is public forever.
+- In `astro dev` the studio stays in local mode. The cloud's sign-in works from `localhost` only for developing the cloud.
+- History (§7.4) isn't in Phase 4's build list, so it waits. It comes from git, so it would serve GitHub mode as well; it deserves its own small step after Phase 4.5.
+- Database access in the cloud uses Kysely over D1, as Taproot does: typed queries and migrations for one small dependency.
+- The deployment notes say how to let the bot's commits build on Netlify (auto-approve or a build hook) and on Vercel (a deploy hook). The real-world check uses a host with no author rule. A GitHub Marketplace listing, which Netlify recognizes, is for launch.
+- Geocoding for `fields.geo` isn't in Phase 4's build list. Its check passed (above), but the free trial can't serve production, so it waits until a client needs address search, and the plan is bought then.
+- Tier: everything above is paid, except that the studio's half ships in the MIT bundle as §5 requires. Call 9 has the one tier question.
+
+**Spec changes these calls would make:** 2(b) changes §7.2's "silently repeats the redirect"; 3(a) removes `roles` from §6.4's `vesper.config.ts`; 5(a) moves §7.3's pull-request fallback to Phase 9. Each would get a dated entry in DECISIONS.md and an edit to the spec.
+
+**Accounts you'll create, each when its step arrives:**
+- **The domain, on Cloudflare's DNS.** Email Service needs that DNS, and Cloudflare Registrar sets it up in one step.
+- **The GitHub organization and the public "Vesper" app** (call 8).
+- **Google:** an OAuth client in a Google Cloud project, with its consent screen published for outside users.
+- **Microsoft:** an app registration in Entra ID for any organization and personal accounts. Get publisher verification through Microsoft's partner program before onboarding a college.
+- **Email:** Email Service on the domain, and the second provider's account (call 7).
+- **Cloudflare:** Workers Paid ($5 a month; Email Service needs it), then the D1 database, R2 bucket and KV namespace. I can create those once you OK it.
+- **The private repository,** `jeremybise/vesper-cloud`. I can create it once you OK it.
+
+**Not in this phase:** billing and the operator console (Phase 5); scheduling (4.5); forms (6); previews and click-to-edit (7); comments (8); the media library on R2; history; SSO and white-label (9); pull-request mode (9); GitLab.
 
 ## Phase 3: GitHub mode (design)
 
@@ -1482,7 +1697,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done 2026-10-18, CI green in run 39169607328) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above). Calls confirmed 2026-10-19 | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators. Design and outcome above (2026-10-19) | GitHub adapter passing the storage contract suite; OAuth relay template |
-| 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); the §13.1 domain; check OpenCage's terms and price (§13.9) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
+| 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); OpenCage's terms and price checked 2026-10-20 (they pass); the §13.1 domain, still to register. Design above (2026-10-20) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
 | **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
 | 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |
 | 6 Forms (expanded) | — | routing rules, private R2 uploads (D21), confirmation emails with the D20 protections |
