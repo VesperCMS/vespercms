@@ -72,3 +72,11 @@ export {
   type TreeResponse,
   type WireChange,
 } from './protocol.ts';
+export {
+  CloudClient,
+  CloudError,
+  authorizeUrl,
+  createPkce,
+  type CloudClientOptions,
+  type CloudTokens,
+} from './client.ts';
