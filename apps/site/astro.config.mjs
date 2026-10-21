@@ -9,9 +9,12 @@ import { sourceConditions } from '../../scripts/vite-source-conditions.mjs';
 export default defineConfig({
   site: 'https://vespercms.com',
   output: 'static',
-  // The studio is local only (`npm run dev -w @vesper/site`, then /admin)
-  // until the site is connected to the cloud; then /admin deploys with it.
-  integrations: [markdoc(), vesper({ siteName: 'Vesper', studio: { deploy: false } })],
+  // Edited through the cloud at vespercms.com/admin; `astro dev` stays local
+  // mode. The project ID is an identifier from the dashboard, not a secret.
+  integrations: [
+    markdoc(),
+    vesper({ siteName: 'Vesper', cloud: { project: 'site_3hfhzj0qma9p27ygk422' } }),
+  ],
   // Resolve workspace @vesper/* packages to source, like the playground.
   vite: sourceConditions(),
 });

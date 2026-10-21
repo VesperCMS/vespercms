@@ -13,11 +13,13 @@ import { expect, test } from '@playwright/test';
 const dist = fileURLToPath(new URL('../../apps/site/dist/', import.meta.url));
 const WCAG21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
+/** The site's own pages. /admin is the studio, which the studio, github and cloud projects test. */
 function builtPages(): string[] {
   return readdirSync(dist, { recursive: true, encoding: 'utf8' })
     .map((file) => file.replaceAll('\\', '/'))
     .filter((file) => file.endsWith('.html') && file !== '404.html')
     .map((file) => `/${file.replace(/(^|\/)index\.html$/, '$1')}`)
+    .filter((path) => !path.startsWith('/admin/'))
     .sort();
 }
 
@@ -48,6 +50,12 @@ for (const path of builtPages()) {
     });
   }
 }
+
+test('the studio is deployed for the cloud, and kept out of search engines', async ({ page }) => {
+  const response = await page.goto('/admin/');
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
+});
 
 test('unknown URLs get a real 404 with the site’s page', async ({ page }) => {
   const response = await page.goto('/no/such/page/');

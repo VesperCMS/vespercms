@@ -27,4 +27,12 @@ Plain language, second person, short sentences. Describe only what's built today
 
 ## Deploying
 
-Not deployed yet. The build is static files in `dist/`, so any host works. The plan is the apex of vespercms.com; the cloud is on `app.` and `api.`. `/admin` is left out of the build (`studio: { deploy: false }`) until the site is connected to the cloud, when it deploys with the site and editing goes through the cloud.
+Live at vespercms.com, on Cloudflare Pages (the cloud is on `app.` and `api.`). The Pages project builds from the repository's root, because the site needs the whole workspace installed:
+
+- Build command: `npm run build -w @vesper/site`
+- Build output directory: `apps/site/dist`
+- Environment variable: `NODE_VERSION` = `24` (Astro 7.4 needs Node 22.22 or later)
+
+On Pages, Vesper writes the host's own `_redirects` for moved pages (it detects `CF_PAGES`).
+
+Editing on the live site goes through the cloud: `vesper({ cloud: { project } })` in `astro.config.mjs`, with the dashboard's site connected to this repository's `apps/site` folder (the folder has to be typed: the repository holds three Astro sites). Editors sign in at vespercms.com/admin; each publish is one commit to `main` by the VesperCMS app, which Pages rebuilds. `astro dev` stays local mode.
