@@ -940,7 +940,15 @@ Hosts that check authors: Netlify holds a private repository's deploys from auth
 
 ### 2026-10-21: A publish credits every draft's author
 
-**Jeremy chose on 2026-10-21: when one publish carries several people's drafts, its commit names each of them in its own `Co-authored-by` trailer, not only the person who published.** GitHub shows every co-author on the commit, and history then says who wrote what. Core's commit trailers hold one value per name today, so they become lists, and the cloud passes each draft's author. Not built yet; it's left before Phase 4 is done (PLAN.md).
+**Jeremy chose on 2026-10-21: when one publish carries several people's drafts, its commit names each of them in its own `Co-authored-by` trailer, not only the person who published.** GitHub shows every co-author on the commit, and history then says who wrote what.
+
+**Built here the same day. A draft keeps `authors`: everyone who saved it, each once by ID, in the order they first did, and a save that joins drafts keeps all of theirs. Core's `publishChangeSet` takes the publisher and the no-reply domain and writes the credit itself: the publisher first, then each draft's authors in the order the drafts are published, each person once, with their IDs in `Vesper-Editor` in the same order. A trailer's value can be a list (`CommitTrailers`), written one line per value.**
+- The publisher comes first, so a publish by the one person who wrote it is byte for byte what it was, and the first `Vesper-Editor` always says who published, which history can use.
+- The credit is built in core, so the fake and the real cloud can't drift, and a draft's own `Vesper-Editor` or `Co-authored-by` trailers are dropped: only the cloud names people. A name goes on one line, without a `<` or `>` that could end its address early, and the address is the member's ID at the no-reply domain, never an email.
+- Trailers merge by name, each value once, so a publish across collections names each `Vesper-Collection`; before, the last draft's won. A name with one value stays a string, as the studio sends it and as drafts already stored hold it.
+- Rejected: crediting each draft's `updatedBy`. Drafts belong to the site, so a second editor's small fix would have erased the first author.
+
+`runCloudContract` checks it: each draft lists its authors, and a publish of several people's drafts names each once, in that order, at an address made from their ID, never their email. The cloud's half (its submodule, storing `authors`, passing the publisher) is in PLAN.md, "Phase 4: progress".
 
 ## Scheduling
 

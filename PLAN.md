@@ -16,7 +16,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
-| 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. Left: `Co-authored-by` for every draft's author (Jeremy's call b), and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
+| 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. Left: the cloud's half of `Co-authored-by` for every draft's author (Jeremy's call b; this repository's half built 2026-10-21), and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
 | 4.5 Scheduled publish and unpublish | Designed 2026-10-21, and Jeremy confirmed its calls that day. Building waits for Phase 4's acceptance criteria. See "Phase 4.5: Scheduled publish and unpublish (design)" below. |
 | 5 onward | Roadmap below |
@@ -142,7 +142,7 @@ What the code and content showed, checked 2026-10-21:
   - `readAt(path, commit)` returns that version's bytes.
 
   The memory adapter implements both, and `runStorageContract` tests them for every adapter that has them.
-- **Who.** For a cloud publish the author is the app's bot, so the names come from its `Co-authored-by` trailers. Those become lists in Phase 4's remaining work, so history comes after that. In GitHub mode the editor is the author; in local mode, whoever made the commit. Names only, never email addresses. A change made outside the studio shows its author and "Changed outside the studio", with the first line of its message below in muted text.
+- **Who.** For a cloud publish the author is the app's bot, so the names come from its `Co-authored-by` trailers. Those are lists since 2026-10-21: the publisher first, then each draft's authors, with their IDs in `Vesper-Editor` in the same order. History comes after the cloud's half of that is live. In GitHub mode the editor is the author; in local mode, whoever made the commit. Names only, never email addresses. A change made outside the studio shows its author and "Changed outside the studio", with the first line of its message below in muted text.
 - **Local mode** (`astro dev`). When the site's folder is inside a git repository, the dev API runs `git log --follow` and `git show` with `execFile` (no shell, the path after `--`), and only for files inside the site that a collection owns. When the working file differs from its last committed version, the list starts with "Saved on this computer, not yet in history". With no git, there's no History (call H2).
 - **GitHub mode.** One GraphQL request per page of 20: the branch's `history(path:)`, with each commit's `file(path:)` for its blob (to be checked against GitHub's docs before building, as Phase 3 did). Bytes come by blob SHA through the existing IndexedDB cache, checked against the SHA. GitHub's history for a path doesn't follow a move, so at the commit that added the path, one REST call (`GET /commits/{sha}`) reads its files, and a `previous_filename` continues the history under the old path. The fake GitHub answers both from `git log` over its real repository.
 - **The cloud.** A contract change in `@vesper/core` first (CLAUDE.md, "The cloud"):
@@ -775,7 +775,7 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 
 **Calls, decided by Jeremy on 2026-10-21 (DECISIONS.md):**
 - **Page moves with a folder grant stay refused** (option a): a move rewrites the site's redirects file, which needs the whole site, so moves stay with site admins and whole-site editors. Rejected: the API checking each redirect against the grant, which needs pages' URLs on the server, where function-form URLs can't run.
-- **`Co-authored-by` credits every draft's author** (option b): trailers become lists in core's commit message, and the cloud passes each draft's author. Not built yet; it's small, in core and the cloud's repository.
+- **`Co-authored-by` credits every draft's author** (option b): trailers become lists in core's commit message, and the cloud passes each draft's author. This repository's half is built (2026-10-21, below); the cloud's is left.
 
 **Screen reader passes** (every phase's, from 2.6 on) wait until the end, before launch: Jeremy's call on 2026-10-21. Automated axe checks and keyboard passes continue as each screen lands.
 
@@ -786,7 +786,18 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 - Signing out of the studio left the dashboard signed in, and the other way round; now one ends both on that browser, server-side in the cloud (vesper-cloud DECISIONS.md; nothing changed in the studio).
 - Connect repository needed a first install of the GitHub App, so an account that already had it never came back from GitHub; "Choose a repository VesperCMS can reach" is the second way in (vesper-cloud DECISIONS.md).
 
-**Left before Phase 4 is done:** the `Co-authored-by` lists (call b, above), and in the cloud's repository the studio against the real API under `wrangler dev`, step 12's last piece. The Phase 4.5 design is written (below, 2026-10-21); building it waits for these.
+**Crediting every draft's author, this repository's half (2026-10-21).** Commit trailers can hold lists (`CommitTrailers`), written one line per value. A draft keeps `authors`, everyone who saved it, and `publishChangeSet` now takes the publisher and the no-reply domain and writes `Vesper-Editor` and `Co-authored-by` itself: the publisher first, then each draft's authors, each person once (DECISIONS.md, "A publish credits every draft's author"). GitHub mode is unchanged: the editor is the commit's author, with one `Vesper-Collection`. Tested in core's unit tests, a new `runCloudContract` test (each draft lists its authors; a publish of three people's drafts names each once, in order, never at their email), and the `cloud` e2e project, where a contributor's draft and an admin's are published together from Changes as one commit naming both. The fake cloud now publishes through `publishChangeSet` instead of adding trailers itself.
+
+**What `vesper-cloud` must change to pass the new contract** (not edited from here):
+1. Move the `vesper` submodule to the commit with this work, once it's on `main`.
+2. `apps/cloud-api/src/site.ts`, `publish`: call `publishChangeSet(this.drafts, ids, { by: by(who), noReplyDomain: this.env.NOREPLY_DOMAIN })` and commit the change set as it comes back, dropping its own `Vesper-Editor` and `Co-authored-by` and the `oneLine` name (core does both, with "Vesper editor" for a blank name). Its typecheck fails until then: the third argument is required.
+3. `apps/cloud-api/src/store.ts`: keep each draft's `authors` (schema 2, for example an `authors_json` column on `drafts`), and load drafts saved before it as `[updatedBy]`, the best it knows. `trailers_json` already keeps lists, which a join of drafts can now produce.
+4. `cleanMessage` can stay: the studio still sends one string per trailer, and core ignores any `Vesper-Editor` or `Co-authored-by` a draft carries.
+5. `api.test.ts`'s one-editor messages stay byte for byte the same. Then the contract passes in workerd, and the deploy follows.
+
+Once the cloud is deployed, the docs' publishing page (`apps/site/src/content/docs/getting-started/publishing.mdoc`), which says the person who published is named, changes to say every author is. It waits because the docs describe only what's live.
+
+**Left before Phase 4 is done:** in the cloud's repository, its half of the `Co-authored-by` lists (above), and the studio against the real API under `wrangler dev`, step 12's last piece. The Phase 4.5 design is written (below, 2026-10-21); building it waits for these.
 
 ## Phase 4: Cloud foundation (design)
 

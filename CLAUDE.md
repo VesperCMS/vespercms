@@ -25,7 +25,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
 | vespercms.com and the docs | Live (2026-10-21), ahead of Phase 9 at Jeremy's request: `apps/site` on Cloudflare Pages, edited with Vesper, with `/admin` for its cloud project; `vesper agents`. CI green on GitHub (run 39636024765). Decisions in `DECISIONS.md` ("Vesper's own site") |
-| 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. Left: `Co-authored-by` for every draft's author, and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vesper-cloud's), decisions in `DECISIONS.md` ("The cloud") |
+| 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. Left: the cloud's half of `Co-authored-by` for every draft's author (this repository's half built 2026-10-21), and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vesper-cloud's), decisions in `DECISIONS.md` ("The cloud") |
 | 4.5 Scheduled publish and unpublish | Designed, and its calls confirmed (2026-10-21). Building waits for Phase 4. Design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
@@ -216,6 +216,8 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 **The studio talks to the cloud only through `@vesper/core`'s protocol and `CloudClient`, and is tested against `scripts/cloud-fake.mjs`.** The fake and the real cloud both pass `runCloudContract`; a behaviour the studio needs goes into the contract first.
 
 **Evaluate grants with core's `fileAccess` / `changeAccess`, matched on file paths, never entry IDs.** The API and the studio must refuse and hide the same things, and an ID can come from a `slug` field the editor controls.
+
+**A publish names people only through core's `publishChangeSet` (the publisher, then each draft's authors, once each), never with trailers added by hand.** The fake and the real cloud then credit the same people in the same order, at no-reply addresses (DECISIONS.md, "A publish credits every draft's author").
 
 **Keep the DPoP key and its tokens in IndexedDB, never a cloud token in localStorage or sessionStorage, and renew inside the Web Lock.** The key can't be exported, so a copied token is useless; two tabs renewing at once would end the sign-in (DECISIONS.md, "Token renewals run one tab at a time").
 
