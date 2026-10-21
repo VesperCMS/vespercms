@@ -40,7 +40,7 @@ Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing
 
 ## Studio additions from dogfooding (design)
 
-Proposed 2026-10-21, and **Jeremy took every recommendation the same day: (a) on every call below, H1 included, so history is free in local and GitHub modes.** DECISIONS.md records each, under "Studio", and spec §4 and §7.4 now list history in the free modes. Nothing here is built yet; the order is at the end.
+Proposed 2026-10-21, and **Jeremy took every recommendation the same day: (a) on every call below, H1 included, so history is free in local and GitHub modes.** DECISIONS.md records each, under "Studio", and spec §4 and §7.4 now list history in the free modes. Step 1 (the tab title and inline code) is built; its outcome and the order of the rest are at the end.
 
 Building vespercms.com and editing it through the cloud showed six gaps in the studio. None of them is in a phase of spec §11, so each was a product call for Jeremy, listed at the end of its item. None adds a panel: each says where it lives and what it hides behind (§10.4). Screen reader passes still wait until before launch, but each design says how it works with one.
 
@@ -202,7 +202,7 @@ What the code and content showed, checked 2026-10-21:
 
 **Seen.** The compact Markdown editor turns code off (`code: false` in `packages/admin/src/widgets/markdown.tsx`), so a value with backticks fails its round-trip check, and the field drops to plain text with "This uses Markdown the compact editor can’t show". vespercms.com's home page writes `src/content.config.ts`, `markdoc.config.mjs` and `meta()` as plain words for that reason (DECISIONS.md, "vespercms.com is a plain Astro site edited with Vesper"; CLAUDE.md has a rule for it). The site renders these fields with micromark, which already turns backticks into `<code>`.
 
-**Design.** Turn on Tiptap's `code` mark in the compact editor, in inline and multi-line fields alike, and add a Code tool after Italic, with the body editor's icon, name, ⌘E shortcut and tooltip. The round-trip check stays: a value the editor can't write back as it is (a code span holding a backtick, which needs a double fence) still falls back to plain text. Nothing is rewritten until someone edits the field. Then vespercms.com's home copy gets its code formatting, edited in the studio as a check, CLAUDE.md's rule keeps only its "no unions" half, and `content/fields.mdoc` says the compact editor has code.
+**Design.** Turn on Tiptap's `code` mark in the compact editor, in inline and multi-line fields alike, and add a Code tool after Italic, with the body editor's icon, name, ⌘E shortcut and tooltip. The round-trip check stays: a value the editor can't write back as it is still falls back to plain text. (A code span holding a backtick, written with a double fence, turned out to round-trip.) Nothing is rewritten until someone edits the field. Then vespercms.com's home copy gets its code formatting, edited in the studio as a check, CLAUDE.md's rule keeps only its "no unions" half, and `content/fields.mdoc` says the compact editor has code.
 
 **Where it lives.** One more tool in the field's own formatting toolbar. Icon-only formatting tools are already the §10.4 exception for this editor and the body's.
 
@@ -332,6 +332,13 @@ From the follow-up and "Not built" lists above, briefly:
 5. **The palette (5),** last or beside History. It lists the actions from 4 and 2, so it's best built after them.
 
 Each lands as its own step with its own outcome note here, as "Icons (after the design pass)" did. They aren't phases, so the phase status table doesn't list them.
+
+**Step 1: outcome (2026-10-21).** Built as designed:
+- **The tab title.** `/admin`'s own title is "Studio · {siteName}" (`packages/astro/pages/admin.astro`), so every title the studio sets is the screen, then the site. The static e2e test reads it from the built page before the studio runs.
+- **Inline code.** The compact Markdown editor has code, with a Code tool after Italic (⌘E, Ctrl+E elsewhere), in inline and multi-line fields. Widget tests: code shows and an unchanged value isn't rewritten; the tool and Ctrl+E toggle it, and the save holds backticks; a code span holding a backtick (`` ``a`b`` ``) opens in the editor and is kept as written; axe.
+- **Docs and rules.** `content/fields.mdoc` and `@vesper/astro`'s README list code. `vesper agents` describes one-line Markdown as "bold, italic, code and links" (its snapshot and `apps/site/AGENTS.md` regenerated). CLAUDE.md's rule for vespercms.com keeps only "no unions", and DECISIONS.md's entries say they're built.
+- **vespercms.com's home page** uses code for `src/content.config.ts`, `meta()` and `markdoc.config.mjs`, edited in the studio on the 4408 preview: Shift+arrows and Ctrl+E for two, the Code tool for one, then Ctrl+S. The save changed only those three values, adding backticks and nothing else, and the page renders them as `<code>`. In the app's browser pane, typing backticks around text didn't turn it into code (the pane inserts text without key events, so Tiptap's input rule never ran), so the tool and the shortcut are the way in.
+- **Checks:** typecheck, lint, the format check and `vesper agents --check` pass. Vitest: 4,267 passed, 3 skipped. `npm run e2e`: 164 passed and 2 skipped (the macOS-only keys), after building the playground and the site. Not done: a screen reader pass (with the rest, before launch).
 
 **The calls (decided 2026-10-21):** T1 to T4 (tables), H1 to H3 (history, H1 being the tier question), C1 (code), D1 and D2 (duplicate), P1 and P2 (palette), N1 (title), each (a), as recommended. And about all six: they're built between phases, in the order above, not held for Phase 9's polish.
 
