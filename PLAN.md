@@ -479,7 +479,7 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 - A monorepo connected with its site folder empty showed no entries; connecting now checks the folder, and the dashboard can change it (vesper-cloud DECISIONS.md).
 - The review email opened the studio's Home, and an open studio didn't see the review until reloaded (DECISIONS.md, "Review emails open Changes").
 
-**Next:** the approver publishes the review, which finishes the check. Open: signing out of the studio and the dashboard at once. In the cloud's repository, the studio against the real API under `wrangler dev` is step 12's last piece.
+**Next:** the approver publishes the review, which finishes the check. Signing out of the studio or the dashboard now ends both on that browser, server-side in the cloud (vesper-cloud DECISIONS.md; nothing changed in the studio). In the cloud's repository, the studio against the real API under `wrangler dev` is step 12's last piece.
 
 ## Phase 4: Cloud foundation (design)
 
