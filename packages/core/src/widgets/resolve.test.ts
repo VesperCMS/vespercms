@@ -106,6 +106,23 @@ describe('resolveWidgets (spec §6.3 order)', () => {
     expect(diagnostics[0]?.message).toContain('threw');
   });
 
+  it('keeps upload for forms: elsewhere the studio has no control for it, so it warns', () => {
+    const attachment = { attachment: z.string().meta({ widget: 'upload' }) };
+    const { field, diagnostics } = only(attachment);
+    expect(field.widget).toBe('text');
+    expect(diagnostics[0]).toMatchObject({ code: 'form-widget', path: ['attachment'] });
+
+    const form: Diagnostic[] = [];
+    const [formField] = resolveWidgets(walkSchema(z.object(attachment)).fields ?? [], form, {
+      form: true,
+    });
+    expect(formField?.widget).toBe('upload');
+    expect(form).toEqual([]);
+
+    // A site's own widget of that name is its own business.
+    expect(only(attachment, { upload: {} }).field.widget).toBe('upload');
+  });
+
   it('resolves nested fields too', () => {
     const { field } = only({ nav: z.object({ blurb: z.string().meta({ widget: 'markdown' }) }) });
     expect(field.children?.[0]?.widget).toBe('markdown');

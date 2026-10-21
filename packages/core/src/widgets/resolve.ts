@@ -7,9 +7,9 @@ import type { Diagnostic, FieldModel } from '../field-model.ts';
  * 3. base-type inference;
  * 4. the raw YAML field.
  *
- * An unknown widget name, or a widget whose `accepts` rejects the field,
- * falls back to step 3 with a warning naming the field and the widget. It
- * never throws.
+ * An unknown widget name, a widget whose `accepts` rejects the field, or a
+ * form-only widget outside a form, falls back to step 3 with a warning naming
+ * the field and the widget. It never throws.
  *
  * Resolution runs when the manifest is built, in Node, where the functions in
  * `vesper.config.ts` can be called. The manifest stores the resolved name and
@@ -35,6 +35,7 @@ export const BUILTIN_WIDGETS: Record<string, WidgetCheck> = {
   slug: isString,
   color: isString,
   file: isString,
+  // A form's file field (spec §6.13): see FORM_WIDGETS.
   upload: (f) => f.kind === 'string' || f.kind === 'array',
   number: (f) => f.kind === 'number',
   switch: (f) => f.kind === 'boolean',
@@ -57,6 +58,14 @@ export const BUILTIN_WIDGETS: Record<string, WidgetCheck> = {
     f.kind === 'object' && child(f, 'lat')?.kind === 'number' && child(f, 'lng')?.kind === 'number',
   raw: () => true,
 };
+
+/**
+ * Widgets only a form's fields may name (spec §6.13). `<Form>` draws them on
+ * the site, and the studio has no control for them, so a collection's field,
+ * a Markdoc attribute or an MDX prop that names one gets the inferred widget,
+ * with a warning, rather than a silent text field.
+ */
+const FORM_WIDGETS: ReadonlySet<string> = new Set(['upload']);
 
 /** Spec §6.3 step 3: the control a field's type implies, with no hints. */
 export function inferWidget(field: FieldModel): string {
@@ -95,6 +104,8 @@ export type ResolveOptions = {
   /** Custom widgets from `vesper.config.ts`, in declaration order. */
   custom?: Record<string, WidgetDefinition>;
   collection?: string;
+  /** The fields are a form's, which may name the form-only widgets. */
+  form?: boolean;
 };
 
 function safeCheck(check: WidgetCheck | undefined, field: FieldModel): boolean | 'error' {
@@ -141,6 +152,13 @@ function resolveField(
   // 1. An explicit widget.
   const requested = field.widget;
   if (requested !== undefined) {
+    if (FORM_WIDGETS.has(requested) && options.form !== true && !Object.hasOwn(custom, requested)) {
+      warn(
+        'form-widget',
+        `Field "${where}" asks for widget "${requested}", which only forms use: the studio has no control for it. Using "${inferred}" instead.`,
+      );
+      return { ...resolved, widget: inferred };
+    }
     const accepts = Object.hasOwn(custom, requested)
       ? safeCheck(custom[requested]?.accepts, resolved)
       : Object.hasOwn(BUILTIN_WIDGETS, requested)

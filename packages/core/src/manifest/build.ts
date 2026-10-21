@@ -140,6 +140,7 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
         ? resolveWidgets(walk.fields, diagnostics, {
             custom: widgets,
             collection: `form:${form.name}`,
+            form: true,
           })
         : null,
       options: plainData(form.options ?? {}),
