@@ -11,14 +11,14 @@ hero:
       href: /docs/getting-started/install/
 sections:
   - heading: No second schema
-    intro: Other git-based editors ask you to describe your content a second time, in their own config. Vesper reads src/content.config.ts instead.
+    intro: Other git-based editors ask you to describe your content a second time, in their own config. Vesper reads `src/content.config.ts` instead.
     points:
       - title: Fields from your Zod schema
         body: Text, numbers, dates, lists, objects, references and images each get a control. Add a field to the schema and it's in the studio.
       - title: Hints where you need them
-        body: Labels, help text and widgets come from Zod's meta(), or from Vesper's field helpers, which are plain Zod underneath.
+        body: Labels, help text and widgets come from Zod's `meta()`, or from Vesper's field helpers, which are plain Zod underneath.
       - title: Your Markdoc tags as blocks
-        body: Tags from markdoc.config.mjs become blocks with their own settings, checked against the same rules as your build.
+        body: Tags from `markdoc.config.mjs` become blocks with their own settings, checked against the same rules as your build.
   - heading: Content stays yours
     intro: Everything is a file in your repository, in the format you chose.
     points:
