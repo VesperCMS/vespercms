@@ -553,10 +553,10 @@ function treeEntries(
   return entries;
 }
 
-/** The change set's summary, then its trailers, as git writes them. */
+/** The change set's summary, then its trailers, as git writes them: one line per value. */
 export function commitMessage(changeSet: ChangeSet): string {
-  const trailers = Object.entries(changeSet.message.trailers ?? {}).map(
-    ([key, value]) => `${key}: ${value}`,
+  const trailers = Object.entries(changeSet.message.trailers ?? {}).flatMap(([key, value]) =>
+    (typeof value === 'string' ? [value] : value).map((one) => `${key}: ${one}`),
   );
   return trailers.length > 0
     ? `${changeSet.message.summary}\n\n${trailers.join('\n')}\n`

@@ -389,16 +389,11 @@ export function createCloudFake(options) {
           });
         }
       }
-      const changeSet = publishChangeSet(state.drafts, ids);
-      const trailers = {
-        ...changeSet.message.trailers,
-        'Vesper-Editor': p.id,
-        'Co-authored-by': `${p.name} <${p.id}@users.noreply.vesper.test>`,
-      };
-      const result = await published.commit({
-        ...changeSet,
-        message: { ...changeSet.message, trailers },
+      const changeSet = publishChangeSet(state.drafts, ids, {
+        by: by(p),
+        noReplyDomain: 'users.noreply.vesper.test',
       });
+      const result = await published.commit(changeSet);
       if (!result.ok) return json(request, result.reason === 'conflict' ? 409 : 422, result);
       clearDrafts(state.drafts, ids);
       state.reviews = state.reviews.filter((r) => !r.drafts.some((d) => ids.includes(d)));

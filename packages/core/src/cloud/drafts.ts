@@ -3,6 +3,7 @@ import { normalizePath } from '../storage/paths.ts';
 import { validateChangeSet } from '../storage/validate.ts';
 import type {
   ChangeSet,
+  CommitTrailers,
   Conflict,
   FileChange,
   StorageEntry,
@@ -161,6 +162,7 @@ export async function saveDraft(
         summary: changeSet.message.summary,
         files: [],
         bytes: {},
+        authors: [],
         updatedBy: by,
         updatedAt: now,
       };
@@ -190,7 +192,12 @@ export async function saveDraft(
   const live = new Set(target.files.flatMap((f) => (f.op === 'put' ? [f.version] : [])));
   target.bytes = Object.fromEntries(Object.entries(target.bytes).filter(([v]) => live.has(v)));
   target.summary = changeSet.message.summary;
-  if (changeSet.message.trailers) target.trailers = changeSet.message.trailers;
+  const trailers = mergeTrailers([...joining.map((d) => d.trailers), changeSet.message.trailers]);
+  if (Object.keys(trailers).length > 0) target.trailers = trailers;
+  // The saver keeps their place, under the name they have now.
+  target.authors = onceEach([...joining.flatMap((d) => d.authors), by]).map((person) =>
+    person.id === by.id ? { id: by.id, name: by.name } : person,
+  );
   target.updatedBy = by;
   target.updatedAt = now;
   if (review) target.review = review;
@@ -241,10 +248,29 @@ export async function rebaseDraft(
 }
 
 /**
+ * Who publishes, and the domain of the no-reply addresses that name people
+ * in the commit (`users.noreply.vespercms.com`): a public repository's
+ * history is public forever, so never anyone's email.
+ */
+export type PublishCredit = { by: { id: string; name: string }; noReplyDomain: string };
+
+/** Trailers only the cloud sets, whatever a draft's own trailers say. */
+const CREDIT_TRAILERS = new Set(['vesper-editor', 'co-authored-by']);
+
+/**
  * The commit that publishes some drafts: every file expected at the version
  * its draft started from, so anything published since is a conflict.
+ *
+ * The commit is the app's bot's, so it names people in trailers: the
+ * publisher first, then each draft's authors in the order the drafts are
+ * given, each person once, with their IDs in `Vesper-Editor` in the same
+ * order (DECISIONS.md, "A publish credits every draft's author").
  */
-export function publishChangeSet(state: DraftState, ids: readonly string[]): ChangeSet | null {
+export function publishChangeSet(
+  state: DraftState,
+  ids: readonly string[],
+  credit: PublishCredit,
+): ChangeSet | null {
   const drafts = ids.map((id) => state.drafts.find((d) => d.id === id));
   if (drafts.length === 0 || drafts.some((d) => d === undefined)) return null;
   const chosen = drafts as StoredDraft[];
@@ -265,14 +291,55 @@ export function publishChangeSet(state: DraftState, ids: readonly string[]): Cha
     chosen.length === 1
       ? first.summary
       : `${first.summary}, and ${String(chosen.length - 1)} more ${chosen.length === 2 ? 'change' : 'changes'}`;
-  const trailers = Object.assign({}, ...chosen.map((d) => d.trailers ?? {})) as Record<
-    string,
-    string
-  >;
+  const own = Object.entries(mergeTrailers(chosen.map((d) => d.trailers))).filter(
+    ([key]) => !CREDIT_TRAILERS.has(key.toLowerCase()),
+  );
+  const people = onceEach([credit.by, ...chosen.flatMap((d) => d.authors)]);
   return {
     changes,
-    message: { summary, ...(Object.keys(trailers).length > 0 ? { trailers } : {}) },
+    message: {
+      summary,
+      trailers: {
+        ...Object.fromEntries(own),
+        'Vesper-Editor': people.map((person) => person.id),
+        'Co-authored-by': people.map((person) => coAuthor(person, credit.noReplyDomain)),
+      },
+    },
   };
+}
+
+/** `Name <id@domain>`, on one line, with nothing in the name that could end the address early. */
+function coAuthor(person: { id: string; name: string }, domain: string): string {
+  const name = person.name.replace(/[\s<>]+/g, ' ').trim() || 'Vesper editor';
+  return `${name} <${person.id}@${domain}>`;
+}
+
+/** People by ID, each once, where they first appear. */
+function onceEach<T extends { id: string }>(people: readonly T[]): T[] {
+  const seen = new Map<string, T>();
+  for (const person of people) if (!seen.has(person.id)) seen.set(person.id, person);
+  return [...seen.values()];
+}
+
+/**
+ * Several saves' trailers as one set: each name's values in the order they
+ * came, each once. A name with one value keeps it as a string, as the
+ * studio sends it.
+ */
+function mergeTrailers(sets: readonly (CommitTrailers | undefined)[]): CommitTrailers {
+  const merged = new Map<string, string[]>();
+  for (const set of sets) {
+    for (const [key, value] of Object.entries(set ?? {})) {
+      const values = merged.get(key) ?? [];
+      for (const one of typeof value === 'string' ? [value] : value) {
+        if (!values.includes(one)) values.push(one);
+      }
+      merged.set(key, values);
+    }
+  }
+  return Object.fromEntries(
+    [...merged].map(([key, values]) => [key, values.length === 1 ? (values[0] as string) : values]),
+  );
 }
 
 /** Removes published drafts. */

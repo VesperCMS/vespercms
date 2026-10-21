@@ -51,10 +51,16 @@ export type FileChange =
       expectedVersion?: string;
     };
 
+/**
+ * Git trailers by name. A list writes one trailer per value, in its order:
+ * a cloud publish names each author in a `Co-authored-by` of their own.
+ */
+export type CommitTrailers = Record<string, string | readonly string[]>;
+
 export type ChangeSet = {
   changes: FileChange[];
   /** Plain-language summary. Adapters with history turn it into a commit message. */
-  message: { summary: string; trailers?: Record<string, string> };
+  message: { summary: string; trailers?: CommitTrailers };
   /** The `head()` version the changes were prepared against, where the adapter can use it. */
   baseVersion?: string;
   /**

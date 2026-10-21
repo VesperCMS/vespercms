@@ -37,6 +37,7 @@ export {
   rebaseDraft,
   saveDraft,
   type DraftState,
+  type PublishCredit,
   type PublishedFiles,
   type SaveResult,
   type StoredDraft,

@@ -1,4 +1,10 @@
-import type { ChangeSet, Conflict, FileChange, StorageEntry } from '../storage/types.ts';
+import type {
+  ChangeSet,
+  CommitTrailers,
+  Conflict,
+  FileChange,
+  StorageEntry,
+} from '../storage/types.ts';
 import { toBase64 } from '../storage/github.ts';
 import { fromBase64url } from './dpop.ts';
 import type { Member } from './grants.ts';
@@ -94,8 +100,11 @@ export type Draft = {
   id: string;
   /** The latest save's summary ("Update “Harbor at dawn” in Blog posts"). */
   summary: string;
-  trailers?: Record<string, string>;
+  /** Every save's trailers, each name's values once. */
+  trailers?: CommitTrailers;
   files: DraftFile[];
+  /** Everyone who saved it, each once, in the order they first did. A publish credits them all. */
+  authors: { id: string; name: string }[];
   updatedBy: { id: string; name: string };
   updatedAt: string;
   /** Set while the draft waits for an approver. */

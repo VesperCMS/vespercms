@@ -3,7 +3,7 @@ import { gitBlobSha } from '../storage/git-blob-sha.ts';
 import type { Member } from './grants.ts';
 import { CloudClient, CloudError, authorizeUrl, createPkce } from './client.ts';
 import { createDpopKey } from './dpop.ts';
-import { encodeChange, fromBase64, type CloudStudioSettings } from './protocol.ts';
+import { encodeChange, fromBase64, type CloudStudioSettings, type CloudUser } from './protocol.ts';
 
 /*
  * What the studio relies on from the cloud's API, as a reusable suite
@@ -58,7 +58,7 @@ export function runCloudContract(
   async function signIn(
     fixture: CloudFixture,
     person: 'admin' | 'editor' | 'contributor' | 'viewer',
-  ): Promise<{ client: CloudClient; member: Member }> {
+  ): Promise<{ client: CloudClient; member: Member; user: CloudUser }> {
     fixture.signInAs(person);
     const redirectUri = `${fixture.origin}/admin/`;
     const { verifier, challenge } = await createPkce();
@@ -82,7 +82,7 @@ export function runCloudContract(
       fetch: fixture.fetch,
     });
     const tokens = await client.exchangeCode({ code, verifier, redirectUri });
-    return { client, member: tokens.member };
+    return { client, member: tokens.member, user: tokens.user };
   }
 
   const pathOf = 'src/content/pages/admissions/apply.md';
@@ -274,6 +274,62 @@ export function runCloudContract(
         fixture.reportDeploy(result.commit, 'live');
         equal((await client.status(result.commit)).state, 'live', 'deploy status is reported');
       }
+    });
+
+    it('credits everyone whose drafts a publish carries, each once, at no-reply addresses', async () => {
+      const fixture = await create();
+      const contributor = await signIn(fixture, 'contributor');
+      const editor = await signIn(fixture, 'editor');
+      const admin = await signIn(fixture, 'admin');
+      const post = 'src/content/blog/a.md';
+      const save = (who: { client: CloudClient }, path: string, body: string, collection: string) =>
+        who.client.saveDraft({
+          changes: [encodeChange({ op: 'put', path, bytes: text(body) })],
+          message: { summary: `Update ${path}`, trailers: { 'Vesper-Collection': collection } },
+        });
+      // Two people on each draft, and the publisher on the second.
+      await save(contributor, pathOf, 'Apply, drafted\n', 'pages');
+      await save(editor, pathOf, 'Apply, edited\n', 'pages');
+      await save(contributor, post, 'A, drafted\n', 'blog');
+      await save(admin, post, 'A, edited\n', 'blog');
+      const { drafts } = await admin.client.drafts();
+      const apply = drafts.find((d) => d.files.some((f) => f.path === pathOf));
+      const blog = drafts.find((d) => d.files.some((f) => f.path === post));
+      equal(
+        apply?.authors.map((a) => a.id),
+        [contributor.user.id, editor.user.id],
+        'a draft lists everyone who saved it, in the order they first did',
+      );
+      equal(
+        blog?.authors.map((a) => a.id),
+        [contributor.user.id, admin.user.id],
+        'each draft its own',
+      );
+
+      const result = await admin.client.publish([apply?.id ?? '', blog?.id ?? '']);
+      equal(result.ok, true, 'the drafts are published');
+      const lines = ((await fixture.commits())[0]?.message ?? '').split('\n');
+      const values = (key: string) =>
+        lines
+          .filter((line) => line.startsWith(`${key}: `))
+          .map((line) => line.slice(key.length + 2));
+      const people = [admin.user, contributor.user, editor.user];
+      equal(
+        values('Vesper-Editor'),
+        people.map((p) => p.id),
+        'the publisher first, then each draft’s authors in order, each once',
+      );
+      const credited = values('Co-authored-by');
+      equal(credited.length, people.length, 'each in a Co-authored-by of their own');
+      people.forEach((person, index) => {
+        const line = credited[index] ?? '';
+        ok(
+          line.startsWith(`${person.name} <${person.id}@`) && line.endsWith('>'),
+          `${person.name} is named, at an address made from their ID`,
+        );
+        ok(!line.includes(person.email), 'never at their email');
+      });
+      equal(values('Vesper-Collection'), ['pages', 'blog'], 'and every collection is named');
     });
 
     it('reports a change published since the draft began as a conflict, and rebases on request', async () => {

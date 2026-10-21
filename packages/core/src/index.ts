@@ -82,6 +82,7 @@ export type {
   StoredFile,
   FileChange,
   ChangeSet,
+  CommitTrailers,
   CommitResult,
   Conflict,
 } from './storage/types.ts';

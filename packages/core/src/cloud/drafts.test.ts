@@ -13,12 +13,16 @@ import {
   type DraftState,
   type StoredDraft,
 } from './drafts.ts';
+import { commitMessage } from '../storage/github.ts';
 import type { ChangeSet } from '../storage/types.ts';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const bytes = (text: string) => enc.encode(text);
 const ada = { id: 'u_ada', name: 'Ada' };
+const cal = { id: 'u_cal', name: 'Cal' };
+const eve = { id: 'u_eve', name: 'Eve' };
+const credit = { by: ada, noReplyDomain: 'users.noreply.vesper.test' };
 const message = (summary: string) => ({ summary, trailers: { 'Vesper-Collection': 'blog' } });
 
 /** The state's only draft, failing the test when there isn't exactly one. */
@@ -30,8 +34,12 @@ function only(state: DraftState): StoredDraft {
 }
 
 /** A change set, failing the test when there's none to publish. */
-function toPublish(state: DraftState, ids: readonly string[]): ChangeSet {
-  const changeSet = publishChangeSet(state, ids);
+function toPublish(
+  state: DraftState,
+  ids: readonly string[],
+  by: { id: string; name: string } = ada,
+): ChangeSet {
+  const changeSet = publishChangeSet(state, ids, { ...credit, by });
   if (!changeSet) throw new Error('Nothing to publish');
   return changeSet;
 }
@@ -44,8 +52,13 @@ async function setup() {
   });
   const state: DraftState = emptyDraftState();
   let n = 0;
-  const save = (changes: Parameters<typeof saveDraft>[2]['changes'], summary = 'Save') =>
-    saveDraft(state, site, { changes, message: message(summary) }, ada, {
+  const save = (
+    changes: Parameters<typeof saveDraft>[2]['changes'],
+    summary = 'Save',
+    by: { id: string; name: string } = ada,
+    trailers: ChangeSet['message']['trailers'] = message(summary).trailers,
+  ) =>
+    saveDraft(state, site, { changes, message: { summary, trailers } }, by, {
       newId: () => `d_${String(++n)}`,
       now: new Date('2026-10-20T12:00:00Z'),
     });
@@ -79,6 +92,7 @@ describe('cloud drafts', () => {
           base: a,
         },
       ],
+      authors: [ada],
       updatedBy: ada,
     });
     const entries = overlayEntries(await site.list(), state.drafts);
@@ -179,10 +193,14 @@ describe('cloud drafts', () => {
     await save([{ op: 'put', path: 'src/content/blog/a.md', bytes: bytes('A2\n') }], 'Edit A');
     await save([{ op: 'delete', path: 'src/content/blog/b.md' }], 'Delete B');
     const ids = state.drafts.map((d) => d.id);
-    const changeSet = publishChangeSet(state, ids);
+    const changeSet = publishChangeSet(state, ids, credit);
     expect(changeSet?.message).toEqual({
       summary: 'Edit A, and 1 more change',
-      trailers: { 'Vesper-Collection': 'blog' },
+      trailers: {
+        'Vesper-Collection': 'blog',
+        'Vesper-Editor': ['u_ada'],
+        'Co-authored-by': ['Ada <u_ada@users.noreply.vesper.test>'],
+      },
     });
     expect(await site.commit(toPublish(state, ids))).toMatchObject({ ok: true });
     clearDrafts(state, ids);
@@ -237,5 +255,107 @@ describe('cloud drafts', () => {
     expect(state.drafts).toEqual([]);
     expect(state.version).toBe(version + 1);
     expect(discardDraft(state, 'nope')).toBe(false);
+  });
+
+  it('list everyone who saved a draft, once each, in the order they first did', async () => {
+    const { state, save } = await setup();
+    const a = (text: string) => [
+      { op: 'put' as const, path: 'src/content/blog/a.md', bytes: bytes(text) },
+    ];
+    await save(a('A2\n'), 'Edit A', ada);
+    await save(a('A3\n'), 'Edit A', cal);
+    await save(a('A4\n'), 'Edit A', ada);
+    expect(only(state).authors).toEqual([ada, cal]);
+    expect(only(state).updatedBy).toEqual(ada);
+
+    // A save that joins two drafts keeps both drafts' authors.
+    await save([{ op: 'put', path: 'src/content/blog/b.md', bytes: bytes('B2\n') }], 'Edit B', eve);
+    await save(
+      [
+        { op: 'put', path: 'src/content/blog/a.md', bytes: bytes('A5\n') },
+        { op: 'put', path: 'src/content/blog/b.md', bytes: bytes('B3\n') },
+      ],
+      'Move',
+      cal,
+    );
+    expect(only(state).authors).toEqual([ada, cal, eve]);
+
+    // Someone renamed keeps their place, under their new name.
+    const renamed = { id: 'u_ada', name: 'Ada Lovelace' };
+    await save(a('A6\n'), 'Edit A', renamed);
+    expect(only(state).authors).toEqual([renamed, cal, eve]);
+  });
+
+  it('keep every collection of the drafts a save joins', async () => {
+    const { state, save } = await setup();
+    await save([{ op: 'put', path: 'src/content/blog/a.md', bytes: bytes('A2\n') }], 'Edit A');
+    await save(
+      [{ op: 'put', path: 'src/content/pages/about.md', bytes: bytes('About2\n') }],
+      'Edit About',
+      ada,
+      { 'Vesper-Collection': 'pages' },
+    );
+    await save(
+      [
+        { op: 'put', path: 'src/content/blog/a.md', bytes: bytes('A3\n') },
+        { op: 'put', path: 'src/content/pages/about.md', bytes: bytes('About3\n') },
+      ],
+      'Move',
+      ada,
+      { 'Vesper-Collection': 'pages' },
+    );
+    expect(only(state).trailers).toEqual({ 'Vesper-Collection': ['blog', 'pages'] });
+  });
+
+  it('credit the publisher, then each draft’s authors, each once, at no-reply addresses', async () => {
+    const { state, save } = await setup();
+    const put = (path: string, text: string) => [{ op: 'put' as const, path, bytes: bytes(text) }];
+    await save(put('src/content/blog/a.md', 'A2\n'), 'Edit A', cal);
+    await save(put('src/content/blog/a.md', 'A3\n'), 'Edit A', eve);
+    await save(put('src/content/blog/b.md', 'B2\n'), 'Edit B', ada);
+    await save(put('src/content/blog/b.md', 'B3\n'), 'Edit B', cal);
+    // A draft's own trailers never credit anyone: only the cloud does.
+    await save(put('src/content/pages/about.md', 'About2\n'), 'Edit About', cal, {
+      'Vesper-Collection': 'pages',
+      'Vesper-Editor': 'u_forged',
+      'Co-Authored-By': 'Mallory <mallory@example.com>',
+    });
+    const ids = state.drafts.map((d) => d.id);
+    expect(commitMessage(toPublish(state, ids, eve))).toBe(
+      [
+        'Edit A, and 2 more changes',
+        '',
+        'Vesper-Collection: blog',
+        'Vesper-Collection: pages',
+        'Vesper-Editor: u_eve',
+        'Vesper-Editor: u_cal',
+        'Vesper-Editor: u_ada',
+        'Co-authored-by: Eve <u_eve@users.noreply.vesper.test>',
+        'Co-authored-by: Cal <u_cal@users.noreply.vesper.test>',
+        'Co-authored-by: Ada <u_ada@users.noreply.vesper.test>',
+        '',
+      ].join('\n'),
+    );
+
+    // A publisher who also wrote the draft is named once, first.
+    expect(commitMessage(toPublish(state, [ids[0] ?? ''], cal))).toBe(
+      'Edit A\n\nVesper-Collection: blog\nVesper-Editor: u_cal\nVesper-Editor: u_eve\nCo-authored-by: Cal <u_cal@users.noreply.vesper.test>\nCo-authored-by: Eve <u_eve@users.noreply.vesper.test>\n',
+    );
+    expect(commitMessage(toPublish(state, [ids[1] ?? ''], ada))).toBe(
+      'Edit B\n\nVesper-Collection: blog\nVesper-Editor: u_ada\nVesper-Editor: u_cal\nCo-authored-by: Ada <u_ada@users.noreply.vesper.test>\nCo-authored-by: Cal <u_cal@users.noreply.vesper.test>\n',
+    );
+  });
+
+  it('keep a name to one line that can’t end its address early', async () => {
+    const { state, save } = await setup();
+    await save([{ op: 'put', path: 'src/content/blog/a.md', bytes: bytes('A2\n') }], 'Edit A', {
+      id: 'u_odd',
+      name: ' Odd\n<Name> ',
+    });
+    const message = commitMessage(toPublish(state, [only(state).id], { id: 'u_blank', name: ' ' }));
+    expect(message.split('\n').filter((line) => line.startsWith('Co-authored-by: '))).toEqual([
+      'Co-authored-by: Vesper editor <u_blank@users.noreply.vesper.test>',
+      'Co-authored-by: Odd Name <u_odd@users.noreply.vesper.test>',
+    ]);
   });
 });
