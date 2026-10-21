@@ -379,3 +379,33 @@ describe('buildManifest: hide from site search', () => {
     ).toEqual(['seo', 'noindex']);
   });
 });
+
+describe('buildManifest: Markdoc attribute hints (spec §6.5.1)', () => {
+  it('resolves a hint’s widget against the attribute’s type, as for a schema field', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [],
+      markdoc: {
+        config: {
+          tags: {
+            badge: { attributes: { color: { type: String }, place: { type: Object } } },
+          },
+        },
+        options: {},
+      },
+      config: {
+        markdoc: {
+          tags: { badge: { attributes: { color: { widget: 'color' }, place: { widget: 'geo' } } } },
+        },
+      },
+    });
+    // A Markdoc Object attribute has no fields of its own, so geo can't edit it.
+    expect(manifest.markdoc?.tags[0]?.fields.map((f) => [f.path[0], f.kind, f.widget])).toEqual([
+      ['color', 'string', 'color'],
+      ['place', 'unknown', 'raw'],
+    ]);
+    expect(manifest.diagnostics.map((d) => [d.code, d.collection])).toEqual([
+      ['widget-rejected', 'markdoc:badge'],
+    ]);
+  });
+});
