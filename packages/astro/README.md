@@ -79,17 +79,23 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 | Helper | Raw Zod equivalent | Stored as |
 |---|---|---|
 | `fields.color({ palette?, alpha?, contrast? })` | `z.string().regex(/^#[0-9a-f]{6}$/i).meta({ widget: 'color' })` | `"#1a73e8"` |
-| `fields.geo()` | `z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).meta({ widget: 'geo' })` | `{ lat, lng }` |
+| `fields.geo({ defaultCenter?, zoom? })` | `z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).meta({ widget: 'geo' })` | `{ lat, lng }` |
 | `fields.slug({ from })` | `z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).meta({ widget: 'slug', widgetOptions: { from } })` | `"my-post"` |
 | `fields.url()` | `z.url().meta({ widget: 'url' })` | `"https://…"` |
 | `fields.email()` | `z.email().meta({ widget: 'email', autocomplete: 'email' })` | `"a@b.com"` |
 | `fields.datetime()` | `z.coerce.date().meta({ widget: 'datetime' })` | ISO 8601 |
 | `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | Markdown string |
-| `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | relative path |
+| `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | `"/files/brochure.pdf"` |
 | `fields.hideFromSearch()` | `z.boolean().default(false).meta({ label: 'Hide from site search', description, placement: 'details', search: 'hide' })` | `true` / `false` |
 
-A test checks that each helper equals its raw equivalent, so this table can't drift. `fields.color({ contrast: 'text' })` (or `'large-text'`, `'graphic'`) adds `widgetOptions: { contrast }`: the studio then checks the colour against the site's `a11y.backgrounds`, at 4.5:1 for text and 3:1 otherwise.
+A test checks that each helper equals its raw equivalent, so this table can't drift. Options a helper takes go into `widgetOptions`, as they would in the raw form:
+
+- `fields.color({ contrast: 'text' })` (or `'large-text'`, `'graphic'`) adds `widgetOptions: { contrast }`: the studio then checks the colour against the site's `a11y.backgrounds`, at 4.5:1 for text and 3:1 otherwise.
+- `fields.geo({ defaultCenter: { lat, lng }, zoom })` adds `widgetOptions: { defaultCenter, zoom }`: where the map starts when the field is empty.
+- `fields.markdown({ inline: true })` adds `widgetOptions: { inline: true }`: a single paragraph with bold, italic and links, and no lists.
+
+`fields.file()` uploads go to `public/files/` (or beside the file they replace) and store the public path, `/files/brochure.pdf`. A file chosen from under `src/` is stored relative to the entry instead, such as `./brochure.pdf`.
 
 `fields.image(image, { ratios? })` takes Astro's `image` helper from the schema function, so `src` still resolves to `ImageMetadata` (spec §6.6.2):
 
@@ -148,7 +154,7 @@ collections: {
 redirects: { native: ['apache'] },
 ```
 
-- **`url`** is the one source of truth for where an entry lives: "View on site", the link picker, redirects, breadcrumbs and the helpers all use it. Tokens: `:id`, `:path` (the ID without a trailing `/index`; a top-level `index` is the root), `:slug`, `:<field>`, and `:<dateField>|yyyy`, `|mm`, `|dd` (calendar dates keep their day; times are read in the site's `timeZone`). Generated URLs follow Astro's `base`, `trailingSlash` and `build.format`.
+- **`url`** is the one source of truth for where an entry lives: "View on site", the link picker, redirects, breadcrumbs and the helpers all use it. Tokens: `:id`, `:path` (the ID without a trailing `/index`; a top-level `index` is the root), `:slug`, `:<field>`, and `:<dateField>|yyyy`, `|mm`, `|dd` (calendar dates keep their day; times are read in the site's `timeZone`). Generated URLs follow Astro's `base`, `trailingSlash` and `build.format`. A function gets the entry's `id`, `collection` and `data` (its frontmatter, typed `unknown`, so narrow it before reading a field) and returns the entry's path on the site.
 - **`tree: true`** shows the collection as an outline: the folder is the hierarchy, `folder/index.md` is the folder's section page, and an optional `_order.yaml` in each folder lists its children by slug (unlisted ones follow by title). Keep `_` files out of the glob, as in `'**/[^_]*.md'`; the manifest warns when a pattern would pick up `_order.yaml`.
 - **`maxDepth`** limits how deep pages may go. There's no default (DECISIONS.md).
 
@@ -210,7 +216,7 @@ markdoc: {
 },
 ```
 
-Hints cover a friendly name, help text, the summary attribute, value labels and a `widget` per attribute (so `color` and `geo` work inside tags too).
+Hints cover a friendly name, help text, the summary attribute, value labels and a `widget` per attribute. A widget applies as it would to a schema field of the attribute's type: a `String` attribute can take `textarea`, `url` or `color` (the full picker, since hints carry no `widgetOptions`), or a custom widget. `Object` and `Array` attributes are edited as YAML, so `geo` can't apply; naming it warns in the terminal and keeps the YAML field.
 
 MDX components don't declare their props anywhere the editor can read, so they are blocks only when declared here with a Zod props schema (from `astro/zod`). Undeclared components, expressions, imports and exports stay protected source blocks:
 
@@ -296,7 +302,7 @@ vesper({
 - **`/search`** is injected as a plain page unless the site has `src/pages/search.astro` (put `<Search variant="inline" />` in your layout there). The injected page doesn't count as a use of `<Search>`, and the build leaves it out when nothing else uses it. It reads `?q=`. Without JavaScript it says search needs JavaScript and links to the home page (or `noJsLink`); `noJsFallback: 'duckduckgo'` makes its form search the site on DuckDuckGo instead.
 - **In `astro dev`**, search uses the last build's index; before the first build it says so.
 - **The build log** says how many pages it indexed and what a first search loads, and warns above 300 KB (uncompressed, as a host without compression sends it).
-- **Other languages:** Pagefind keeps an index per `<html lang>`. `<Search>`'s words are English; give others with `search: { strings: { fr: { button: 'Rechercher', label: 'Rechercher sur ce site' } } }` (the keys are in `components/search/strings.ts`).
+- **Other languages:** Pagefind keeps an index per `<html lang>`. `<Search>`'s words are English; give others with `search: { strings: { fr: { button: 'Rechercher', label: 'Rechercher sur ce site' } } }` (the keys are in `components/search/strings.ts`). The words written into the page (the button, the field's label, Close and the no-JavaScript text) follow `<Search>`'s `lang` prop, which defaults to Astro's current locale, then `en`; only the script reads `<html lang>`. Without Astro's i18n routing, a page in another language passes it: `<Search lang="fr" />`. The injected `/search` page takes its language the same way, so such a site puts its own in `src/pages/search.astro`.
 
 **Theming.** `<Search>` inherits the site's font and colours. Four custom properties do the rest:
 

@@ -15,7 +15,7 @@ import { importSiteVite, processConditions } from './load-site.ts';
 
 /** The integration's `github` option. */
 export type GitHubOptions = {
-  /** The OAuth relay's address (templates/oauth-relay, or Vesper's free relay). */
+  /** The address of the site's own OAuth relay, deployed from templates/oauth-relay. */
   relay: string;
   /** `owner/name`. Read from git, or the host's environment, when absent. */
   repo?: string;
