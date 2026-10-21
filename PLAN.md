@@ -38,6 +38,301 @@ Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing
 - The repository link in the footer (`settings.repository`) once this repository is public.
 - Pricing stays off the site until Phase 5 sets the numbers (§13.4).
 
+## Studio additions from dogfooding (proposal)
+
+Proposed 2026-10-21. This is design only: nothing here is built. Building vespercms.com and editing it through the cloud showed six gaps in the studio. None of them is in a phase of spec §11, so each is a product call for Jeremy, listed at the end of its item with a recommendation. None adds a panel: each says where it lives and what it hides behind (§10.4). Screen reader passes still wait until before launch, but each design says how it works with one.
+
+What the code and content showed, checked 2026-10-21:
+- **Tables.** vespercms.com's docs have 27 pipe tables on 9 pages, 13 of them in `reference/integration.mdoc`. The committed corpus (Jeremy's four sites, jazzy included) has 21 more. All 48 are pipe tables, and 47 are compact (`|---|---|`, one space around each cell); one is padded so its pipes line up. No content in this repository uses Markdoc's `{% table %}`.
+- **Parsers.** Against the installed Markdoc 0.5.10 and micromark:
+  - micromark (`.md`, `.mdx`) gives every cell an exact range, which includes its leading pipe and padding, plus the closing pipe on a row's last cell. It also gives the column alignment.
+  - Markdoc parses pipe tables as Astro tokenizes them, but records only each row's line, with the alignment on each cell.
+  - `{% table %}` is a built-in tag holding a `table` node. Each cell is a list item (`* text`) on its own line, a `---` line ends a row, and the first row is the header; Markdoc records each cell's line. The studio shows it today as a protected "Markdoc tag" block, and validation passes it.
+  - Both read `\|` as a pipe inside a cell, code spans included (GFM's example 200). micromark also splits a cell at an unescaped `|` inside backticks, as GFM says.
+- **The tab title.** The injected `/admin` page's `<title>` is `{siteName} · Vesper` (`packages/astro/pages/admin.astro`), and each screen then sets `{screen} · {siteName}` (`app/Screen.tsx`). On vespercms.com (`siteName: 'Vesper'`) the first reads "Vesper · Vesper". Once a screen opens, the product's name isn't in the tab at all.
+
+### 1. Tables in the writing view
+
+**Seen.** Every table is a protected block, "Table, kept as written", edited as raw pipe text in a dialog or the source view. Changing one default in the integration's options table means editing pipe syntax by hand, escaping any `|`, and keeping the column count. Agency sites have the same tables (prices, opening hours, contacts), and raw pipe text is the most developer-like thing an editor meets in the studio. The playground has one table, in the accessibility fixture.
+
+**Design.**
+- **Reading, in core.** A table becomes a block of its own kind (`kind: 'table'`) with its syntax (pipe or Markdoc), its column alignment, and for each row and cell the exact range of the content, without pipes or padding. micromark's cell ranges are trimmed to that. For a pipe table in `.mdoc`, a row scanner splits each line at unescaped pipes. For `{% table %}`, a cell is its line after `* `. As with tags, the scanner's cells must agree with the parser's: the same number per row and the same inline content in each. When they disagree, the table stays as written.
+- **Which tables become writable.** A table is writable only when every cell is one line of inline Markdown the writing view already writes back (text, emphasis, strong, code, links, images, strikethrough, and chips), and every row has as many cells as the header. These stay protected blocks, named as now:
+  - HTML tables, and cells with inline HTML (`<br>` for a line break is common);
+  - ragged rows, which GFM fills or truncates, so a grid can't show what the page shows;
+  - footnote references, reference-style links, and links with titles;
+  - `{% table %}` cells that hold blocks (lists, several paragraphs, fences) or carry annotations (`{% colspan=2 %}`, `{% align="right" %}`);
+  - tables inside list items or quotes, which are already inside a protected block;
+  - any table whose scanner and parser disagree.
+- **Saving splices cells, not tables.** Each row and column gets an id when the body loads, so a move can be told from an edit. On save, core compares the table with how it loaded:
+  - an unchanged row keeps its bytes, line ending included;
+  - a changed cell rewrites only its content range, so one edit changes one line of a pipe table, or one `* ` line of a `{% table %}`;
+  - a moved row moves its line as it is, a new row is written in the table's style, and a deleted row goes with its line ending;
+  - a new, moved or deleted column changes each row (and the delimiter row) by exactly that cell, which it must;
+  - an alignment change rewrites that column's cell in the delimiter row (`:---`, `---:`, `:---:`, `---`). A `{% table %}` aligns with annotations, which keep a table as written, so it isn't offered there.
+
+  The result is re-parsed and must read back as the intended table, or the save is refused, as `editMarkdocTag` does. The writer lives in core (`editTable`, beside `editMarkdocTag`), so local mode, GitHub mode and the cloud splice with the same code, and the admin's `bodyItems` hands a changed table to it instead of the Markdown serializer.
+- **Padding** (call T1). In a compact table a changed cell is written with its row's own spacing. In an aligned table the new text is padded to the column's width when it fits, so the row still lines up. When it's longer, it gets one space on each side, and that row's pipes stop lining up. GFM ignores padding, so the page is the same either way, and no other row changes. New rows follow the same rule, and rows written without outer pipes (`a | b`, valid GFM) keep that shape.
+- **Escaping.** A `|` typed into a cell is written `\|`, inside code too, as GFM asks. A cell is one line: Enter in a cell never adds a line break.
+- **The editor** (call T2). A writable table is one atom node, `vesperTable`, whose view is a grid: the WAI-ARIA data grid pattern with editable cells. Each cell shows its formatting and chips. Editing a cell opens the one-line Markdown editor in place (the `fields.markdown({ inline: true })` editor, with code from item 3). Committing a cell is one ProseMirror transaction, so Ctrl+Z undoes cell by cell along with the rest of the body.
+- **Inserting** (call T4). "Table" in the toolbar's Insert menu and in the "/" list inserts a compact pipe table in every format: a header row and one row, two columns.
+- The source view and the raw-text dialog still edit any table as text.
+
+**Where it lives.** In the body, as a block, framed like a tag. It has a hairline frame, the header row on `surface-sunken` as the kit's Table has it, no zebra striping, and the focused cell's ring drawn inside the cell, as menu items draw theirs. A label line above it reads "Table · 3 columns", with one "…" button, "Table actions" (an overflow button, which §10.4 allows). Row and column actions hide behind it, and behind Shift+F10 on a cell. No new colour or panel. A table wider than the column scrolls inside its own container, as the entry list does at 320px.
+
+**Keyboard and screen readers.**
+- In the text, the arrow keys select the table as a block, announced as blocks are: "Table, 3 columns and 7 rows, selected. Press Enter to edit its cells." Alt+↑/↓ move it and Delete removes it, as for a tag's block.
+- Enter moves focus into the grid, onto the cell last used (a roving tabindex). The arrow keys move by cell; Home and End go to the row's ends, and Ctrl+Home and Ctrl+End to the first and last cells.
+- Enter or F2 edits the focused cell, with the caret at the end. In the cell, Enter or Escape stops editing and keeps the change; Tab and Shift+Tab edit the next or previous cell. Tab in the last cell adds a row, as word processors do, and announces it.
+- Escape in the grid returns to the text with the table selected, as Escape inside a frame selects the frame. Shift+Tab from the grid reaches Table actions, as Tab from inside a frame reaches its Settings button; Tab leaves the table.
+- Shift+F10 (or the menu key) opens Table actions for the focused cell:
+  - insert a row above or below, or a column left or right;
+  - move the row or the column (also Alt+↑/↓ and Alt+←/→ on a cell);
+  - delete the row or the column;
+  - align the column: left, centre, right, or as written (a radio group in the menu).
+
+  The header row can't move below a body row or be deleted: a pipe table must have one.
+- The grid has `role="grid"`, a name ("Table" with its column headers), `aria-rowcount` and `aria-colcount`. Header cells are `columnheader`, the others `gridcell`, and rows carry `aria-rowindex`. NVDA and JAWS switch to focus mode in a grid and read each cell with its column header. The cell's editor is named by its column and row ("Default, row 3").
+- Changes are announced in the body's polite live region: "Row added below row 3.", "Column Default moved left.", "Row 4 deleted.", "Column Default aligned right."
+- The accessibility rule for a table without a header row keeps working, on the file as written.
+
+**Tests.**
+- Core:
+  - reading both syntaxes: alignment colons, escaped pipes, code spans holding pipes, compact and aligned tables, rows without outer pipes, CRLF;
+  - every kind of edit changes only the bytes it must: one cell's range, one row's line, one column's cells;
+  - a save is refused when its result would read back differently;
+  - the scanner agrees with Markdoc and with micromark;
+  - a snapshot like `tag-edits.md`: one cell edit per table in every test file.
+- Corpus: vespercms.com's docs (Jeremy's own), the playground, and the committed four-site corpus, jazzy's 108 Markdoc files among it. Each table is either writable or kept with a reason. Editing each table's first cell changes only that cell, and opening and saving with no edit changes nothing. The count of tables kept as written is reported, to see what real content needs.
+- Admin (jsdom): the grid's keys in both modes, Table actions, the announcements, and axe. `fidelity.test.ts` also types into every cell of every writable table.
+- e2e (`studio`, keys only), on new playground fixtures: an aligned price table in Markdown, opening hours as a `{% table %}` (kept as written until it's built, under T3's (a)), a table inside a callout, and one kept as written. It edits a cell; adds, moves and deletes a row and a column; aligns a column; and tabs past the last cell. The file is checked byte for byte after each save. axe runs with the grid focused, a cell being edited, and the menu open.
+- Docs: `content/markdoc-and-mdx.mdoc` says how tables are edited and which stay as written. CLAUDE.md gains a rule: change a table through `editTable`.
+
+**Size.** Large, the largest item: about 15 commits, for core's reading and writing, the grid and its menu, fixtures, tests and docs. Fewer if `{% table %}` waits (call T3). No new dependency: the grid uses the kit's React Aria pieces and the compact editor.
+
+**Risks.**
+- Edge cases where a parser splits cells differently from the scanner, such as a backslash before an escaped pipe, or markdown-it (inside Markdoc) against micromark. The agree-or-keep rule leaves those tables protected, never wrong, and the corpus count shows how often it happens.
+- Focus moving between the document, the grid and a cell's editor, inside ProseMirror. The chips' caret problems on a Mac (DECISIONS.md, "A chip is non-editable once") came from nested non-editable elements. The grid is one atom node whose view owns its focus, which keeps ProseMirror's caret walk out, but the e2e tests should cover the grid's edges on macOS too.
+- An aligned table edited many times drifts out of line. That's the cost of the splice rule (call T1), and only one table in 48 is aligned.
+
+**Free or paid.** Free, as the body editor is.
+
+**Calls.**
+- **T1. Padding when a cell changes in an aligned table.**
+  - (a) Pad to the column's width when the text fits, else one space on each side, so only that row's line changes. Recommended: one edit changes one line, as the splice rule and "No unrelated diff" (DECISIONS.md) ask.
+  - (b) Re-align the whole column. Tidy source, but changing one price rewrites every row in history, and "No unrelated diff" would need a dated exception.
+  - (c) Never pad. The least code, but an aligned table goes ragged on its first edit, even when the text would have fit.
+- **T2. How a table is edited.**
+  - (a) A grid, as above. Recommended: the keys are predictable, and screen readers treat a grid as one thing.
+  - (b) A table inside the text (`prosemirror-tables`, already part of `@tiptap/pm`), typed into like a word processor. Quicker to type across, but the arrow keys move through text rather than cells, screen readers' table commands are unreliable inside an editable region, and cell-by-cell splicing would have to map ProseMirror's own table model back to the source.
+- **T3. Which tables come first.**
+  - (a) Pipe tables first, and `{% table %}` when a site uses one. Recommended: every table in vespercms.com and the corpus is a pipe table, and none uses `{% table %}`. It stays a protected block meanwhile, and the design above already covers it.
+  - (b) Both in one step. The grid and cell editor are shared, and `{% table %}`'s writer is small, but it adds a second syntax to test with no content to test it on.
+- **T4. Inserting a new table** from Insert and "/". (a) Yes, a compact pipe table. Recommended. (b) Edit existing tables only.
+
+### 2. History for an entry
+
+**Seen.** Spec §7.4 says history "comes from git", and §10.3 puts it in the editor's "…" menu, but nothing shows who changed an entry or when, and nothing brings an earlier version back. On vespercms.com every docs change is a cloud publish, so its history exists only on GitHub, out of an editor's reach. PLAN.md's Phase 4 defaults said history waits for its own step after Phase 4.5.
+
+**Design.**
+- **Storage.** `StorageAdapter` gains two optional methods, present only where there's history:
+  - `history(path, { cursor? })` returns a page of versions, newest first. Each has the commit, the path at that time (it differs across a move), the file's blob SHA, the time, who made it, the summary, and whether the studio made it (a `Vesper-Collection` trailer);
+  - `readAt(path, commit)` returns that version's bytes.
+
+  The memory adapter implements both, and `runStorageContract` tests them for every adapter that has them.
+- **Who.** For a cloud publish the author is the app's bot, so the names come from its `Co-authored-by` trailers. Those become lists in Phase 4's remaining work, so history comes after that. In GitHub mode the editor is the author; in local mode, whoever made the commit. Names only, never email addresses. A change made outside the studio shows its author and "Changed outside the studio", with the first line of its message below in muted text.
+- **Local mode** (`astro dev`). When the site's folder is inside a git repository, the dev API runs `git log --follow` and `git show` with `execFile` (no shell, the path after `--`), and only for files inside the site that a collection owns. When the working file differs from its last committed version, the list starts with "Saved on this computer, not yet in history". With no git, there's no History (call H2).
+- **GitHub mode.** One GraphQL request per page of 20: the branch's `history(path:)`, with each commit's `file(path:)` for its blob (to be checked against GitHub's docs before building, as Phase 3 did). Bytes come by blob SHA through the existing IndexedDB cache, checked against the SHA. GitHub's history for a path doesn't follow a move, so at the commit that added the path, one REST call (`GET /commits/{sha}`) reads its files, and a `previous_filename` continues the history under the old path. The fake GitHub answers both from `git log` over its real repository.
+- **The cloud.** A contract change in `@vesper/core` first (CLAUDE.md, "The cloud"):
+  - `GET /sites/{site}/history?path=…&cursor=…` returns `{ versions: HistoryVersion[]; cursor?: string }`, with each version's commit, path, blob version, time, `by` (names, and member IDs from `Vesper-Editor`), summary, and whether the studio made it;
+  - `GET /sites/{site}/history/{commit}?path=…` returns that version's bytes. The API resolves the blob from that commit's tree and refuses a path outside the site's folder (a monorepo's other code) or a commit not on the branch. `POST /blobs` keeps serving only the head's tree and drafts, so it isn't widened to any blob in the repository;
+  - restoring needs no endpoint: it's an ordinary draft save, checked by `changeAccess` like any other.
+
+  `runCloudContract` gains: two publishes list newest first, with their editors from the trailers; a moved page keeps its earlier versions; a version outside the site's folder is refused; viewers can read history. `CloudClient` and `scripts/cloud-fake.mjs` follow. The cloud's repository then runs history over the git proxy and caches each page by path and head commit in the site's Durable Object, since an older page never changes.
+- **Entries, in `ContentService`.** `history(collection, id)` maps the entry to its file. For a `file()` collection, where entries share one file, it keeps only the versions in which this entry's own JSON changed (each version read through the SHA cache). `readVersion(collection, id, commit)` returns an `EntryDocument` with status `read-only`, read with the same reader as today.
+- **Viewing** (call H3). An earlier version opens in the editor's own form, read-only, as a viewer sees it. A line above the title names the fields that differ from now, each a link to its field, and each of those fields says "Changed since this version" in its description: words, no colour.
+- **Restoring.** "Restore this version" loads that version's raw values and body into the editor as unsaved changes, and nothing is written yet. In local and GitHub modes, Save or Publish writes them through the usual splice and checks. In the cloud, autosave makes it a draft, as spec §7.4 says, and it publishes or goes to review like any draft. The change set's summary says "Restore “Harbor at dawn” to the version of 14 October", with a `Vesper-Restored-From` trailer, so history can say so later. A restore never moves the file back to an old path. If a restored version uses an image that has since been removed, the save is refused in plain words, naming the image.
+
+**Where it lives.** "History" in the editor's "…" menu, as §10.3 lists it, opening a drawer (the Details and notes pattern). The drawer lists versions newest first: when (in the site's time zone, as dates are shown), who, and the summary. Each row is a link to `#/c/<collection>/e/<id>/history/<commit>`, so a version survives a reload with no rewrite rules. "Show earlier" loads the next page. While a version is open, the editor's bar has a back link ("Back to the current version"), the version as status text, and "Restore this version" as the one primary button, in Save's place.
+
+**Keyboard and screen readers.**
+- History is a menu item. The drawer is modal: focus goes to its heading, Tab moves through the versions, and Escape returns to the "…" button.
+- Each version's link has a full name: "14 October 2026, 3:20 pm, Jeremy Bise: Update “Harbor at dawn” in Blog posts".
+- Opening a version focuses the screen's heading, as every screen does, and the heading names it: "Harbor at dawn, version of 14 October 2026, 3:20 pm".
+- Fields are read-only, not disabled, so they stay in the Tab order and their values can be read. The differences line is a list of links that move focus to each field, as the error summary's do.
+- After a restore, focus returns to the heading, and the status announces "Restored the version of 14 October. Not saved yet." (in the cloud, "Draft saved" follows, as usual).
+
+**Tests.**
+- Core:
+  - history over the memory adapter, over a temporary git repository (local), and over the fake GitHub: newest first, authors from the author or the trailers, a move followed, paging;
+  - a `file()` entry's versions filtered to its own changes;
+  - restoring through `ContentService` gives the earlier values, spliced, and refuses a missing image.
+- Contract: `runCloudContract`'s new cases, against the fake cloud here and the real API in the cloud's repository.
+- Admin (jsdom): the drawer, a read-only version, the differences line and its links, restoring into unsaved changes, and axe.
+- e2e:
+  - `github`: publish twice, open the first version, restore and publish; the bare repository's file equals the first version's bytes when nothing else changed;
+  - `cloud`: a restore becomes a draft;
+  - `studio`: the throwaway site copy is made a git repository of its own, with one commit, then saved and restored. A unit test checks that a folder outside any repository gets no History item.
+- Docs: a "History" page under Content, and the integration's README.
+
+**Size.** Large: about 12 commits here (storage, three adapters, the contract, services, the drawer and the version view, tests, docs), plus the history endpoints in the cloud's repository.
+
+**Risks.**
+- GitHub's rename detection misses a move whose file changed a lot. History then stops at the move; a move made by the studio rewrites only links, so it should be found.
+- Old versions can hold text removed on purpose (a phone number published by mistake). History shows them to everyone who can open the studio, as GitHub already shows them to everyone with access to the repository. The docs should say that removing something from history is a git task.
+- Rate limits in GitHub mode: one GraphQL request per 20 versions, plus one per move, with bytes cached by SHA.
+- Scheduling (Phase 4.5) publishes by rebuilding, with the date already saved in the entry (D18), so History shows the save that set the date, not the moment it went live. That save's summary should name the schedule ("Schedule “Open house” for 3 November") so the list reads well.
+
+**Free or paid** (call H1). It's a tier question for Jeremy, so it's asked, not decided.
+
+**Calls.**
+- **H1. Free or paid.**
+  - (a) Free in local and GitHub modes, and part of the cloud. Recommended: it's git's own data, read with the editor's own sign-in, and costs the cloud nothing in those modes. The paid parts stay what only the cloud does: restore as a draft, review.
+  - (b) Cloud only, as spec §7.4 places it. Local and GitHub users keep git's own tools.
+- **H2. Local mode without git.**
+  - (a) No History item. Recommended: an Astro site without git is rare, and git is history.
+  - (b) Vesper keeps a copy of each save in `.vesper/history/`, which duplicates git and needs pruning.
+- **H3. How an earlier version is shown.**
+  - (a) The entry's own form, read-only, with the fields that differ named and marked in words. Recommended: editors see content, not file syntax, and every widget already has a read-only state.
+  - (b) The two files' text side by side, as the cloud's conflict compare does (`ConflictCompare`). Cheaper, but it's YAML and Markdown source.
+
+### 3. Inline code in one-line Markdown fields
+
+**Seen.** The compact Markdown editor turns code off (`code: false` in `packages/admin/src/widgets/markdown.tsx`), so a value with backticks fails its round-trip check, and the field drops to plain text with "This uses Markdown the compact editor can’t show". vespercms.com's home page writes `src/content.config.ts`, `markdoc.config.mjs` and `meta()` as plain words for that reason (DECISIONS.md, "vespercms.com is a plain Astro site edited with Vesper"; CLAUDE.md has a rule for it). The site renders these fields with micromark, which already turns backticks into `<code>`.
+
+**Design.** Turn on Tiptap's `code` mark in the compact editor, in inline and multi-line fields alike, and add a Code tool after Italic, with the body editor's icon, name, ⌘E shortcut and tooltip. The round-trip check stays: a value the editor can't write back as it is (a code span holding a backtick, which needs a double fence) still falls back to plain text. Nothing is rewritten until someone edits the field. Then vespercms.com's home copy gets its code formatting, edited in the studio as a check, CLAUDE.md's rule keeps only its "no unions" half, and `content/fields.mdoc` says the compact editor has code.
+
+**Where it lives.** One more tool in the field's own formatting toolbar. Icon-only formatting tools are already the §10.4 exception for this editor and the body's.
+
+**Keyboard and screen readers.** The tool is a toggle in the field's toolbar: one Tab stop, the arrow keys along it, and Escape from the text reaches it. It's named "Code", with `aria-pressed`, `aria-keyshortcuts`, and the tooltip "Code ⌘E" on hover and keyboard focus. ⌘E (Ctrl+E) toggles it from the text. Screen readers read code as text; NVDA names it when formatting reports are on.
+
+**Tests.** Widget tests: a value with code opens in the editor, not the fallback; code is toggled by key and by the tool; an unchanged value isn't rewritten; a value with a backtick inside code falls back; axe. The `site` e2e project already renders the home page.
+
+**Size.** Small: two or three commits (the widget and its tests, then the site's copy, the docs and the rule).
+
+**Risks.** Tiptap's serializer with code beside bold or links. The round-trip check catches anything it can't write back, so the worst case is the plain-text fallback, never changed content.
+
+**Free or paid.** Free.
+
+**Calls.**
+- **C1. Which fields get code.**
+  - (a) Every Markdown field. Recommended: backticks are core Markdown, and every common renderer (micromark, marked, remark) handles them.
+  - (b) Opt-in, with `fields.markdown({ code: true })`. A field that shouldn't have code stays as it is, but every site that wants it has to find the option, vespercms.com included.
+
+### 4. Duplicate an entry, and copy links
+
+**Seen.** A new docs page that looks like an existing one starts empty, so its fields are retyped. Pointing a colleague at an entry means copying the address bar, and the page's own address means opening it with View on site first. Spec §10.3 puts "duplicate" and "copy link" in the editor's "…" menu. The design pass listed both as not built.
+
+**Design.**
+- **Duplicate** opens a copy as an unsaved new entry, at `#/c/<collection>/e/<id>/copy`:
+  - every raw value and the body are copied, and the title gets " (copy)";
+  - fields that hold the entry's own address (the `slug` widget's) are cleared, so the copy gets its own, and the file name comes from the title at the first save, as for any new entry;
+  - images are shared, never copied, and keep their focal points and crops;
+  - in the cloud, the first save is by hand, as for any new entry (DECISIONS.md).
+
+  Saving sends `copyOf: { id, version }` with the new entry. The service reads the original at that version, splices the edited values into its text, and writes the result at the new path (`expectedVersion: null`). So the copy keeps the original's comments, key order and body bytes, through `writeEntryFile` like any save. The services run in the browser in GitHub mode and the cloud, so the cloud's contract doesn't change. In a tree collection the copy goes right after the original among its siblings, in one change set with the folder's `_order.yaml` (`PageService`). In a `file()` collection it's appended as new items are. Singletons have no Duplicate.
+- **Copy page address** copies the entry's page address: the one View on site opens, with Astro's `site` in front when it's set, so a link copied in local mode is the live one. It's offered only where View on site is.
+- **Copy editing link** copies the studio's address for the entry (`/admin/#/c/<collection>/e/<id>` under Astro's `base`), which survives a reload on any host. In GitHub mode and the cloud, a colleague who opens it signs in and lands on the entry, as the review emails do.
+- After a copy, the bar's status text reads "Link copied" for a few seconds (it's a polite status, so it's announced): no toast. Where the Clipboard API isn't there (a site served over plain `http`, or a refused permission), a small dialog shows the link in a read-only field, selected, with "Press Ctrl+C to copy" (⌘C on a Mac).
+- **Function-form URLs** (the 2.6 follow-up). They have no View on site today, and would have no Copy page address. GitHub mode and the cloud already load `vesper.config.ts` in the browser, so the editor can run the function there, and in local mode the dev API can answer.
+
+**Where it lives.** The editor's "…" menu, which then reads: View on site, Copy page address, Copy editing link, Duplicate, History, then the danger items (Discard draft…, Delete…). The outline's row menu gains Duplicate. Phase 4.5's Schedule dialog may want this menu too, so its place is agreed with that design. No new buttons or colours.
+
+**Keyboard and screen readers.** Each is a menu item with an icon beside its words. Duplicate moves to the copy's screen, whose heading takes focus ("New blog post, a copy of Harbor at dawn"), and the status reads "Not saved yet". The copy items keep focus on the "…" button and announce "Link copied". The fallback dialog puts focus in its selected field.
+
+**Tests.**
+- Core: a copy splices into the original's text (comments and order kept, only the changed values differ); a tree copy is placed after its original in one change set; a `file()` copy; slug fields cleared; a copy needs edit access at its new path (`changeAccess`).
+- Admin (jsdom): the menu items per mode and entry kind, the copy's status, the clipboard and its fallback, and axe.
+- e2e: duplicate and save in `studio` (the new file checked byte for byte against the original, less the changed lines) and in `github` (one commit).
+
+**Size.** Medium: about 6 commits.
+
+**Risks.** A field that must be unique but isn't a slug (an external ID, say) gets copied. The schema's own refinements, or the build, catch it. A later hint (`.meta({ copy: false })`) could clear it, if a site needs one.
+
+**Free or paid.** Free.
+
+**Calls.**
+- **D1. What a copy starts as.**
+  - (a) An unsaved new entry with every value copied, " (copy)" after its title, and slug fields cleared. Recommended: nothing is written until the editor saves, as with any new entry.
+  - (b) The same, but marked `draft: true` when the collection has a boolean `draft` field. Safer against publishing by accident, but surprising when a copy saved on purpose doesn't appear.
+  - (c) Saved at once, then opened. One step less, but the folder fills with abandoned copies.
+- **D2. A page with subpages, in a tree.**
+  - (a) The page alone. Recommended: copying a section is rare, and it would be a move-sized change set.
+  - (b) Also "Duplicate with its subpages".
+
+### 5. The ⌘K command palette
+
+**Seen.** Spec §10.3 puts "a search/command palette (⌘K)" in the top bar, and the design system shows it; the design pass listed it as not built. On vespercms.com, reaching a docs page means opening the Content menu, then the outline, then expanding sections. Every entry is reached by browsing.
+
+**Design.**
+- A dialog with a search field and a list of results, built from React Aria's `Autocomplete` (in the installed react-aria-components 1.22.1, so no new dependency), in the kit as `CommandPalette`.
+- **What it finds** (call P2): entries by title, address and file name, across every collection the member can edit (the same grant filters as lists, so the cloud hides what someone can't change); "Go to" places (Home, Media, Redirects, Changes in the cloud); "New …" for each collection. In the editor, also the current entry's actions: History, Duplicate, and the two copy links. Each command shows its shortcut, which is the design pass's "shortcuts in menus" too.
+- **Data.** The entry lists the studio already loads (`EntrySummary`), fetched for every collection the first time the palette opens, then kept for the visit. In GitHub mode and the cloud that reads each entry once, through the SHA cache. Matching is the studio's own: a prefix of the title, then of a word, then anywhere. No fuzzy-search library.
+
+**Where it lives.** A quiet "Search" button (an icon beside the word) in the top bar of every screen except the editor, whose bar holds the entry's own controls. Under 640px, where the top bar already leaves out Vesper's mark for room, "Search…" is the first item of the Content menu instead: no icon-only button. ⌘K (Ctrl+K) opens it on every screen, the editor included (call P1). It's a dialog, on glass like other dialogs, with no primary button.
+
+**Keyboard and screen readers.**
+- ⌘K or the button opens it with focus in the field. The field is a combobox: ↑ and ↓ move through the results (virtual focus, `aria-activedescendant`), Enter opens one, and Escape clears the text, then closes the palette and returns focus to where it was.
+- Results are grouped (Entries, Go to, Create), with group labels. Each entry's name includes its collection ("Harbor at dawn, Blog posts"), with its address as the description.
+- The count is announced politely as the results change ("12 results"), once typing pauses, so it doesn't speak on every keystroke.
+
+**Tests.** Unit: matching and ranking, grant filtering, and the commands per screen. Kit (jsdom): the combobox's keys, groups, the announcement, and axe. e2e (`studio`): ⌘K from Home, type, Enter opens the entry; ⌘K inside the body opens the link dialog, not the palette; Escape returns focus to where it was; axe with the palette open.
+
+**Size.** Medium: about 7 commits.
+
+**Risks.** The first open on a large site in GitHub mode reads every entry; it shows "Loading entries…" meanwhile, and GraphQL batches of 50 keep it to a few requests. ⌘K means Link inside text (call P1).
+
+**Free or paid.** Free, within one site. A palette that jumps between an agency's sites is the site switcher's job (§10.3), which is the cloud's and would be paid.
+
+**Calls.**
+- **P1. The shortcut.** ⌘K is already Link inside the body editor and the compact Markdown fields.
+  - (a) ⌘K opens the palette everywhere except inside a text editor, where it stays Link. Escape (which moves focus to the editor's toolbar), then ⌘K, opens the palette from there. Recommended: both are the common conventions, and neither moves.
+  - (b) ⌘K always opens the palette, and Link moves to another key.
+  - (c) Another key for the palette, such as ⌘/ (Ctrl+/), and ⌘K stays Link everywhere.
+- **P2. What it searches.**
+  - (a) Titles, addresses and file names, plus the commands above. Recommended.
+  - (b) Body text too. Needs an index of every body; in GitHub mode and the cloud, that means reading every body on first open.
+
+### 6. The tab title on Vesper's own site
+
+**Seen.** "Vesper · Vesper" in the tab, from `{siteName} · Vesper` with vespercms.com's `siteName: 'Vesper'`. Each screen then sets `{screen} · {siteName}`, so the product's name was only ever in the tab until the first screen opened.
+
+**Design and calls.**
+- **N1. The title.**
+  - (a) The page's own title follows the screens' pattern: "Studio · Highlands College", and "Studio · Vesper" on vespercms.com. Vesper's name leaves the tab, as it already does once a screen opens, and the favicon is Vesper's mark. Recommended: one pattern everywhere, and one less thing for white-label (Phase 9) to replace.
+  - (b) Keep `{siteName} · Vesper`, and drop the suffix when the name is Vesper's own (in any case).
+  - (c) Change only vespercms.com's `siteName` (to "vespercms.com", say). That also changes its top bar and its search page's title, and works around the studio instead of fixing it.
+
+Where, keyboard, tests and size: one line in `admin.astro`, its static-build test, nothing to operate. Free.
+
+### Other studio items worth grouping
+
+From the follow-up and "Not built" lists above, briefly:
+- **With item 4:** View on site for function-form URLs (Phase 2.6's follow-up), folded in above.
+- **With item 5:** shortcuts shown in menus (the design pass's list), shown in the palette and in the "…" menus' items.
+- **With item 1:**
+  - pasting a table from a spreadsheet or a document (HTML or tab-separated) as a new pipe table;
+  - task lists, footnotes and links with titles, which also stay protected blocks; each could follow tables, under the same round-trip rule.
+- **With item 2:** restoring a deleted entry, from the history of its collection's folder.
+- **Small, any time:**
+  - a light and dark switch for the studio (it follows the system), kept per viewer in `localStorage`;
+  - DECISIONS.md's open caret item: with a chip selected, ⇧⌘← leaves a caret before it;
+  - a spinner on a pending button;
+  - tags shown inside the combobox's field.
+- **Cloud, later:** dismissing an accessibility note (Phase 2.8: cloud drafts could hold it); the site switcher in the top bar (§10.3), for members of several sites.
+
+### Recommended order, and Phase 4.5
+
+1. **The title (6) and inline code (3):** a few commits, now. They touch only `admin.astro` and the Markdown widget, which 4.5 won't, and vespercms.com's home copy can use code straight away.
+2. **Duplicate and copy links (4),** before 4.5's studio work, so 4.5's Schedule dialog joins a "…" menu whose shape is settled. The two designs settle the menu's order together.
+3. **Tables (1),** in its own worktree while 4.5 is built. It touches only `packages/core/src/body`, `packages/admin/src/body` and the playground's new fixtures, none of which 4.5 needs (4.5 is build-time filtering, rebuild templates, the Durable Object's alarms and the Schedule dialog). It also needs the compact editor's code from step 1.
+4. **History (2),** after Phase 4's `Co-authored-by` lists (it reads them to name editors) and after 4.5, as Phase 4's defaults already said. It changes the cloud's contract and repository, and 4.5 changes the cloud too, so the two contract changes go one at a time.
+5. **The palette (5),** last or beside History. It lists the actions from 4 and 2, so it's best built after them.
+
+Each lands as its own step with its own outcome note here, as "Icons (after the design pass)" did. They aren't phases, so the phase status table doesn't list them.
+
+**The calls, in one list:** T1 to T4 (tables), H1 to H3 (history, H1 being the tier question), C1 (code), D1 and D2 (duplicate), P1 and P2 (palette), N1 (title). Plus one about all six: build them between phases in the order above (recommended), or hold them for Phase 9's polish.
+
 ## Calls of 2026-10-19
 
 Jeremy took the recommendation on every open item on 2026-10-19: the earlier phases' "Open, for Jeremy" lists, the Phase 2.9 calls and spec §13. The spec's §13 records the product calls, and DECISIONS.md the reasons. What changes in the code:
