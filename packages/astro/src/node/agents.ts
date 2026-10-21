@@ -308,8 +308,8 @@ function describe(field: FieldModel): string {
       if (field.widget === 'slug') return 'a slug: lowercase letters, numbers and hyphens';
       if (field.widget === 'markdown') {
         return field.widgetOptions?.inline === true
-          ? 'Markdown on one line (bold, italic and links)'
-          : 'Markdown (paragraphs, lists, bold, italic and links)';
+          ? 'Markdown on one line (bold, italic, code and links)'
+          : 'Markdown (paragraphs, lists, bold, italic, code and links)';
       }
       if (field.widget === 'file') return 'a path to a file';
       if (field.format === 'email') return 'an email address';

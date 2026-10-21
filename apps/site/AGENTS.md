@@ -59,10 +59,10 @@ Markdown (`.md`) files in `src/content/pages/`, matching `**/[^_]*.md`. Fields g
     - `href`: text. Required. A path on this site, like /docs/, or a full address.
 - `sections`: a list of objects with the fields below. Default `[]`.
   - `heading`: text. Required.
-  - `intro`: Markdown on one line (bold, italic and links). Optional.
+  - `intro`: Markdown on one line (bold, italic, code and links). Optional.
   - `points`: a list of objects with the fields below. Default `[]`.
     - `title`: text. Required.
-    - `body`: Markdown on one line (bold, italic and links). Required.
+    - `body`: Markdown on one line (bold, italic, code and links). Required.
 - `hideFromSearch` (Hide from site search): `true` or `false`. Default `false`. The page stays on the site. It just won’t show up in the site’s own search.
 
 #### Docs (`docs`)

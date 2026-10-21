@@ -93,7 +93,7 @@ A test checks that each helper equals its raw equivalent, so this table can't dr
 
 - `fields.color({ contrast: 'text' })` (or `'large-text'`, `'graphic'`) adds `widgetOptions: { contrast }`: the studio then checks the colour against the site's `a11y.backgrounds`, at 4.5:1 for text and 3:1 otherwise.
 - `fields.geo({ defaultCenter: { lat, lng }, zoom })` adds `widgetOptions: { defaultCenter, zoom }`: where the map starts when the field is empty.
-- `fields.markdown({ inline: true })` adds `widgetOptions: { inline: true }`: a single paragraph with bold, italic and links, and no lists.
+- `fields.markdown({ inline: true })` adds `widgetOptions: { inline: true }`: a single paragraph with bold, italic, code and links, and no lists.
 
 `fields.file()` uploads go to `public/files/` (or beside the file they replace) and store the public path, `/files/brochure.pdf`. A file chosen from under `src/` is stored relative to the entry instead, such as `./brochure.pdf`.
 

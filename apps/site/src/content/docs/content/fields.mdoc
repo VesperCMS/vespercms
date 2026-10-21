@@ -102,7 +102,7 @@ Options you pass go into `widgetOptions`, as they would in the raw form. What th
 - `slug({ from: 'title' })` follows that field on a new entry until someone edits the slug.
 - `geo()` shows latitude and longitude fields. A map loads only when an editor asks for it with "Show on a map", and `defaultCenter` and `zoom` set where it starts.
 - `datetime()` is entered in the site's time zone (`timeZone` in `vesper.config.ts`, otherwise each editor's own) and stored with that day's offset.
-- `markdown()` is a small editor for bold, italic, links, paragraphs and lists. With `inline: true` it leaves out paragraphs and lists.
+- `markdown()` is a small editor for bold, italic, code, links, paragraphs and lists. With `inline: true` it leaves out paragraphs and lists.
 - `select()` takes a list of values, an object of values and labels (`{ news: 'News' }`), or `[{ value, label }]`. The file stores the value.
 - `hideFromSearch()` keeps the entry's page out of the site's own search: see [Site search](/docs/site/search/).
 

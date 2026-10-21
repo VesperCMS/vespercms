@@ -103,7 +103,7 @@ Markdown (`.md`) or MDX (`.mdx`) files in `src/content/pages/`, matching `**/[^_
   - `hidden`: `true` or `false`. Default `false`.
 - `sections`: a list of objects with the fields below. Default `[]`.
   - `heading`: text. Required.
-  - `body`: Markdown on one line (bold, italic and links). Required.
+  - `body`: Markdown on one line (bold, italic, code and links). Required.
 - `brochure`: a path to a file. Optional.
 - `hideFromSearch` (Hide from site search): `true` or `false`. Default `false`. The page stays on the site. It just won’t show up in the site’s own search.
 

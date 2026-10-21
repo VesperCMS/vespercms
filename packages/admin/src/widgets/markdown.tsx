@@ -11,10 +11,10 @@ import { inputClass } from './basic.tsx';
 
 /*
  * Markdown in frontmatter (spec §6.3.2): a compact editor for short rich
- * text, with bold, italic, links and (unless the field is inline) paragraphs
- * and lists. Nothing is rewritten until someone edits it. A value that uses
- * Markdown this editor can't show faithfully is edited as plain text, and
- * the field says so.
+ * text, with bold, italic, code, links and (unless the field is inline)
+ * paragraphs and lists. Nothing is rewritten until someone edits it. A
+ * value that uses Markdown this editor can't show faithfully is edited as
+ * plain text, and the field says so.
  */
 
 const ALLOWED = new Set([
@@ -88,7 +88,6 @@ export function MarkdownWidget(props: WidgetProps<string>) {
         heading: false,
         blockquote: false,
         codeBlock: false,
-        code: false,
         horizontalRule: false,
         strike: false,
         underline: false,
@@ -135,6 +134,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
     selector: ({ editor: e }) => ({
       bold: e.isActive('bold'),
       italic: e.isActive('italic'),
+      code: e.isActive('code'),
       link: e.isActive('link'),
     }),
   });
@@ -190,6 +190,14 @@ export function MarkdownWidget(props: WidgetProps<string>) {
               isDisabled={disabled}
               isSelected={state.italic}
               onChange={() => editor.chain().focus().toggleItalic().run()}
+            />
+            <ToggleButton
+              icon="code"
+              label="Code"
+              shortcut={shortcut('Mod', 'E')}
+              isDisabled={disabled}
+              isSelected={state.code}
+              onChange={() => editor.chain().focus().toggleCode().run()}
             />
             <ToolButton
               icon="link"
