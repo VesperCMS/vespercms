@@ -170,6 +170,8 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Leave entries out of the index with `isPublished` and `isHiddenFromSearch` from `@vesper/core`, never a date check of your own.** Phase 4.5's build filtering uses the same window, so search and the site can't disagree.
 
+**Vesper's injected `/search` page never counts as the site using `<Search>`, and it's found by its route, never its markup.** It renders `<Search variant="inline">` on every site, so counting it indexed every site, and a site's own page copied from it must still count (DECISIONS.md, "Vesper's /search page isn't a use of `<Search>`").
+
 **Take the index from Pagefind with `getFiles` and write it with `writeBundle`; never call `writeFiles`.** Pagefind 1.5.2 answers `writeFiles` before its writes land, and `close()` then leaves files empty (DECISIONS.md, "Vesper writes Pagefind's files itself").
 
 ### Studio and cloud

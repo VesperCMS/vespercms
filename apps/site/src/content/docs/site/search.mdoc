@@ -1,9 +1,9 @@
 ---
 title: Site search
-summary: Vesper indexes your site with Pagefind at every build, and one component gives visitors a search dialog that works on any host.
+summary: Add one component to your layout, and every build indexes your site with Pagefind for a search dialog that works on any host.
 ---
 
-Search is free and static. After every `astro build`, Vesper indexes your pages with [Pagefind](https://pagefind.app) and writes the index into `dist/_vesper/search/`. It's plain files, so there's no service to run, and no MIME type or rewrite to set on the host.
+Search is free and static. Once a page uses `<Search>`, every `astro build` indexes your pages with [Pagefind](https://pagefind.app) and writes the index into `dist/_vesper/search/`. It's plain files, so there's no service to run, and no MIME type or rewrite to set on the host.
 
 ## Add search to your layout
 
@@ -29,7 +29,7 @@ import { Search, SearchHead } from '@vesper/astro/components';
 - `<Search />` renders a **Search** button that opens a dialog with the field, filters and results.
 - `<SearchHead />` goes in `<head>`. It links the site's `opensearch.xml`, so browsers can offer your search from the address bar. It needs Astro's `site` setting, and renders nothing without it.
 
-There's no other step: no command to run and no change to how you deploy.
+There's no other step: no command to run and no change to how you deploy. Until a page uses `<Search>`, the build writes no index and no `/search` page, and its log says so.
 
 ## Using the dialog
 
@@ -114,7 +114,7 @@ Vesper matches pages to entries through each collection's `url` in `vesper.confi
 
 ## The /search page
 
-Vesper adds a plain page at `/search`. It reads `?q=`, so a search can be linked and bookmarked, and asks search engines not to index it.
+When your pages use `<Search>`, Vesper adds a plain page at `/search`. It reads `?q=`, so a search can be linked and bookmarked, and asks search engines not to index it.
 
 For a search page in your own layout, add `src/pages/search.astro`. Yours replaces Vesper's:
 

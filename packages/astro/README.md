@@ -22,7 +22,7 @@ Zero config. It:
 - when the site uses Astro's own Sharp image service, wraps it so each image's stored crop is cut before Astro resizes it (see "Images" below). The build log says so.
 - writes `dist/_vesper/manifest.json` after `astro build`, which is how the cloud learns the schema.
 - after `astro build`, checks every page's accessibility structure and writes `.vesper/a11y-report.json` beside `dist/` (see "Accessibility checks at build" below).
-- after `astro build`, when a page uses `<Search>`, indexes the site with Pagefind into `dist/_vesper/search/`, and injects a plain `/search` page unless the site has its own (see "Site search" below).
+- after `astro build`, when a page uses `<Search>`, indexes the site with Pagefind into `dist/_vesper/search/`, and injects a plain `/search` page unless the site has its own. With no `<Search>` in the site's own pages, the build writes no index and leaves the injected page out (see "Site search" below).
 
 | Option | Default | |
 |---|---|---|
@@ -265,7 +265,7 @@ Never pass a focal point as Astro's `position`: Sharp accepts only its own keywo
 
 ## Site search (`@vesper/astro/components`)
 
-Search is free and static (D23): after every build, the integration indexes the site with [Pagefind](https://pagefind.app) into `dist/_vesper/search/`. It's plain files, so it works on any host, with no MIME type or rewrite to set.
+Search is free and static (D23): once a page uses `<Search>`, every build indexes the site with [Pagefind](https://pagefind.app) into `dist/_vesper/search/`. It's plain files, so it works on any host, with no MIME type or rewrite to set. Until then the build writes no index and no `/search` page, and its log says so.
 
 ```astro
 ---
@@ -293,7 +293,7 @@ vesper({
 
 - **`<Search />`** is a button that opens a dialog: the field, filters as checkboxes (every entry's `Section` is its collection's label, then your `filters`), "Sort" once a section with a sort field is chosen, and results as a list of links with the date, an excerpt and a thumbnail of the entry's first image (its square crop). The count is announced once typing pauses. `<Search variant="inline" />` puts the same in the page; `<Search shortcut={false} />` drops Ctrl/⌘+K.
 - **What's indexed:** every built page except Astro's redirect pages, `/admin`, `404`, the search page itself, pages with `<meta name="robots" content="noindex">`, and `exclude` patterns; and of entry pages, none from a collection with `search: false` in vesper.config.ts, none hidden with `fields.hideFromSearch()` (or a boolean `noindex`, at the top level or under `seo`), and none outside their publish window. The index reads each page's `<main>`, unless your pages mark their own content with `data-pagefind-body`. The deployed HTML is never changed.
-- **`/search`** is injected as a plain page unless the site has `src/pages/search.astro` (put `<Search variant="inline" />` in your layout there). It reads `?q=`. Without JavaScript it says search needs JavaScript and links to the home page (or `noJsLink`); `noJsFallback: 'duckduckgo'` makes its form search the site on DuckDuckGo instead.
+- **`/search`** is injected as a plain page unless the site has `src/pages/search.astro` (put `<Search variant="inline" />` in your layout there). The injected page doesn't count as a use of `<Search>`, and the build leaves it out when nothing else uses it. It reads `?q=`. Without JavaScript it says search needs JavaScript and links to the home page (or `noJsLink`); `noJsFallback: 'duckduckgo'` makes its form search the site on DuckDuckGo instead.
 - **In `astro dev`**, search uses the last build's index; before the first build it says so.
 - **The build log** says how many pages it indexed and what a first search loads, and warns above 300 KB (uncompressed, as a host without compression sends it).
 - **Other languages:** Pagefind keeps an index per `<html lang>`. `<Search>`'s words are English; give others with `search: { strings: { fr: { button: 'Rechercher', label: 'Rechercher sur ce site' } } }` (the keys are in `components/search/strings.ts`).

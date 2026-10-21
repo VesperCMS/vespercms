@@ -17,8 +17,8 @@ No feature depends on a host's rewrites, headers, functions or image service. Wh
 |---|---|
 | `admin/` | The studio. |
 | `_vesper/manifest.json` | Your collections and their fields, as the studio and the cloud read them. It holds no entries and no secrets. |
-| `_vesper/search/` | The [search](/docs/site/search/) index. |
-| `search/` | The search page, unless you have your own. |
+| `_vesper/search/` | The [search](/docs/site/search/) index, once a page uses `<Search>`. |
+| `search/` | The search page, once a page uses `<Search>`, unless you have your own. |
 | `opensearch.xml` | So browsers can offer your search, when Astro's `site` is set. |
 | `_vesper/schemas.js` | With GitHub mode or the cloud: your content schemas, built for the browser so the studio checks entries as your build does. A schema that imports Node-only code can't be built, and the build log says why. |
 | A page at each old address | Your redirects, below. |
