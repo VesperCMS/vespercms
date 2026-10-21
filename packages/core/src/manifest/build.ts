@@ -16,7 +16,7 @@ import { RATIO_NAME, isRatio, siteRatios } from '../images/ratios.ts';
 import { humanize } from '../schema/humanize.ts';
 import { globMatcher } from '../collections/entries.ts';
 import type { NativeTarget } from '../urls/hosts.ts';
-import { DEFAULT_URL_SETTINGS, type UrlSettings } from '../urls/pattern.ts';
+import { DEFAULT_URL_SETTINGS, type UrlEntry, type UrlSettings } from '../urls/pattern.ts';
 import { walkSchema } from '../schema/walk.ts';
 import { searchHiddenField } from '../search/fields.ts';
 import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
@@ -51,7 +51,8 @@ export type CollectionConfig = {
   label?: string;
   singleton?: boolean;
   tree?: boolean;
-  url?: string | ((entry: unknown) => string);
+  /** A pattern, or a function of the entry that returns its site path. */
+  url?: string | ((entry: UrlEntry) => string);
   listFields?: string[];
   newEntryPath?: string;
   schedule?: boolean | { unpublish?: boolean; publishAt?: string; unpublishAt?: string };

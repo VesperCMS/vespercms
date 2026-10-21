@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { A11Y_RULE_IDS } from '@vesper/core';
+import { A11Y_RULE_IDS, entryUrlKey } from '@vesper/core';
 import { checkConfig, defineConfig } from './index.ts';
 
 describe('defineConfig', () => {
   it('returns the config unchanged (it exists for types)', () => {
     const config = { collections: { blog: { label: 'Blog' } } };
     expect(defineConfig(config)).toBe(config);
+  });
+
+  it('types a url function’s entry, so the README’s example passes a strict typecheck', () => {
+    const config = defineConfig({
+      collections: { people: { url: (entry) => `/people/${entry.id}` } },
+    });
+    const url = config.collections?.people?.url;
+    expect(entryUrlKey(url, { id: 'ada', collection: 'people', data: {} })).toBe('/people/ada');
   });
 });
 
