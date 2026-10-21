@@ -18,7 +18,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
 | 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. Left: `Co-authored-by` for every draft's author (Jeremy's call b), and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
-| 4.5 Scheduled publish and unpublish | Designed (2026-10-21), with 11 calls for Jeremy. Building waits for Phase 4's acceptance criteria. See "Phase 4.5: Scheduled publish and unpublish (design)" below. |
+| 4.5 Scheduled publish and unpublish | Designed 2026-10-21, and Jeremy confirmed its calls that day. Building waits for Phase 4's acceptance criteria. See "Phase 4.5: Scheduled publish and unpublish (design)" below. |
 | 5 onward | Roadmap below |
 
 ## vespercms.com and the docs
@@ -701,7 +701,7 @@ Jeremy confirmed every recommendation on 2026-10-20: 1a to 9a, and the smaller d
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 
-Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-correct at build. Any rebuild at or after the time gives the right site, on any host, with or without the cloud, and the cloud's only job is to trigger a rebuild at the exact time. The free half lives here, under MIT: build-time filtering, the studio's Schedule dialog and Scheduled view, unpublish redirects, and the deploy templates' scheduled rebuild. The paid half lives in `vesper-cloud`: exact times through Durable Object alarms, `holdScheduledDrafts`, and each scheduled event's result. This section describes that half at the boundary; its detailed design goes in that repository's PLAN.md. Written 2026-10-21, ahead of time. Building waits for Phase 4's acceptance criteria (CLAUDE.md, "Build in the phase order") and for the calls below.
+Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-correct at build. Any rebuild at or after the time gives the right site, on any host, with or without the cloud, and the cloud's only job is to trigger a rebuild at the exact time. The free half lives here, under MIT: build-time filtering, the studio's Schedule dialog and Scheduled view, unpublish redirects, and the deploy templates' scheduled rebuild. The paid half lives in `vesper-cloud`: exact times through Durable Object alarms, `holdScheduledDrafts`, and each scheduled event's result. This section describes that half at the boundary; its detailed design goes in that repository's PLAN.md. Written 2026-10-21, ahead of time, and Jeremy confirmed its calls that day. Building waits for Phase 4's acceptance criteria (CLAUDE.md, "Build in the phase order").
 
 **Done when** (§11):
 1. A post scheduled for a time 5 minutes ahead goes live on a Netlify site and on an SFTP-template site within 2 minutes of that time (cloud).
@@ -711,7 +711,6 @@ Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-corr
 
 **Before it can start:**
 - Phase 4 is done: the `Co-authored-by` lists, and the studio against the real API under `wrangler dev` (above).
-- Jeremy's calls, below.
 - **For the real-world check** (Jeremy, when it arrives): a Netlify site for a copy of the playground, and a host reached by SFTP, with its credentials in the test repository's secrets. A shared-hosting account is the realistic case. Call 6(a) also needs push webhooks turned on for VesperCMS.
 
 **What was found first.** In the code:
@@ -737,7 +736,7 @@ Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-corr
 **To check at the start of the phase.** These are from memory, not checked today:
 - **GitHub Actions' `schedule`:** runs from the default branch, at most every 5 minutes, often minutes late under load, and is switched off in a public repository after 60 days without activity.
 - **`repository_dispatch`:** needs Contents write, which the app has. It starts only default-branch workflows, and it does start them when sent with an installation token, unlike `GITHUB_TOKEN`.
-- **Durable Object alarms:** one per object, delivered at least once, and retried with backoff when the handler throws.
+- **Durable Object alarms:** checked on 2026-10-21 (DECISIONS.md, "The cloud learns the times from the files and fires at them with an alarm"). Their precision isn't documented, so the real-world check measures it.
 - **Hosts' own builds:** Netlify, Cloudflare Pages and Vercel have no scheduled builds of their own, only build or deploy hooks. Their free plans' build limits decide what an hourly rebuild costs (call 2).
 
 ### What lives where
@@ -913,9 +912,9 @@ Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-corr
 6. Cloud: the SiteDO's schedule, alarms, triggers and results; the push webhook; the dashboard's settings and results; `runCloudContract` against the real API.
 7. The real-world check, then the docs page, since the docs describe only what's built.
 
-### The calls (for Jeremy)
+### The calls (confirmed 2026-10-21)
 
-Each has a recommendation, and nothing here is picked until Jeremy confirms it. Spec §13 has no item this phase depends on.
+Jeremy confirmed every recommendation on 2026-10-21: 1a to 11a, and the smaller defaults. On call 3, he asked first whether Vesper would deploy sites itself. It doesn't: the templates are GitHub Actions workflows the site owner keeps in their repository, and he wants them. DECISIONS.md records each call under "Scheduling", and the spec's §6.16 and §6.17 are changed to match. Spec §13 has no item this phase depends on.
 
 1. **Where an unpublish redirect lives.**
    - (a) In the entry's own field only. Recommended.
@@ -971,7 +970,7 @@ Each has a recommendation, and nothing here is picked until Jeremy confirms it. 
     - (b) An item in the sidebar beside the collections. Easier to find, but it isn't content.
     - (c) Inside the Changes drawer. That's cloud only, and scheduling is free.
 
-**Smaller defaults, built as written unless Jeremy says otherwise:**
+**Smaller defaults, confirmed with the calls:**
 - **The build's instant:** one per build, and `VESPER_BUILD_TIME` sets it.
 - **Loaders:** `getEntries` leaves out entries outside the window, and `getEntry` returns `undefined`.
 - **Unpublish redirects are temporary (302),** since an event can come back.
@@ -988,17 +987,18 @@ Each has a recommendation, and nothing here is picked until Jeremy confirms it. 
 
   Nothing is unclear.
 
-**Spec and rule changes these calls would make:**
-- 1(a) changes §6.17's "adds a redirect to `vesper.redirects.yaml` at publish time".
-- 2(a) refines §6.17's "for example hourly".
-- 3(a) and 4(a) narrow §6.16's `deploy init` targets, and its "only changed files" for now.
-- 6(a) turns on webhooks (DECISIONS.md, "The app is VesperCMS, with no webhooks yet").
-- Whatever the calls, the work changes:
-  - CLAUDE.md's rule on production `vesper:content`;
-  - its list of icon-only buttons (the split button's chevron);
-  - DECISIONS.md's "The index leaves out entries outside their publish window", which says "until Phase 4.5".
+**Spec and rule changes, made 2026-10-21:**
+- **§6.17:**
+  - 1(a) replaces "adds a redirect to `vesper.redirects.yaml` at publish time";
+  - 2(a) and 5(a) refine "for example hourly";
+  - calls 6 to 11 are added.
+- **§6.16:** 3(a) and 4(a) narrow `deploy init`'s targets for now, and its "only changed files".
+- **Webhooks:** 6(a) turns them on for VesperCMS (DECISIONS.md, "The app is VesperCMS, with no webhooks yet").
+- **CLAUDE.md** lists the split button's chevron among the allowed icon-only buttons.
 
-Each gets a dated entry in DECISIONS.md, and the spec is edited to match.
+**Changed when it's built, since they describe the code as it is:**
+- CLAUDE.md's rule that production `vesper:content` stays a plain re-export;
+- DECISIONS.md's "The index leaves out entries outside their publish window", which says "until Phase 4.5".
 
 **Not in this phase:** scheduled changes to live pages (call 8b); schedules in instant previews (Phase 7, with live collections); `entry.scheduled` events (6.5); the S3 and GitHub Pages templates (Phase 9, unless call 3b); sitemaps and feeds (not adopted); a calendar view.
 
@@ -2058,7 +2058,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above). Calls confirmed 2026-10-19 | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators. Design and outcome above (2026-10-19) | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); OpenCage's terms and price checked 2026-10-20 (they pass); the §13.1 domain, vespercms.com, registered 2026-10-20. Design above (2026-10-20) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
-| **4.5 Scheduling** (new) | The 11 calls in its design above (2026-10-21) | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
+| **4.5 Scheduling** (new) | Calls confirmed 2026-10-21 (design above) | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
 | 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |
 | 6 Forms (expanded) | — | routing rules, private R2 uploads (D21), confirmation emails with the D20 protections |
 | **6.5 Integrations** (new) | — | event and delivery system, Queues with DLQ, five destinations |

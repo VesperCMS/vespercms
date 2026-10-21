@@ -851,11 +851,17 @@ The integration respects Astro's `base`, `trailingSlash` and `build.format`, so 
 | Host | How it rebuilds |
 |---|---|
 | Netlify, Cloudflare, Vercel, or any git-connected host | The host builds on every commit. Nothing to set up. |
-| Traditional host via FTP/SFTP | GitHub Actions workflow template: build on push, then upload only changed files over SFTP or FTP. Credentials live in GitHub repository secrets. |
+| Traditional host via FTP/SFTP | GitHub Actions workflow template: build on push, then mirror `dist/` to the host over SFTP or FTP, deleting files the build no longer has. For now it uploads the whole site each time; uploading only changed files can follow (decided October 21, 2026). Credentials live in GitHub repository secrets. |
 | S3 (with optional CloudFront) | GitHub Actions workflow template: build, then sync to the bucket, set redirect metadata (§6.15.5) and optionally invalidate CloudFront. |
 | No CI at all | Build locally and upload `dist/` by hand. Edits made in the studio wait in git until the next build, and the studio says so in plain words ("Published. It will be live after the site is next built."). |
 
 **CLI helper.** `npx vesper deploy init --target sftp|ftp|s3|github-pages` writes the matching workflow file and lists the secrets to add. The templates are plain YAML in the repo, so agencies can read and adjust them.
+- **Vesper never deploys a site itself.** The workflows run in the site owner's GitHub account, with their secrets.
+- **Phase 4.5 builds `sftp`, `ftp` and `hook`.** `hook` is for git-connected hosts: it calls the host's build hook on a schedule (§6.17).
+- **`s3` and `github-pages` follow in Phase 9.**
+- **Every template also listens for the cloud's `repository_dispatch`** (§6.17).
+
+(Decided October 21, 2026.)
 
 **Deploy status (cloud mode).** The studio and dashboard read GitHub commit statuses and check runs for the published commit. They show "Publishing…", "Live" or "Build failed" with a link to the log. The GitHub App asks for read-only checks and statuses permissions for this.
 
@@ -890,22 +896,30 @@ collections: {
 **Build-time filtering** (free and cloud, every host):
 - `getCollection`/`getEntry` from `vesper:content` skip entries whose `publishAt` is in the future or whose `unpublishAt` has passed, judged at **build time**.
 - So do `getTree`, `getChildren`, sitemaps, RSS and the link picker's "live" view.
-- In dev, scheduled entries stay visible with a small "Scheduled" marker, so editors can work on them.
+- Every check in one build uses one instant, read when the build starts. Collections without scheduling pass through `vesper:content` untouched.
+- In dev, scheduled entries stay visible with a small "Scheduled" marker, so editors can work on them. The marker appears in Vesper's dev toolbar app, and as a small note on the entry's own page (decided October 21, 2026).
 
 **What an unpublished entry's URL does.**
 - By default it simply stops being built, so it 404s.
-- An optional `unpublishRedirect` field (a page picker) adds a redirect to `vesper.redirects.yaml` at publish time. For example, an expired event can point to `/events`. The redirect takes effect when the entry unpublishes, through the same build-time filtering.
+- An optional `unpublishRedirect` field (a page picker) sends visitors elsewhere once the entry unpublishes. For example, an expired event can point to `/events`.
+  - The build adds the redirect only once the entry is past its `unpublishAt`, through the same cleaning and host rules as `vesper.redirects.yaml` (§6.15.5).
+  - It's temporary (302), since an entry can come back.
+  - Nothing is written into the redirects file (decided October 21, 2026).
 
 **Time zones.**
 - A site time zone setting (IANA name) controls how times are shown and entered. Storage is always ISO 8601 with offset.
 - The date and time controls show the zone in text ("8:00 AM Eastern").
 
 **Free tier (no cloud).**
-- Accuracy equals rebuild frequency. The deploy templates (§6.16) gain an optional scheduled rebuild, for example hourly via GitHub Actions `schedule`. Git-connected hosts can use their own scheduled build hooks.
-- The studio states the accuracy plainly: "Goes live at the first rebuild after 8:00 AM. This site rebuilds hourly."
+- Accuracy equals rebuild frequency. The deploy templates (§6.16) gain an optional scheduled rebuild, for example hourly via GitHub Actions `schedule`. Git-connected hosts get the `hook` template, which calls their build hook the same way.
+- **It rebuilds only when something is due** (decided October 21, 2026).
+  - Every build writes `_vesper/schedule.json` with the next time the site changes, never what changes.
+  - The scheduled run reads that file from the live site and rebuilds once that time has passed.
+- The studio states the accuracy plainly: "Goes live at the first rebuild after 8:00 AM. This site rebuilds hourly." It knows how often from `rebuildEvery` (minutes) in `vesper.config.ts`. Without it, the studio says "Goes live the next time the site is built after 8:00 AM."
 
 **Cloud tier (exact).**
 - The cloud keeps each site's upcoming publish and unpublish times in the SiteDO and sets a Durable Object alarm for the next one.
+  - It reads the times from the site's files after every publish through the cloud, and on GitHub's push webhook. A time set in local mode, or in a developer's commit, is then exact too (decided October 21, 2026).
 - When the alarm fires, the cloud triggers a rebuild using one of:
   - the site's **deploy hook** URL (Netlify, Vercel or Cloudflare build hooks, stored as a secret), or
   - a GitHub `repository_dispatch` event, which the deploy templates listen for.
@@ -914,6 +928,8 @@ collections: {
 **How a scheduled draft gets into git.**
 - The default is **commit now, filter at build**: scheduling a draft publishes the file immediately with a future `publishAt`. The content is safely in git, and if the cloud is unreachable at the scheduled time, the next rebuild still gets it right.
 - For **public repositories**, a site setting `holdScheduledDrafts: true` keeps the draft in the cloud until the scheduled time, then commits it and triggers the rebuild. The studio warns about this choice when it detects the repo is public.
+  - It's off unless a site admin turns it on in the dashboard (decided October 21, 2026).
+- **Only an entry that isn't live yet gets a publish time.** A page's file holds one version, so for a live entry, "Schedule…" sets only when it comes down (decided October 21, 2026).
 
 **Where it lives in the UI (§10.4 rule)**
 - The primary button becomes a split button: **Publish ▾**, with "Schedule…" in its menu. That still counts as one primary button.
@@ -921,6 +937,12 @@ collections: {
 - Scheduled entries show "Scheduled · Mon, Nov 3, 8:00 AM" as their status text.
 - The entry list's status filter gains "Scheduled."
 - A plain "Scheduled" view lists upcoming changes across the site, with reschedule and cancel.
+  - It's a screen reached from Home and from the entry list's filter, never a navigation item.
+  - **Cancelling an unpublish** removes it.
+  - **Cancelling a publish in the cloud** makes the entry a draft again.
+  - **Local and GitHub mode** have no drafts, so for a publish they offer reschedule only.
+
+  (Decided October 21, 2026.)
 
 **Accessibility.** Date and time use native inputs or the `ui` kit equivalents, with visible labels and the zone in text. The split button follows the menu button pattern.
 

@@ -26,6 +26,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
 | vespercms.com and the docs | Live (2026-10-21), ahead of Phase 9 at Jeremy's request: `apps/site` on Cloudflare Pages, edited with Vesper, with `/admin` for its cloud project; `vesper agents`. CI green on GitHub (run 39636024765). Decisions in `DECISIONS.md` ("Vesper's own site") |
 | 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. Left: `Co-authored-by` for every draft's author, and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vesper-cloud's), decisions in `DECISIONS.md` ("The cloud") |
+| 4.5 Scheduled publish and unpublish | Designed, and its calls confirmed (2026-10-21). Building waits for Phase 4. Design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -247,7 +248,7 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - At most one primary (accent-filled) button per screen.
 - At most two levels of navigation visible at once.
 - No colored status badges. Status is text.
-- No icon-only buttons except close, overflow ("…"), drag handles, the outline's expand toggle and the body editor's formatting tools (DECISIONS.md, 2026-10-18), all with accessible names; the formatting tools also show a tooltip. Everywhere else an icon sits beside its words, and icons come only from the kit's `Icon` (Lucide).
+- No icon-only buttons except close, overflow ("…"), drag handles, the outline's expand toggle and the body editor's formatting tools (DECISIONS.md, 2026-10-18), all with accessible names; the formatting tools also show a tooltip. Phase 4.5 adds the menu half of the split Publish ▾ button (DECISIONS.md, "Where scheduling lives in the studio"). Everywhere else an icon sits beside its words, and icons come only from the kit's `Icon` (Lucide).
 - At most five color tokens beyond neutrals on any screen: accent, accent-subtle, danger, focus, plus optional warning.
 - No tabs inside the editor.
 - Body text 15–16px, line-height ≥ 1.5, two font weights.
