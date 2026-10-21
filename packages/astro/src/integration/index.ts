@@ -56,9 +56,11 @@ export type VesperOptions = {
    */
   a11y?: false | A11yBuildOptions;
   /**
-   * Site search (spec §6.19, D23). When a page uses `<Search>`, every build
-   * indexes the site with Pagefind into `_vesper/search/`: plain files that
-   * work on any host. `filters` and `sort` name each collection's fields
+   * Site search (spec §6.19, D23). When a page of the site's own uses
+   * `<Search>`, every build indexes the site with Pagefind into
+   * `_vesper/search/`: plain files that work on any host. With none, the build
+   * writes no index and leaves out the injected `/search` page.
+   * `filters` and `sort` name each collection's fields
    * (`{ blog: ['tags'] }`), `exclude` leaves pages out by URL
    * (`['/tags/**']`). `false` turns search off.
    */
@@ -115,6 +117,8 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
   let redirects: BuildRedirects | null = null;
   const logged = new Set<string>();
   let siteName = 'Your site';
+  /** Whether /search is Vesper's page, because the site has none of its own. */
+  let searchInjected = false;
   /** GitHub mode's settings for built sites, or null. */
   let github: GitHubSettings | null = null;
   /** The cloud's settings for built sites, or null. */
@@ -173,7 +177,9 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         if (command === 'dev' || options.studio?.deploy !== false) {
           injectRoute({ pattern: '/admin', entrypoint: ADMIN_PAGE, prerender: true });
         }
-        if (options.search !== false && !staticRoutesFromFiles(root, srcDir).has('/search')) {
+        searchInjected =
+          options.search !== false && !staticRoutesFromFiles(root, srcDir).has('/search');
+        if (searchInjected) {
           injectRoute({ pattern: '/search', entrypoint: SEARCH_PAGE, prerender: true });
         }
         if (command === 'dev') {
@@ -318,6 +324,34 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
           const written = writeHostRules(fileURLToPath(dir), redirects, urlSettings(model));
           logger.info(`Wrote ${written.join(', ')}`);
         }
+        // Before the accessibility check, which then never reports on a /search
+        // page that search leaves out.
+        if (options.search !== false) {
+          const settings = urlSettings(model);
+          const dist = fileURLToPath(dir);
+          const result = await indexSearch({
+            root,
+            dist,
+            model,
+            settings,
+            routes: staticRoutes,
+            search: options.search ?? {},
+            injectedPage: searchInjected,
+          });
+          for (const line of result.info) logger.info(line);
+          for (const line of result.warnings) logger.warn(line);
+          if (result.built && settings.site) {
+            writeFileSync(
+              join(dist, 'opensearch.xml'),
+              openSearchXml({
+                siteName,
+                site: settings.site,
+                searchPage: formatUrl('/search', settings),
+              }),
+            );
+            logger.info('Wrote opensearch.xml');
+          }
+        }
         if (options.a11y !== false) {
           const result = await checkBuild({
             root,
@@ -355,31 +389,6 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             logger.warn(
               `${modes} Your content schemas couldn't be built for the browser (${built.reason}). The studio checks entries from the manifest instead, and the site's build is the last check.`,
             );
-          }
-        }
-        if (options.search !== false) {
-          const settings = urlSettings(model);
-          const dist = fileURLToPath(dir);
-          const result = await indexSearch({
-            root,
-            dist,
-            model,
-            settings,
-            routes: staticRoutes,
-            search: options.search ?? {},
-          });
-          for (const line of result.info) logger.info(line);
-          for (const line of result.warnings) logger.warn(line);
-          if (result.built && settings.site) {
-            writeFileSync(
-              join(dist, 'opensearch.xml'),
-              openSearchXml({
-                siteName,
-                site: settings.site,
-                searchPage: formatUrl('/search', settings),
-              }),
-            );
-            logger.info('Wrote opensearch.xml');
           }
         }
       },

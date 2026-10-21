@@ -101,6 +101,8 @@ export async function indexSearch(options: {
   settings: UrlSettings;
   routes: () => StaticRoutes;
   search: SearchOptions;
+  /** Whether `/search` is Vesper's own page, injected because the site has none. */
+  injectedPage?: boolean;
   now?: Date;
   /** The first-search budget in bytes; tests set a small one. */
   budget?: number;
@@ -115,15 +117,23 @@ export async function indexSearch(options: {
     ...page,
     html: readFileSync(join(dist, page.file), 'utf8'),
   }));
-  if (!pages.some((page) => USES_SEARCH.test(page.html))) {
+  // A stale index from an earlier build in the same folder would be served as is.
+  rmSync(join(dist, SEARCH_DIR), { recursive: true, force: true });
+  // Vesper's page renders <Search variant="inline"> on every site, so it isn't
+  // a use of search. It's found by its route, not its markup, so a site's own
+  // /search page always counts and is never removed.
+  const injected = options.injectedPage
+    ? pages.find((page) => urlKey(page.url, settings) === '/search')
+    : undefined;
+  if (!pages.some((page) => page !== injected && USES_SEARCH.test(page.html))) {
+    // Without an index the page could only say that search failed to load.
+    if (injected) removePage(dist, injected.file);
     result.info.push(
-      'Search: no page uses <Search>, so no index was built. Add <Search /> from @vesper/astro/components to a layout, or set vesper({ search: false }).',
+      `Search: no page uses <Search>, so no index was built${injected ? ' and the /search page was left out' : ''}. Add <Search /> from @vesper/astro/components to a layout, or set vesper({ search: false }).`,
     );
     return result;
   }
 
-  // A stale index from an earlier build in the same folder would be served as is.
-  rmSync(join(dist, SEARCH_DIR), { recursive: true, force: true });
   const content = new ContentService(new LocalStorage(root), model.manifest);
   const stored = new Map<string, Promise<StoredEntry[]>>();
   const entriesOf = (name: string) => {
@@ -441,6 +451,15 @@ async function writeIndex(
     await pagefind.close();
   }
   return [...errors, ...writeBundle(files, out)];
+}
+
+/** Removes a built page, and its folder when that leaves it empty (`search/index.html`). */
+function removePage(dist: string, file: string): void {
+  const path = resolve(dist, file);
+  rmSync(path, { force: true });
+  const folder = dirname(path);
+  if (folder !== resolve(dist) && readdirSync(folder).length === 0)
+    rmSync(folder, { recursive: true });
 }
 
 /**

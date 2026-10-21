@@ -16,7 +16,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  * playground's own scheduled events will have gone live by the time this
  * runs again) and a page that asks robots not to index it. It's built as
  * is, then again with `base: '/sub/'`, a `site` and no /search page of its
- * own, for base-prefixed URLs, opensearch.xml and the injected page.
+ * own, for base-prefixed URLs, opensearch.xml and the injected page, and
+ * last with no <Search> in its layout.
  */
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
@@ -223,5 +224,40 @@ describe('the search index under a base, with a site', () => {
     expect(readFileSync(join(site, 'dist/index.html'), 'utf8')).toContain(
       '<link rel="search" type="application/opensearchdescription+xml" title="example.edu" href="/sub/opensearch.xml">',
     );
+  });
+});
+
+/*
+ * The injected /search page renders <Search variant="inline"> itself, so
+ * once counted as the site using search, and every site was indexed.
+ */
+describe('a site with no <Search> of its own', () => {
+  let third: SpawnSyncReturns<string>;
+  beforeAll(() => {
+    const layout = join(site, 'src/layouts/BaseLayout.astro');
+    const text = readFileSync(layout, 'utf8');
+    const uses = [
+      "import { Search, SearchHead } from '@vesper/astro/components';\n",
+      '<SearchHead />',
+      '<Search />',
+    ];
+    for (const use of uses)
+      if (!text.includes(use)) throw new Error(`BaseLayout.astro no longer has ${use.trim()}`);
+    writeFileSync(
+      layout,
+      uses.reduce((source, use) => source.replace(use, ''), text),
+    );
+    third = astroBuild();
+  }, 200_000);
+
+  it('builds no index, and leaves out the /search page and opensearch.xml', () => {
+    expect(third.status, third.stderr).toBe(0);
+    expect(third.stdout).toContain(
+      'Search: no page uses <Search>, so no index was built and the /search page was left out.',
+    );
+    const dist = join(site, 'dist');
+    expect(existsSync(join(dist, '_vesper/search'))).toBe(false);
+    expect(existsSync(join(dist, 'search'))).toBe(false);
+    expect(existsSync(join(dist, 'opensearch.xml'))).toBe(false);
   });
 });

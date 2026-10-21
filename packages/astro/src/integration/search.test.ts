@@ -202,6 +202,7 @@ describe('indexing a build', () => {
   } as const;
   const settings = { base: '/', trailingSlash: 'ignore', buildFormat: 'directory' } as const;
   const searchBox = '<div data-vesper-search="dialog"></div>';
+  const inlineBox = '<div data-vesper-search="inline"></div>';
 
   function site(pages: Record<string, string>): { root: string; dist: string } {
     const root = mkdtempSync(join(tmpdir(), 'vesper-index-'));
@@ -235,20 +236,54 @@ describe('indexing a build', () => {
     });
   });
 
+  it('doesn’t count Vesper’s own /search page, and leaves it out with no index', async () => {
+    const where = site({
+      'index.html': page(),
+      'search/index.html': page(`<main>${inlineBox}</main>`),
+    });
+    // An index left by an earlier build into the same folder.
+    mkdirSync(join(where.dist, '_vesper/search'), { recursive: true });
+    writeFileSync(join(where.dist, '_vesper/search/pagefind.js'), '');
+    const result = await index(where, { injectedPage: true });
+    expect(result).toEqual({
+      built: false,
+      warnings: [],
+      info: [
+        'Search: no page uses <Search>, so no index was built and the /search page was left out. Add <Search /> from @vesper/astro/components to a layout, or set vesper({ search: false }).',
+      ],
+    });
+    expect(existsSync(join(where.dist, 'search'))).toBe(false);
+    expect(existsSync(join(where.dist, '_vesper/search'))).toBe(false);
+    expect(existsSync(join(where.dist, 'index.html'))).toBe(true);
+  });
+
+  it('counts a site’s own /search page, and never removes it', async () => {
+    const own = site({
+      'index.html': page(),
+      'search/index.html': page(`<main>${inlineBox}</main>`),
+    });
+    expect((await index(own)).built).toBe(true);
+    const unused = site({ 'index.html': page(), 'search.html': page('<main>Ours</main>') });
+    expect((await index(unused)).built).toBe(false);
+    expect(existsSync(join(unused.dist, 'search.html'))).toBe(true);
+  });
+
   it('indexes the site’s pages, leaving out 404, noindex, excluded and search pages', async () => {
     const where = site({
       'index.html': page(`<main>${searchBox}Welcome</main>`),
       'about/index.html': page('<main>About us</main>'),
       'tags/a/index.html': page('<main>Tag</main>'),
       '404.html': page('<main>Not found</main>'),
-      'search/index.html': page('<main><div data-vesper-search="inline"></div></main>'),
+      'search/index.html': page(`<main>${inlineBox}</main>`),
       'private/index.html': page('<main>Private</main>').replace(
         '</head>',
         '<meta name="robots" content="noindex"></head>',
       ),
     });
-    const result = await index(where, { search: { exclude: ['/tags/**'] } });
+    const result = await index(where, { search: { exclude: ['/tags/**'] }, injectedPage: true });
     expect(result.built).toBe(true);
+    // Vesper's /search page stays when the site uses <Search>.
+    expect(existsSync(join(where.dist, 'search/index.html'))).toBe(true);
     expect(result.warnings).toEqual([]);
     expect(result.info).toEqual([
       expect.stringMatching(
