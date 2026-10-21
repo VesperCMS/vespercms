@@ -18,6 +18,8 @@ const STUDIO_PORT = 4401;
 const GITHUB_SITE_PORT = 4405;
 /** The cloud's site; 4406 is the fake cloud (scripts/cloud-site.mjs). */
 const CLOUD_SITE_PORT = 4407;
+/** vespercms.com, built (apps/site). 4408 is its preview, so a preview never stands in. */
+const SITE_PORT = 4409;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -73,6 +75,12 @@ export default defineConfig({
         baseURL: `http://127.0.0.1:${String(CLOUD_SITE_PORT)}`,
       },
     },
+    {
+      // vespercms.com, built: build first with `npm run build -w @vesper/site`.
+      name: 'site',
+      testMatch: 'site/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${String(SITE_PORT)}` },
+    },
   ],
   webServer: [
     {
@@ -97,6 +105,11 @@ export default defineConfig({
       url: `http://127.0.0.1:${String(CLOUD_SITE_PORT)}/admin/`,
       reuseExistingServer: false,
       timeout: 180_000,
+    },
+    {
+      command: `node scripts/static-server.mjs apps/site/dist --port ${String(SITE_PORT)}`,
+      url: `http://127.0.0.1:${String(SITE_PORT)}/`,
+      reuseExistingServer: false,
     },
   ],
 });
