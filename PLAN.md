@@ -38,9 +38,11 @@ Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing
 - The repository link in the footer (`settings.repository`) once this repository is public.
 - Pricing stays off the site until Phase 5 sets the numbers (§13.4).
 
-## Studio additions from dogfooding (proposal)
+## Studio additions from dogfooding (design)
 
-Proposed 2026-10-21. This is design only: nothing here is built. Building vespercms.com and editing it through the cloud showed six gaps in the studio. None of them is in a phase of spec §11, so each is a product call for Jeremy, listed at the end of its item with a recommendation. None adds a panel: each says where it lives and what it hides behind (§10.4). Screen reader passes still wait until before launch, but each design says how it works with one.
+Proposed 2026-10-21, and **Jeremy took every recommendation the same day: (a) on every call below, H1 included, so history is free in local and GitHub modes.** DECISIONS.md records each, under "Studio", and spec §4 and §7.4 now list history in the free modes. Nothing here is built yet; the order is at the end.
+
+Building vespercms.com and editing it through the cloud showed six gaps in the studio. None of them is in a phase of spec §11, so each was a product call for Jeremy, listed at the end of its item. None adds a panel: each says where it lives and what it hides behind (§10.4). Screen reader passes still wait until before launch, but each design says how it works with one.
 
 What the code and content showed, checked 2026-10-21:
 - **Tables.** vespercms.com's docs have 27 pipe tables on 9 pages, 13 of them in `reference/integration.mdoc`. The committed corpus (Jeremy's four sites, jazzy included) has 21 more. All 48 are pipe tables, and 47 are compact (`|---|---|`, one space around each cell); one is padded so its pipes line up. No content in this repository uses Markdoc's `{% table %}`.
@@ -183,7 +185,7 @@ What the code and content showed, checked 2026-10-21:
 - Rate limits in GitHub mode: one GraphQL request per 20 versions, plus one per move, with bytes cached by SHA.
 - Scheduling (Phase 4.5) publishes by rebuilding, with the date already saved in the entry (D18), so History shows the save that set the date, not the moment it went live. That save's summary should name the schedule ("Schedule “Open house” for 3 November") so the list reads well.
 
-**Free or paid** (call H1). It's a tier question for Jeremy, so it's asked, not decided.
+**Free or paid** (call H1). Free in local and GitHub modes, and part of the cloud: Jeremy's call, 2026-10-21.
 
 **Calls.**
 - **H1. Free or paid.**
@@ -331,7 +333,7 @@ From the follow-up and "Not built" lists above, briefly:
 
 Each lands as its own step with its own outcome note here, as "Icons (after the design pass)" did. They aren't phases, so the phase status table doesn't list them.
 
-**The calls, in one list:** T1 to T4 (tables), H1 to H3 (history, H1 being the tier question), C1 (code), D1 and D2 (duplicate), P1 and P2 (palette), N1 (title). Plus one about all six: build them between phases in the order above (recommended), or hold them for Phase 9's polish.
+**The calls (decided 2026-10-21):** T1 to T4 (tables), H1 to H3 (history, H1 being the tier question), C1 (code), D1 and D2 (duplicate), P1 and P2 (palette), N1 (title), each (a), as recommended. And about all six: they're built between phases, in the order above, not held for Phase 9's polish.
 
 ## Calls of 2026-10-19
 

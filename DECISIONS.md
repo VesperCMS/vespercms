@@ -364,6 +364,41 @@ Rejected: binding ⌘← to `selectTextblockStart`, which goes to the paragraph'
 
 Rejected: binding Shift-Mod-ArrowLeft and -Right to commands that select to the textblock's ends, which are the paragraph's ends, not the visual line's, and break wrapped lines (as with ⌘← above); and preventing the default, then copying the browser's move with `Selection.modify('extend', 'left', 'lineboundary')`, which is non-standard and only imitates what the browser does itself. The e2e test types over each selection and checks the saved line, on macOS only. A unit test with the platform set to a Mac checks that the key is left to the browser, on every platform CI runs. Still open: with the chip itself selected, ⇧⌘← leaves a caret before it, as ← does, because ProseMirror's branch for a selected inline node ignores modifiers.
 
+### 2026-10-21: Studio additions from dogfooding are built between phases
+
+**Building vespercms.com and editing it through the cloud showed six gaps in the studio: tables, history, inline code in one-line Markdown fields, duplicate and copy links, the ⌘K palette, and the tab title. None is in a phase of spec §11. Jeremy approved all six on 2026-10-21 and took every recommendation in PLAN.md's "Studio additions from dogfooding (design)". They're built between phases, in that section's order, not held for Phase 9's polish.** Each lands as its own step with an outcome note, as the icons did after the design pass. The entries below record each call. None of them is built yet, so CLAUDE.md's rules change only as each one lands (the "no code formatting" half of the rule for vespercms.com's one-line Markdown fields, for one).
+
+### 2026-10-21: Tables are edited as a grid, and a save splices cells
+
+**A pipe table whose cells are each one line of inline Markdown the writing view writes back becomes a grid in the body editor: the WAI-ARIA data grid pattern, with arrow keys between cells, Enter or F2 to edit one in the one-line Markdown editor, and row and column actions behind a "Table actions" overflow button and Shift+F10. Saving changes only the cells, rows and columns that changed, through a core writer beside `editMarkdocTag`, and refuses a result that doesn't read back as intended. Everything else stays a protected block, as now (calls T1 to T4).**
+- **Padding (T1).** In an aligned table, a changed cell is padded to its column's width when it fits. When it's longer, it gets one space on each side and that row stops lining up. No other row changes, so one edit is one line, as "No unrelated diff" defines it. GFM ignores padding, so the page is the same. Rejected: re-aligning the column, which rewrites every row for one changed price; and never padding, which makes an aligned table ragged on its first edit. Of the 48 tables in vespercms.com and the corpus, 47 are compact and one is aligned, so this rarely shows.
+- **A grid (T2).** The keys are predictable, and screen readers treat a grid as one thing. Rejected: a ProseMirror table in the text (`prosemirror-tables`), where arrows move through text rather than cells, screen readers' table commands are unreliable inside an editable region, and cell-by-cell splicing would have to map ProseMirror's table model back to the source.
+- **Pipe tables first (T3).** Every table in this repository's content is a pipe table, and none uses `{% table %}`. A `{% table %}` stays a protected block until a site uses one; the design already covers it (a cell is its `* ` line).
+- **Inserting (T4).** "Table" in the Insert menu and the "/" list inserts a compact pipe table, in every format.
+
+### 2026-10-21: History comes from git in every mode, and is free outside the cloud
+
+**Jeremy chose on 2026-10-21 (call H1): an entry's history, viewing an earlier version and restoring it are free in local and GitHub modes, and part of the cloud. In the cloud a restore becomes a draft, as spec §7.4 says. In local and GitHub modes it loads the earlier values as unsaved changes, and Save or Publish writes them through the usual splice and checks. Spec §4 and §7.4 are changed to match.** It's git's own data, read with the editor's own sign-in or the developer's own git, and costs the cloud nothing in those modes. What only the cloud does stays paid: restoring as a draft, and review. Rejected: history in the cloud only, as §7.4 first placed it.
+- **Local mode without git (H2)** has no History item. An Astro site without git is rare, and git is the history. Rejected: copies of each save in `.vesper/history/`, which would duplicate git and need pruning.
+- **An earlier version is shown (H3)** in the entry's own form, read-only, with the fields that differ from now named and marked in words. Editors see content, not file syntax. Rejected: the two files' text side by side, as the cloud's conflict compare shows it (YAML and Markdown source).
+- **The cloud's API** gains a history list and a version's bytes, in `@vesper/core`'s contract first. The API resolves a version's blob itself, from that commit's tree, and refuses a path outside the site's folder. `POST /blobs` is never widened to every blob in the repository.
+
+### 2026-10-21: One-line Markdown fields have code
+
+**The compact Markdown editor turns on code, in inline and multi-line fields alike, with a Code tool and ⌘E, as the body editor has (call C1). The round-trip check stays, so a value it can't write back as it is still falls back to plain text.** Backticks are core Markdown, and every common renderer handles them. vespercms.com's home page avoided code formatting only because the editor couldn't show it. Rejected: an opt-in `fields.markdown({ code: true })`, which every site that wants code would have to find.
+
+### 2026-10-21: Duplicate starts an unsaved copy that keeps the original's text
+
+**"Duplicate" in the editor's "…" menu (and the outline's row menu) opens an unsaved new entry with every value copied, " (copy)" after the title, and fields holding the entry's own address cleared (call D1). Saving reads the original and splices the copy's changes into its text, so comments, key order and body bytes carry over. In a tree, the copy goes right after its original among its siblings, and a page is copied without its subpages (D2).** Nothing is written until the editor saves, as with any new entry. Rejected: marking the copy `draft: true` (a copy saved on purpose wouldn't appear), and saving it at once (abandoned copies fill the folder). "Copy page address" and "Copy editing link" sit in the same menu; where the Clipboard API isn't available (a site on plain `http`), a dialog shows the link selected instead.
+
+### 2026-10-21: ⌘K opens the palette, except inside text
+
+**⌘K (Ctrl+K) opens the command palette on every screen, except when focus is in a text editor (the body or a Markdown field), where it stays Link; Escape moves focus to the editor's toolbar, and ⌘K works from there (call P1). The palette finds entries by title, address and file name, plus places to go, new entries, and the open entry's actions. It doesn't search body text (P2).** Both are the common conventions, and neither moves. Rejected: moving Link to another key, and giving the palette another key (⌘/). Body search would mean reading every body on first open in GitHub mode and the cloud.
+
+### 2026-10-21: The studio's tab title is always the screen, then the site
+
+**The `/admin` page's own title becomes "Studio · {siteName}", the same pattern every screen already sets ("Content · {siteName}"), instead of "{siteName} · Vesper" (call N1).** On vespercms.com the old title read "Vesper · Vesper". Vesper's name was in the tab only until the first screen opened anyway, and the favicon is Vesper's mark. One pattern everywhere is also one less thing for white-label to replace. Rejected: dropping the suffix only when the site is called Vesper, and changing vespercms.com's `siteName`, which would work around the studio instead of fixing it.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas

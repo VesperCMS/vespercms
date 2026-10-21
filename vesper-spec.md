@@ -87,6 +87,7 @@ A paid cloud service adds what static sites can't do on their own:
 | Editor UI generated from content collections | ✓ | ✓ |
 | Local mode (`astro dev`, writes to disk) | ✓ | ✓ |
 | GitHub mode (each editor signs in with GitHub) | ✓ | ✓ |
+| An entry's history from git, and restoring an earlier version (decided October 21, 2026) | ✓ | ✓ (restores as a draft) |
 | Editors log in with email, Google or Microsoft (no GitHub) | | ✓ |
 | Roles scoped to collections and folders, plus review before publish | | ✓ |
 | Cloud drafts (autosave without commits) | | ✓ |
@@ -1129,7 +1130,7 @@ Storage
 - **Publish.** Commits the draft (and any other drafts the user selects: "Publish 3 changes") to the default branch, then clears the drafts.
 - **Request review.** Shown to users who can edit but not publish. It creates a review in the SiteDO and notifies approvers. An approver can comment, request changes or publish.
 - **Conflicts.** If the file changed in git since the draft was based on it, show a simple two-column compare. Never silently overwrite.
-- **History.** Comes from git. The editor shows an entry's commit history and can restore an earlier version as a new draft.
+- **History.** Comes from git. The editor shows an entry's commit history and can restore an earlier version as a new draft. Local mode (in a git repository) and GitHub mode have history too, free, and restore there as a new save (decided October 21, 2026).
 
 ### 7.5 Roles and permissions
 
