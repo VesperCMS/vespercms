@@ -54,6 +54,8 @@ for (const path of builtPages()) {
 test('the studio is deployed for the cloud, and kept out of search engines', async ({ page }) => {
   const response = await page.goto('/admin/');
   expect(response?.status()).toBe(200);
+  // As built, before the studio sets each screen's: not "Vesper · Vesper".
+  expect(await response?.text()).toContain('<title>Studio · Vesper</title>');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
 });
 
