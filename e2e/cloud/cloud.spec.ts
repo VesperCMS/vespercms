@@ -163,12 +163,18 @@ test('a contributor requests review, and an approver publishes it from Changes',
     page.getByText('Sent for review. An approver will publish it or ask for changes.'),
   ).toBeVisible();
 
-  // The approver, in a browser of their own.
+  // The approver follows the email's link, in a browser of their own, and
+  // lands in Changes once signed in.
+  const { emails } = (await control('state')) as { emails: { to: string; url: string }[] };
+  const link = emails.findLast((e) => e.to === 'ada@example.edu')?.url ?? '';
+  expect(link).toMatch(/\/admin\/#\/changes$/);
   const approver = await (await browser.newContext()).newPage();
   const commits = github.log().length;
-  await signIn(approver, 'u_admin');
-  await approver.getByRole('button', { name: '1 change, 1 to review' }).click();
+  await control('sign-in-as', { id: 'u_admin' });
+  await approver.goto(link);
+  await approver.getByRole('button', { name: 'Sign in with Vesper' }).click();
   const drawer = approver.getByRole('dialog', { name: 'Changes' });
+  await expect(drawer).toBeVisible();
   const review = drawer.getByRole('article', { name: /^Cal Contributor asked/ });
   await expect(review.getByText('New title')).toBeVisible();
   await axe(approver);

@@ -71,6 +71,8 @@ export function createCloudFake(options) {
   };
   const now = () => Date.now() + state.skew * 1000;
   const seconds = () => Math.floor(now() / 1000);
+  /** Where review emails send people, as the real cloud's do: the studio's Changes. */
+  const changesUrl = () => `${site.origins[0] ?? ''}/admin/#/changes`;
   const published = new GitHubStorage({
     owner: github.owner,
     repo: github.repo,
@@ -438,6 +440,7 @@ export function createCloudFake(options) {
           state.emails.push({
             to: approver.email,
             subject: `${p.name} asked you to review changes`,
+            url: changesUrl(),
           });
         }
       }
@@ -463,7 +466,11 @@ export function createCloudFake(options) {
         review.state = 'changes-requested';
         const requester = person(review.requestedBy.id);
         if (requester) {
-          state.emails.push({ to: requester.email, subject: `${p.name} asked for changes` });
+          state.emails.push({
+            to: requester.email,
+            subject: `${p.name} asked for changes`,
+            url: changesUrl(),
+          });
         }
       }
       return json(request, 200, review);
@@ -586,5 +593,9 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
       res.end(String(thrown));
     }
   });
+  // Never close an idle connection: git runs synchronously here, so a keep-alive
+  // timer could fire late, as a test's request arrived on that connection, and
+  // reset it (the studio's checks for new drafts made that happen).
+  server.keepAliveTimeout = 0;
   return new Promise((resolve) => server.listen(port, host, () => resolve(server)));
 }

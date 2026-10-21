@@ -521,4 +521,53 @@ describe('the studio and the cloud', () => {
     expect(cloud.state.emails.map((e) => e.to)).toContain('cal@example.edu');
     await expectNoViolations(drawer);
   });
+
+  /** Cal's draft of Harbor at dawn, sent for review. */
+  async function reviewFromCal(): Promise<void> {
+    const contributor = await clientAs('u_contributor');
+    await draftOf(
+      contributor,
+      'src/content/blog/harbor-at-dawn.md',
+      (t) => t.replace('title: Harbor at dawn', 'title: Harbor, reviewed'),
+      'Update “Harbor, reviewed” in Blog posts',
+    );
+    const id = (await contributor.drafts()).drafts[0]?.id ?? '';
+    await contributor.requestReview({ drafts: [id] });
+  }
+
+  it('opens Changes at #/changes, through sign-in, and closes back to Home', async () => {
+    await reviewFromCal();
+    // The review email's link, followed by someone who has to sign in first.
+    await returnFromSignIn('u_admin', '#/changes');
+    render(gate());
+    const drawer = await screen.findByRole('dialog', { name: 'Changes' }, { timeout: 10_000 });
+    // Open at once, filled in as the drafts and reviews arrive.
+    expect(
+      await within(drawer).findByRole(
+        'article',
+        { name: /^Cal Contributor asked/ },
+        { timeout: 10_000 },
+      ),
+    ).toBeInTheDocument();
+    await userEvent.setup().keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Changes' })).not.toBeInTheDocument();
+    });
+    expect(window.location.hash).toBe('#/');
+    expect(screen.getByRole('heading', { level: 1, name: 'Content' })).toBeInTheDocument();
+  });
+
+  it('shows a review requested elsewhere when the tab comes back into view', async () => {
+    await returnFromSignIn('u_admin');
+    render(gate());
+    await screen.findByRole('button', { name: 'Ada Admin' }, { timeout: 10_000 });
+    expect(screen.queryByRole('button', { name: /to review$/ })).not.toBeInTheDocument();
+    // Meanwhile, in Cal's studio.
+    await reviewFromCal();
+    expect(document.visibilityState).toBe('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(
+      await screen.findByRole('button', { name: '1 change, 1 to review' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+  });
 });

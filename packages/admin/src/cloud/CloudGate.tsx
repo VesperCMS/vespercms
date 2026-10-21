@@ -32,6 +32,9 @@ type State =
 
 const noProps = () => Promise.resolve({});
 
+/** How often a visible studio asks for drafts and reviews: three small requests, the tree cached by commit in the cloud. */
+const CHECK_EVERY = 60_000;
+
 export function CloudGate({
   settings,
   github,
@@ -113,7 +116,33 @@ export function CloudGate({
     [ready, settings, options],
   );
   useEffect(() => {
-    void connected?.connection.drafts.refresh().catch(() => undefined);
+    if (!connected) return;
+    const drafts = connected.connection.drafts;
+    // One check at a time: coming back into view and the timer can coincide.
+    let checking = false;
+    const check = () => {
+      if (checking) return;
+      checking = true;
+      void drafts
+        .refresh()
+        .catch(() => undefined)
+        .finally(() => {
+          checking = false;
+        });
+    };
+    check();
+    // Other people's drafts and reviews arrive while this tab is open: an
+    // approver's studio, open before a review was requested, showed nothing
+    // of it until reloaded. A hidden tab doesn't ask.
+    const whenSeen = () => {
+      if (document.visibilityState === 'visible') check();
+    };
+    document.addEventListener('visibilitychange', whenSeen);
+    const timer = window.setInterval(whenSeen, CHECK_EVERY);
+    return () => {
+      document.removeEventListener('visibilitychange', whenSeen);
+      window.clearInterval(timer);
+    };
   }, [connected]);
 
   const account = useMemo<Account | null>(

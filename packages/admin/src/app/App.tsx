@@ -84,7 +84,11 @@ export function App({
     <StudioContext.Provider value={studio}>
       <NavigationContext.Provider value={navigation}>
         {/* The cloud's Changes drawer, reachable from every screen (spec §7.4). */}
-        {connection ? <ChangesProvider>{screen}</ChangesProvider> : screen}
+        {connection ? (
+          <ChangesProvider linked={route.screen === 'changes'}>{screen}</ChangesProvider>
+        ) : (
+          screen
+        )}
         <Dialog
           title="Leave without saving?"
           role="alertdialog"
@@ -107,7 +111,7 @@ export function App({
 }
 
 function CurrentScreen({ route, studio }: { route: Route; studio: Studio }) {
-  if (route.screen === 'home') return <Home />;
+  if (route.screen === 'home' || route.screen === 'changes') return <Home />;
   if (route.screen === 'media') return <MediaBrowser />;
   if (route.screen === 'redirects') return <Redirects />;
   if (route.screen === 'list' || route.screen === 'edit' || route.screen === 'new') {
@@ -153,9 +157,12 @@ function lazyWidgets(loaders: Record<string, WidgetLoader>): Record<string, Widg
   );
 }
 
-/** Each route gets a fresh screen, so no state leaks from one entry to the next. */
+/**
+ * Each route gets a fresh screen, so no state leaks from one entry to the
+ * next. Changes is Home under the drawer, so closing it keeps the same Home.
+ */
 function routeKey(route: Route): string {
-  return JSON.stringify(route);
+  return JSON.stringify(route.screen === 'changes' ? { screen: 'home' } : route);
 }
 
 /**

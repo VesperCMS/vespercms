@@ -27,7 +27,7 @@ export type CloudFakeState = {
   drafts: DraftState;
   reviews: Review[];
   deploys: Map<string, DeployStatus>;
-  emails: { to: string; subject: string }[];
+  emails: { to: string; subject: string; url: string }[];
   log: string[];
 };
 

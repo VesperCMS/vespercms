@@ -13,6 +13,8 @@ export type Route =
   | { screen: 'new'; collection: string; parent?: string }
   | { screen: 'media' }
   | { screen: 'redirects' }
+  /** Home with the cloud's Changes open: review emails link here. Home alone elsewhere. */
+  | { screen: 'changes' }
   | { screen: 'not-found'; path: string };
 
 export type KnownRoute = Exclude<Route, { screen: 'not-found' }>;
@@ -23,6 +25,7 @@ export function parseRoute(hash: string): Route {
   if (parts.length === 0) return { screen: 'home' };
   if (parts[0] === 'media' && parts.length === 1) return { screen: 'media' };
   if (parts[0] === 'redirects' && parts.length === 1) return { screen: 'redirects' };
+  if (parts[0] === 'changes' && parts.length === 1) return { screen: 'changes' };
   if (parts[0] === 'c' && parts[1]) {
     if (parts.length === 2) return { screen: 'list', collection: parts[1] };
     if (parts[2] === 'new' && parts.length === 3) return { screen: 'new', collection: parts[1] };
@@ -46,6 +49,8 @@ export function hrefFor(route: KnownRoute): string {
       return '#/media';
     case 'redirects':
       return '#/redirects';
+    case 'changes':
+      return '#/changes';
     case 'list':
       return `#/c/${enc(route.collection)}`;
     case 'new':

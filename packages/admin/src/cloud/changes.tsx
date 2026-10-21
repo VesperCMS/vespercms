@@ -1,9 +1,9 @@
 import { collectionOf, defaultEntryId, type Draft, type Review } from '@vesper/core';
 import { Button, Checkbox, Dialog, Drawer, Link, TextArea } from '@vesper/ui';
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
-import { hrefFor } from '../app/router.ts';
+import { hrefFor, navigate, parseRoute } from '../app/router.ts';
 import { DeployLine, useDrafts } from './editor.tsx';
 
 /*
@@ -18,9 +18,21 @@ type ChangesState = { open: boolean; setOpen: (open: boolean) => void };
 
 const ChangesContext = createContext<ChangesState | null>(null);
 
-export function ChangesProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const value = useMemo(() => ({ open, setOpen }), [open]);
+/**
+ * `linked` is the `#/changes` address, where review emails send an approver:
+ * it opens the drawer, and closing the drawer goes back to `#/`, so a reload
+ * or Back doesn't open it again.
+ */
+export function ChangesProvider({ children, linked }: { children: ReactNode; linked: boolean }) {
+  const [shown, setShown] = useState(false);
+  const open = linked || shown;
+  const setOpen = useCallback((next: boolean) => {
+    setShown(next);
+    if (!next && parseRoute(window.location.hash).screen === 'changes') {
+      navigate({ screen: 'home' }, { replace: true });
+    }
+  }, []);
+  const value = useMemo(() => ({ open, setOpen }), [open, setOpen]);
   return (
     <ChangesContext.Provider value={value}>
       {children}
