@@ -10,6 +10,10 @@
     "git"
   ],
   "type": "module",
+  "//bin": "`vesper manifest` and `vesper agents` (src/node/cli.ts), for a site's own scripts and CI. Workspace scripts run cli.ts from source instead.",
+  "bin": {
+    "vesper": "./dist/node/cli.js"
+  },
   "//exports": "@vesper/source points workspace tooling at TypeScript source; everyone else gets dist/. \".\" is the integration (astro add); ./node is Node-only (config loading, manifest, local storage). ./components is <Img> and getImg(), shipped as source for the site's Astro to compile, like pages/; ./images is their planning. ./image-service is the crop step around Astro's Sharp image service, registered by the integration (spec §6.6.5).",
   "exports": {
     ".": {

@@ -30,6 +30,7 @@ Zero config. It:
 | `siteName` | the host of Astro's `site`, then the package name | Shown in the studio's top bar and page titles. |
 | `a11y` | `{}` | Accessibility checks at build. `{ failBuildOn: 'error' }` (or `'warning'`) fails the build on an issue at that level; `false` turns the check off. |
 | `github` | off | GitHub mode (see below): `{ relay }`, plus `repo`, `branch`, `root` or `apiUrl` when git can't tell them. |
+| `cloud` | off | The cloud (see below): `{ project }`, or `true` to read `VESPER_PROJECT`. |
 | `search` | `{}` | Site search. `filters` and `sort` name each collection's fields, `exclude` leaves pages out by URL, `noJsLink` and `noJsFallback` decide what `/search` offers without JavaScript, `strings` gives other languages' words. `false` turns search off. |
 | `imageService` | `true` | `false` leaves Astro's image service alone. `<Img>` then uses Astro's own server crop for each ratio, with the focal point as `object-position`, and manual crops aren't applied. |
 
@@ -342,3 +343,19 @@ vesper({ cloud: { project: 'site_…' } })
 
 `astro dev` stays local mode; the cloud is on in built sites. A site can have GitHub mode too: the sign-in screen then offers both. Roles and grants are set per person in the dashboard, not in `vesper.config.ts`.
 
+
+## The `vesper` command
+
+The package installs a `vesper` command (`src/node/cli.ts`). It loads the site's configs through the site's own Vite, like the integration.
+
+```sh
+npx vesper agents            # write instructions for coding agents into AGENTS.md
+npx vesper agents --check    # in CI: fail when AGENTS.md no longer matches the schema
+npx vesper manifest          # print the manifest the studio is built from
+```
+
+- **`vesper agents`** turns the manifest into a guide for coding agents: the rules that keep the studio and the build working (splice, never reformat; raw values; check with `astro build`), the parts the site uses (images, page trees, redirects, Markdoc tags, declared MDX components), and every collection with its files, URL and fields. It goes between `<!-- vesper:agents:start -->` and `<!-- vesper:agents:end -->` in `AGENTS.md`, or `--file` relative to the site; the rest of the file is left alone. The output is deterministic, so `--check` compares bytes. Claude Code reads `CLAUDE.md`: an `@AGENTS.md` line there imports the file.
+- **`vesper manifest`** prints the manifest, or writes it with `--out`, and exits with an error when a diagnostic is an error.
+- Both take `--root <site>` and `--src-dir <dir>`.
+
+`agentGuide(manifest)` and `withAgentGuide(file, guide)` do the same as functions, from `@vesper/astro/node`.

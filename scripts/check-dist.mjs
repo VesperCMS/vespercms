@@ -37,6 +37,23 @@ for (const dir of readdirSync(join(rootPath, 'packages'))) {
     checked++;
     if (result.status !== 0) failures.push(`${specifier}\n${result.stderr.trim()}`);
   }
+
+  // Each command a package installs must start from dist/ too.
+  for (const [name, target] of Object.entries(pkg.bin ?? {})) {
+    const env = { ...process.env };
+    delete env.NODE_OPTIONS;
+    const result = spawnSync(
+      process.execPath,
+      [join(rootPath, 'packages', dir, target), '--help'],
+      {
+        cwd: rootPath,
+        env,
+        encoding: 'utf8',
+      },
+    );
+    checked++;
+    if (result.status !== 0) failures.push(`${name} (bin of ${pkg.name})\n${result.stderr.trim()}`);
+  }
 }
 
 if (failures.length > 0) {
