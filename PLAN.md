@@ -474,7 +474,12 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
   - (a) As built.
   - (b) Trailers as lists in core's commit message, crediting each draft's author. Recommended, with the cloud's repository, since it's small.
 
-**Next:** the real-world check (step 13) on `vesper-github-test`: its playground built with `vesper({ cloud: { project } })` (the addresses default to vespercms.com since 2026-10-21), an editor invited, and a change drafted, reviewed and published. In the cloud's repository, the studio against the real API under `wrangler dev` is step 12's last piece.
+**The real-world check, so far (2026-10-21)** on `vesper-github-test`, its playground built with `vesper({ cloud: { project } })`. Jeremy signed in by email as an invited contributor, drafted a change and requested review, and the approver's email arrived. On the way it found, and these fixed:
+- A sign-in by email link was refused in the tab the mail client opened (DECISIONS.md, "A sign-in in progress can finish in any tab").
+- A monorepo connected with its site folder empty showed no entries; connecting now checks the folder, and the dashboard can change it (vesper-cloud DECISIONS.md).
+- The review email opened the studio's Home, and an open studio didn't see the review until reloaded (DECISIONS.md, "Review emails open Changes").
+
+**Next:** the approver publishes the review, which finishes the check. Open: signing out of the studio and the dashboard at once. In the cloud's repository, the studio against the real API under `wrangler dev` is step 12's last piece.
 
 ## Phase 4: Cloud foundation (design)
 
