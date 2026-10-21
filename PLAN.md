@@ -18,7 +18,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
 | 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. Left: `Co-authored-by` for every draft's author (Jeremy's call b), and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
-| 4.5 onward | Roadmap below |
+| 4.5 Scheduled publish and unpublish | Designed (2026-10-21), with 11 calls for Jeremy. Building waits for Phase 4's acceptance criteria. See "Phase 4.5: Scheduled publish and unpublish (design)" below. |
+| 5 onward | Roadmap below |
 
 ## vespercms.com and the docs
 
@@ -480,7 +481,7 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 - Signing out of the studio left the dashboard signed in, and the other way round; now one ends both on that browser, server-side in the cloud (vesper-cloud DECISIONS.md; nothing changed in the studio).
 - Connect repository needed a first install of the GitHub App, so an account that already had it never came back from GitHub; "Choose a repository VesperCMS can reach" is the second way in (vesper-cloud DECISIONS.md).
 
-**Left before Phase 4 is done:** the `Co-authored-by` lists (call b, above), and in the cloud's repository the studio against the real API under `wrangler dev`, step 12's last piece. The Phase 4.5 design can start meanwhile; building it waits for these.
+**Left before Phase 4 is done:** the `Co-authored-by` lists (call b, above), and in the cloud's repository the studio against the real API under `wrangler dev`, step 12's last piece. The Phase 4.5 design is written (below, 2026-10-21); building it waits for these.
 
 ## Phase 4: Cloud foundation (design)
 
@@ -697,6 +698,309 @@ Jeremy confirmed every recommendation on 2026-10-20: 1a to 9a, and the smaller d
 - **The private repository,** `jeremybise/vesper-cloud`. I can create it once you OK it.
 
 **Not in this phase:** billing and the operator console (Phase 5); scheduling (4.5); forms (6); previews and click-to-edit (7); comments (8); the media library on R2; history; SSO and white-label (9); pull-request mode (9); GitLab.
+
+## Phase 4.5: Scheduled publish and unpublish (design)
+
+Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-correct at build. Any rebuild at or after the time gives the right site, on any host, with or without the cloud, and the cloud's only job is to trigger a rebuild at the exact time. The free half lives here, under MIT: build-time filtering, the studio's Schedule dialog and Scheduled view, unpublish redirects, and the deploy templates' scheduled rebuild. The paid half lives in `vesper-cloud`: exact times through Durable Object alarms, `holdScheduledDrafts`, and each scheduled event's result. This section describes that half at the boundary; its detailed design goes in that repository's PLAN.md. Written 2026-10-21, ahead of time. Building waits for Phase 4's acceptance criteria (CLAUDE.md, "Build in the phase order") and for the calls below.
+
+**Done when** (§11):
+1. A post scheduled for a time 5 minutes ahead goes live on a Netlify site and on an SFTP-template site within 2 minutes of that time (cloud).
+2. On a free-tier site, it appears at the first scheduled rebuild after that time.
+3. An expired event 404s or redirects as configured.
+4. Times display correctly in the site time zone across a daylight-saving change.
+
+**Before it can start:**
+- Phase 4 is done: the `Co-authored-by` lists, and the studio against the real API under `wrangler dev` (above).
+- Jeremy's calls, below.
+- **For the real-world check** (Jeremy, when it arrives): a Netlify site for a copy of the playground, and a host reached by SFTP, with its credentials in the test repository's secrets. A shared-hosting account is the realistic case. Call 6(a) also needs push webhooks turned on for VesperCMS.
+
+**What was found first.** In the code:
+- **The window exists.** `publishWindow` and `isPublished` in `@vesper/core` (`schedule/window.ts`) read an entry's two times through the field names its collection's `schedule` gives. An entry is live from `publishAt` and gone at `unpublishAt`. The search index already leaves out entries outside the window with them (DECISIONS.md, 2026-10-19).
+- **The manifest carries the schedule.** `presentation.schedule` is `{ unpublish, publishAt, unpublishAt }`, from `schedule: true`, `{ unpublish: false }` or mapped names in `vesper.config.ts`. The editor already puts both fields in Details.
+- **`vesper:content` is a plain re-export in builds,** plus the site helpers, which read through its `getCollection`. In dev it wraps the loaders to note what a page reads. Filtering in builds therefore changes CLAUDE.md's "Production `vesper:content` stays a plain re-export".
+- **Build redirects are worked out at config setup** (`buildRedirects`), with `ContentService` and `PageService` over the site's files, before Astro loads content. Entries' fields can be read there.
+- **Times.** `vesper.config.ts` has `timeZone`, and the studio's `app/time.ts` shows and takes wall time in that zone and writes that day's offset. A time skipped by a DST change moves forward, and a repeated one takes the first (DECISIONS.md, "Times are entered in the site's time zone").
+- **The playground's events cover each case:**
+  - unpublished with a redirect: `fall-open-house` and `summer-orientation`;
+  - unpublished with none, both times in the hour that repeats on 1 November 2026: `night-owl-study-hall`, live from 1:30 AM EDT to 1:30 AM EST;
+  - published later: `harvest-concert`, on 31 October;
+  - coming down with a redirect: `nursing-info-session`;
+  - unscheduled: `spring-commencement`.
+
+  Their dates pass within weeks, so every test pins the build's time.
+- **No deploy templates exist yet.** `templates/` holds only the OAuth relay, and the `vesper` command has only `agents`. §6.16's `vesper deploy init` was never placed in a phase, and criterion 1 needs an SFTP-template site (call 3).
+- **Other pieces in place:**
+  - the entry list's status filter (All, Drafts, Needs a developer) and Home's cloud "drafts waiting" line;
+  - the cloud protocol: drafts, publishing, reviews and deploy status, with nothing for schedules;
+  - `dist/_vesper/redirects.json`, written for the S3 template.
+
+**To check at the start of the phase.** These are from memory, not checked today:
+- **GitHub Actions' `schedule`:** runs from the default branch, at most every 5 minutes, often minutes late under load, and is switched off in a public repository after 60 days without activity.
+- **`repository_dispatch`:** needs Contents write, which the app has. It starts only default-branch workflows, and it does start them when sent with an installation token, unlike `GITHUB_TOKEN`.
+- **Durable Object alarms:** one per object, delivered at least once, and retried with backoff when the handler throws.
+- **Hosts' own builds:** Netlify, Cloudflare Pages and Vercel have no scheduled builds of their own, only build or deploy hooks. Their free plans' build limits decide what an hourly rebuild costs (call 2).
+
+### What lives where
+
+| Here (MIT, free) | `vesper-cloud` (private, paid) |
+|---|---|
+| **`@vesper/core`:** the window (as now) and `scheduledEvents`, every upcoming change in a site's files, used by the studio, the build and the cloud. Also the schedule's words ("Scheduled · Sat, Oct 31, 8:00 AM"), and the protocol's schedule types with their `runCloudContract` cases. | **The SiteDO:** upcoming times, one alarm for the earliest, held drafts, and each event's result. |
+| **`@vesper/astro`:** filtering in `vesper:content`, unpublish redirects, `_vesper/schedule.json`, the dev marker, the build's warnings, and `vesper deploy init`. | **The trigger:** a deploy hook stored as a secret, or `repository_dispatch` through the GitHub App. |
+| **`@vesper/admin`:** Publish ▾ with Schedule…, the dialog, the schedule in Details, status words, the Scheduled view and the public-repository line. Connected to the cloud, also held drafts and each event's state. | **The dashboard:** the site's scheduled publishing settings (the trigger and `holdScheduledDrafts`), and recent results. |
+| **The workflows** `vesper deploy init` writes. `scripts/cloud-fake.mjs` gains schedules, a clock the tests move and a recorded trigger. The fake GitHub gains `POST /dispatches`. | **Tests:** alarms in the Workers pool, the new `runCloudContract` cases against the real API, and the real-world check. |
+
+### How it works
+
+**Opting in** stays as §6.17 has it: `schedule: true` on a collection, `{ unpublish: false }`, or mapped names (`{ publishAt: 'publishedAt' }`).
+- It gains one optional name, `unpublishRedirect`, which is also the default.
+- The fields must be in the collection's schema, since Astro strips unknown keys before the site's code sees them. A scheduled collection without them gets one warning in dev and at build, naming the lines to add (`publishAt: fields.datetime().optional(),`).
+
+**Build-time filtering** (D18; free, every host):
+- **One instant per build.** The build reads the time once, at `astro:config:setup`. Every check in it uses that instant: `vesper:content`, redirects, search, the accessibility check and `schedule.json`. `VESPER_BUILD_TIME` (an ISO time) sets it, for tests and for seeing the site as it will be.
+- **Three loaders are wrapped.** In builds, `vesper:content` still re-exports `astro:content`. For scheduled collections only, with the instant and each schedule embedded as JSON, it also wraps three loaders:
+  - `getCollection(name, filter?)` leaves out entries outside the window, after the site's own filter;
+  - `getEntry(…)` returns `undefined` for one, as Astro does for an entry that doesn't exist;
+  - `getEntries(refs)` leaves them out.
+
+  Other collections and `render` are untouched. `getTree`, `getChildren` and `getBreadcrumbs` read through `getCollection`, so they follow. A scheduled section page's folder shows as a folder with no page (`url: null`).
+- **Still nothing recorded.** CLAUDE.md's rule becomes: production `vesper:content` re-exports `astro:content`, filters only scheduled collections, and never records reads.
+- **Sites that read `astro:content` directly** aren't filtered. The build finds them through the URL tracing the accessibility check uses. A built page whose URL belongs to an entry outside its window gets a warning: "/events/harvest-concert/ was built, but it's scheduled for Sat, Oct 31, 8:00 AM. The page reads astro:content; import from vesper:content instead."
+- **Sitemaps and feeds.** Vesper builds neither; both are on the not-adopted list. `@astrojs/sitemap` lists the pages Astro built, and a feed made with `vesper:content` reads the filtered list, so both follow without work.
+- **References** to a scheduled entry resolve to nothing until it's live, as they would to a missing entry. The docs say so, and the playground's event page already copes with a missing location.
+- **Search keeps its own check.** Pages outside the window aren't built now, but the check still covers a site that reads `astro:content`.
+
+**In dev**, scheduled entries stay in `vesper:content` so editors can work on them, and they're marked (call 10). Dev and builds then differ for scheduled collections only. The tree parity test (`/site-tree.json`) uses `pages`, which isn't scheduled.
+
+**When the site next changes.** Every build writes `dist/_vesper/schedule.json`: `{ "version": 1, "builtAt": "…", "next": "…" }`. `next` is the earliest publish or unpublish time after the build's instant, or `null`. It says only when, never what.
+- The free tier's scheduled rebuild reads it (call 2).
+- The cloud reads `builtAt` on the live site to tell when a scheduled change is live, on any host.
+
+**Unpublishing.** An entry past its `unpublishAt` isn't built, so its URL 404s.
+- Hosts that deploy atomically (Netlify, Cloudflare, Vercel, GitHub Pages) drop the old page with the new deploy.
+- The SFTP and FTP templates must delete what the build no longer has, or the old page stays on the server (call 4).
+
+**The unpublish redirect** (call 1, as recommended):
+- **From the entry's field.** At config setup, the build lists the entries past their `unpublishAt` that have a redirect set. It adds a temporary (302) redirect from each one's URL into the same `cleanRedirects` pass as the redirects file. Chains then collapse, and host rules (`_redirects`, `.htaccess`, nginx) carry it.
+- **Nothing in the file.** Nothing is written into `vesper.redirects.yaml`, so there's nothing to undo if the entry comes back.
+- **Cleaned against live pages only.** The page keys the pass cleans against leave out unpublished entries; otherwise the redirect would be dropped as "the page wins".
+- **On Vercel** it's Astro's HTML redirect page, the universal fallback, because Vercel reads `vercel.json` before the build.
+- **The file wins.** A redirect for the same address in `vesper.redirects.yaml` takes priority, with a warning.
+- **The field** uses the page picker and stores the page's exact URL. Link rewriting on moves already covers `url`-widget fields.
+
+**The free tier's scheduled rebuild** (calls 2 to 5). `vesper deploy init --target sftp|ftp|hook` writes one GitHub Actions workflow into the repository and lists the secrets to add.
+- **Targets.** `sftp` and `ftp` build on push and upload, as §6.16 says. `hook` is for git-connected hosts, which already build on push: it only calls the site's build hook, kept in a repository secret.
+- **The scheduled run.** With `--rebuild-every 60` (minutes, at least 5), the workflow also runs on `schedule:`.
+  - Its first step fetches the live site's `/_vesper/schedule.json`. It goes on only when `next` has passed, or when the file can't be read.
+  - A site then rebuilds once per scheduled change, not every hour.
+- **Other triggers.** Every workflow also listens for `repository_dispatch` (type `vesper-rebuild`), the cloud's trigger, and has `workflow_dispatch`, a button for people.
+- **Telling the studio.** `deploy init` prints a `rebuildEvery` line for `vesper.config.ts`, which the studio's accuracy line reads (call 5).
+
+**Exact times in the cloud** (paid; described here, designed in `vesper-cloud`):
+- **Where the times come from** (call 6): the site's files, read with core's `scheduledEvents` and the manifest. A time set in local mode or by a developer's commit then gets its exact rebuild too. The SiteDO reads them after every publish through the cloud and on GitHub's push webhook, and keeps them with each event's state.
+- **The alarm.** The SiteDO keeps one alarm, for the earliest pending time. When it fires, the SiteDO:
+  1. publishes any held drafts due then (below);
+  2. triggers one rebuild for everything due;
+  3. records the result and sets the next alarm.
+- **The trigger** is chosen in the dashboard, per site:
+  - a deploy hook URL (Netlify, Cloudflare Pages or Vercel), stored encrypted and never shown again in full;
+  - or `repository_dispatch` through the GitHub App, which the templates listen for.
+
+  A site with neither gets no exact times, and the studio's line says it goes live at the next build.
+- **Results.** An event goes from waiting to rebuild started, and then to one of:
+  - live, when the live site's `schedule.json` shows a build after the time;
+  - failed, when the host reports a failure or there's no such build within 30 minutes.
+
+  The dashboard lists recent results, and the studio's Scheduled view shows the upcoming events' state.
+- **`holdScheduledDrafts`** (call 7) is a site setting in the dashboard. It's for public repositories, where a future post committed to git can be read early.
+  - Scheduling then keeps the drafts in the SiteDO instead of publishing them.
+  - At the time, the alarm publishes them as Publish does (one commit, by the app's bot, crediting every author) and triggers the rebuild.
+  - Nothing is published if a held file changed in git since, or if the person who scheduled it can no longer publish there. The Scheduled view says why, and that person gets an email.
+  - Only the publish waits. An unpublish time is a plain field, filtered at build.
+- **Protocol,** in core, with the fake and `runCloudContract`:
+  - `GET /sites/{site}/schedule`: the trigger's kind, whether drafts are held, whether the repository is public, and each upcoming event's state;
+  - `POST /sites/{site}/schedule` with `{ drafts, at }`: holds drafts until a time, with Publish's grants and checks;
+  - `DELETE /sites/{site}/schedule/{id}`: a held draft goes back to being a draft.
+
+**In the studio:**
+- **Publish ▾.** In a scheduled collection, the editor's primary button becomes a split button: Publish (Save in local mode), with a menu that follows the menu button pattern.
+  - The menu holds "Schedule…", plus "Publish now" and "Cancel schedule" for an entry that's already scheduled.
+  - It's still one primary button.
+  - Contributors keep Request review and set a time through Details; their approver's Publish then schedules it.
+- **Schedule…** opens a small dialog:
+  - **"Goes live":** date and time, with the zone in text ("Times are in Eastern Time, the site's time zone."). It's left out for an entry that's already live (call 8).
+  - **"Comes down"** (optional, when the collection unpublishes), and **"Then send visitors to"** (optional, the page picker, when the schema has the redirect field).
+  - **One line on accuracy,** under the times:
+    - "Goes live at 8:00 AM." (cloud, with a trigger);
+    - "Goes live at the first rebuild after 8:00 AM. This site rebuilds every hour." (with `rebuildEvery`);
+    - "Goes live the next time the site is built after 8:00 AM." (otherwise).
+  - **A public repository** without held drafts gets a line: "This site's repository is public, so anyone can read this there before it goes live." In GitHub mode that's all it says. Connected to the cloud, a site admin can hold scheduled changes, and the line says so.
+  - **The primary button, Schedule,** sets the fields and publishes (saves, in local mode), or holds the drafts.
+  - **Checks:**
+    - "That time has passed. Publish now instead?";
+    - an unpublish time before the publish time;
+    - a time the clocks skip: "2:30 AM doesn't happen on Sun, Mar 14; this is 3:30 AM.";
+    - the hour that repeats: "1:30 AM happens twice that night; this is the first, EDT."
+- **Details** shows the schedule as text, in place of the two raw date fields: "Goes live Sat, Oct 31, 8:00 AM · Comes down Sun, Nov 8, 12:00 AM". "Change schedule…" opens the same dialog to change the fields. The redirect field joins them.
+- **Status words,** in the editor's bar and the entry list's Status column:
+  - "Scheduled · Sat, Oct 31, 8:00 AM";
+  - "Live until Fri, Nov 13, 12:00 AM";
+  - "Unpublished · Sun, Oct 25".
+
+  In the repeated hour, the zone's short name follows ("1:30 AM EDT"). They come from core, so the view, the list and the toolbar agree.
+- **The entry list's filter** gains "Scheduled" (upcoming publishes and unpublishes). It appears when a collection has any, as Drafts does.
+- **The Scheduled view** (call 11), at `#/scheduled`, is one table of upcoming changes across the site, soonest first:
+  - the time, in the site's zone;
+  - the entry, linked to its editor;
+  - the change: "Goes live" or "Comes down";
+  - its collection;
+  - connected to the cloud, its state in words ("Rebuild at 8:00 AM", "Waiting in Vesper until 8:00 AM").
+
+  Each row's "…" menu has Reschedule… (the dialog) and Cancel (call 9). With nothing scheduled, it says "Nothing is scheduled." It reads the files in every mode, through the same services as the entry lists, plus `GET /schedule` when connected.
+
+**Cancelling** (call 9, as recommended):
+- **An unpublish:** cancelling removes the time and the redirect, in every mode.
+- **A publish, in the cloud:** the entry becomes a draft again. One publish takes its file out of the site and keeps the content as a draft. A held draft simply stops waiting.
+- **A publish, in local and GitHub mode:** they have no drafts, so the view offers Reschedule only, and the entry's own Delete stays where it is.
+
+**The dev marker** (call 10, as recommended):
+- **The toolbar.** Vesper's toolbar app shows each entry the page reads with its status words. Its icon carries the toolbar's notification dot when any of them is outside its window.
+- **The page.** A page that shows a scheduled entry (its own page, from `render` or `getEntry`) also gets a small fixed note from the dev middleware: "Scheduled · Sat, Oct 31, 8:00 AM. Visitors won't see this page until then." Dev only, like the page-entries script.
+
+### In the interface (§10.4)
+
+- **One primary button.** Publish ▾ is one split button, and the dialog's only primary is Schedule.
+- **The split button's chevron** is an icon-only button, named "More ways to publish". §6.17 asks for the split button itself. It joins CLAUDE.md's list of allowed icon-only buttons, with a dated DECISIONS.md note, and the budget test learns it.
+- **No new navigation level.** The Scheduled view is a screen reached from Home's line ("3 scheduled changes"), never a sidebar item (call 11).
+- **Status is text,** never a badge, and the zone is text too.
+- **No tabs and no panel.** The schedule lives in Details and in the dialog.
+- **Absent, not disabled.** Held drafts, trigger state and results appear only when the studio is connected to the cloud. In GitHub and local mode, the dialog never mentions the cloud.
+- **No new colours.**
+
+### Tests, mapped to "Done when"
+
+1. **Exact times, on Netlify and SFTP (cloud).**
+   - **Here:**
+     - core's `scheduledEvents` and the protocol's types;
+     - the fake cloud's schedule, with a clock the tests move, recording a build-hook call or a dispatch to the fake GitHub;
+     - the new `runCloudContract` cases: holding, cancelling, grants and the publish gate on scheduling, and a held draft's conflict;
+     - the `cloud` e2e project: it schedules a post, moves the clock, and finds one dispatch. With holding on, it finds one commit at the time.
+   - **In `vesper-cloud`:** the alarm in the Workers pool, where alarms run on demand; deploy-hook and dispatch calls against fakes; results from `schedule.json`.
+   - **The real-world check:** a copy of the playground on Netlify (build hook) and on an SFTP host with the `sftp` template (`repository_dispatch`). A post is scheduled 5 minutes ahead, and the time from its moment until the page answers is measured on each. The bar is 2 minutes.
+2. **Free tier, at the first scheduled rebuild.**
+   - **Integration:** the playground built with `VESPER_BUILD_TIME` a minute before and a minute after `harvest-concert`'s time, checking its page, its place in `/events/`, the tree, search, and `schedule.json`'s `next`.
+   - **The workflow's due step,** on its own: a script with fixtures for `next` passed, not passed, null and unreadable.
+   - **The real-world check:** `vesper-github-test` with the `hook` template every 15 minutes. A post scheduled in GitHub mode appears at the first run after its time.
+3. **An expired event 404s or redirects.**
+   - **Static e2e** on `scripts/static-server.mjs`, with the build pinned: `fall-open-house` redirects to `/events/`, `night-owl-study-hall` 404s, and `harvest-concert` 404s before its time.
+   - **Host rules:** unit tests, like the move redirects', show Netlify's and Apache's rules carry the unpublish redirects.
+   - **Deletions:** in the real-world check, an event unpublished between two deploys disappears from the SFTP host.
+4. **Times across a daylight-saving change.**
+   - **Core:** words and parsing in America/New_York across 1 November 2026 and 14 March 2027.
+     - A time chosen in October for November keeps `-05:00`.
+     - The repeated hour's two 1:30s show EDT and EST.
+     - A skipped 2:30 becomes 3:30.
+   - **The studio,** in Playwright with the browser's zone set elsewhere (`timezoneId: 'Asia/Tokyo'`): the dialog, Details, the list and the view show Eastern times.
+   - **The build** compares instants only: `night-owl-study-hall` is live for exactly the hour between its two 1:30s.
+
+**The studio's screens.** The `studio` e2e project schedules, reschedules and cancels an unpublish through the dialog and the view, with axe on both in both themes, plus a keyboard pass. The `github` project's commit carries the times and nothing else.
+
+**Order of work** (small commits, each repository green):
+1. Here: this design, then the decisions once the calls are made.
+2. Here: core's `scheduledEvents`, status words and DST tests. Then the build's instant, filtering in `vesper:content`, unpublish redirects, `schedule.json` and the warnings.
+3. Here: the studio's split button, dialog, Details, status words, filter and Scheduled view, and the dev marker.
+4. Here: `vesper deploy init` and its workflows, with the due step's tests.
+5. Here: the protocol's schedule types, the fake cloud's schedule and clock, and `runCloudContract`'s cases. Then the studio's held drafts, states and cancelling when connected.
+6. Cloud: the SiteDO's schedule, alarms, triggers and results; the push webhook; the dashboard's settings and results; `runCloudContract` against the real API.
+7. The real-world check, then the docs page, since the docs describe only what's built.
+
+### The calls (for Jeremy)
+
+Each has a recommendation, and nothing here is picked until Jeremy confirms it. Spec §13 has no item this phase depends on.
+
+1. **Where an unpublish redirect lives.**
+   - (a) In the entry's own field only. Recommended.
+     - The build turns it into a redirect once the entry is past its `unpublishAt`, through the same cleaning and host rules as the redirects file.
+     - One place holds it, and a republished entry has nothing to undo.
+     - The file's "the page wins" cleanup can't drop it while the page is still live.
+   - (b) Written into `vesper.redirects.yaml` when the entry is published, with the time it starts, as §6.17 says.
+     - The Redirects screen would show it.
+     - But the file would then hold redirects that aren't active yet, and cleaning would have to skip them while their page is live.
+     - Vercel's `vercel.json` can't hold a redirect that starts later.
+2. **How the free tier rebuilds on time.**
+   - (a) A scheduled workflow that checks the live site's `/_vesper/schedule.json` and rebuilds only when a time has passed. Recommended. A site builds once per scheduled change, so hourly checks cost nothing on hosts that count builds. The file says when the site next changes, never what.
+   - (b) Rebuild on every run, as §6.17's example does. Simplest, but hourly means about 720 builds a month, which may exceed a free plan's build limit (to check).
+   - (c) Check the repository's files in the workflow. No public file, but every run installs the site first, which takes a minute or more.
+3. **Which deploy templates 4.5 builds.** None exist yet, and criterion 1 needs an SFTP one.
+   - (a) `vesper deploy init --target sftp|ftp|hook`. Recommended: it's what the criteria and the free tier need.
+     - `sftp` and `ftp` cover traditional hosts.
+     - `hook` covers git-connected hosts, which have no scheduled builds of their own (to check).
+     - S3 and GitHub Pages stay with Phase 9.
+   - (b) All of §6.16's targets now, `s3` and `github-pages` too.
+   - (c) The SFTP template only, with a hook recipe in the docs.
+4. **How the SFTP and FTP template uploads.**
+   - (a) `lftp` on the runner, mirroring `dist/` with deletions and uploading every file each time. Recommended for 4.5.
+     - No new dependency.
+     - Deletions are what make an expired event 404.
+     - §6.16's "only changed files" can follow later with a state file, if uploads prove slow.
+   - (b) A `vesper deploy upload` step that keeps a file of hashes on the server and sends only what changed. Faster on large sites, but it adds two dependencies to `@vesper/astro`, an SFTP client and an FTP client.
+   - (c) A third-party Action, pinned by commit. Less to build, but someone else's code holds the host's password.
+5. **How the studio knows how often a free site rebuilds,** for "This site rebuilds every hour".
+   - (a) `rebuildEvery` (in minutes) in `vesper.config.ts`, which `deploy init` prints for the developer to add. Recommended: the line is then true, and with nothing set it says "the next time the site is built".
+   - (b) No setting, and the line always says "the next time the site is built after 8:00 AM". Vaguer.
+6. **How the cloud learns the times.**
+   - (a) From the site's files, with core's `scheduledEvents`, after each publish through the cloud and on GitHub's push webhook. Recommended: a time set in local mode or by a developer's commit is exact too. It turns on the app's push webhook, which needs an endpoint in the cloud and a settings change on VesperCMS (Jeremy's).
+   - (b) Only what's scheduled from a studio connected to the cloud. No webhook, but a developer's scheduled commit waits for the next build.
+   - (c) From the files, with an hourly sweep instead of the webhook. No webhook, but a time less than an hour after a developer's commit can be missed until the sweep.
+7. **`holdScheduledDrafts` for public repositories.**
+   - (a) Off unless a site admin turns it on in the dashboard, as §6.17 says, with the studio's line when the repository is public. Recommended: committing at once is what keeps D18 safe when the cloud is down at the time.
+   - (b) On by default when the repository is public. An announcement can't leak early, but it goes out late if the cloud is down at its time.
+8. **Scheduling changes to a page that's already live.** D18's files hold one version of a page, so a future version can't sit beside the live one in git.
+   - (a) Not in 4.5: for a live entry, Schedule… sets only when it comes down. Recommended.
+   - (b) In the cloud, hold any scheduled draft until its time, so "update the tuition page on 1 January" works. That's held drafts for every site, not only public ones: a paid feature beyond §6.17, for later if Jeremy wants it.
+9. **What cancelling a scheduled publish does.** A scheduled entry is already in the site's files (under call 7a).
+   - (a) Recommended.
+     - In the cloud, it becomes a draft again: one publish takes its file out, and its content stays as a draft.
+     - Local and GitHub mode have no drafts, so they offer Reschedule only, and Delete stays in the entry's own menu.
+   - (b) Delete it, in every mode; git's history keeps it.
+   - (c) Set the collection's `draft` field, where the schema has one. It only works on sites whose pages leave drafts out.
+10. **The "Scheduled" marker in dev** (§6.17).
+    - (a) In Vesper's toolbar app, each entry's status words and the toolbar's dot, plus a small fixed note on a scheduled entry's own page. Recommended: it's seen without opening the toolbar, and only in dev.
+    - (b) The toolbar only. Quieter, but easy to miss when the toolbar is hidden.
+11. **Where the Scheduled view lives.**
+    - (a) A screen at `#/scheduled`, reached from a line on Home ("3 scheduled changes") and from each list's Scheduled filter. Recommended: no new navigation item, the same choice as for Changes.
+    - (b) An item in the sidebar beside the collections. Easier to find, but it isn't content.
+    - (c) Inside the Changes drawer. That's cloud only, and scheduling is free.
+
+**Smaller defaults, built as written unless Jeremy says otherwise:**
+- **The build's instant:** one per build, and `VESPER_BUILD_TIME` sets it.
+- **Loaders:** `getEntries` leaves out entries outside the window, and `getEntry` returns `undefined`.
+- **Unpublish redirects are temporary (302),** since an event can come back.
+- **Status words** as above, from core, with the zone's short name only in the hour that repeats.
+- **One trigger per instant,** however many entries share it.
+- **The 2-minute bar.** If the SFTP template misses it in the real-world check, the next step is building a few minutes early, as of the time, and uploading at the time. That comes back to Jeremy first.
+- **Failures:**
+  - a scheduled rebuild that fails sends no email; the Scheduled view and the dashboard say so;
+  - a held draft that can't be published at its time emails whoever scheduled it.
+- **The `entry.scheduled` integration event** (§7.13) waits for Phase 6.5.
+- **Tier:**
+  - free (§13.4, "scheduling via scheduled rebuilds"): the studio's scheduling, filtering, `schedule.json` and the templates;
+  - paid ("exact scheduling"): exact times, held drafts and results.
+
+  Nothing is unclear.
+
+**Spec and rule changes these calls would make:**
+- 1(a) changes §6.17's "adds a redirect to `vesper.redirects.yaml` at publish time".
+- 2(a) refines §6.17's "for example hourly".
+- 3(a) and 4(a) narrow §6.16's `deploy init` targets, and its "only changed files" for now.
+- 6(a) turns on webhooks (DECISIONS.md, "The app is VesperCMS, with no webhooks yet").
+- Whatever the calls, the work changes:
+  - CLAUDE.md's rule on production `vesper:content`;
+  - its list of icon-only buttons (the split button's chevron);
+  - DECISIONS.md's "The index leaves out entries outside their publish window", which says "until Phase 4.5".
+
+Each gets a dated entry in DECISIONS.md, and the spec is edited to match.
+
+**Not in this phase:** scheduled changes to live pages (call 8b); schedules in instant previews (Phase 7, with live collections); `entry.scheduled` events (6.5); the S3 and GitHub Pages templates (Phase 9, unless call 3b); sitemaps and feeds (not adopted); a calendar view.
 
 ## Phase 3: GitHub mode (design)
 
@@ -1754,7 +2058,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above). Calls confirmed 2026-10-19 | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators. Design and outcome above (2026-10-19) | GitHub adapter passing the storage contract suite; OAuth relay template |
 | 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); OpenCage's terms and price checked 2026-10-20 (they pass); the §13.1 domain, vespercms.com, registered 2026-10-20. Design above (2026-10-20) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
-| **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
+| **4.5 Scheduling** (new) | The 11 calls in its design above (2026-10-21) | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
 | 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |
 | 6 Forms (expanded) | — | routing rules, private R2 uploads (D21), confirmation emails with the D20 protections |
 | **6.5 Integrations** (new) | — | event and delivery system, Queues with DLQ, five destinations |
