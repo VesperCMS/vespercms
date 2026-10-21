@@ -1019,7 +1019,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 - In the top bar the mark is decorative (`aria-hidden`). The link's accessible name stays the site's name, which is the visible text (WCAG 2.5.3) and says where the link goes. Announcing "Vesper logo" on every screen would add nothing.
 - It's drawn inline from the tokens (`VesperMark` in `@vesper/ui`): the stroke is `currentColor` (`content`), the star `accent`, and both follow the theme. In forced colours the star takes `CanvasText`.
 - The favicon is an inline `data:image/svg+xml` in the injected `/admin` page, so it costs no request and needs no file in the site. A favicon can't read CSS variables, so it carries Pine's `content` and `accent` values for each theme and switches with `prefers-color-scheme` inside the SVG.
-- The site's own pages keep their own favicon; only `/admin` gets this one.
+- The site's own pages keep their own favicon; only `/admin` gets this one. (Vesper's own site, vespercms.com, uses the small cut as its logo and favicon too: "Vesper's own site" below.)
 - White-label (the higher paid tier, Phase 9) replaces both. Keeping the mark in one component and one favicon makes that a single swap.
 
 ### 2026-10-18: Icons are Lucide's, beside words; the body's formatting tools are icons alone (an exception to spec §10.4)
@@ -1041,3 +1041,32 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 ### 2026-10-19: A site's name shows as written; only Vesper's own is lowercase
 
 **The top bar shows the site's name exactly as the site writes it. Only Vesper's own name, shown when a site gives none, is set lowercase, as its wordmark.** The design pass lowercased every name with CSS, so screen readers still read it as written, but it showed "Highlands College" as "highlands college": a customer's own name, changed in their own studio. Jeremy chose this on 2026-10-19. The integration always passes a name (the site's host, its package name, or "Your site"), so in practice the lowercase wordmark appears only where the studio is mounted without one.
+
+---
+
+## Vesper's own site
+
+### 2026-10-21: vespercms.com is a plain Astro site edited with Vesper, not Starlight
+
+**Jeremy chose on 2026-10-21: the marketing site and the docs are one Astro site, `apps/site` in this repository, built on Vesper's own features rather than Starlight, for the apex of vespercms.com (the cloud is on `app.` and `api.`). This replaces spec §5's `apps/docs` "Starlight docs site" (Phase 9), and starts it ahead of the phase order because Jeremy asked for it now.**
+- The docs menu is the `docs` collection's page tree (`tree: true`, `_order.yaml`, `maxDepth: 2`), read with `getTree`, so reordering or moving a page in the studio reorders the menu, and a move writes its redirects. Search is `<Search>`, callouts are a Markdoc tag with hints in `vesper.config.ts`, and the home page is a `pages` entry whose sections are fields. Every part is edited in `/admin`, so the site is also the product's demo and a real site to test it on.
+- Rejected: Starlight. Its sidebar comes from `astro.config` or `sidebar` frontmatter, not the studio's tree; its own Pagefind index would have to be turned off for Vesper's; and `docsSchema()`'s unions (`hero`, `prev`, `next`, `sidebar`, `banner`, `head`) show as raw YAML fields in the studio. Starlight 0.42 does support Astro 7, so this was a choice, not a constraint.
+- The schemas avoid unions, so every field gets a real control. The home page's inline Markdown fields avoid code formatting, which the studio's compact Markdown editor doesn't offer (it would fall back to plain text).
+- The colours are the studio's Pine tokens, copied into `site.css` as plain custom properties so the site needs no Tailwind. Figtree comes from the same `@fontsource/figtree` the studio bundles, self-hosted. The mark's small cut is the site's logo and favicon.
+- `/admin` isn't deployed yet (`studio: { deploy: false }`): the site is edited locally (`npm run dev -w @vesper/site`) until it's connected to the cloud. Then it deploys with the site, and editing vespercms.com becomes a real-world use of the cloud.
+- e2e: the built site on the plain static host (port 4409; previews of the site use 4408), axe on every page in both colour schemes, the docs menu by keyboard at phone width, and every llms.txt link.
+
+### 2026-10-21: `vesper agents` writes agent instructions from the manifest
+
+**Jeremy chose generated instructions over a static block on 2026-10-21. `vesper agents` (in `@vesper/astro`'s new `vesper` bin) turns the manifest into a Markdown guide for coding agents and writes it between `<!-- vesper:agents:start -->` and `<!-- vesper:agents:end -->` in the site's `AGENTS.md` (or `--file`), leaving the rest of the file alone. `--check` writes nothing and fails when the file is stale, for CI. Free, like the rest of the integration.**
+- The guide is the rules that keep the studio and the build working (the schema is `content.config.ts`, splice don't reformat, raw values not parsed ones, check with `astro build`), then sections that appear only when the site has them (images, page trees, redirects, Markdoc tags, declared MDX components, `blockPublishOn`), then every collection: its files, URL pattern and each field's type, presence, default and help text. The same manifest builds the studio, so the agent and the editor see one schema.
+- It's deterministic (no dates, the manifest's own order), so `--check` can compare bytes. A file's CRLF line endings are kept.
+- `AGENTS.md` because most coding agents read it; Claude Code reads `CLAUDE.md`, which imports it with an `@AGENTS.md` line (`apps/site/CLAUDE.md` does exactly that), or `--file CLAUDE.md` writes there directly.
+- Scheduling isn't described: build-time filtering arrives in Phase 4.5, and the guide must not promise it.
+- This isn't the "AI writing" spec addendum §9 rejects: nothing changes in the studio or the cloud, and nothing writes content. It's documentation for a developer's own tools.
+- Rejected: a copy-paste block in the docs only (the agent would still have to read the schema itself, and nothing keeps it current); writing the file automatically in `astro dev` (it would change a file in the site's repository without being asked); an MCP server (content is already files an agent can edit, and a server would be a new free-or-paid question).
+- `check:dist` now runs each package's bin with `--help` from `dist/`.
+
+### 2026-10-21: The docs are Markdown too
+
+**Every docs page has a Markdown copy at its address with `.md` in place of the trailing slash (`/docs.md` for the root), `/llms.txt` lists them in menu order with each page's summary, and `/llms-full.txt` is all of them in one file.** They're static endpoints built from the same tree as the menu, so they follow every move. Each page links to its copy, and `<head>` names `llms.txt`. The copies are the Markdoc source with the title and summary on top: callouts read fine as tags, and no conversion can drift from the page.

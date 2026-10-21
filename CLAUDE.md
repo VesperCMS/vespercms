@@ -24,6 +24,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
+| vespercms.com and the docs | Started 2026-10-21, ahead of Phase 9 at Jeremy's request: `apps/site`, edited with Vesper; `vesper agents`. Decisions in `DECISIONS.md` ("Vesper's own site") |
 | 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live and the first repository connected (2026-10-21). The real-world check is next. Progress and design in `PLAN.md` (the cloud's own in vesper-cloud's), decisions in `DECISIONS.md` ("The cloud") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
@@ -42,7 +43,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 
 Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `node`. The `.npmrc` sets `--conditions=@vesper/source`, and it only applies inside npm.
 
-**Preview the playground on port 4402 (`.claude/launch.json`), never 4321 or 4400–4407.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files. The e2e tests own 4400 (static build), 4401 (studio), 4403–4405 (GitHub mode: the fake GitHub, the relay and the built site) and 4406–4407 (the cloud: the fake cloud and the built site), and never reuse a running server, so a preview can't stand in for what they test.
+**Preview the playground on port 4402 and vespercms.com on 4408 (`.claude/launch.json`), never 4321, 4400–4407 or 4409.** Jeremy's own sites run on 4321 in dev, and a studio opened on the wrong port would edit that site's files. The e2e tests own 4400 (static build), 4401 (studio), 4403–4405 (GitHub mode: the fake GitHub, the relay and the built site), 4406–4407 (the cloud: the fake cloud and the built site) and 4409 (vespercms.com, built), and never reuse a running server, so a preview can't stand in for what they test.
 
 **Never serve `scripts/studio-site.mjs` yourself while `npm run e2e` runs.** Both use the one copy in `e2e/.studio-site`, and two dev servers over the same files make the tests' saves fail.
 
@@ -64,7 +65,9 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
 | `npm run build` | `dist/` for every package: tsc for the libraries, Vite for the studio bundle and its CSS. |
 | `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`, and its accessibility report into `apps/playground/.vesper/`. |
-| `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). `github`: a GitHub-mode build, the real relay and a fake GitHub over real git (`scripts/github-site.mjs`). `cloud`: a cloud-mode build and the fake cloud over a fake GitHub (`scripts/cloud-site.mjs`). |
+| `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). `github`: a GitHub-mode build, the real relay and a fake GitHub over real git (`scripts/github-site.mjs`). `cloud`: a cloud-mode build and the fake cloud over a fake GitHub (`scripts/cloud-site.mjs`). `site`: vespercms.com, built (build it first). |
+| `npm run dev -w @vesper/site` | vespercms.com in `astro dev`, with its studio at `/admin`. `npm run build -w @vesper/site` builds it into `apps/site/dist/`. |
+| `npm run agents -w @vesper/site` | Regenerate `apps/site/AGENTS.md` with `vesper agents` after changing the site's schema or `vesper.config.ts`. CI runs it with `-- --check`. |
 | `npm run manifest` | Print the playground's manifest, generated from source. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
@@ -76,13 +79,14 @@ packages/astro     The Astro integration (vesper(), /admin, dev API, vesper:cont
 packages/ui        Design tokens and the accessible component kit. Tokens enforce the §10.4 budget.
 packages/admin     The studio at /admin: screens, widgets, body editor, upload hygiene, GitHub mode's and the cloud's sign-in and back ends. Precompiled for sites.
 apps/playground    Astro 7 site that exercises every feature. Its content doubles as test fixtures.
+apps/site          vespercms.com: the marketing pages and the docs, edited with Vesper. Its AGENTS.md is generated by `vesper agents`.
 fixtures/          astro6-site: an Astro 6 site, installed on its own, for the Astro 6 CI job.
 e2e/               Playwright specs: static-*.spec.ts (the built site), studio/ (local mode), github/ (GitHub mode) and cloud/ (the cloud).
 scripts/           Repo tooling (contrast check, static server, dist check, the studio, GitHub-mode and cloud test sites, the fake GitHub and the fake cloud).
 templates/         oauth-relay: the GitHub sign-in relay, one Worker a site owner deploys (GitHub mode).
 ```
 
-Later phases add `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (`cloud-api`, `cloud-app`) lives in its own private repository, never this one (spec §13.3, decided 2026-10-19).
+Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separate `apps/docs` (DECISIONS.md, "vespercms.com is a plain Astro site edited with Vesper"). The cloud (`cloud-api`, `cloud-app`) lives in its own private repository, never this one (spec §13.3, decided 2026-10-19).
 
 ## Constraints that are easy to violate
 
@@ -215,6 +219,16 @@ Later phases add `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (
 **Keep a cloud sign-in in progress in `localStorage` under its state, never `sessionStorage`.** An email sign-in link finishes it in the tab the mail client opens (DECISIONS.md, "A sign-in in progress can finish in any tab").
 
 **A cloud draft passes the same checks as a save; the publish gate applies to Publish, never to a draft.** A draft is then always a file the site could build (DECISIONS.md, "A draft passes the same checks as a save").
+
+### Vesper's own site and agent instructions
+
+**The docs menu is the `docs` collection's tree: order and move docs with `_order.yaml` or the studio, never a hand-written list.** Moves then write their redirects, and `llms.txt` follows the same order (DECISIONS.md, "vespercms.com is a plain Astro site edited with Vesper").
+
+**The docs describe only what is built today.** They are the product's promise; check a claim against the code, not the spec, which also holds plans.
+
+**vespercms.com's schemas use no unions, and its one-line Markdown fields no code formatting.** Every field then gets a real control in the studio instead of raw YAML or plain text.
+
+**The agent guide (`agentGuide`) is built only from the manifest and stays deterministic: no dates, no environment.** `vesper agents --check` compares bytes, and CI runs it on `apps/site/AGENTS.md` (DECISIONS.md, "`vesper agents` writes agent instructions from the manifest").
 
 ## Accessibility is an acceptance criterion
 
