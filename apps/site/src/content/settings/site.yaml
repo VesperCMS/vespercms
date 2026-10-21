@@ -1,0 +1,6 @@
+tagline: Vesper is a content editor for Astro sites. This site is edited with it.
+nav:
+  - label: Docs
+    href: /docs/
+  - label: Install
+    href: /docs/getting-started/install/

@@ -1,0 +1,30 @@
+---
+// Vesper's mark, "Launch", in its small cut (DECISIONS.md, "Vesper's mark is
+// Launch"), as VesperMark in @vesper/ui draws it at 24px and below.
+// Decorative: it sits beside the visible name.
+interface Props {
+  size?: number;
+}
+
+const { size = 24 } = Astro.props;
+---
+
+<svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" focusable="false">
+  <path
+    d="M11 14 L29 50 L42 25"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="11"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  ></path>
+  <circle class="mark-star" cx="52" cy="11" r="7"></circle>
+</svg>
+
+<style>
+  @media (forced-colors: active) {
+    .mark-star {
+      fill: CanvasText;
+    }
+  }
+</style>

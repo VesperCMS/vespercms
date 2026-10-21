@@ -1,0 +1,19 @@
+---
+// The Markdoc `callout` tag (markdoc.config.mjs). The type is said in words,
+// never by colour alone. A note, not an <aside>: a complementary landmark
+// inside <main> fails axe's landmark rules.
+interface Props {
+  type?: 'note' | 'tip' | 'warning';
+  title?: string;
+}
+
+const { type = 'note', title } = Astro.props;
+const labels = { note: 'Note', tip: 'Tip', warning: 'Warning' };
+---
+
+<div class:list={['callout', `callout-${type}`]} role="note">
+  <p class="callout-title">
+    <strong>{title ?? labels[type]}</strong>
+  </p>
+  <slot />
+</div>

@@ -1,0 +1,57 @@
+---
+import type { CollectionEntry } from 'vesper:content';
+import { render } from 'vesper:content';
+import { inlineMarkdown } from '../lib/inline-markdown.ts';
+
+// A marketing page: its hero (or title), its body, then its sections, each a
+// heading, an intro and a grid of points. Every part is a field in the studio.
+interface Props {
+  page: CollectionEntry<'pages'>;
+}
+
+const { page } = Astro.props;
+const { hero, sections, title, summary } = page.data;
+const { Content } = await render(page);
+---
+
+<div class="page">
+  {hero ? (
+    <section class="hero" aria-labelledby="page-title">
+      <h1 id="page-title">{hero.heading}</h1>
+      <p class="lead">{hero.lead}</p>
+      {hero.actions.length > 0 && (
+        <p class="actions">
+          {hero.actions.map((action, i) => (
+            <a class:list={['button', i === 0 && 'button-primary']} href={action.href}>
+              {action.label}
+            </a>
+          ))}
+        </p>
+      )}
+    </section>
+  ) : (
+    <div class="page-title">
+      <h1 id="page-title">{title}</h1>
+      <p class="lead">{summary}</p>
+    </div>
+  )}
+  <div class="prose">
+    <Content />
+  </div>
+  {sections.map((section, i) => (
+    <section class="section" aria-labelledby={`section-${String(i)}`}>
+      <h2 id={`section-${String(i)}`}>{section.heading}</h2>
+      {section.intro && <p class="section-intro" set:html={inlineMarkdown(section.intro)} />}
+      {section.points.length > 0 && (
+        <ul class="points">
+          {section.points.map((point) => (
+            <li class="point">
+              <h3>{point.title}</h3>
+              <p set:html={inlineMarkdown(point.body)} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  ))}
+</div>

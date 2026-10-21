@@ -1,0 +1,6 @@
+# The docs menu: sections in this order, then the pages inside each (their own _order.yaml).
+- getting-started
+- content
+- site
+- agents
+- reference

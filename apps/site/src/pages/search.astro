@@ -1,0 +1,14 @@
+---
+// The site's own /search page, in its layout (spec §6.19).
+import { Search } from '@vesper/astro/components';
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Search">
+  <div class="page">
+    <div class="page-title search-page">
+      <h1>Search</h1>
+      <Search variant="inline" />
+    </div>
+  </div>
+</Base>

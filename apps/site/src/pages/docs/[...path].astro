@@ -1,0 +1,89 @@
+---
+import { getCollection, getTree, render } from 'vesper:content';
+import DocsMenu from '../../components/DocsMenu.astro';
+import Base from '../../layouts/Base.astro';
+import { flatten, markdownPath } from '../../lib/docs.ts';
+
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  // The collection's root index is /docs/ itself.
+  return docs.map((doc) => ({
+    params: { path: doc.id === 'index' ? undefined : doc.id },
+    props: { doc },
+  }));
+}
+
+const { doc } = Astro.props;
+const { Content, headings } = await render(doc);
+const tree = await getTree('docs');
+
+// Previous and next follow the menu: each section, then its pages.
+const flat = flatten(tree);
+const at = flat.findIndex((node) => node.id === doc.id);
+const previous = at > 0 ? flat[at - 1] : undefined;
+const next = at >= 0 ? flat[at + 1] : undefined;
+const node = flat[at];
+const section =
+  node && node.depth === 2 ? flat.find((n) => n.path === node.path.split('/')[0]) : undefined;
+const children = node && node.depth === 1 ? node.children.filter((child) => child.url) : [];
+const toc = headings.filter((heading) => heading.depth === 2);
+---
+
+<Base title={doc.data.title} description={doc.data.summary}>
+  <div class="docs">
+    <DocsMenu tree={tree} current={doc.id} />
+    <article class="docs-article">
+      {section?.url && (
+        <p class="docs-section-link">
+          <a href={section.url}>{section.title}</a>
+        </p>
+      )}
+      <h1>{doc.data.title}</h1>
+      <p class="docs-summary">{doc.data.summary}</p>
+      <div class="docs-body">
+        <Content />
+      </div>
+      {children.length > 0 && (
+        <ul class="docs-children" data-pagefind-ignore="all">
+          {children.map((child) => (
+            <li>
+              <a href={child.url}>
+                <strong>{child.title}</strong>
+                <span>{child.entry?.data.summary}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      <nav class="docs-pager" aria-label="Previous and next" data-pagefind-ignore="all">
+        {previous?.url && (
+          <a class="previous" href={previous.url}>
+            <span>Previous</span>
+            {previous.title}
+          </a>
+        )}
+        {next?.url && (
+          <a class="next" href={next.url}>
+            <span>Next</span>
+            {next.title}
+          </a>
+        )}
+      </nav>
+      <p class="docs-meta" data-pagefind-ignore="all">
+        <a href={markdownPath(doc.id)}>This page as Markdown</a>, for AI tools.
+      </p>
+    </article>
+    {toc.length > 1 && (
+      <nav class="docs-toc" aria-labelledby="toc-heading" data-pagefind-ignore="all">
+        <h2 id="toc-heading">On this page</h2>
+        <ul>
+          {toc.map((heading) => (
+            <li>
+              <a href={`#${heading.slug}`}>{heading.text}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )}
+  </div>
+</Base>

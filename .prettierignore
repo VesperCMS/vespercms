@@ -21,6 +21,8 @@ packages/astro/test/fixtures/
 fixtures/astro6-site/src/content/
 fixtures/astro6-site/src/data/
 apps/playground/vesper.redirects.yaml
+# vespercms.com's content is edited in the studio, which keeps its bytes as written.
+apps/site/src/content/
 e2e/.studio-site
 e2e/.move-site
 e2e/.images-site

@@ -1,0 +1,13 @@
+---
+import { getEntry } from 'vesper:content';
+import PageBody from '../components/PageBody.astro';
+import Base from '../layouts/Base.astro';
+
+// The home page is src/content/pages/index.md, the pages tree's root.
+const page = await getEntry('pages', 'index');
+if (!page) throw new Error('src/content/pages/index.md is missing');
+---
+
+<Base title={page.data.title} description={page.data.summary} home>
+  <PageBody page={page} />
+</Base>

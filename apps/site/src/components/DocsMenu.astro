@@ -1,0 +1,58 @@
+---
+import type { PageNode } from 'vesper:content';
+
+// The docs menu is the docs collection's page tree, in each folder's
+// _order.yaml order, so moving or reordering a page in the studio moves it
+// here. Two levels: sections and their pages (maxDepth in vesper.config.ts).
+interface Props {
+  tree: PageNode<'docs'>[];
+  current: string;
+}
+
+const { tree, current } = Astro.props;
+const label = (node: PageNode<'docs'>) => node.entry?.data.menuLabel ?? node.title;
+---
+
+<details class="docs-menu" open data-docs-menu data-pagefind-ignore="all">
+  <summary>Docs menu</summary>
+  <nav aria-label="Docs">
+    <ul>
+      {tree.map((node) => (
+        <li>
+          {node.url ? (
+            <a href={node.url} aria-current={node.id === current ? 'page' : undefined}>
+              {label(node)}
+            </a>
+          ) : (
+            <span>{label(node)}</span>
+          )}
+          {node.children.length > 0 && (
+            <ul>
+              {node.children.map((child) =>
+                child.url ? (
+                  <li>
+                    <a href={child.url} aria-current={child.id === current ? 'page' : undefined}>
+                      {label(child)}
+                    </a>
+                  </li>
+                ) : null,
+              )}
+            </ul>
+          )}
+        </li>
+      ))}
+    </ul>
+  </nav>
+</details>
+
+<script>
+  // On narrow screens the menu starts closed, above the page; on wide ones
+  // it's a sidebar and always open. Without JavaScript it stays open.
+  const menu = document.querySelector<HTMLDetailsElement>('[data-docs-menu]');
+  const wide = window.matchMedia('(min-width: 60.0625rem)');
+  const sync = () => {
+    if (menu) menu.open = wide.matches;
+  };
+  sync();
+  wide.addEventListener('change', sync);
+</script>

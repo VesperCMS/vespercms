@@ -1,0 +1,32 @@
+---
+title: Introduction
+summary: Vesper adds an editor to your Astro site that reads your content collections and saves to the files in your repository.
+---
+
+Vesper is a content editor for Astro sites. It adds one page to your site, the studio at `/admin`, where people edit your content in plain forms instead of files.
+
+{% callout type="note" title="Not released yet" %}
+Vesper is in development, and its packages aren't on npm yet. These docs describe how it works in the repository today.
+{% /callout %}
+
+## How it works
+
+**Your schema is the editor.** Vesper reads the content collections in `src/content.config.ts` and builds a form for each one: text, dates, lists, references, images. There is no second schema to write or keep in step.
+
+**Content stays as files.** A save writes to the same Markdown, Markdoc, MDX, JSON or YAML file the site already reads, and changes only what the editor changed. Formatting, comments and key order are kept.
+
+**The site stays static.** The studio is built with your site, as plain files. Nothing runs on a server, so the site works on any host, from Netlify to a shared host you upload to by FTP.
+
+## Three ways to edit
+
+- **Local.** While `astro dev` runs, the studio saves straight to the files on your computer.
+- **GitHub.** On the deployed site, editors sign in with their own GitHub accounts, and each publish is a commit to your repository. Free.
+- **Cloud.** Editors sign in with an email link instead of a GitHub account, save drafts, and publish after review. Paid.
+
+Everything except the cloud is open source under the MIT license: the studio, local and GitHub editing, accessibility checks and site search.
+
+## Where to start
+
+- [Install](/docs/getting-started/install/) Vesper on an Astro site.
+- [Make your first edit](/docs/getting-started/first-edit/) in the studio.
+- See how [fields](/docs/content/fields/) in your schema become controls.

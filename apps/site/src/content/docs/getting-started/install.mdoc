@@ -1,0 +1,56 @@
+---
+title: Install
+summary: Add Vesper to an Astro site with one command, then open the studio.
+---
+
+## Before you start
+
+You need an Astro 6 or 7 site with its content collections in `src/content.config.ts`. Static output is fine: Vesper needs no adapter and no server.
+
+## Add Vesper
+
+Run this in your site's folder:
+
+```sh
+npx astro add @vesper/astro
+```
+
+It installs `@vesper/astro` and adds it to the integrations in `astro.config.mjs`:
+
+```js
+import { defineConfig } from 'astro/config';
+import vesper from '@vesper/astro';
+
+export default defineConfig({
+  integrations: [vesper()],
+});
+```
+
+The studio is built with React, so npm installs `react` and `react-dom` beside it. They load only at `/admin`, never on your site's own pages. If your package manager doesn't install peer dependencies, add them yourself.
+
+## Open the studio
+
+Start the dev server:
+
+```sh
+npm run dev
+```
+
+Then open `/admin/` on it, for example `http://localhost:4321/admin/`. Every collection is there, with a form built from its schema. Change something and save: the file in `src/content/` changes, and the page reloads with your edit.
+
+{% callout type="tip" %}
+There's nothing to configure. Vesper reads `src/content.config.ts` as Astro does, so a new field in your schema is a new control in the studio the next time it loads.
+{% /callout %}
+
+## What Vesper can edit
+
+- Collections that use Astro's `glob()` or `file()` loaders, in Markdown, Markdoc, MDX, JSON or YAML.
+- Collections with another loader, or in TOML, are listed but read only: Vesper can't tell where their entries live, or can't write their format without changing it.
+
+Import `z` from `astro/zod` in your config, as Astro's docs do. A second copy of Zod from the `zod` package loses the hints Vesper reads.
+
+## Next steps
+
+- [Make your first edit](/docs/getting-started/first-edit/) and see what the studio does with each file.
+- [Publish](/docs/getting-started/publishing/) from the deployed site, with GitHub or the cloud.
+- Give the studio labels, URLs and icons with [vesper.config.ts](/docs/reference/integration/).

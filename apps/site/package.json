@@ -1,0 +1,27 @@
+{
+  "name": "@vesper/site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "vespercms.com: the marketing site and the docs, edited with Vesper.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "node ../../scripts/static-server.mjs dist",
+    "check": "astro check",
+    "agents": "node ../../packages/astro/src/node/cli.ts agents",
+    "astro": "astro"
+  },
+  "//dependencies": "@fontsource/figtree is the studio's own copy of Figtree (packages/admin), self-hosted so the site asks no font service for anything. micromark renders the inline Markdown fields; @vesper/core already depends on it. lucide resolves the collections' icons for the studio.",
+  "dependencies": {
+    "@astrojs/markdoc": "^2.1.0",
+    "@fontsource/figtree": "^5.3.0",
+    "@vesper/astro": "0.0.0",
+    "astro": "^7.4.0",
+    "lucide": "^1.59.0",
+    "micromark": "^4.0.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10"
+  }
+}

@@ -1,0 +1,20 @@
+---
+import { getCollection } from 'vesper:content';
+import PageBody from '../components/PageBody.astro';
+import Base from '../layouts/Base.astro';
+
+// Every other page in the pages tree, at its folder's address, so a page
+// added in the studio has a URL with no code change.
+export async function getStaticPaths() {
+  const pages = await getCollection('pages');
+  return pages
+    .filter((page) => page.id !== 'index')
+    .map((page) => ({ params: { path: page.id }, props: { page } }));
+}
+
+const { page } = Astro.props;
+---
+
+<Base title={page.data.title} description={page.data.summary}>
+  <PageBody page={page} />
+</Base>

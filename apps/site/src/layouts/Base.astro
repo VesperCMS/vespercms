@@ -1,0 +1,84 @@
+---
+import { Search, SearchHead } from '@vesper/astro/components';
+import { getEntry } from 'vesper:content';
+import Mark from '../components/Mark.astro';
+import '../styles/site.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** The home page's title stands alone; every other page adds the site's name. */
+  home?: boolean;
+}
+
+const { title, description, home = false } = Astro.props;
+const settings = await getEntry('settings', 'site');
+if (!settings) throw new Error('src/content/settings/site.yaml is missing');
+const { tagline, nav, repository } = settings.data;
+const current = Astro.url.pathname;
+const canonical = Astro.site ? new URL(current, Astro.site).href : undefined;
+const fullTitle = home ? title : `${title} · Vesper`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{fullTitle}</title>
+    {description && <meta name="description" content={description} />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vesper" />
+    <meta property="og:title" content={fullTitle} />
+    {description && <meta property="og:description" content={description} />}
+    {canonical && <meta property="og:url" content={canonical} />}
+    <link rel="alternate" type="text/plain" title="Vesper docs for AI tools" href="/llms.txt" />
+    <SearchHead />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      Skip to content
+    </a>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="brand" href="/">
+          <Mark />
+          vesper
+        </a>
+        <nav class="site-nav" aria-label="Main">
+          <ul>
+            {nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  aria-current={
+                    current === item.href || (item.href !== '/' && current.startsWith(item.href))
+                      ? 'page'
+                      : undefined
+                  }
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <Search />
+      </div>
+    </header>
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <p>{tagline}</p>
+        <p>
+          Open source under the MIT license.
+          {repository && <a href={repository}>Source on GitHub</a>}
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
