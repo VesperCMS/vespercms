@@ -337,7 +337,7 @@ vesper({ cloud: { project: 'site_…' } })
 ```
 
 - **The project ID** is the site's, from its settings in the dashboard: an identifier, not a secret. `VESPER_PROJECT` works too.
-- **The cloud's addresses** are `app` and `api` (or `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`). They're required until Vesper's domain exists, then default to it.
+- **The cloud's addresses** are Vesper's own, `https://app.vespercms.com` and `https://api.vespercms.com`, so the project ID is all a site needs. Staging and tests set `app` and `api` (or `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`), always both: one alone would sign in at one cloud and save to another.
 - **The schemas** are built for the browser as in GitHub mode, so drafts are checked with your real schemas.
 
 `astro dev` stays local mode; the cloud is on in built sites. A site can have GitHub mode too: the sign-in screen then offers both. Roles and grants are set per person in the dashboard, not in `vesper.config.ts`.

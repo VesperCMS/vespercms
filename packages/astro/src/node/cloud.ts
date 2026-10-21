@@ -11,14 +11,17 @@ export type CloudOptions = {
   /** The site's project ID from the dashboard. `VESPER_PROJECT` when absent. */
   project?: string;
   /**
-   * The cloud's sign-in and dashboard (`https://app.<domain>`), and its API
-   * (`https://api.<domain>`). `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`
-   * when absent. Required until Vesper's domain is registered (spec §13.1);
-   * after that they default to it, and staging and tests still set them.
+   * The cloud's sign-in and dashboard, and its API. `VESPER_CLOUD_APP` and
+   * `VESPER_CLOUD_API` when absent, then Vesper's own (`CLOUD_APP`,
+   * `CLOUD_API`). Only staging and tests set them, and always both.
    */
   app?: string;
   api?: string;
 };
+
+/** Vesper's cloud, at the domain of spec §13.1. */
+export const CLOUD_APP = 'https://app.vespercms.com';
+export const CLOUD_API = 'https://api.vespercms.com';
 
 const PROJECT = /^[\w-]{3,64}$/;
 
@@ -50,8 +53,18 @@ export function cloudSettings(
         : "Cloud: no project ID. Set VESPER_PROJECT, or vesper({ cloud: { project: '…' } }), to the ID from the site's settings in the dashboard.",
     };
   }
-  const app = address(given.app ?? env.VESPER_CLOUD_APP);
-  const api = address(given.api ?? env.VESPER_CLOUD_API);
+  const givenApp = given.app ?? env.VESPER_CLOUD_APP;
+  const givenApi = given.api ?? env.VESPER_CLOUD_API;
+  // One address with the other defaulted would sign in at one cloud and
+  // save to another.
+  if ((givenApp === undefined) !== (givenApi === undefined)) {
+    return {
+      problem:
+        "Cloud: set the app and API addresses together (vesper({ cloud: { app, api } }), or VESPER_CLOUD_APP and VESPER_CLOUD_API), or neither for Vesper's own.",
+    };
+  }
+  const app = address(givenApp ?? CLOUD_APP);
+  const api = address(givenApi ?? CLOUD_API);
   if (!app || !api) {
     return {
       problem:

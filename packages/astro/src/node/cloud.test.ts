@@ -27,6 +27,40 @@ describe('the cloud option', () => {
     });
   });
 
+  it('defaults to Vesper’s own cloud, so a site needs only its project ID', () => {
+    expect(cloudSettings({ project: 'site_abc' }, {})).toEqual({
+      settings: {
+        project: 'site_abc',
+        app: 'https://app.vespercms.com',
+        api: 'https://api.vespercms.com',
+      },
+    });
+    expect(cloudSettings(true, { VESPER_PROJECT: 'site_env' })).toEqual({
+      settings: {
+        project: 'site_env',
+        app: 'https://app.vespercms.com',
+        api: 'https://api.vespercms.com',
+      },
+    });
+  });
+
+  it('takes the addresses as a pair, never one with the other defaulted', () => {
+    const pair = expect.stringContaining('together') as unknown;
+    expect(cloudSettings({ project: 'site_abc', app: addresses.app }, {})).toEqual({
+      problem: pair,
+    });
+    expect(
+      cloudSettings({ project: 'site_abc' }, { VESPER_CLOUD_API: 'https://api.example.test' }),
+    ).toEqual({ problem: pair });
+    // The option's app and the environment's API still make a pair.
+    expect(
+      cloudSettings(
+        { project: 'site_abc', app: addresses.app },
+        { VESPER_CLOUD_API: 'https://api.example.test' },
+      ),
+    ).toMatchObject({ settings: { app: 'https://app.example.test' } });
+  });
+
   it('says what’s missing in one line for the build log', () => {
     expect(cloudSettings({ ...addresses }, {})).toEqual({
       problem:

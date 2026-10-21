@@ -74,8 +74,9 @@ export type VesperOptions = {
   /**
    * The cloud (spec §6.9): editors sign in to Vesper on the deployed site,
    * and their saves are drafts until someone publishes them. `true` reads the
-   * project ID and the cloud's addresses from `VESPER_PROJECT`,
-   * `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`. `astro dev` stays local mode.
+   * project ID from `VESPER_PROJECT`. The cloud's addresses are Vesper's own
+   * unless `VESPER_CLOUD_APP` and `VESPER_CLOUD_API` say otherwise.
+   * `astro dev` stays local mode.
    */
   cloud?: CloudOptions | boolean;
 };
