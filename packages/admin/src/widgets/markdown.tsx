@@ -1,4 +1,4 @@
-import { Extension, type JSONContent } from '@tiptap/core';
+import { Extension, type JSONContent, type MarkdownToken } from '@tiptap/core';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -34,10 +34,51 @@ function nodeTypes(node: JSONContent, found = new Set<string>()): Set<string> {
   return found;
 }
 
-/** Whether the compact editor can own this value: only allowed nodes, and it reads back the same. */
+/*
+ * The tokens of marked, the lexer Tiptap parses with, that the editor holds.
+ * Tiptap's parser drops what no extension claims (a strikethrough's tildes,
+ * an image, a quote, a rule, a table, a link definition, a list in a
+ * one-line field), and the round trip can't see that: it's missing from both
+ * sides. HTML is a token too, so a code span holding `<` is still code.
+ */
+const INLINE_TOKENS = new Set([
+  'space',
+  'paragraph',
+  'text',
+  'escape',
+  'strong',
+  'em',
+  'codespan',
+  'link',
+  'br',
+]);
+const TOKENS = new Set([...INLINE_TOKENS, 'list', 'list_item']);
+
+/*
+ * Text marked keeps as text that the editor would change: a GFM footnote,
+ * which it writes back with the brackets escaped, and a named character
+ * reference Tiptap doesn't decode (any but `&lt;`, `&gt;`, `&quot;` and
+ * `&amp;`), which it shows as written and saves as `&amp;nbsp;`. Escaped
+ * characters are tokens of their own, so `\[^1]` and `\&nbsp;` don't match.
+ */
+const LOSSY_TEXT = /\[\^|&(?!(?:lt|gt|quot|amp);)[A-Za-z][A-Za-z0-9]*;/;
+
+function holds(tokens: MarkdownToken[], allowed: Set<string>): boolean {
+  return tokens.every(
+    (token) =>
+      allowed.has(token.type ?? '') &&
+      // A list item's text token carries its line's raw source, escapes and all.
+      !(token.type === 'text' && !token.tokens && LOSSY_TEXT.test(token.raw ?? '')) &&
+      holds(token.tokens ?? [], allowed) &&
+      holds(token.items ?? [], allowed),
+  );
+}
+
+/** Whether the compact editor can own this value: only tokens and nodes it holds, and it reads back the same. */
 function fits(markdown: MarkdownManager, value: string, inline: boolean): boolean {
-  if (/<[a-z!/]/i.test(value)) return false;
   try {
+    const tokens = markdown.instance.lexer(value) as MarkdownToken[];
+    if (!holds(tokens, inline ? INLINE_TOKENS : TOKENS)) return false;
     const doc = markdown.parse(value);
     const allowed = inline ? INLINE_ALLOWED : ALLOWED;
     if (![...nodeTypes(doc)].every((type) => allowed.has(type))) return false;

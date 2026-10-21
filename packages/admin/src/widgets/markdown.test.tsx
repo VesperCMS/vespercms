@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import type { Editor } from '@tiptap/core';
-import type { EntryDocument, SaveRequest } from '@vesper/core';
+import type { EntryDocument, Manifest, SaveRequest } from '@vesper/core';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
+import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
   cleanup();
@@ -53,6 +53,45 @@ const guide: EntryDocument = {
     ],
   },
 };
+
+const FALLBACK = 'This uses Markdown the compact editor can’t show, so it’s edited as text.';
+
+/** `about`, with one section per body. */
+function withBodies(bodies: string[]): EntryDocument {
+  return {
+    ...about,
+    data: {
+      title: 'About the college',
+      sections: bodies.map((body, i) => ({ heading: `Section ${String(i + 1)}`, body })),
+    },
+  };
+}
+
+/** The playground's manifest, with the sections' Body a multi-line Markdown field. */
+function multiLine(): Manifest {
+  const manifest = structuredClone(playgroundManifest);
+  const sections = manifest.collections
+    .find((c) => c.name === 'pages')
+    ?.fields?.find((f) => f.path[0] === 'sections');
+  const body = sections?.children?.[0]?.children?.find((f) => f.path.at(-1) === 'body');
+  if (!body) throw new Error('no section body');
+  body.widgetOptions = {};
+  return manifest;
+}
+
+/** Every section's Body, once each has opened as plain text (`TEXTAREA`) or in the editor (`DIV`). */
+async function bodies(count: number, tag: 'TEXTAREA' | 'DIV'): Promise<HTMLElement[]> {
+  return waitFor(
+    () => {
+      const fields = screen.getAllByRole('textbox', { name: 'Body (required)' });
+      expect(fields.map((field) => field.tagName)).toEqual(Array<string>(count).fill(tag));
+      // The editor is empty until it has checked the value and filled in.
+      if (tag === 'DIV') expect(fields.every((field) => field.textContent !== '')).toBe(true);
+      return fields;
+    },
+    { timeout: 5000 },
+  );
+}
 
 /** Selects the first occurrence of `text` in the editor. */
 function select(editor: Editor, text: string) {
@@ -185,5 +224,111 @@ describe('the compact Markdown field', () => {
       data: typeof backtick.data;
     };
     expect(saved.data).toEqual(backtick.data);
+  });
+
+  it('falls back to plain text for Markdown the editor would drop, and saves it as written', async () => {
+    // Each of these once opened in the editor without what it couldn't show
+    // (or, for the rule and the lists, empty), and the first edit saved that.
+    const lossy = [
+      'Was ~~$40~~ now $30.',
+      'Look ![a map](/map.png) here.',
+      '> A quote',
+      '***',
+      '| Day | Open |\n| --- | --- |\n| Monday | 9–5 |',
+      '- One item',
+      '1. One item',
+      'See [the guide][guide].\n\n[guide]: /docs/',
+      'Open daily.[^1]',
+      '5&nbsp;km from campus',
+      'Some <b>bold</b> words',
+      // Code ending in a space would be written back as code, then a space.
+      '`a `',
+    ];
+    const entry = withBodies(lossy);
+    const api = fakeApi({ documents: { 'pages/about': entry } });
+    renderStudio('#/c/pages/e/about', { api });
+    const user = userEvent.setup();
+    const fields = await bodies(lossy.length, 'TEXTAREA');
+    expect(fields.map((field) => (field as HTMLTextAreaElement).value)).toEqual(lossy);
+    expect(screen.getAllByText(FALLBACK)).toHaveLength(lossy.length);
+
+    await user.type(screen.getByDisplayValue('Was ~~$40~~ now $30.'), ' Edited.');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+    const saved = api.saveEntry.mock.calls[0]?.[0] as SaveRequest & { data: typeof entry.data };
+    expect(saved.data).toEqual(
+      withBodies(['Was ~~$40~~ now $30. Edited.', ...lossy.slice(1)]).data,
+    );
+    await expectNoViolations();
+  });
+
+  it('falls back for blocks a multi-line field would drop, and still opens lists', async () => {
+    const lossy = [
+      '> A quote',
+      'Before\n\n***\n\nAfter',
+      '| Day | Open |\n| --- | --- |\n| Monday | 9–5 |',
+      '```\nnpm test\n```',
+      '- [ ] To do\n- [x] Done',
+      'See [the guide][guide].\n\n[guide]: /docs/',
+      'Open daily.[^1]\n\n[^1]: Except holidays.',
+      '## A heading',
+    ];
+    const entry = withBodies([...lossy, '- One\n- Two']);
+    const api = fakeApi({ documents: { 'pages/about': entry } });
+    renderStudio('#/c/pages/e/about', { api, manifest: multiLine() });
+    const user = userEvent.setup();
+    await waitFor(
+      () => {
+        const fields = screen.getAllByRole('textbox', { name: 'Body (required)' });
+        expect(
+          fields.map((field) =>
+            field instanceof HTMLTextAreaElement
+              ? field.value
+              : field.querySelector('ul')?.textContent,
+          ),
+        ).toEqual([...lossy, 'OneTwo']);
+      },
+      { timeout: 5000 },
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+    const saved = api.saveEntry.mock.calls[0]?.[0] as SaveRequest & { data: typeof entry.data };
+    expect(saved.data).toEqual(entry.data);
+  });
+
+  it('opens the Markdown it holds in the editor, and keeps it as written', async () => {
+    const held = [
+      '**Bold**, *italic* and _italic_ too.',
+      'Run `npm test`, and put `<Search>` on a page.',
+      'Write `` a`b `` for a backtick.',
+      '[The guide](/docs/ "Docs") and <https://vespercms.com>.',
+      'One line\\\nand the next.',
+      'Escaped \\*stars\\*, \\[^1] and \\&nbsp; stay text.',
+      'AT&amp;T, &lt;3 and &#169; 2026.',
+    ];
+    const entry = withBodies(held);
+    const api = fakeApi({ documents: { 'pages/about': entry } });
+    renderStudio('#/c/pages/e/about', { api });
+    const user = userEvent.setup();
+    const fields = await bodies(held.length, 'DIV');
+    expect(screen.queryByText(FALLBACK)).not.toBeInTheDocument();
+    // A code span holding `<` is code, not HTML.
+    expect(fields[1]?.querySelectorAll('code')[1]).toHaveTextContent('<Search>');
+    expect(fields[3]?.querySelectorAll('a')).toHaveLength(2);
+    expect(fields[4]?.querySelector('br')).toBeInTheDocument();
+    expect(fields[6]).toHaveTextContent('AT&T, <3 and © 2026.');
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+    const saved = api.saveEntry.mock.calls[0]?.[0] as SaveRequest & { data: typeof entry.data };
+    expect(saved.data).toEqual(entry.data);
+    await expectNoViolations();
   });
 });
