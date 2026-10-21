@@ -16,7 +16,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
-| 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21 and the first repository is connected. Next, the real-world check. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
+| 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. Left: `Co-authored-by` for every draft's author (Jeremy's call b), and the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
 | 4.5 onward | Roadmap below |
 
@@ -454,10 +454,10 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 
 | Criterion (spec §11) | Where it stands |
 |---|---|
-| ThoseGeeks can onboard one real client site | The cloud is on production with the domain and the GitHub App, and a repository is connected (2026-10-21). The real-world check (step 13) is next. |
+| ThoseGeeks can onboard one real client site | Passed 2026-10-21, on two sites: `vesper-github-test` (a contributor's draft, a review, the approver's publish) and vespercms.com itself (connected through an installation the account already had, then a docs change published as one commit by `vespercms[bot]` with its trailers, and rebuilt by Pages). |
 | An editor with no GitHub account drafts, requests review and is published by an approver | Here, against the fake cloud: `packages/admin/src/cloud/cloud.test.tsx` (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server). A contributor's review is published by an approver from Changes, as one commit by the app's bot. The real API: the cloud's repository runs `runCloudContract`. |
 | A folder grant is enforced in the API and the UI | Core's `changeAccess` (unit tests), the fake API (the contract suite's grant tests), and the studio, which hides collections, entries and page-tree branches outside it (tests). The real API runs the same contract. |
-| The site works from an FTP-style host: sign-in, drafts, publishing, deploy status | The `cloud` e2e project serves the build from `scripts/static-server.mjs` (no rewrites, headers or functions): sign-in, a reload staying signed in, drafting, publishing and deploy status. A real plain host is the real-world check. |
+| The site works from an FTP-style host: sign-in, drafts, publishing, deploy status | The `cloud` e2e project serves the build from `scripts/static-server.mjs` (no rewrites, headers or functions): sign-in, a reload staying signed in, drafting, publishing and deploy status. The real-world sites ran on Cloudflare Pages, whose rewrites Vesper doesn't use; no real FTP host was tried. |
 | With the cloud unreachable, unsaved work is kept; signed out, no cloud UI | Unit and e2e: the cloud goes down mid-edit, the page reloads, and once it's back the changes return and are saved. The signed-out screen shows nothing of the cloud's features. |
 
 **Built as designed, with these differences:**
@@ -467,20 +467,20 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 - **New media** can be added by anyone who edits; replacing or removing media needs the whole site.
 - **Renewals run one tab at a time** (a Web Lock), which the design missed: rotating refresh tokens would otherwise end the sign-in when two tabs renew together.
 
-**Open, for Jeremy:**
-- **Page moves with a folder grant are refused,** because a move rewrites the site's redirects file, which needs the whole site. Options:
-  - (a) As built. Recommended for now: moves stay with site admins and whole-site editors.
-  - (b) The API checks each redirect a move adds against the grant. It needs pages' URLs on the server, and function-form URLs can't run there.
-- **`Co-authored-by` names whoever published,** not every draft's author: core's commit trailers hold one value per name. Options:
-  - (a) As built.
-  - (b) Trailers as lists in core's commit message, crediting each draft's author. Recommended, with the cloud's repository, since it's small.
+**Calls, decided by Jeremy on 2026-10-21 (DECISIONS.md):**
+- **Page moves with a folder grant stay refused** (option a): a move rewrites the site's redirects file, which needs the whole site, so moves stay with site admins and whole-site editors. Rejected: the API checking each redirect against the grant, which needs pages' URLs on the server, where function-form URLs can't run.
+- **`Co-authored-by` credits every draft's author** (option b): trailers become lists in core's commit message, and the cloud passes each draft's author. Not built yet; it's small, in core and the cloud's repository.
 
-**The real-world check, so far (2026-10-21)** on `vesper-github-test`, its playground built with `vesper({ cloud: { project } })`. Jeremy signed in by email as an invited contributor, drafted a change and requested review, and the approver's email arrived. On the way it found, and these fixed:
+**Screen reader passes** (every phase's, from 2.6 on) wait until the end, before launch: Jeremy's call on 2026-10-21. Automated axe checks and keyboard passes continue as each screen lands.
+
+**The real-world check, passed (2026-10-21)** on `vesper-github-test`, its playground built with `vesper({ cloud: { project } })`: Jeremy signed in by email as an invited contributor, drafted a change and requested review, the approver's email arrived, and the approver published it. Then on vespercms.com: connected, and a docs change published through the cloud. On the way it found, and these fixed:
 - A sign-in by email link was refused in the tab the mail client opened (DECISIONS.md, "A sign-in in progress can finish in any tab").
 - A monorepo connected with its site folder empty showed no entries; connecting now checks the folder, and the dashboard can change it (vesper-cloud DECISIONS.md).
 - The review email opened the studio's Home, and an open studio didn't see the review until reloaded (DECISIONS.md, "Review emails open Changes").
+- Signing out of the studio left the dashboard signed in, and the other way round; now one ends both on that browser, server-side in the cloud (vesper-cloud DECISIONS.md; nothing changed in the studio).
+- Connect repository needed a first install of the GitHub App, so an account that already had it never came back from GitHub; "Choose a repository VesperCMS can reach" is the second way in (vesper-cloud DECISIONS.md).
 
-**Next:** the approver publishes the review, which finishes the check. Signing out of the studio or the dashboard now ends both on that browser, server-side in the cloud (vesper-cloud DECISIONS.md; nothing changed in the studio). In the cloud's repository, the studio against the real API under `wrangler dev` is step 12's last piece.
+**Left before Phase 4 is done:** the `Co-authored-by` lists (call b, above), and in the cloud's repository the studio against the real API under `wrangler dev`, step 12's last piece. The Phase 4.5 design can start meanwhile; building it waits for these.
 
 ## Phase 4: Cloud foundation (design)
 

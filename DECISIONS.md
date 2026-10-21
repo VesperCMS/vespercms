@@ -889,11 +889,19 @@ Hosts that check authors: Netlify holds a private repository's deploys from auth
 
 ### 2026-10-20: What a grant shows in the studio
 
-**The studio hides what a member can't change (spec §7.5): their menus and home screen list the collections they edit, lists show the entries their grants cover, and Redirects appear only with the whole site. A folder grant's page tree shows its branches and the pages above them, which open but don't change. Viewers see everything, read-only.** Reordering a page needs its parent's folder too, since the order file lives there. A page move by someone with a folder grant is refused, because a move rewrites the site's redirects file, which needs the whole site; whether the API should check a move's redirects instead is open (PLAN.md).
+**The studio hides what a member can't change (spec §7.5): their menus and home screen list the collections they edit, lists show the entries their grants cover, and Redirects appear only with the whole site. A folder grant's page tree shows its branches and the pages above them, which open but don't change. Viewers see everything, read-only.** Reordering a page needs its parent's folder too, since the order file lives there. A page move by someone with a folder grant is refused, because a move rewrites the site's redirects file, which needs the whole site (Jeremy kept this on 2026-10-21, below).
 
 ### 2026-10-20: The studio is tested against a fake cloud that keeps the contract
 
 **`scripts/cloud-fake.mjs` answers the studio as the cloud does, publishing through `GitHubStorage` to the fake GitHub over real git, and passes `runCloudContract` from `@vesper/core/cloud-testing`, which the real cloud runs too.** The studio's unit tests (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server, ports 4406 and 4407) never touch the private repository. The browser tests found two bugs the jsdom tests didn't: the kept copy cleared before its restore, and a review's confirmation vanishing with it.
+
+### 2026-10-21: Page moves stay with whole-site editors
+
+**Jeremy chose on 2026-10-21 to keep refusing a page move by someone whose grant is a folder.** A move writes a redirect for every page that moved into `vesper.redirects.yaml`, a file of the whole site. Rejected: the API checking each redirect a move adds against the grant. That needs every page's URL on the server, and a function-form `url` from `vesper.config.ts` can't run there. Revisit if an agency's folder editors need to move their own pages.
+
+### 2026-10-21: A publish credits every draft's author
+
+**Jeremy chose on 2026-10-21: when one publish carries several people's drafts, its commit names each of them in its own `Co-authored-by` trailer, not only the person who published.** GitHub shows every co-author on the commit, and history then says who wrote what. Core's commit trailers hold one value per name today, so they become lists, and the cloud passes each draft's author. Not built yet; it's left before Phase 4 is done (PLAN.md).
 
 ## GitHub mode
 
