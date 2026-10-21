@@ -1,0 +1,10 @@
+---
+title: Content
+summary: How the studio reads your content collections, and where its presentation settings go.
+---
+
+The studio has no schema of its own. It reads the collections in `src/content.config.ts` the way Astro does: each loader says where the files are, and each Zod schema says what the fields are. A field you add to a schema is a new control in the studio the next time it loads. Collections loaded with `glob()` or `file()` can be edited; others are listed, read only.
+
+Import `z` from `astro/zod`, not from the `zod` package. Vesper reads the hints you attach with `.meta()`, such as a label or help text, and a second copy of Zod loses them. The `fields.*` helpers are plain Zod from `astro/zod` too, so Astro checks them like any other schema.
+
+`vesper.config.ts`, in your site's folder beside `astro.config.mjs`, is optional. It holds presentation only: what collections are called, their icons and URLs, image ratios, hints for Markdoc tags, MDX components and custom widgets. It never defines fields, so `content.config.ts` stays the one place your content's shape is written down.

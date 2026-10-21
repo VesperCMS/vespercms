@@ -1,0 +1,86 @@
+---
+title: Hosting
+summary: The built site and the studio are plain static files, so they work on any host, from Netlify to a shared host you upload to by FTP.
+---
+
+`astro build` makes ordinary static output in `dist/`, and the studio is part of it. There's no adapter, no server and no function to deploy. Copy `dist/` to anything that serves files, and every Vesper feature works there.
+
+## Any host
+
+The built site and the studio work on Netlify, Cloudflare Pages, Vercel, Amazon S3 (with or without CloudFront), GitHub Pages, and a shared host you upload to by FTP or SFTP.
+
+No feature depends on a host's rewrites, headers, functions or image service. Where a host has something better, such as its own redirect rules, Vesper uses it as an extra, and the plain version still works everywhere else.
+
+## What Vesper adds to dist/
+
+| Path | What it is |
+|---|---|
+| `admin/` | The studio. |
+| `_vesper/manifest.json` | Your collections and their fields, as the studio and the cloud read them. It holds no entries and no secrets. |
+| `_vesper/search/` | The [search](/docs/site/search/) index. |
+| `search/` | The search page, unless you have your own. |
+| `opensearch.xml` | So browsers can offer your search, when Astro's `site` is set. |
+| `_vesper/schemas.js` | With GitHub mode or the cloud: your content schemas, built for the browser so the studio checks entries as your build does. A schema that imports Node-only code can't be built, and the build log says why. |
+| A page at each old address | Your redirects, below. |
+| `_vesper/redirects.json` | The cleaned list of redirects, when there are any. |
+
+The [accessibility report](/docs/site/accessibility/) goes to `.vesper/` in your project, never into `dist/`.
+
+## Subfolders and trailing slashes
+
+Vesper follows Astro's `base`, `trailingSlash` and `build.format`. A site with `base: '/college/'` gets its studio at `/college/admin/`, and every address Vesper writes, from links to redirects to search results, has the base and the trailing slash your site uses. That's what a subfolder on a shared host needs, and what a GitHub Pages project site needs too.
+
+The studio's own screens use addresses after a `#`, such as `/admin/#/c/blog`. That part never reaches the server, so a link to any screen survives a reload on a host with no rewrite rules.
+
+## Redirects
+
+When a page moves in the studio, Vesper adds a redirect from its old address (see [Pages and URLs](/docs/content/pages-and-urls/)). At build, each old address gets an HTML page that sends visitors on to the new page's exact URL in one step. That works on every host.
+
+Real 301 redirects need the host's own rules. Vesper writes them for these hosts:
+
+| Host | How Vesper knows | What it writes |
+|---|---|---|
+| Netlify | The `NETLIFY` build variable | `_redirects` in `dist/`, with Vesper's rules first |
+| Cloudflare Pages | The `CF_PAGES` build variable | `_redirects` in `dist/` |
+| Vercel | The `VERCEL` build variable | Nothing at build: the studio keeps the `redirects` in your site's `vercel.json` up to date |
+| Apache, LiteSpeed | `native: ['apache']` | Rules in `dist/.htaccess`, between `# BEGIN vesper` and `# END vesper` |
+| nginx | `native: ['nginx']` | `dist/_vesper/nginx-redirects.conf`, for your server's admin to include |
+
+Name a host that can't be detected in `vesper.config.ts`. Most shared hosting runs Apache:
+
+```ts
+// vesper.config.ts
+import { defineConfig } from '@vesper/astro/config';
+
+export default defineConfig({
+  redirects: { native: ['apache'] },
+});
+```
+
+An address a host rule covers gets no HTML page. Vercel reads `vercel.json` before it builds, so the file can't be written at build. Instead, the studio updates it whenever it writes redirects, if the site has a `vercel.json` or `native` lists `vercel`.
+
+## How a publish goes live
+
+In GitHub mode and the cloud, a publish is a commit to your repository. A host connected to the repository, such as Netlify, Cloudflare Pages or Vercel, or a GitHub Actions workflow, builds on every commit, so there's nothing to set up. On a host you upload to yourself, the change goes live after your next build and upload, and the studio says so: "Published. It will be live after the site is next built."
+
+## Notes for GitHub mode
+
+**Hosts that check commit authors.** In GitHub mode each editor is the author of their own commits. On private repositories, Vercel builds only commits by members of your team, and Netlify holds commits from unknown authors for approval. Add your editors there, or build with GitHub Actions or Cloudflare Pages.
+
+**A Content Security Policy for `/admin`.** If your host sets headers and you give `/admin` a policy, it needs:
+
+- `connect-src` for `https://api.github.com` and your sign-in relay
+- `img-src blob:` for image previews
+
+With the cloud, the studio's requests go to `https://api.vespercms.com` instead of GitHub. A custom widget, or the map in a `fields.geo()` field, loads from its own servers too.
+
+## Leave the studio off the live site
+
+`/admin` deploys with the site by default. It's a static page that shows nothing until someone signs in, and it asks search engines not to index it. A site edited only on your computer can leave it out of production builds:
+
+```js
+// astro.config.mjs
+vesper({ studio: { deploy: false } });
+```
+
+The studio is still at `/admin` in `astro dev`.

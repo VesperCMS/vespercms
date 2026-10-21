@@ -1,0 +1,154 @@
+---
+title: Accessibility checks
+summary: Vesper checks content in the studio as it's edited, and every page at build, and reports what it finds in plain words.
+---
+
+Vesper checks accessibility in two places: in the studio, while someone edits an entry, and at build, on every page the site produces. Both use one set of rules and the same plain words, with one sentence on why each problem matters.
+
+{% callout type="note" title="What the checks can't do" %}
+Automated checks find many problems, not all. Vesper reports what it finds. It never says a page or a site is compliant, and it never adds an accessibility overlay or widget to your site. Test your pages with a keyboard and a screen reader too.
+{% /callout %}
+
+## In the studio
+
+The studio checks each entry as it's edited, in every mode: local, GitHub and the cloud. A note is text beside the field it's about, and notes on the body sit under the body. The top bar counts them ("2 accessibility notes"), and the count opens a list of every note with **Go to field**.
+
+| Rule | What it looks for |
+|---|---|
+| `missing-alt` | Images with no alt text that aren't marked decorative |
+| `alt-file-name` | Alt text that is a file name |
+| `alt-redundant` | Alt text that starts with "Image of" |
+| `alt-too-long` | Alt text longer than 150 characters |
+| `heading-skip` | Headings that skip a level |
+| `heading-extra-top` | An extra top-level heading in the body |
+| `heading-empty` | Empty headings |
+| `link-vague` | Link text such as "click here", "read more" or a bare address |
+| `link-new-window` | Links that open a new tab without saying so |
+| `table-header` | Tables without a header row |
+| `fake-list` | Lines typed with "-" or "1." to look like a list |
+| `tag-name-empty` | Embeds and components whose accessible name is empty |
+| `video-captions` | Videos that may not have captions |
+| `color-contrast` | Text colours with too little contrast against your backgrounds |
+| `pdf-untagged` | PDFs without tags |
+| `pdf-no-title` | PDFs without a document title |
+| `pdf-no-language` | PDFs without a language |
+
+- **Images** are checked in `fields.image()` fields and in the body. An image marked decorative needs no alt text.
+- **Headings** in the body should start at level 2, because the page's title is its h1. If a collection's bodies hold their own h1, set `headingStart: 1` for it in `vesper.config.ts`.
+- **Markdoc tags and MDX components** are checked from their own schemas. A required `title`, `alt`, `label` or `aria-label` attribute left empty is a note, and a tag with a `captions` attribute asks the editor to confirm captions when it's missing or off.
+- **PDFs** in file fields, and the site's own PDFs linked from the body, are read in the browser the first time an entry has one.
+- **Markdown fields** from `fields.markdown()` get the body's checks, except headings.
+
+### Text colours against your backgrounds
+
+A colour field can ask to be checked against the colours your site draws text on. Give the field a use, and name the backgrounds in `vesper.config.ts`:
+
+```ts
+// src/content.config.ts
+accentText: fields.color({ contrast: 'text' }),
+```
+
+```ts
+// vesper.config.ts
+export default defineConfig({
+  a11y: {
+    backgrounds: { 'Page, light': '#ffffff', 'Page, dark': '#12151f' },
+  },
+});
+```
+
+`'text'` needs a ratio of 4.5:1, and `'large-text'` and `'graphic'` need 3:1, as WCAG 2.1 sets them. The colour is checked against each background, and the note names the one it fails: "Contrast 3.1:1 against Page, dark is below 4.5:1." Backgrounds are hex colours. If a field asks for a check and the site names no backgrounds, Vesper warns that there's nothing to check it against.
+
+### Notes that block a save
+
+Every note only warns by default. To make some rules stop a save, list them:
+
+```ts
+// vesper.config.ts
+export default defineConfig({
+  a11y: { blockPublishOn: ['missing-alt'] },
+});
+```
+
+- **GitHub mode.** Save is refused while a note on a listed rule remains. The error summary takes focus and links each note to its field, and the count says how many block saving.
+- **Local mode.** The save is refused too, then **Save anyway** is offered: saving there only changes the file on your computer, and the studio still won't publish the entry with those notes.
+- **The cloud.** Drafts save with any notes. The listed rules apply when someone publishes.
+
+A name that isn't one of the rules above gets a warning and blocks nothing.
+
+## At build
+
+After every `astro build`, Vesper loads each page into jsdom, a browser-like document with no screen, and runs axe-core's structure rules:
+
+- the page's language and title
+- landmarks: one main area, no duplicate header or footer, content inside landmarks, a way to skip to the main content
+- heading order, a main heading, empty headings
+- alt text on images, image buttons, SVG images and embedded objects
+- labels on form fields, and names on links, buttons and frames
+- duplicate IDs
+- ARIA roles, attributes and values, and hidden content that can take focus
+- list and table structure
+
+What it doesn't check:
+
+- **Colour contrast**, and anything else that needs a rendered page. jsdom has no layout.
+- **What your scripts add.** The page's own scripts never run.
+- **Astro's redirect pages and the studio**, which are skipped.
+
+It adds about a tenth of a second a page, plus a few seconds to start.
+
+### The report
+
+The report is `.vesper/a11y-report.json` in your project, never in `dist/`, so it's never deployed. Vesper also writes `.vesper/.gitignore`, so the report stays out of git. If your output folder would contain `.vesper/`, no report is written and the build log says so.
+
+Each page with issues lists them in plain words. An issue's `level` is `error` for axe's critical and serious problems and `warning` for the rest. A trimmed example:
+
+```json
+{
+  "summary": { "errors": 1, "warnings": 0, "pages": 1 },
+  "pages": [
+    {
+      "url": "/news/open-day/",
+      "file": "news/open-day/index.html",
+      "entry": {
+        "collection": "news",
+        "id": "open-day",
+        "file": "src/content/news/open-day.md",
+        "studio": "/admin/#/c/news/e/open-day"
+      },
+      "issues": [
+        {
+          "rule": "image-alt",
+          "level": "error",
+          "message": "Describe this image, or mark it decorative.",
+          "why": "Screen readers announce an image with no description by its file name, or not at all.",
+          "help": "https://dequeuniversity.com/rules/axe/4.14/image-alt",
+          "target": "main > img",
+          "html": "<img src=\"/_astro/campus.webp\">"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### From a page to its entry
+
+Vesper traces each built page to the entry that produced it through the collection's `url` in `vesper.config.ts`, the same addresses the studio uses. The report then gives the entry's file and its link in the studio, so you can fix it there. Pages no entry produced, such as listings, the 404 page and pages of collections without a `url`, have `"entry": null`. See [Pages and URLs](/docs/content/pages-and-urls/).
+
+### Fail the build
+
+The build never fails on an issue unless you ask it to:
+
+```js
+// astro.config.mjs
+vesper({ a11y: { failBuildOn: 'error' } });
+```
+
+`'error'` fails it on errors only, and `'warning'` on any issue. The build fails after the report is written, so the reasons are there to read.
+
+### Turn it off
+
+```js
+vesper({ a11y: false });
+```

@@ -1,0 +1,188 @@
+---
+title: Markdoc and MDX
+summary: How the body editor shows Markdoc tags and MDX components as blocks, what it keeps exactly as written, and what stops a save.
+---
+
+## The body editor
+
+An entry's body opens in a writing view: paragraphs, headings, lists, quotes, code, links and images are edited as formatted text. "Edit as Markdoc" (or MDX, or Markdown) switches to the whole body as text, exactly as it's saved, and "Back to the writing view" returns.
+
+A save rewrites only the blocks you changed. Untouched blocks keep their bytes, and so does the space between them. A changed block is written in one house style. Vesper reads the body with the same parser and options your site builds with, so the studio and the build see the same document.
+
+## Markdoc tags as blocks
+
+The studio reads the tags in `markdoc.config.mjs`, as `@astrojs/markdoc` does, and builds each tag's block from them. There's nothing to declare twice.
+
+```js
+// markdoc.config.mjs
+import { component, defineMarkdocConfig } from '@astrojs/markdoc/config';
+
+export default defineMarkdocConfig({
+  tags: {
+    callout: {
+      render: component('./src/components/Callout.astro'),
+      children: ['paragraph', 'list'],
+      attributes: {
+        type: { type: String, default: 'note', matches: ['note', 'tip', 'warning'] },
+        title: { type: String },
+      },
+    },
+    youtube: {
+      render: component('./src/components/YouTube.astro'),
+      selfClosing: true,
+      attributes: {
+        id: { type: String, required: true },
+        title: { type: String, required: true },
+      },
+    },
+    abbr: {
+      render: component('./src/components/Abbr.astro'),
+      inline: true,
+      attributes: { title: { type: String, required: true } },
+    },
+  },
+});
+```
+
+How a tag sits in the body decides how it shows:
+
+| In the body | In the writing view |
+|---|---|
+| An opening line, content, then a closing line | A frame. Its content stays editable, and only what the tag's `children` lists fits inside. |
+| Self-closing, or with its content on the opening line | A card: one piece, with its settings |
+| Inside a line of text (`inline: true`) | A chip in the text |
+
+Each frame and card is named after its tag, with a Settings button. Its settings are the tag's attributes, with the same controls as frontmatter fields:
+
+| Attribute | Control |
+|---|---|
+| `String` with a list of `matches` | Radio buttons for four values or fewer, otherwise a select |
+| `String` with a pattern in `matches` | A text field checked against the pattern |
+| `String`, or a custom type | A text field |
+| `Number` | A number field |
+| `Boolean` | A switch |
+| `Array`, `Object` or anything else | A raw YAML field |
+
+Changes apply as you make them, so Ctrl+Z undoes them like typing. Changing a setting changes only that attribute's bytes in the tag. The rest of the tag, its content and its closing stay as written. A new tag is written with its attributes in schema order, leaving out empty values and defaults.
+
+On the keyboard: arrow onto a block to select it, Enter opens its settings, Alt+↑ and Alt+↓ move it, and Delete removes it. Inside a frame, Escape selects the frame, and Escape again moves to the toolbar. Type "/" at the start of a line or after a space for a list of the blocks that fit where you are. The toolbar's Insert menu has the same list.
+
+## Hints in vesper.config.ts
+
+Names and help text for the studio live in `vesper.config.ts`, never in `markdoc.config.mjs`:
+
+```ts
+// vesper.config.ts
+markdoc: {
+  tags: {
+    callout: {
+      label: 'Callout',
+      summary: 'type',
+      attributes: {
+        type: { labels: { note: 'Note', tip: 'Tip', warning: 'Warning' } },
+        title: { description: 'Shown above the callout. Leave it empty to use the type.' },
+      },
+    },
+    youtube: {
+      label: 'YouTube video',
+      summary: 'title',
+      attributes: {
+        id: { label: 'Video ID', description: 'The part after “v=” in the video’s address.' },
+        title: { description: 'Describes the video for screen reader users.' },
+      },
+    },
+  },
+},
+```
+
+- `label` is the block's name. Without one, it's the tag's name in sentence case.
+- `description` is help text for the tag.
+- `summary` names the attribute whose value shows in the block's header, as in "Callout · Warning".
+- Each attribute can have a `label`, a `description`, `labels` for its `matches` values, and a `widget` to choose its control by name, such as `color` for a `String`.
+
+## Partials and conditionals
+
+Markdoc's `partial` tag is a card with a file picker. It lists `.mdoc` files whose names start with `_` or that sit in a `partials` folder, nearest the entry first, and stores the path relative to the entry, as Astro resolves it.
+
+A conditional is a frame named "Conditional content". Its content is editable, and its settings hold the condition as Markdoc writes it, such as `$product.beta` or `equals($tier, "free")`. An `else` inside it shows as "Otherwise":
+
+```md {% process=false %}
+{% if $product.beta %}
+This feature is in beta, and may change.
+{% else /%}
+This feature is ready to use.
+{% /if %}
+```
+
+The "/" list doesn't offer conditionals. Write a new one in the source view.
+
+## Kept as written
+
+Some things aren't safe to retype in a writing view, so the studio protects them. It never reformats them.
+
+- **Variables, functions and annotations** are chips in the text. Their settings are a small text field, edited as written.
+- **Everything else the writing view can't show faithfully** is a block named in words, such as "Table, kept as written": tags `markdoc.config.mjs` doesn't define, HTML, comments, tables, footnotes and reference-style links. You edit it as raw text, in its own dialog or in the source view.
+
+## What stops a save
+
+The studio checks the body as you type. A problem stops the save only when your site's build would fail on it:
+
+- a required attribute that's missing
+- a value the attribute's type or `matches` doesn't allow
+- an attribute the tag doesn't have
+- a partial whose file doesn't exist
+- MDX props that fail their schema
+
+Each message names the block, as in "YouTube video: Title is required."
+
+Other problems are warnings. Markdoc's own warnings stay warnings, such as content a tag's `children` doesn't list. Undefined variables aren't reported at all, because pages can pass variables in.
+
+Tags and functions the site doesn't define depend on the mode. In local mode, the dev server checks every save again with your real `markdoc.config.mjs`. Unknown tags and functions then stop the save, and custom attribute types and `validate` functions run too. On the deployed site, in GitHub mode and the cloud, the studio checks with what it knows of your config, so unknown tags only warn, and your site's build is the last check for custom validators.
+
+Tags and declared components also get accessibility notes from their own schema. A required `title`, `alt`, `label` or `aria-label` left empty is a note, and a tag with a `captions` attribute asks you to confirm captions when it's absent or off. See [Accessibility](/docs/site/accessibility/).
+
+## MDX components
+
+MDX components don't declare their props anywhere the studio can read. So a component is a block only when you declare it in `vesper.config.ts`, with a Zod props schema from `astro/zod`:
+
+```ts
+// vesper.config.ts
+import { defineConfig } from '@vesper/astro/config';
+import { fields } from '@vesper/astro/fields';
+import { z } from 'astro/zod';
+
+export default defineConfig({
+  mdx: {
+    components: {
+      Callout: {
+        label: 'Callout',
+        summary: 'type',
+        children: true,
+        props: z.object({
+          type: fields.select({ note: 'Note', tip: 'Tip', warning: 'Warning' }).default('note'),
+          title: z.string().optional(),
+        }),
+      },
+      YouTube: {
+        label: 'YouTube video',
+        props: z.object({ id: z.string(), title: z.string() }),
+      },
+    },
+  },
+});
+```
+
+```md
+<Callout type="tip" title="Before you apply">
+Check the deadline for your program.
+</Callout>
+
+<YouTube id="abc123" title="A walk across campus" />
+```
+
+- `children: true` makes the component a frame whose content stays editable. Without it, the component is a card.
+- `inline: true` puts it inside a line of text instead.
+- `label`, `description` and `summary` work as they do for Markdoc tags. Props get the same controls as frontmatter fields, so `fields.*` helpers and `.meta()` hints work there too.
+- The studio checks props with your own schema, in every mode. The schema loads the first time an MDX body needs it.
+- A prop that holds code, such as a function, or a spread of props, is shown read only and kept byte for byte. A component with a spread isn't checked.
+- Undeclared components, expressions, imports and exports are kept as written.

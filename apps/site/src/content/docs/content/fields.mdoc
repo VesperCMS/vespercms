@@ -1,0 +1,167 @@
+---
+title: Fields and widgets
+summary: How each Zod type in your schema becomes a control in the studio, and how hints, helpers and custom widgets change it.
+---
+
+Every field in a collection's schema becomes a control in the studio's editor. The type decides what's stored and how it's checked. A hint can choose a different control for the same type. Content files always hold plain values, so they stay readable without Vesper.
+
+## From type to control
+
+| In your schema | In the studio |
+|---|---|
+| `z.string()` | A one-line text field. `z.email()` and `z.url()` get email and web address fields. |
+| `z.number()` | A number field that follows `min()`, `max()`, `int()` and `multipleOf()` |
+| `z.boolean()` | A switch |
+| `z.date()` or `z.coerce.date()` | A date picker. The file keeps a calendar date, such as `2026-10-17`. |
+| `z.enum([...])` | Radio buttons for four options or fewer, otherwise a select |
+| `z.array(z.string())` | A tag list: type a value and press Enter |
+| `z.array(z.enum([...]))` | A multi-select |
+| `z.object({ ... })` | A group of fields under its own heading |
+| `z.array(z.object({ ... }))` | A repeater: add, remove and reorder items |
+| `reference('authors')` | A searchable list of that collection's entries. The file stores the entry's ID. |
+| `z.array(reference('posts'))` | An ordered list of entries, with Move up, Move down and Remove |
+| `image()` | An image picker. See [Images](/docs/content/images/). |
+
+A few more rules:
+
+- `.optional()` and `.default()` make a field optional, and a default fills in new entries.
+- A union of string literals counts as an enum.
+- `.refine()` keeps the field's control. The refinement still runs when the entry is saved.
+- Fields appear in schema order. The first text field called `title`, `name`, `heading` or `label` becomes the page's heading in the editor.
+
+Every save is checked against your schema. A problem shows under its field and in a summary at the top of the form.
+
+## Raw YAML fields
+
+When Vesper has no control for a type, it shows the value as a small YAML text box marked "Edited as YAML", instead of hiding it or guessing. That happens for:
+
+- unions of different types, such as `z.union([z.string(), z.object({ ... })])`, discriminated unions included
+- `.transform()` and `z.preprocess()`: the file holds something other than what the site reads, so editing the parsed value would write the wrong thing back
+- records, tuples, `z.any()`, recursive schemas, and literals that aren't strings
+- a schema that isn't a `z.object()` at the top level, whose whole frontmatter is then edited as YAML
+
+The text is read the way Astro reads it, and what you type is kept while it's invalid. If a field shows as YAML and you'd rather it didn't, a simpler type usually gives it a real control.
+
+## Hints with .meta()
+
+```ts
+summary: z.string().meta({
+  widget: 'textarea',
+  description: 'One or two sentences for search results and link previews.',
+}),
+```
+
+| Key | What it does |
+|---|---|
+| `label` | The field's label. Without one, Vesper writes the key in sentence case: `publishedAt` becomes "Published at", `seoTitle` "SEO title". |
+| `description` | Help text under the label |
+| `widget` | The control to use instead of the one the type implies |
+| `widgetOptions` | Settings for that control, such as `{ labels }` for an enum's options |
+| `placeholder` | Sample text in an empty field. It's never a label. |
+| `placement` | `'main'` or `'details'`: see below |
+| `hidden` | Leaves the field out of the editor. Saves don't change its value. |
+| `readOnly` | Shows the value, but editors can't change it |
+| `autocomplete` | The browser's autofill hint, such as `email` |
+
+`.meta()` works before or after `.optional()` and `.default()`. Values must be plain data: a function in `widgetOptions` is dropped, with a warning.
+
+The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `url`, `slug`, `color`, `file`, `number`, `switch`, `date`, `datetime`, `select`, `radio`, `tags`, `multiselect`, `group`, `repeater`, `reference`, `references`, `image`, `geo` and `raw`. A name that doesn't exist, or a widget that can't edit the field's type (`color` on a number), falls back to the control the type implies. Vesper warns in the terminal, naming the field and the widget.
+
+## Field helpers
+
+`@vesper/astro/fields` has helpers for common fields. Each returns plain Zod from `astro/zod` with `.meta()` attached, so Astro checks it like any other schema. Paste the raw Zod instead and you get the same field: a test keeps the two equal.
+
+```ts
+import { z } from 'astro/zod';
+import { fields } from '@vesper/astro/fields';
+
+const schema = z.object({
+  brandColor: fields.color({ palette: { Indigo: '#28335f', Pine: '#2f5d50' } }),
+  website: fields.url(),
+  startsAt: fields.datetime(),
+});
+```
+
+| Helper | Raw Zod | Stored as |
+|---|---|---|
+| `fields.color({ palette?, alpha?, contrast? })` | `z.string().regex(/^#[0-9a-f]{6}$/i).meta({ widget: 'color' })` | `"#1a73e8"` |
+| `fields.geo({ defaultCenter?, zoom? })` | `z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).meta({ widget: 'geo' })` | `{ lat, lng }` |
+| `fields.slug({ from })` | `z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).meta({ widget: 'slug', widgetOptions: { from } })` | `"my-post"` |
+| `fields.url()` | `z.url().meta({ widget: 'url' })` | `"https://…"` |
+| `fields.email()` | `z.email().meta({ widget: 'email', autocomplete: 'email' })` | `"a@b.com"` |
+| `fields.datetime()` | `z.coerce.date().meta({ widget: 'datetime' })` | ISO 8601, with an offset |
+| `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
+| `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | A Markdown string |
+| `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | A path, such as `/files/brochure.pdf` |
+| `fields.image(image, { ratios? })` | See [Images](/docs/content/images/) | `{ src, alt, … }` |
+| `fields.hideFromSearch()` | `z.boolean().default(false).meta({ label: 'Hide from site search', description, placement: 'details', search: 'hide' })` | `true` or `false` |
+
+Options you pass go into `widgetOptions`, as they would in the raw form. What they do:
+
+- `color()` with a `palette` shows the named swatches as radio buttons instead of a colour picker. `alpha` allows eight digits. `contrast: 'text'` (or `'large-text'`, `'graphic'`) checks the colour against your declared backgrounds: see [Accessibility](/docs/site/accessibility/).
+- `slug({ from: 'title' })` follows that field on a new entry until someone edits the slug.
+- `geo()` shows latitude and longitude fields. A map loads only when an editor asks for it with "Show on a map", and `defaultCenter` and `zoom` set where it starts.
+- `datetime()` is entered in the site's time zone (`timeZone` in `vesper.config.ts`, otherwise each editor's own) and stored with that day's offset.
+- `markdown()` is a small editor for bold, italic, links, paragraphs and lists. With `inline: true` it leaves out paragraphs and lists.
+- `select()` takes a list of values, an object of values and labels (`{ news: 'News' }`), or `[{ value, label }]`. The file stores the value.
+- `hideFromSearch()` keeps the entry's page out of the site's own search: see [Site search](/docs/site/search/).
+
+## Main column and Details
+
+The editor shows the title as the page's heading, then the main fields. Secondary fields go to Details, at the end of the form. On wide screens, a Details button in the top bar opens them in a drawer instead. Details gets:
+
+- slugs, dates and tags
+- ordering and layout fields, such as `order`, `weight`, `layout` and `template`
+- `draft`, SEO fields such as `seo`, `seoTitle` and `metaDescription`, and `canonical`, `noindex` and `aliases`
+
+To move a field, set `.meta({ placement: 'main' })` or `'details'` on it, or set it per collection in `vesper.config.ts`, which wins:
+
+```ts
+// vesper.config.ts
+collections: {
+  events: { placement: { startsAt: 'main', endsAt: 'main' } },
+},
+```
+
+## Custom widgets
+
+When no built-in control fits, write your own as a React component and register it in `vesper.config.ts`:
+
+```ts
+import { defineConfig } from '@vesper/astro/config';
+
+export default defineConfig({
+  widgets: {
+    'store-hours': {
+      component: () => import('./src/cms/StoreHours.tsx'),
+      accepts: (field) => field.kind === 'array',
+      match: (field) => field.path.at(-1) === 'hours',
+    },
+  },
+});
+```
+
+- A field uses the widget when its `.meta({ widget: 'store-hours' })` names it, or when `match` returns true for it. `accepts` limits which fields it can edit.
+- Vesper picks a control in this order: the widget a field names, then a custom widget whose `match` claims it, then the control its type implies, then a raw YAML field.
+- The file's default export is the component. It receives `WidgetProps` (`import type { WidgetProps } from '@vesper/astro/config'`): `value`, `onChange`, `field`, `id`, `describedBy`, `invalid` and `disabled`.
+- The editor draws the label, help text and errors. Your control takes `id`, passes `describedBy` and `invalid` on to `aria-describedby` and `aria-invalid`, works with the keyboard, and never validates: the schema does.
+- Vesper compiles widget files as React, so your site needs no `@astrojs/react`. Start each file with `/** @jsxImportSource react */` so TypeScript checks it as React.
+- If a widget fails to load, the field falls back to its built-in control, with a note.
+
+## Collections in the studio
+
+`vesper.config.ts` also says how each collection appears:
+
+```ts
+collections: {
+  blog: { label: 'Blog posts', icon: 'newspaper', listFields: ['title', 'publishedAt'] },
+  settings: { label: 'Site settings', singleton: true, icon: 'settings' },
+},
+```
+
+- `label` is the collection's name in the studio. Without one, it's the collection's key in sentence case.
+- `singleton: true` is for a collection with one entry, such as site settings. Home lists it on its own, and it opens straight into its editor.
+- `listFields` names the fields the entry list shows beside each title.
+- `icon` names a [Lucide](https://lucide.dev/icons) icon. Install the `lucide` package to use one.
+
+Every option is on [vesper() and vesper.config.ts](/docs/reference/integration/).

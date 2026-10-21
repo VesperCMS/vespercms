@@ -1,0 +1,10 @@
+---
+title: On your site
+summary: What Vesper adds to the site it builds, and why all of it is plain static files.
+---
+
+Vesper does more than edit content. Every `astro build` also indexes your site for search, checks each built page's accessibility structure, and turns the studio's redirects into pages any host can serve.
+
+Everything it adds is static files in `dist/`, beside the pages Astro builds: the studio at `/admin`, the search index, and a redirect page at each old address. Nothing needs a server, a function or a host setting, so the site works the same on Netlify as on a shared host you upload to by FTP.
+
+The accessibility report is the one thing that stays out of `dist/`. It's written to `.vesper/` in your project, so it's never deployed.

@@ -1,0 +1,281 @@
+---
+title: Configuration
+menuLabel: Configuration
+summary: Every option of vesper() in astro.config.mjs and every key of vesper.config.ts, with its default.
+---
+
+Vesper reads two files, and neither is required. `vesper()` with no options and no `vesper.config.ts` is a complete setup: every collection gets a form built from its schema.
+
+## vesper() in astro.config.mjs
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import vesper from '@vesper/astro';
+
+export default defineConfig({
+  site: 'https://www.example.edu',
+  integrations: [
+    vesper({
+      siteName: 'Riverside College',
+      search: { filters: { news: ['tags'] } },
+      a11y: { failBuildOn: 'error' },
+    }),
+  ],
+});
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `siteName` | The host of Astro's `site`, else your package's name | The site's name in the studio's top bar and page titles, and on the search page. |
+| `studio.deploy` | `true` | `false` leaves `/admin` out of production builds. It's still there in `astro dev`. |
+| `imageService` | `true` | Wraps Astro's Sharp image service, when your site uses it, so the crops editors set are cut before Astro resizes each image. `false` leaves Astro's service alone; `<Img>` then uses Astro's own crop for each ratio, and manual crops aren't applied. |
+| `a11y` | `{}` | The [accessibility check](/docs/site/accessibility/) at build. `false` turns it off. |
+| `search` | `{}` | [Site search](/docs/site/search/). `false` turns it off: no index and no `/search` page. |
+| `github` | Off | [GitHub mode](/docs/getting-started/publishing/): editors sign in with GitHub on the deployed site. |
+| `cloud` | Off | [The cloud](/docs/getting-started/publishing/): editors sign in to Vesper, and saves are drafts until published. |
+
+### a11y
+
+| Key | Default | What it does |
+|---|---|---|
+| `failBuildOn` | `false` | `'error'` fails the build when the report has an error (axe's critical and serious issues). `'warning'` fails it on any issue. The report is written first. |
+
+### search
+
+| Key | Default | What it does |
+|---|---|---|
+| `filters` | None | Per collection, the fields offered as filters: text, lists of text, selects and references. |
+| `sort` | None | Per collection, the fields results can be sorted by: dates, numbers and text. |
+| `exclude` | `[]` | Pages to leave out, by path, with `*` and `**`, such as `'/tags/**'`. |
+| `noJsLink` | The home page | Where `/search` sends visitors who have no JavaScript. |
+| `noJsFallback` | None | `'duckduckgo'`: without JavaScript, the search form searches the site on DuckDuckGo. Needs Astro's `site`. |
+| `strings` | English | The search interface's words in other languages, keyed by `<html lang>`. |
+
+```js
+vesper({
+  search: {
+    filters: { blog: ['tags', 'author'] },
+    sort: { blog: ['publishedAt'] },
+    exclude: ['/tags/**'],
+    strings: { fr: { button: 'Rechercher' } },
+  },
+});
+```
+
+### github
+
+GitHub mode is on in built sites only; `astro dev` always saves to your files.
+
+| Key | Default | What it does |
+|---|---|---|
+| `relay` | Required | The address of your sign-in relay: the `oauth-relay` template from Vesper's repository, deployed as a Cloudflare Worker. |
+| `repo` | Read from the host's build environment, then git | The repository, as `owner/name`. |
+| `branch` | The repository's default branch | Where publishes go. If git can't tell, `main`, and the build log says so. |
+| `root` | Read from git | The site's folder inside the repository, for a monorepo. |
+| `apiUrl` | `https://api.github.com` | For GitHub Enterprise Server: its API, such as `https://github.example.edu/api/v3`. |
+
+```js
+vesper({ github: { relay: 'https://vesper-github-relay.your-account.workers.dev' } });
+```
+
+### cloud
+
+The cloud is on in built sites only. A site can have GitHub mode too, and the sign-in screen then offers both.
+
+| Key | Default | What it does |
+|---|---|---|
+| `project` | The `VESPER_PROJECT` variable | The site's project ID, from its settings in the dashboard. It's an identifier, not a secret. |
+| `app`, `api` | `https://app.vespercms.com`, `https://api.vespercms.com` | For staging and tests only, and always set together, as here or with `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`. |
+
+```js
+vesper({ cloud: { project: 'site_…' } });
+```
+
+`cloud: true` reads the project ID from `VESPER_PROJECT`.
+
+## vesper.config.ts
+
+`vesper.config.ts` sits next to `astro.config.mjs` (`.mts`, `.js` and `.mjs` work too). It holds how the studio presents your content and where entries live on the site, never field definitions. Every key is optional. A key Vesper doesn't know is ignored with a warning, so a config written for a newer version still loads, and a value of the wrong type is reported with what it should be. A change to the file restarts the dev server.
+
+```ts
+// vesper.config.ts
+import { defineConfig } from '@vesper/astro/config';
+
+export default defineConfig({
+  timeZone: 'America/New_York',
+  collections: {
+    pages: { url: '/:path', tree: true, maxDepth: 3, icon: 'panels-top-left' },
+    news: { label: 'News', url: '/news/:slug', listFields: ['publishedAt'], icon: 'newspaper' },
+    settings: { label: 'Site settings', singleton: true },
+  },
+  images: { ratios: { wide: 16 / 9, square: 1 } },
+});
+```
+
+| Key | What it holds |
+|---|---|
+| `collections` | How the studio presents each collection, and where its entries live. |
+| `images` | The aspect ratios your site crops to, and the upload size limit. |
+| `a11y` | The rules that block a save, and the colours your site draws text on. |
+| `redirects` | Hosts to write native redirect rules for. |
+| `timeZone` | The site's time zone. |
+| `markdoc` | Labels and help text for your Markdoc tags. |
+| `mdx` | MDX components the body editor shows as blocks. |
+| `widgets` | Your own editor controls. |
+
+Roles and what each person may edit are set in the cloud's dashboard, not here. A `roles` key is ignored with a warning.
+
+### collections
+
+Keyed by the collection's name in `src/content.config.ts`. A name that isn't a collection gets a warning.
+
+| Key | Default | What it does |
+|---|---|---|
+| `label` | From the name: `blogPosts` is "Blog posts" | The collection's name in the studio, and its Section filter in search. |
+| `icon` | A page; an outline for a tree; sliders for a singleton | A [Lucide](https://lucide.dev/icons) icon name, as that site lists it, such as `newspaper`. Install the `lucide` package to use one. |
+| `url` | None | Where each entry lives on the site: a pattern or a function, below. |
+| `tree` | `false` | Shows the collection as an outline: folders are sections, and an optional `_order.yaml` in each folder sets its order. Collections loaded with `glob()` only. |
+| `maxDepth` | No limit | For a tree: how many levels deep a page may be, 1 or more. |
+| `singleton` | `false` | The collection holds one entry, and the studio opens it directly. |
+| `listFields` | None | Top-level fields shown as columns in the entry list. The first date field among them sorts the list, newest first. |
+| `newEntryPath` | `:slug` | Where new entries are saved, inside the collection's folder, with `:slug`, `:year`, `:month` and `:day`. Trees place new pages under their parent instead. |
+| `placement` | Each field's own `.meta({ placement })` | Per top-level field, `'main'` for the main form or `'details'` for the Details section. |
+| `headingStart` | `2` | The level the body's top headings should have, from 1 to 6. Set `1` when the body holds the page's h1. |
+| `search` | `true` | `false` leaves the collection's pages out of site search. |
+| `schedule` | None | Reserved for scheduled publishing, which isn't available yet. |
+
+A `url` pattern is built from tokens:
+
+- `:id` is the entry's ID.
+- `:path` is the ID without a trailing `/index`. A top-level `index` is the collection's root.
+- `:slug` is the last part of the path.
+- `:title`, or any other field's name, is that field's value.
+- `:publishedAt|yyyy`, `|mm` and `|dd` are parts of a date field. A date with a time is read in the site's `timeZone`.
+
+Addresses follow Astro's `base`, `trailingSlash` and `build.format`. The studio, links, redirects, breadcrumbs, search and the build's accessibility report all use the same `url`. For anything a pattern can't say, give a function. Keep it pure, with no server-only imports, because the studio runs it in the browser too:
+
+```ts
+collections: {
+  news: { url: '/news/:publishedAt|yyyy/:slug' },
+  people: { url: (entry) => `/people/${entry.id}` },
+},
+```
+
+`/admin` and `/_vesper` are Vesper's, so no page may live there. See [Pages and URLs](/docs/content/pages-and-urls/) for trees, section pages and moves.
+
+### images
+
+| Key | Default | What it does |
+|---|---|---|
+| `ratios` | Only `og` | Named aspect ratios, as width / height, such as `{ wide: 16 / 9, square: 1 }`. The studio previews each crop, and `<Img ratio="wide">` renders it. `og` (1.91:1, for social images) is always there. |
+| `maxUploadEdge` | `3000` | Uploads whose longer edge is bigger, in pixels, are scaled down in the browser before they're saved. |
+
+See [Images](/docs/content/images/).
+
+### a11y
+
+| Key | Default | What it does |
+|---|---|---|
+| `blockPublishOn` | `[]` | Rules whose notes stop a save, such as `['missing-alt']`. In the cloud they stop a publish, not a draft. |
+| `backgrounds` | None | The colours your site draws text on, by name, as hex: `{ Page: '#ffffff', Footer: '#1d2433' }`. Colour fields with `contrast` are checked against each. |
+
+```ts
+a11y: {
+  blockPublishOn: ['missing-alt'],
+  backgrounds: { 'Page, light': '#ffffff', 'Page, dark': '#12151f' },
+},
+```
+
+The rule names are on [Accessibility checks](/docs/site/accessibility/).
+
+### redirects
+
+| Key | Default | What it does |
+|---|---|---|
+| `native` | Detected | Hosts to write their own redirect rules for: `netlify`, `cloudflare`, `vercel`, `apache` or `nginx`. Netlify, Cloudflare Pages and Vercel are detected from the build environment; name `apache` or `nginx` yourself. |
+
+Every host also gets an HTML redirect page at each old address. See [Hosting](/docs/site/hosting/).
+
+### timeZone
+
+An IANA time zone name, such as `'America/New_York'`. The studio shows and takes times in it, and stores them as ISO 8601 with the offset. Date tokens in `url` and dates in search results use it too. Without it, each editor sees their own time zone, and addresses use UTC.
+
+### markdoc
+
+Your tags stay in `markdoc.config.mjs`, and the studio builds each tag's settings from their attributes. These hints only add words for editors:
+
+```ts
+markdoc: {
+  tags: {
+    callout: {
+      label: 'Callout',
+      summary: 'type',
+      attributes: {
+        type: { labels: { note: 'Note', tip: 'Tip', warning: 'Warning' } },
+        title: { description: 'Shown above the callout.' },
+      },
+    },
+  },
+},
+```
+
+| Key | What it does |
+|---|---|
+| `label` | The tag's name in the studio. |
+| `description` | Help text for the tag. |
+| `summary` | The attribute whose value the block's header shows: "Callout · Warning". |
+| `attributes` | Per attribute: `label`, `description`, `labels` for each value, and `widget`, such as `'color'`. |
+
+### mdx
+
+MDX components declare their props nowhere the studio can read, so they're edited as blocks only when you declare them here, with a Zod schema from `astro/zod`. Other components stay as protected source.
+
+```ts
+import { z } from 'astro/zod';
+import { defineConfig } from '@vesper/astro/config';
+
+export default defineConfig({
+  mdx: {
+    components: {
+      YouTube: { label: 'YouTube video', props: z.object({ id: z.string(), title: z.string() }) },
+      Aside: { label: 'Aside', children: true, props: z.object({ title: z.string().optional() }) },
+    },
+  },
+});
+```
+
+| Key | Default | What it does |
+|---|---|---|
+| `label` | The component's name | Its name in the studio. |
+| `description` | None | Help text. |
+| `summary` | None | The prop the block's header shows. |
+| `children` | `false` | `true` shows a frame whose content stays editable. |
+| `inline` | `false` | `true` inserts the component inside a line of text. |
+| `props` | None | A Zod object schema for its props. Saves check props with it, as your site does. |
+
+See [Markdoc and MDX](/docs/content/markdoc-and-mdx/).
+
+### widgets
+
+Your own React controls for fields:
+
+```ts
+widgets: {
+  'store-hours': {
+    component: () => import('./src/cms/StoreHours.tsx'),
+    accepts: (field) => field.kind === 'array',
+    match: (field) => field.path.at(-1) === 'hours',
+  },
+},
+```
+
+| Key | Default | What it does |
+|---|---|---|
+| `component` | Required | Loads the component, which receives `WidgetProps` from `@vesper/astro/config`. |
+| `accepts` | Any field | Which fields it may be used on. |
+| `match` | None | Claims fields on its own. Without it, a field asks for the widget with `.meta({ widget: 'store-hours' })`. |
+
+Vesper compiles widget files with React's automatic runtime, so your site doesn't need `@astrojs/react`. Start each widget file with `/** @jsxImportSource react */` so TypeScript checks it as React. A widget that fails to load falls back to the built-in control, with a note.
+
+See [Fields](/docs/content/fields/).

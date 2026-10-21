@@ -1,0 +1,197 @@
+---
+title: Site search
+summary: Vesper indexes your site with Pagefind at every build, and one component gives visitors a search dialog that works on any host.
+---
+
+Search is free and static. After every `astro build`, Vesper indexes your pages with [Pagefind](https://pagefind.app) and writes the index into `dist/_vesper/search/`. It's plain files, so there's no service to run, and no MIME type or rewrite to set on the host.
+
+## Add search to your layout
+
+```astro
+---
+import { Search, SearchHead } from '@vesper/astro/components';
+---
+<html lang="en">
+  <head>
+    <SearchHead />
+  </head>
+  <body>
+    <header>
+      <Search />
+    </header>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>
+```
+
+- `<Search />` renders a **Search** button that opens a dialog with the field, filters and results.
+- `<SearchHead />` goes in `<head>`. It links the site's `opensearch.xml`, so browsers can offer your search from the address bar. It needs Astro's `site` setting, and renders nothing without it.
+
+There's no other step: no command to run and no change to how you deploy.
+
+## Using the dialog
+
+- **Ctrl+K** (⌘K on a Mac) opens it from anywhere on the page, and the button's description tells screen reader users so. There's no single-key shortcut such as "/", because WCAG requires that visitors can turn one off; a shortcut with Ctrl or ⌘ needs no switch.
+- Results appear as you type, and the count is announced once typing pauses: "12 results for “nursing”".
+- Down Arrow moves from the field to the first result, and Up and Down Arrow move between results. Results come ten at a time; **Show more results** moves focus to the first new one.
+- Escape closes the dialog, and focus returns to the button. A click outside it closes it too.
+
+Each result shows the page's title as its link, the entry's date, an excerpt with the matches marked, and the square crop of the entry's first image, so a focal point set in the studio carries through. Thumbnails need `sharp`, the package Astro's own image service uses.
+
+| Prop | Default | What it does |
+|---|---|---|
+| `variant` | `'dialog'` | `'inline'` puts the field and results in the page instead. Use it on a search page. |
+| `shortcut` | `true` | `false` turns off Ctrl+K. Only the first dialog on a page takes the shortcut. |
+| `lang` | Astro's current locale, then `en` | The language of the words written into the page. |
+| `id` | | Needed only for a second `<Search>` on one page. |
+| `class` | | Added to the component's outer element. |
+
+## Filters and sorting
+
+Every entry's page has a **Section** filter: its collection's label. You can add your own filters, and fields to sort by, in `astro.config.mjs`:
+
+```js
+vesper({
+  search: {
+    filters: { blog: ['tags', 'author'] },
+    sort: { blog: ['publishedAt'] },
+  },
+});
+```
+
+- Keys are collection names, and values are field names from its schema, with a dotted path for a field inside an object (`seo.keywords`).
+- **Filters** can be text, lists of text, selects and references. Each is a group of checkboxes under the field's label, showing a select's labels and a referenced entry's title.
+- **Sort** fields can be dates, numbers and text. The Sort menu appears once a visitor picks a section that has them, because Pagefind leaves out pages with no value for the chosen field.
+- A result's date is its first date field in `sort`, or else the entry's first date field.
+
+The build warns about a field that doesn't exist or can't filter or sort, and leaves it out.
+
+## What's indexed
+
+Every built page, except:
+
+- Astro's redirect pages, the studio at `/admin` and the 404 page
+- the search page, and any page with `<Search variant="inline" />`
+- pages with `<meta name="robots" content="noindex">`
+- pages that match a pattern in `search.exclude`
+- entries of a collection with `search: false` in `vesper.config.ts`
+- entries hidden from search, below
+
+```js
+vesper({ search: { exclude: ['/tags/**'] } });
+```
+
+Patterns match the page's path without Astro's `base`. `*` matches within one part of the path, `**` across parts.
+
+The index reads each page's `<main>`, so headers, menus and footers stay out of the excerpts. If your pages mark their own content with Pagefind's `data-pagefind-body`, Vesper uses that instead, and warns about the pages Pagefind then drops for not having it. Pagefind's `data-pagefind-ignore` works as usual. Vesper adds the entry's title, date and filters to the copy of each page it hands Pagefind; the HTML in `dist/` is never changed.
+
+{% callout type="warning" %}
+Use the inline variant only on your search page. Vesper leaves every page with an inline `<Search>` out of the index, so an inline search in a shared layout would hide every page built with that layout.
+{% /callout %}
+
+### Hide one entry
+
+Add `fields.hideFromSearch()` to the collection's schema:
+
+```ts
+// src/content.config.ts
+import { fields } from '@vesper/astro/fields';
+
+const blog = defineCollection({
+  loader: glob({ pattern: '**/[^_]*.md', base: './src/content/blog' }),
+  schema: z.object({
+    title: z.string(),
+    hideFromSearch: fields.hideFromSearch(),
+  }),
+});
+```
+
+Editors get a **Hide from site search** switch in the entry's Details. The page stays on the site. The value is a plain `true` or `false` in the file, so your layout can also use it for `<meta name="robots">`. Without this field, Vesper uses a boolean `noindex` field if your schema has one, at the top level or under `seo`.
+
+Vesper matches pages to entries through each collection's `url` in `vesper.config.ts`, so the switch and `search: false` apply only to collections with a `url`. See [Pages and URLs](/docs/content/pages-and-urls/).
+
+## The /search page
+
+Vesper adds a plain page at `/search`. It reads `?q=`, so a search can be linked and bookmarked, and asks search engines not to index it.
+
+For a search page in your own layout, add `src/pages/search.astro`. Yours replaces Vesper's:
+
+```astro
+---
+import { Search } from '@vesper/astro/components';
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Search">
+  <h1>Search</h1>
+  <Search variant="inline" />
+</Layout>
+```
+
+The inline variant keeps the query in the page's address as you type, so a reload or a shared link searches again.
+
+## Without JavaScript
+
+- The **Search** button is a link to `/search`.
+- `/search` says that search needs JavaScript, and links to the home page, or to `search.noJsLink`. If the site uses `@astrojs/sitemap`, it links to the site map too.
+- With `noJsFallback: 'duckduckgo'`, the form searches your site on DuckDuckGo instead, and says so. It needs Astro's `site`.
+
+```js
+vesper({ search: { noJsFallback: 'duckduckgo' } });
+```
+
+## Theming
+
+`<Search>` uses your site's font and colours. Four custom properties do the rest:
+
+```css
+:root {
+  --vesper-search-accent: #1f5fd1;  /* focus ring and the tint of matches; default: the system highlight */
+  --vesper-search-surface: #ffffff; /* the dialog's background; default: Canvas */
+  --vesper-search-border: #4d566b;  /* borders, at 3:1 against the surface; default: currentColor */
+  --vesper-search-radius: 0.5rem;   /* default: 0.5rem */
+}
+```
+
+In Windows high contrast and other forced-colour modes, matches use the system's own colours so they stay visible.
+
+## Other languages
+
+Pagefind keeps one index per `<html lang>`, so a multilingual site gets results in the page's own language. `<Search>`'s words are English. Give other languages with `search.strings`:
+
+```js
+vesper({
+  search: {
+    strings: {
+      fr: { button: 'Rechercher', label: 'Rechercher sur ce site', close: 'Fermer' },
+    },
+  },
+});
+```
+
+- Keys are lower-case language codes. A page in `fr-CA` uses the words under `fr-ca` if you give them, else those under `fr`. A word you leave out stays English.
+- The button and the field's label are written into the page in the `lang` you pass to `<Search>`, which defaults to Astro's current locale. Without Astro's i18n routing, pass it yourself: `<Search lang="fr" />`.
+
+The words you can replace:
+
+- **The button and field:** `button`, `label`, `close`, `shortcut` (with `{key}`)
+- **Results:** `results`, `oneResult` and `noResults` (with `{count}` and `{query}`), `resultsList`, `more`, `loadError`, `noIndexYet`
+- **Sorting:** `sort`, `bestMatch`, and `newest`, `oldest`, `lowest`, `highest`, `aToZ`, `zToA` (each with `{field}`)
+- **The search page:** `pageTitle`, `noJs`, `noJsHome`, `noJsLink`, `noJsSitemap`, `noJsDuckDuckGo`
+
+## Size
+
+The build log says how many pages were indexed, how large the index is, and what a first search loads. Pagefind loads the index in chunks as they're needed, so a large site stays fast. The build warns when a first search loads more than 300 KB, counted uncompressed, which is what a host without compression sends. If you see it, leave pages out with `exclude`, or turn on compression at your host.
+
+## In astro dev
+
+Search uses the index from your last build. Before the first build, it says "Search works after astro build."
+
+## Turn search off
+
+```js
+vesper({ search: false });
+```
+
+The build then writes no index, no `/search` page and no `opensearch.xml`.

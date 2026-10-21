@@ -1,0 +1,93 @@
+---
+title: Your first edit
+summary: A tour of the studio in local mode, from opening an entry to saving it, with the body editor, images and page trees.
+---
+
+In local mode the studio runs inside `astro dev` and saves straight to the files on your computer. Start the dev server and open `/admin/` on it:
+
+```sh
+npm run dev
+```
+
+## Home
+
+The first screen, headed Content, lists your collections, with how many entries each has and when one was last edited. Collections with `singleton: true`, such as site settings, are listed under Settings. The top bar's Content menu reaches the same collections, and its Site menu has Media, Redirects and View site.
+
+## A collection's list
+
+A collection opens as a table of its entries: title, any columns you name in `listFields`, when each was edited, and status in words, such as Draft (`draft: true`) or Read only. Search filters by title, and the column headings sort.
+
+New entry starts one. Its file is named after its title the first time you save it. A singleton skips the list and opens its one entry.
+
+## The entry editor
+
+The title field is the page's heading. Below it come the main fields, in your schema's order, then the body.
+
+**Details** holds secondary fields: slugs, dates, tags, `draft`, ordering and SEO. On a wide screen the Details button in the top bar opens them in a drawer; on a narrow one they're a section at the end of the form. A field's `.meta({ placement: 'details' })` or `'main'` overrides the rule.
+
+The top bar also has the entry's status ("Unsaved changes", "Saved just now"), Save, and a "…" menu with Delete and, for a collection with a `url`, View on site.
+
+## What Save does
+
+Nothing is written until you press Save, or Ctrl+S (⌘S on a Mac). There's no autosave: every write makes Astro reload the site, and a half-typed value could fail your schema.
+
+When you save:
+
+- Your schema checks the values. Problems show under their fields and in a summary at the top, and nothing is written.
+- Only the entry's own file changes, apart from the page-tree cases below.
+- The change is spliced into that file: only the bytes of the values you changed are rewritten. Comments, quoting, key order and line endings stay as they were, and in the body only the blocks you touched change.
+- If the file changed on disk since you opened it, nothing is written, and the studio offers Reload this entry.
+
+The one exception is frontmatter with YAML anchors, aliases or tags, which can't be edited in place. It's rewritten in a standard layout, and the studio says so.
+
+## The body editor
+
+Markdown, Markdoc and MDX bodies open in a writing view, with a toolbar for bold, italic, headings, lists, quotes, code, links and images. The link dialog searches your pages by title.
+
+Markdoc tags from `markdoc.config.mjs`, and MDX components you declare in `vesper.config.ts`, are blocks: a frame with a Settings button, whose form comes from the tag's attributes.
+
+- Type `/` at the start of a line or after a space to insert a block, or use the toolbar's Insert menu. Both offer only what fits at the cursor.
+- Arrow onto a block to select it. Enter opens its settings, and Alt+↑ and Alt+↓ move it.
+- Escape leaves a block, then moves from the text to the toolbar.
+
+Anything the writing view can't save back exactly is a source block, a dashed box such as "Table, kept as written": tables, HTML, comments, footnotes, imports and undeclared MDX components. They're kept byte for byte, and Edit as text changes one as plain text. Edit as Markdoc (or Markdown, or MDX) shows the whole body as text, exactly as it's saved.
+
+A body your site's build would fail on, such as a tag without a required attribute, can't be saved; the problem shows on its block. More in [Markdoc and MDX](/docs/content/markdoc-and-mdx/).
+
+## Add an image
+
+Use Choose image in an image field, or Image in the body's toolbar. Both open one dialog: upload from your computer, or choose an image already in the site. Large photos are scaled down, turned upright and stripped of location data, and a file the site already has is offered for reuse.
+
+Then describe the image. Alt text is required unless you mark it decorative, an image that adds nothing a reader needs.
+
+New images go to `src/assets/<collection>/`, or beside the image they replace, and the entry stores a path relative to its own file, so Astro's `image()` processes them. The image file is written as soon as it's uploaded; the entry changes when you save. For focal points and crops, see [Images](/docs/content/images/).
+
+## Pages in a tree
+
+A collection with `tree: true` opens as an outline: pages as they nest on the site, each with its address. Each page's "…" menu has Add child page, Move to…, Move up, Move down and Delete. From a page, the right arrow or Shift+F10 reaches its menu, and Alt+↑ and Alt+↓ move it. You can drag pages too.
+
+- **Move up** and **Move down** rewrite the folder's `_order.yaml`.
+- **Add child page** opens a new page under that one. Saving it adds it to the folder's `_order.yaml`, if there is one. A parent that's a single file becomes a folder's section page, so `about.md` moves to `about/index.md`, at the same address.
+- **Move to…** asks for the new parent and the last part of the address. Review move says what will happen, such as "8 links on other pages will be updated", before anything changes. The move writes the page and every page under it, both folders' `_order.yaml`, a redirect for each old address in `vesper.redirects.yaml`, and the links to them on other pages.
+
+More in [Pages and URLs](/docs/content/pages-and-urls/).
+
+## Edit this page
+
+In `astro dev`, Astro's toolbar gets a Vesper app, a crescent. On any page of your site it lists the entries the page shows, each linked to its editor, then the ones it only lists.
+
+It sees only entries the page reads through `vesper:content`, a drop-in for `astro:content`:
+
+```astro
+---
+// was: import { getCollection, getEntry, render } from 'astro:content';
+import { getCollection, getEntry, render } from 'vesper:content';
+---
+```
+
+In a build, `vesper:content` is Astro's own module, unchanged.
+
+## Next steps
+
+- [Publish](/docs/getting-started/publishing/) your edits, yourself or from the deployed site.
+- See how [fields](/docs/content/fields/) in your schema become controls.

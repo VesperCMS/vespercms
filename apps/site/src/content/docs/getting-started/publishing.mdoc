@@ -1,0 +1,99 @@
+---
+title: Publishing
+summary: How an edit reaches the live site in each mode, from committing local changes yourself to editors publishing from the deployed studio.
+---
+
+Vesper never deploys your site. Every published change is a commit to your repository, and your host builds the site from it as it does for any push. The modes differ in who makes that commit.
+
+## Local mode: you commit
+
+In local mode the studio exists only while `astro dev` runs, and a save writes files on your computer. Nothing reaches the live site until you commit and push. `git status` lists every file the studio changed: entries, new images, `_order.yaml` files and `vesper.redirects.yaml`.
+
+```sh
+git add -A
+git commit -m "Update the admissions page"
+git push
+```
+
+If the site is only ever edited this way, leave `/admin` out of production builds. Otherwise a deployed `/admin` with neither GitHub mode nor the cloud only says that editing isn't available there.
+
+```js
+vesper({ studio: { deploy: false } })
+```
+
+## GitHub mode: editors publish from the live site
+
+GitHub mode is free. Editors sign in with their own GitHub accounts on the deployed `/admin`, and each Publish is one commit to the branch, with the editor as its author. An image uploaded from a field goes into the same commit as its entry.
+
+### The relay
+
+GitHub's sign-in ends with a call that needs your app's secret and can't be made from a browser, so a relay makes it: one Cloudflare Worker that stores nothing, on the free plan. `templates/oauth-relay/README.md` has every step:
+
+1. Create a GitHub App with one repository permission, Contents: Read and write, its webhook off, and its callback URL set to your relay's address plus `/callback`.
+2. Note its Client ID, generate a client secret, and install the app on the site's repository only.
+3. Copy `templates/oauth-relay`. In `wrangler.toml`, set `GITHUB_CLIENT_ID`, and `ALLOWED_ORIGINS` to every origin editors open `/admin` from, separated by commas.
+4. Deploy it:
+
+```sh
+npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler deploy
+```
+
+Editors need write access to the repository too. Their sign-in never reaches more than they could already change there.
+
+### Turn it on
+
+```js
+vesper({ github: { relay: 'https://vesper-github-relay.your-account.workers.dev' } })
+```
+
+At build, Vesper reads the repository, its default branch and the site's folder in it (for a monorepo) from git or the host's environment, and the log says where it will publish: "GitHub mode: publishing to owner/name (main)". Set `repo: 'owner/name'`, `branch` or `root` when they can't be read or aren't what you want.
+
+GitHub mode is on in built sites only; `astro dev` stays local mode. Editors see Sign in with GitHub, and the editor's main button reads Publish.
+
+### Hosts and branch rules
+
+- **Hosts that check commit authors.** On a private repository, Vercel builds only commits by members of your team, and Netlify holds commits from authors it doesn't recognize for approval. Add your editors there, or build with GitHub Actions or Cloudflare Pages.
+- **Branch rules.** Publishes go straight to the branch, so a rule that requires pull requests refuses them, and the studio says so. GitHub mode's commits aren't signed, so a rule that requires signed commits would refuse them too.
+- **A Content Security Policy** for `/admin`, if your host sets headers, needs `connect-src` for `https://api.github.com` and your relay, and `img-src blob:` for previews.
+
+## The cloud: drafts, review and publish
+
+The cloud is paid. Editors sign in with an email link instead of a GitHub account, and their saves are drafts, kept by the cloud until someone who may publish does. Publishing is one commit by Vesper's GitHub App.
+
+### Set up the site
+
+In the dashboard at `app.vespercms.com`:
+
+1. **Add site**, with its production address and any preview and development addresses. The studio signs in only at these.
+2. **Connect repository.** This installs Vesper's GitHub App, VesperCMS, on the repository. You sign in to GitHub once, so the cloud can check the installation is yours, then choose the repository, and its branch and the site's folder if they aren't the defaults. The dashboard warns if a branch rule won't let it publish.
+3. **Copy the project ID** from the site's page into your config. It's an identifier, not a secret, and `VESPER_PROJECT` works too.
+
+```js
+vesper({ cloud: { project: 'site_…' } })
+```
+
+As with GitHub mode, the cloud is on in built sites, and `astro dev` stays local mode. There's no sign-up yet: Vesper creates each account, and everyone else joins by invite.
+
+### People, roles and grants
+
+Under Manage people, invite someone by email as a site admin (everything, including people and settings), an editor (edits and publishes), a contributor (edits; an approver publishes) or a viewer (reads only).
+
+An editor or contributor can be limited to one collection or folder, and "Publishing needs approval" sends their changes there to an approver. Roles and grants live in the dashboard, not in `vesper.config.ts`, and take effect at once. The studio hides what someone can't change, and the cloud refuses it. The choices come from the deployed site's `_vesper/manifest.json`, so deploy the site once before limiting anyone.
+
+### What editors see
+
+- **Sign in with Vesper** goes to Vesper's sign-in page, which emails a link that works once, within 15 minutes.
+- **Drafts** save themselves a moment after typing stops, after the same checks as a save. A new entry's first draft is saved with Save draft.
+- **Publish**, or **Request review** for contributors, sends a draft on. Approvers get an email.
+- **Changes**, in the top bar, lists the site's drafts with "Publish 3 changes", and for approvers the reviews waiting for them.
+- **After a publish**, the studio follows the site's build, with a link to it: building, live or failed. A host that reports nothing gets "It will be live after the site is next built."
+- **If Vesper can't be reached**, unsaved changes are kept on the device and saved once it's back.
+
+The app is the commit's author, so GitHub marks it Verified, and the person who published is named in a `Co-authored-by` trailer with a no-reply address, never their email. If a file changed on GitHub since its draft began, the studio shows both versions side by side and overwrites nothing.
+
+On a private repository, Netlify and Vercel may hold or skip builds of commits by authors they don't know, the app included. Check that its commits build, or build with GitHub Actions or Cloudflare Pages. A Content Security Policy needs `connect-src` for `https://api.vespercms.com`, and `img-src blob:`.
+
+## Both on one site
+
+A site can set both `github` and `cloud`. The sign-in screen then offers Sign in with Vesper and Sign in with GitHub. Someone who signs in with GitHub publishes their own commits, as in GitHub mode; someone who signs in with Vesper works with drafts.

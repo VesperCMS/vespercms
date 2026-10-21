@@ -1,0 +1,42 @@
+---
+title: The vesper command
+menuLabel: Command line
+summary: vesper agents writes instructions for coding agents, and vesper manifest shows what Vesper reads from your site.
+---
+
+`@vesper/astro` installs a `vesper` command. Run it with `npx` in your site's folder, or from a script in `package.json`. It reads your configs with your site's own Astro and Vite, so run it where your site's dependencies are installed.
+
+## vesper agents
+
+Writes instructions for coding agents, generated from your schema, between Vesper's markers in `AGENTS.md`. It creates the file if there isn't one, and leaves everything outside the markers as it was. [AI coding agents](/docs/agents/) explains what goes in it and how agents find it.
+
+```sh
+npx vesper agents
+```
+
+| Option | Default | |
+|---|---|---|
+| `--file <file>` | `AGENTS.md` | The file to write, relative to the site's folder. |
+| `--check` | off | Write nothing. Exit with an error when the file is out of date, for CI. |
+| `--root <folder>` | the current folder | The site's folder, for a site inside a larger repository. |
+| `--src-dir <dir>` | `src` | Astro's `srcDir`, when the site changed it. |
+
+It prints any problems it finds in your schema or config, the ones the studio would show you in development.
+
+## vesper manifest
+
+Prints the manifest: the JSON the studio is built from. It lists every collection with its fields as the studio sees them, URL patterns, page trees, Markdoc tags, declared MDX components, image ratios and accessibility settings. Use it to see how Vesper reads a schema, for example why a field shows as raw YAML.
+
+```sh
+npx vesper manifest
+```
+
+| Option | Default | |
+|---|---|---|
+| `--out <file>` | none | Write the manifest to a file instead of printing it. |
+| `--root <folder>` | the current folder | The site's folder. |
+| `--src-dir <dir>` | `src` | Astro's `srcDir`, when the site changed it. |
+
+Problems with your schema or config go to standard error. The command exits with an error when one of them is an error rather than a warning.
+
+`astro build` writes the same manifest to `dist/_vesper/manifest.json`. That file is how the cloud learns your site's schema without reading your repository's code.

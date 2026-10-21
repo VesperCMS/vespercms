@@ -1,0 +1,66 @@
+---
+title: AI coding agents
+summary: Give a coding agent your site's content rules with one command, and point it at these docs as Markdown.
+---
+
+Your content is files in your repository, so a coding agent can already edit it. What it doesn't know is how your site's content works: which collections exist, which fields each one needs, which Markdoc tags it may use, and what to leave alone so the studio keeps working. Vesper writes that down for it.
+
+## Write your site's instructions
+
+Run this in your site's folder:
+
+```sh
+npx vesper agents
+```
+
+It reads `src/content.config.ts` and `vesper.config.ts`, as the studio does, and writes a section of `AGENTS.md` with:
+
+- **The rules** that keep the studio and your build working: change only what you mean to change, never reformat content files, write values as the file stores them, and check the result with `astro build`.
+- **What your site uses**: how image fields are stored, how page trees and `_order.yaml` work, how to add a redirect, and every Markdoc tag and MDX component with its attributes. Each part appears only if your site has it.
+- **Every collection**: where its files are, its URL pattern, and each field with its type, whether it's required, its default and its help text.
+
+The section sits between two markers. Everything outside them is yours, and Vesper never changes it. Run the command again after you change your schema: it replaces its own section and nothing else.
+
+{% callout type="tip" title="Claude Code" %}
+Many coding agents read `AGENTS.md` at the top of a project. Claude Code reads `CLAUDE.md` instead, and can import another file from it. Add this line to your `CLAUDE.md`:
+
+```md
+@AGENTS.md
+```
+
+Or write the section straight into `CLAUDE.md` with `npx vesper agents --file CLAUDE.md`.
+{% /callout %}
+
+## Keep it current
+
+A schema change makes the instructions out of date. `--check` writes nothing, and fails when the file doesn't match your schema:
+
+```sh
+npx vesper agents --check
+```
+
+Run it in CI beside your build, and a changed schema can't leave the instructions behind. A script in `package.json` makes both easy to remember:
+
+```json
+{
+  "scripts": {
+    "agents": "vesper agents"
+  }
+}
+```
+
+The [command reference](/docs/reference/cli/) lists every option, including `--root` for a site inside a larger repository.
+
+## These docs, for agents
+
+Agents read Markdown more reliably than web pages, so the docs come in both:
+
+- [/llms.txt](/llms.txt) lists every page, with a one-line summary and a link to its Markdown.
+- [/llms-full.txt](/llms-full.txt) is all of the docs in one file.
+- Every page is Markdown too: put `.md` in place of the trailing slash, as in `/docs/agents.md`. The link at the bottom of each page goes there.
+
+Give an agent the address of the page it needs, or the whole file when it's learning Vesper from scratch.
+
+## Reviewing an agent's changes
+
+An agent's edit is an ordinary change to a file, so review it like anyone else's: the diff shows exactly what changed. When a move or rename was done by hand, check that both `_order.yaml` files, the redirects and the links changed with it. Moving pages in the studio does all of that for you.

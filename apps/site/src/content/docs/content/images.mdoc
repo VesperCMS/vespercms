@@ -1,0 +1,132 @@
+---
+title: Images
+summary: Image fields with alt text, focal points and crops, what happens to an upload before it's saved, and how to render the result.
+---
+
+## Add an image field
+
+Use `fields.image()` and pass it Astro's `image` helper from the schema function, so `src` still goes through Astro's image pipeline:
+
+```ts
+import { defineCollection } from 'astro:content';
+import { glob } from 'astro/loaders';
+import { z } from 'astro/zod';
+import { fields } from '@vesper/astro/fields';
+
+const blog = defineCollection({
+  loader: glob({ pattern: '**/[^_]*.md', base: './src/content/blog' }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      hero: fields.image(image, { ratios: ['wide', 'square'] }).optional(),
+    }),
+});
+```
+
+`ratios` names the crops the studio previews for this field. Without it, the studio previews every ratio the site declares.
+
+A plain `image()` field works too, but it stores only a path: no alt text, focal point or crops.
+
+## What the file stores
+
+```yaml
+hero:
+  src: ../../assets/blog/harbor-at-dawn.jpg
+  alt: An orange sun low over a dark harbor, with one small boat heading out
+  focus: { x: 0.62, y: 0.35 }
+  crops:
+    square: { x: 0.40, y: 0.10, w: 0.45, h: 0.675 }
+```
+
+- `src` is relative to the entry's file, as Astro's `image()` expects.
+- `alt` is required unless the image is decorative, which stores `alt: ""` and `decorative: true`. The schema checks this, so a save without either is refused: "Describe this image, or mark it decorative."
+- `focus` is the focal point and `crops` holds a rectangle per ratio. Every number is a share of the image, 0 to 1 from the top left.
+
+## In the studio
+
+The image field shows the picture with "Replace image" and "Remove image", then the alt text: "Describe what this image communicates on this page." Accessibility notes beside the box point out alt text that's a file name, starts with "Image of", or runs too long: see [Accessibility](/docs/site/accessibility/). The "Decorative image" checkbox is for pictures that add nothing a reader needs.
+
+"Focal point & crops" opens below it:
+
+- **Focal point.** Click or tap the image to set it, or drag the marker. With focus on the image, the arrow keys move it 1%, or 10% with Shift. "Across (%)" and "Down (%)" set it by number.
+- **Crops.** There's a preview for each ratio, such as "Wide · 16:9", cut around the focal point. "Adjust crop" opens a box fixed to that ratio: drag it or a corner, or use the arrow keys, with Shift to resize. Enter applies and Escape cancels. The preview then says "Custom crop", and "Reset to focal point" goes back.
+
+These edits change only the entry. The image file itself is never rewritten.
+
+Replacing the image clears its focal point and crops, which were chosen for the old picture, and keeps its alt text, with a note to check that the words still describe the new one.
+
+## Ratios
+
+Declare the site's ratios once, in `vesper.config.ts`, as width divided by height:
+
+```ts
+// vesper.config.ts
+images: {
+  ratios: { wide: 16 / 9, square: 1, portrait: 4 / 5 },
+  maxUploadEdge: 3000,
+},
+```
+
+The studio previews these, and `<Img ratio="wide">` renders the same crop, so editors see what visitors get. `og` (1.91:1, for social images) is built in unless you declare your own. A field that lists a ratio the site doesn't declare gets a warning.
+
+## Uploads
+
+An image uploaded from a field goes into the folder of the image it replaces, otherwise `src/assets/<collection>/`. A file field (`fields.file()`) uploads to `public/files/` and stores `/files/name.pdf`, because a file people download has to be served as it is. The Media screen, in the Site menu, lists everything in `src/assets` and `public` with the pages that use it.
+
+In GitHub mode, an upload from a field is published with the entry, in one commit.
+
+Before anything is saved, the studio cleans each upload in the browser:
+
+- **Location and camera data** (EXIF, XMP, IPTC) are removed from JPEG, PNG and WebP files. When the pixels don't change, the image data stays byte for byte the original, colour profile included.
+- **Sideways photos** are turned upright, from their EXIF orientation.
+- **Large photos** are scaled down so the longer edge is at most `maxUploadEdge` pixels (3000 by default). Turning or scaling a photo means encoding it again, which drops all its metadata.
+- **iPhone photos (HEIC)** become JPEG where the browser can decode them, which today means Safari. Elsewhere the studio asks you to export a JPEG first, or to upload from Safari.
+- **SVG files** lose scripts, event handlers, `javascript:` and `data:` links, and embedded HTML.
+- **Duplicates** are found by content. If the file is already in the site, you choose between "Use the existing file" and "Upload a copy anyway".
+- **Size.** A file over 5 MB asks first, and over 20 MB is refused.
+
+Image fields accept JPEG, PNG, WebP, AVIF, GIF and SVG, checked by the file's contents, not its name.
+
+## Rendering on your site
+
+`<Img>` renders an image field through Astro's own `<Image>`, `<Picture>` and `getImage()`:
+
+```astro
+---
+import { Img } from '@vesper/astro/components';
+const { post } = Astro.props;
+---
+<Img image={post.data.hero} ratio="wide" widths={[480, 960, 1440]} sizes="100vw" />
+<Img image={post.data.hero} art={{ base: 'square', '(min-width: 48rem)': 'wide' }} />
+<Img image={post.data.hero} layout="full-width" />
+```
+
+| Props | What you get |
+|---|---|
+| `ratio` | A ratio's name from `images.ratios`, or a number. The editor's crop for that ratio if there is one, otherwise the crop around the focal point. |
+| `art` | A `<picture>` with a source per media query, each with its own crop, and `base` for everything else. `formats` and `fallbackFormat` work as in Astro's `<Picture>`. |
+| neither | The whole image, fluid. The focal point becomes `object-position`, so CSS cropping keeps the subject in frame. |
+
+Alt text always comes from the field, and a decorative image gets `alt=""`. Every other Astro image prop passes through, and `srcset` never offers a width larger than the crop.
+
+## Social images
+
+For places an `<img>` can't go, such as `og:image`, `getImg()` returns Astro's `getImage()` result for the same crop:
+
+```astro
+---
+import { getImg } from '@vesper/astro/components';
+const og = await getImg({ image: post.data.hero, ratio: 'og', width: 1200 });
+---
+<meta property="og:image" content={new URL(og.src, Astro.site)} />
+```
+
+## How crops are cut
+
+With Astro's default Sharp image service, Vesper adds a step to it: the stored rectangle is cut from the upright image, then Astro resizes and encodes it as usual. The crops are ordinary files in `dist/`, so they work on any host. The build log says the step is on. It uses the copy of `sharp` that Astro's own service loads.
+
+`vesper({ imageService: false })` turns the step off. Then, and with a host's image service (Cloudflare, Netlify, Vercel), `<Img>` asks Astro for the ratio's size, which is Astro's own server crop, and keeps the focal point as `object-position`. Crops an editor adjusted by hand are applied only with the step on.
+
+{% callout type="warning" title="Keep focal points out of position" %}
+Never pass a focal point to Astro's `position` prop. Sharp accepts only its own keywords there, such as `top` or `left`, and a value like `62% 35%` fails the build. `<Img>` writes the focal point into `style` as `object-position`. Do the same if you render an image field with Astro's components directly.
+{% /callout %}

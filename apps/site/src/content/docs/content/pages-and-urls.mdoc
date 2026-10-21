@@ -1,0 +1,167 @@
+---
+title: Pages, URLs and redirects
+menuLabel: Pages and URLs
+summary: Give entries their addresses, arrange pages in a tree, move them safely, and keep old addresses working with redirects.
+---
+
+## Give a collection URLs
+
+Set each collection's `url` in `vesper.config.ts`:
+
+```ts
+import { defineConfig } from '@vesper/astro/config';
+
+export default defineConfig({
+  collections: {
+    pages: { url: '/:path', tree: true },
+    blog: { url: '/blog/:publishedAt|yyyy/:slug' },
+  },
+});
+```
+
+`url` is the one record of where an entry lives. "View on site", the link picker, moves, redirects, breadcrumbs, the site helpers and the build's accessibility report all read it, so they can't disagree. It doesn't create pages: your routes in `src/pages` still render them, and Vesper warns when no route can produce a collection's URLs. A collection without `url` is data only.
+
+The tokens:
+
+- `:id` is the entry's ID.
+- `:path` is the ID without a trailing `/index`, and a top-level `index` is the root. `academics/nursing/index.md` is `/academics/nursing/`.
+- `:slug` is the last part of `:path`.
+- `:category`, or any other field's name, is that field's value.
+- `:publishedAt|yyyy`, `|mm` and `|dd` are parts of a date field. A calendar date keeps its day, and a date with a time is read in the site's `timeZone`.
+
+An entry that lacks a token's value has no URL. URLs follow Astro's `base`, `trailingSlash` and `build.format`. For addresses a pattern can't express, `url` can be a function that takes the entry and returns a path. Keep it pure, with no server-only imports, because the studio runs it in the browser too.
+
+## Page trees
+
+With `tree: true`, a collection's folders are its hierarchy, and the studio shows it as an outline instead of a list. It works for collections loaded with `glob()`.
+
+| File in the collection | URL with `url: '/:path'` |
+|---|---|
+| `index.md` | `/` |
+| `about.md` | `/about/` |
+| `academics/index.md` | `/academics/`, the folder's section page |
+| `academics/nursing/index.md` | `/academics/nursing/` |
+| `academics/nursing/clinicals.md` | `/academics/nursing/clinicals/` |
+
+A folder with no `index.md` is still part of the tree, with no page of its own. The outline marks it "No section page".
+
+Each folder may have an `_order.yaml` that lists its children by slug:
+
+```yaml
+# src/content/pages/academics/_order.yaml
+- nursing
+- business
+- admissions
+```
+
+Listed pages come first, in that order. The rest follow by title, with numbers in order ("Step 2" before "Step 10").
+
+Keep files that start with `_` out of the collection, with a pattern such as `glob({ pattern: '**/[^_]*.md', base: './src/content/pages' })`. Vesper warns when a pattern would pick up `_order.yaml`.
+
+`maxDepth` limits how deep pages can go, as in `{ tree: true, maxDepth: 4 }`. There's no default. With it set, a new page or a move deeper than that is refused before anything is written.
+
+## The outline
+
+In the studio, each row of the outline has the page's title, its address and its status in words, such as "Draft". Enter opens a page. Each row's "…" menu, also reached with Shift+F10, has Open, Add child page, Move to…, Move up, Move down and Delete…, plus Create section page for a folder without one. Alt+↑ and Alt+↓ move the focused page among its neighbours, and you can drag pages, with the keyboard too.
+
+## Moving a page
+
+A move is one change, saved together:
+
+- the page's file, or its folder and everything in it
+- the `_order.yaml` of the folder it leaves and of the one it joins, where they have one
+- a redirect from the old address of the page, and of every page under it
+- every link to those addresses, in every content file
+- `vercel.json`, when the site has one
+
+In GitHub mode, that's one commit. Before anything is written, the studio says what will happen: "This moves “Nursing” and its 3 pages to the top level. Its address becomes /nursing/. 8 links on other pages will be updated. Visitors to the old addresses will be sent to the new ones."
+
+A move is refused, in plain words, when the new address belongs to another page or to a file in `src/pages`, is under `/admin` or `/_vesper`, would put the page inside itself, or goes past `maxDepth`. A page whose frontmatter sets its own `slug` can't be moved, because its address doesn't follow its file.
+
+Rewritten links keep their form: base or not, trailing slash or not, and any `?query` or `#anchor`. Links inside code are left alone.
+
+## The redirects file
+
+Redirects live in `vesper.redirects.yaml`, in your site's folder beside its Astro config:
+
+```yaml
+- { from: /programs/nursing, to: /academics/nursing, status: 301, reason: move, at: 2026-10-01 }
+- { from: /apply-now, to: /admissions/apply, status: 302, reason: manual, at: 2026-10-01 }
+```
+
+- `from` is a path on the site, without the base or a trailing slash.
+- `to` is a path written the same way, or a full URL elsewhere.
+- `status` is 301 (the default) or 308 for a permanent move, or 302, 303 or 307 for a temporary one.
+- `reason` (`move`, `manual` or `import`) and `at` are notes for people. Keys you add are kept.
+
+Every save and every build cleans the list:
+
+- A chain collapses onto its final address. It becomes temporary if any step was.
+- A loop is removed.
+- A redirect whose old address is a real page again is dropped, with a warning: the page wins.
+- A repeated `from` keeps the later entry.
+- An entry that isn't a valid redirect stays in the file, but is ignored, with a warning.
+- A target that's no page Vesper knows is flagged, never removed. It may be a file or a route Vesper can't see.
+
+## How redirects are served
+
+At build, every old address gets an HTML redirect page aimed at the new page's exact URL, so a visitor lands in one step. That works on any host, including one you upload to by FTP.
+
+True 301s need the host's own rules. Vesper writes them when it detects the host, or when you name it in `redirects.native` in `vesper.config.ts`:
+
+| Host | Detected by | What Vesper writes |
+|---|---|---|
+| Netlify | `NETLIFY` | `_redirects` in `dist`, forced (`301!`), with Vesper's rules first |
+| Cloudflare Pages | `CF_PAGES` | `_redirects` in `dist` |
+| Vercel | `VERCEL` | `redirects` in the site's `vercel.json`, kept in step by the studio, since Vercel reads the file before it builds |
+| Apache or LiteSpeed | `native: ['apache']` | Lines in `dist/.htaccess` between `# BEGIN vesper` and `# END vesper` |
+| nginx | `native: ['nginx']` | `dist/_vesper/nginx-redirects.conf`, for the server's admin to include |
+
+An address a host rule covers gets no HTML page. `astro dev` doesn't serve redirects. For more on hosts, see [Hosting](/docs/site/hosting/).
+
+## The Redirects screen
+
+Redirects is in the studio's Site menu. It lists every redirect with its kind in words, Permanent or Temporary, and what needs a look. "Add redirect" adds one, and each row's "…" menu edits or deletes it.
+
+"Import from CSV…" reads plain `from,to,status` rows, with or without a header, and exports from WordPress's Redirection plugin and Drupal's Redirect module. Full addresses from an old site keep only their path. A preview shows what's added, what replaces an existing redirect, and each skipped row with its reason, such as a pattern redirect a static site can't serve. Nothing is saved until you confirm.
+
+In the cloud, only people who can edit the whole site see Redirects.
+
+## Linking to pages
+
+The body editor's link dialog suggests pages by title as you type, and URL fields get "Choose a page…". Both write the page's address as it is now, with base and trailing slash, so a later move can rewrite it. A field that only takes full URLs, such as `fields.url()`, gets the site's address in front when Astro's `site` is set, and no picker when it isn't.
+
+## Site helpers
+
+`vesper:content` is a drop-in for `astro:content`, plus four helpers that use the same URL and tree code as the studio:
+
+```astro
+---
+import { getBreadcrumbs, getChildren, render } from 'vesper:content';
+
+const { page } = Astro.props;
+const { Content } = await render(page);
+const crumbs = await getBreadcrumbs('pages', page);
+const children = await getChildren('pages', page);
+---
+<nav aria-label="Breadcrumb">
+  <ol>
+    {crumbs.map((crumb) => (
+      <li>{crumb.url ? <a href={crumb.url}>{crumb.title}</a> : crumb.title}</li>
+    ))}
+  </ol>
+</nav>
+<Content />
+<ul>
+  {children.map((child) => (
+    <li>{child.url ? <a href={child.url}>{child.title}</a> : child.title}</li>
+  ))}
+</ul>
+```
+
+- `getTree(collection)` returns the whole tree, nested by folder and ordered by `_order.yaml`, with the home page first. Each node has `title`, `url`, `entry` and `children`.
+- `getChildren(collection, entry)` returns a page's children, in order.
+- `getBreadcrumbs(collection, entry)` returns `{ title, url }` for each step from the home page to the entry.
+- `getUrl(entry)` returns the entry's URL from its pattern, with base and trailing slash, or `undefined` for a data-only collection.
+
+A folder with no section page is a node with `url: null`. In `astro dev`, a change to an `_order.yaml` reloads the site's pages.
