@@ -16,7 +16,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
-| 4 Cloud foundation | In progress. This repository's half built 2026-10-20 (steps 1 to 5); next, the cloud's own repository (with Jeremy's OK), the domain and the accounts. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
+| 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21 and the first repository is connected. Next, the real-world check. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | 4.5 onward | Roadmap below |
 
 ## Calls of 2026-10-19
@@ -37,7 +37,7 @@ Jeremy took the recommendation on every open item on 2026-10-19: the earlier pha
 | Phase 2.9 calls 1 to 10 and the smaller defaults | All (a), as recommended | Phase 2.9 |
 | Filing the audit's findings with Pagefind | Yes, once Jeremy's screen reader Part A confirms findings 1 and 2; posted only with his OK | Drafted in 2.9 |
 
-Still Jeremy's: claim the `@vesper` npm org, register the domain, and the screen reader passes (2.6, 2.7, 2.8, the design pass, 2.9's Part B, then 3).
+Still Jeremy's: claim the `@vesper` npm org and the screen reader passes (2.6, 2.7, 2.8, the design pass, 2.9's Part B, then 3).
 
 ## Phase 0: Scaffold
 
@@ -430,11 +430,13 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 
 ## Phase 4: progress
 
-**This repository's half is built (2026-10-20):** steps 1 to 5 of the design's order of work. Unit tests (4,241) and every e2e project (118 tests, now four projects with `cloud`) pass locally on macOS. Nothing is pushed yet, so CI hasn't run it.
+**This repository's half is built (2026-10-20):** steps 1 to 5 of the design's order of work. Unit tests (4,241) and every e2e project (118 tests, now four projects with `cloud`) pass locally on macOS, and CI is green on GitHub (run 39438657706).
+
+**The cloud's half is built and on production (2026-10-20):** steps 6 to 12 in `jeremybise/vesper-cloud`, with this repository as its submodule. `runCloudContract` passes against the real API in workerd, and the dashboard's pages pass e2e with axe. The app and the API run at app.vespercms.com and api.vespercms.com, with sign-in by email through Resend. The GitHub App, VesperCMS, went live on 2026-10-21, and Jeremy connected `jeremybise/vesper-github-test` through it. The cloud's own progress, environments and accounts are in its PLAN.md.
 
 | Criterion (spec §11) | Where it stands |
 |---|---|
-| ThoseGeeks can onboard one real client site | Needs the cloud's repository (steps 6 to 12), the domain and the accounts. Not started. |
+| ThoseGeeks can onboard one real client site | The cloud is on production with the domain and the GitHub App, and a repository is connected (2026-10-21). The real-world check (step 13) is next. |
 | An editor with no GitHub account drafts, requests review and is published by an approver | Here, against the fake cloud: `packages/admin/src/cloud/cloud.test.tsx` (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server). A contributor's review is published by an approver from Changes, as one commit by the app's bot. The real API: the cloud's repository runs `runCloudContract`. |
 | A folder grant is enforced in the API and the UI | Core's `changeAccess` (unit tests), the fake API (the contract suite's grant tests), and the studio, which hides collections, entries and page-tree branches outside it (tests). The real API runs the same contract. |
 | The site works from an FTP-style host: sign-in, drafts, publishing, deploy status | The `cloud` e2e project serves the build from `scripts/static-server.mjs` (no rewrites, headers or functions): sign-in, a reload staying signed in, drafting, publishing and deploy status. A real plain host is the real-world check. |
@@ -455,7 +457,7 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
   - (a) As built.
   - (b) Trailers as lists in core's commit message, crediting each draft's author. Recommended, with the cloud's repository, since it's small.
 
-**Next:** step 6, the cloud's repository (`jeremybise/vesper-cloud`, private, this repository as its submodule), which I create once you OK it. Then steps 7 to 12 there, and the accounts listed in the design as their steps arrive.
+**Next:** the real-world check (step 13) on `vesper-github-test`: its playground built with `vesper({ cloud: { project } })` (the addresses default to vespercms.com since 2026-10-21), an editor invited, and a change drafted, reviewed and published. In the cloud's repository, the studio against the real API under `wrangler dev` is step 12's last piece.
 
 ## Phase 4: Cloud foundation (design)
 
@@ -469,7 +471,7 @@ Scope is the §11 Phase 4 entry, the cloud half of §6.9 (connecting the studio)
 5. With the cloud unreachable, the studio keeps unsaved work and falls back cleanly. Signed-out users see no cloud UI at all.
 
 **Before it can be finished (Jeremy):**
-- **The domain (§13.1).** The cloud's addresses, its cookies, the sign-in providers' redirect addresses, the email sending domain and the GitHub App's URLs all need it. Building can start on `workers.dev` and `localhost`; criterion 1 can't be met without it.
+- **The domain (§13.1).** The cloud's addresses, its cookies, the sign-in providers' redirect addresses, the email sending domain and the GitHub App's URLs all need it. Building can start on `workers.dev` and `localhost`; criterion 1 can't be met without it. Registered 2026-10-20: vespercms.com.
 - **The accounts listed after the calls.** Each is created by you, under the domain, when its milestone arrives.
 
 **What was found first.** In the code:
@@ -1728,7 +1730,7 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | **Studio design pass** (added 2026-10-18; moved ahead of 2.9; done 2026-10-18, CI green in run 39169607328) | Done: Jeremy made the direction himself, as Vesper's design system (Pine), and decided its conflicts with the spec (DECISIONS.md, "Studio design") | One visual pass over every studio screen, inside the §10.4 budget: type scale, spacing and density, empty and loading states, the top bar, lists, the editor column, dialogs, light and dark. Before 2.9 and Phase 3, so GitHub mode and the Phase 4 dashboard build on the result instead of being restyled later. Phase 9 keeps final polish. |
 | **2.9 Search** (new) | Pagefind Component UI accessibility audit: done 2026-10-19, and it falls short (design above). Calls confirmed 2026-10-19 | Pagefind Node API index into `dist/_vesper/search/`; `<Search>`; `/search`; `opensearch.xml`; wasm MIME type on the static test host |
 | 3 GitHub mode | Decided 2026-10-19: the cloud runs a free relay (needs the §13.1 domain), and the site's build is the last check for custom Markdoc validators. Design and outcome above (2026-10-19) | GitHub adapter passing the storage contract suite; OAuth relay template |
-| 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); OpenCage's terms and price checked 2026-10-20 (they pass); the §13.1 domain, still to register. Design above (2026-10-20) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
+| 4 Cloud foundation | D13 and D15 confirmed; §13.3 decided 2026-10-19 (closed, so `cloud-api` and `cloud-app` live in a separate private repository); OpenCage's terms and price checked 2026-10-20 (they pass); the §13.1 domain, vespercms.com, registered 2026-10-20. Design above (2026-10-20) | D1 control plane, auth (reusing Taproot's session and throttle ideas), GitHub App, SiteDO drafts, PKCE studio connection, roles and grants, dashboard v1 |
 | **4.5 Scheduling** (new) | — | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
 | 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |
 | 6 Forms (expanded) | — | routing rules, private R2 uploads (D21), confirmation emails with the D20 protections |

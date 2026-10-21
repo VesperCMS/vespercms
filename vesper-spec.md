@@ -1,6 +1,6 @@
 # Vesper: Product & Build Spec
 
-> **Name:** Vesper (the evening star). Code, package and path forms are lowercase (`vesper`, `@vesper/astro`, `vesper.config.ts`, `/_vesper`); environment variables are uppercase (`VESPER_PROJECT`). `{{domain}}` is still a placeholder for the cloud service's domain.
+> **Name:** Vesper (the evening star). Code, package and path forms are lowercase (`vesper`, `@vesper/astro`, `vesper.config.ts`, `/_vesper`); environment variables are uppercase (`VESPER_PROJECT`). `{{domain}}` stands for the cloud service's domain, vespercms.com (registered 2026-10-20).
 > **Written:** October 17, 2026. **Targets:** Astro 7.x, Zod 4, Cloudflare Workers.
 > **Amended:** Addendum 1 (D18–D23) applied October 17, 2026.
 > **Sibling project:** Taproot (`jeremybise/taproot`), the database-backed CMS. Vesper is the git-based, static-site counterpart. It is not a storage mode inside Taproot.
@@ -1606,7 +1606,7 @@ Confirm D13 and D15 before starting.
 
 ## 13. Open decisions
 
-1. **Name**: decided: **Vesper**. Still to do (Jeremy): claim the `@vesper` org on npmjs.com now, and register the cloud domain (replaces `{{domain}}`) before Phase 3, since the free OAuth relay, docs links and the cloud all need it. On October 19, 2026 no package was published under `@vesper`.
+1. **Name**: decided: **Vesper**. The cloud domain is **vespercms.com** (replaces `{{domain}}`), registered at Cloudflare by Jeremy on 2026-10-20. Still to do (Jeremy): claim the `@vesper` org on npmjs.com. On October 19, 2026 no package was published under `@vesper`.
 2. **Headless primitives**: decided October 17, 2026: **React Aria Components**. Radix lacks the combobox, tree, table and date/time primitives the kit needs (DECISIONS.md).
 3. **Cloud license**: decided October 19, 2026: **closed, in a separate private repository**. `cloud-api` and `cloud-app` (§5) live there, not in the MIT repo. A closed license can be opened later; an open one can't be closed.
 4. **Plans and prices**: decided October 19, 2026, as direction: **build entitlements on the proposed numbers below, price per site with the Agency bundle as proposed, and set the final numbers in Phase 5 from measured cost.** The original question: tiers, limits and annual-only versus monthly. Should agency billing be per site or per bundle of sites?

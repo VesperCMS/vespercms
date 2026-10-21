@@ -24,7 +24,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328); outcome and open questions in `PLAN.md` |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
-| 4 Cloud foundation | In progress. This repository's half built (2026-10-20); the cloud's repository, the domain and the real-world check are next. Progress and design in `PLAN.md`, decisions in `DECISIONS.md` ("The cloud") |
+| 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live and the first repository connected (2026-10-21). The real-world check is next. Progress and design in `PLAN.md` (the cloud's own in vesper-cloud's), decisions in `DECISIONS.md` ("The cloud") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 

@@ -56,7 +56,7 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 - **§13.12, conditional form fields: not adopted.** Forms stay static and routing covers the cases. Show/hide logic would need its own accessibility work (announcing fields that appear) for little gain.
 - **§13.13, the scan engine: measure Cloudflare Browser Rendering first** (it fits D7), and set page caps from that cost in Phase 8.5.
 - **§13.14, custom sending domains: Agency and Institution.** The Site plan sends from Vesper's domain, with reply-to set to the site owner. A sending domain means DNS records (SPF, DKIM) per customer, which is support work.
-- **Still Jeremy's to do (§13.1):** claim the `@vesper` org on npmjs.com, and register the cloud domain before Phase 3. On October 19, 2026 no package was published under `@vesper`; whether the scope itself is held couldn't be checked from here.
+- **Still Jeremy's to do (§13.1):** claim the `@vesper` org on npmjs.com. On October 19, 2026 no package was published under `@vesper`; whether the scope itself is held couldn't be checked from here. The cloud's domain, vespercms.com, was registered at Cloudflare on 2026-10-20.
 
 ### 2026-10-19: GitHub mode gets a free relay, and the site's build checks custom validators
 
@@ -832,6 +832,14 @@ Hosts that check authors: Netlify holds a private repository's deploys from auth
 ### 2026-10-20: A Vesper organization owns the public GitHub App
 
 **A new GitHub organization for Vesper owns the app, which is public and asks for Contents read and write plus Metadata, Commit statuses, Checks and Deployments read-only, with webhooks for installation changes only (call 8).** The app moves with the product rather than with ThoseGeeks or a personal account, and an organization can have several owners. Deploy status reads statuses, check runs and deployments, which hosts use in different mixes (docs.github.com/en/rest/authentication/permissions-required-for-github-apps).
+
+### 2026-10-21: The app is VesperCMS, with no webhooks yet
+
+**The organization and the app are both VesperCMS (`vespercms`, ID 5410635), created by Jeremy on 2026-10-21 with the permissions above, installable on any account, and with webhooks off.** "Vesper" alone is a GitHub user's name, and an app can't take another account's name. Nothing in the cloud receives webhooks yet, so an uninstall goes unnoticed until a publish fails; they come on with an endpoint for them (vesper-cloud PLAN.md). GitHub sends every install back to the app's first callback URL, production's, so staging can't connect a repository with this app.
+
+### 2026-10-21: A site needs only its project ID
+
+**The build's cloud addresses default to `https://app.vespercms.com` and `https://api.vespercms.com`. Staging and tests set both, through `vesper({ cloud: { app, api } })` or `VESPER_CLOUD_APP` and `VESPER_CLOUD_API`; a build that sets only one warns and leaves the cloud off.** One address with the other defaulted would send sign-in to one cloud and saves to another, and the studio would fail at its first request instead of at build.
 
 ### 2026-10-20: No sign-up before billing
 
