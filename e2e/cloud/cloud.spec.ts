@@ -87,6 +87,31 @@ test('stays signed in across a reload, with nothing in sessionStorage or localSt
   expect(kept).toEqual({ local: [], session: [] });
 });
 
+test('finishes a sign-in in the tab an email link opens', async ({ page, context }) => {
+  await control('sign-in-as', { id: 'u_admin' });
+  await page.goto('/admin/#/c/blog');
+  // The real app emails a sign-in link, and the mail client opens it in a new
+  // tab: the site's localStorage, but a sessionStorage of its own. The fake
+  // signs in at once, so its redirect back is held here and opened in a new tab.
+  let callback = '';
+  await page.route(/\/app\/authorize\?/, async (route) => {
+    const answer = await route.fetch({ maxRedirects: 0 });
+    callback = answer.headers()['location'] ?? '';
+    await route.fulfill({
+      contentType: 'text/html',
+      body: '<!doctype html><title>Check your email</title><h1>Check your email</h1>',
+    });
+  });
+  await page.getByRole('button', { name: 'Sign in with Vesper' }).click();
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+  expect(callback).toContain('/admin/#/callback?code=');
+  const tab = await context.newPage();
+  await tab.goto(callback);
+  await expect(tab.getByRole('heading', { level: 1, name: 'Blog posts' })).toBeVisible();
+  await expect(tab.getByRole('button', { name: 'Ada Admin' })).toBeVisible();
+  expect(tab.url()).not.toContain('code=');
+});
+
 test('saves a draft as the editor types, and publishes it as one commit by the app', async ({
   page,
 }) => {

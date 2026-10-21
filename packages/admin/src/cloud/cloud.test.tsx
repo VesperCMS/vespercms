@@ -78,6 +78,7 @@ beforeEach(() => {
   // A store of its own per test: without IndexedDB in jsdom it keeps sessions in memory.
   store = keyValueStore<StoredSession>(`vesper-cloud-test-${String(++storeCount)}`, 'sessions');
   sessionStorage.clear();
+  localStorage.clear();
   window.history.replaceState(null, '', '/admin/');
 });
 
@@ -89,13 +90,16 @@ afterAll(() => {
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** Comes back from the app's sign-in as `person`, as the browser would after the redirect. */
-async function returnFromSignIn(person: string, route = '#/'): Promise<void> {
+/**
+ * Comes back from the app's sign-in as `person`, as the browser would after
+ * the redirect. `started` is when the studio sent the browser away.
+ */
+async function returnFromSignIn(person: string, route = '#/', started = Date.now()): Promise<void> {
   cloud.state.signedIn = person;
   const { verifier, challenge } = await createPkce();
-  sessionStorage.setItem(
-    'vesper.cloud.pending',
-    JSON.stringify({ state: 'st_test', verifier, route }),
+  localStorage.setItem(
+    'vesper.cloud.pending.st_test',
+    JSON.stringify({ state: 'st_test', verifier, route, started }),
   );
   const answer = await cloud.fetch(
     authorizeUrl(settings, { redirectUri: `${ORIGIN}/admin/`, state: 'st_test', challenge }),
@@ -176,13 +180,39 @@ describe('the studio and the cloud', () => {
     });
   });
 
-  it('refuses a sign-in that didn’t start in this tab', async () => {
-    await returnFromSignIn('u_admin');
+  it('finishes a sign-in in another tab, as an email link opens one', async () => {
+    await returnFromSignIn('u_admin', '#/c/blog');
+    // A new tab has a sessionStorage of its own, and the site's localStorage.
     sessionStorage.clear();
+    render(gate());
+    expect(
+      await screen.findByRole('button', { name: 'Ada Admin' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/c/blog');
+    expect(Object.keys(localStorage)).toEqual([]);
+  });
+
+  it('refuses a sign-in this browser didn’t start', async () => {
+    await returnFromSignIn('u_admin');
+    localStorage.clear();
     render(gate());
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'That sign-in didn’t start here. Try again.',
     );
+  });
+
+  it('refuses a sign-in that took over half an hour, and forgets old ones', async () => {
+    const started = Date.now() - 31 * 60 * 1000;
+    localStorage.setItem(
+      'vesper.cloud.pending.st_old',
+      JSON.stringify({ state: 'st_old', verifier: 'v', route: '#/', started }),
+    );
+    await returnFromSignIn('u_admin', '#/', started);
+    render(gate());
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'That sign-in didn’t start here. Try again.',
+    );
+    expect(Object.keys(localStorage)).toEqual([]);
   });
 
   it('stays signed in across a reload, with the member’s current role', async () => {

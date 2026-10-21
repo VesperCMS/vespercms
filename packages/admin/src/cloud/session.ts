@@ -37,9 +37,18 @@ export type StoredSession = {
   siteName?: string;
 };
 
-const PENDING_KEY = 'vesper.cloud.pending';
+/*
+ * A sign-in in progress is kept by its state in localStorage, so any tab on
+ * the site can finish it. Signing in by email link comes back in the tab the
+ * mail client opened, whose sessionStorage is its own: kept there, the
+ * sign-in was refused as one that didn't start here. A state no tab began is
+ * still refused.
+ */
+const PENDING_PREFIX = 'vesper.cloud.pending.';
+/** Long enough to ask for a sign-in link (15 minutes) and use it. */
+const PENDING_TTL = 30 * 60 * 1000;
 
-type Pending = { state: string; verifier: string; route: string };
+type Pending = { state: string; verifier: string; route: string; started: number };
 
 let defaultStore: KeyValueStore<StoredSession> | null = null;
 export function sessionStore(): KeyValueStore<StoredSession> {
@@ -49,10 +58,44 @@ export function sessionStore(): KeyValueStore<StoredSession> {
 
 function pendingStorage(): Storage | null {
   try {
-    return window.sessionStorage;
+    return window.localStorage;
   } catch {
     return null;
   }
+}
+
+function readPending(storage: Storage, key: string): Pending | null {
+  try {
+    return JSON.parse(storage.getItem(key) ?? 'null') as Pending | null;
+  } catch {
+    return null;
+  }
+}
+
+/** Drops sign-ins that never came back, so they don't pile up. */
+function sweepPending(storage: Storage, now: number): void {
+  const keys: string[] = [];
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (key?.startsWith(PENDING_PREFIX)) keys.push(key);
+  }
+  for (const key of keys) {
+    const pending = readPending(storage, key);
+    if (!pending || !(now - pending.started < PENDING_TTL)) storage.removeItem(key);
+  }
+}
+
+/** The sign-in this state began, once: it leaves storage as it's read. */
+function takePending(state: string | null): Pending | null {
+  const storage = pendingStorage();
+  if (!storage) return null;
+  const now = Date.now();
+  sweepPending(storage, now);
+  if (!state) return null;
+  const key = `${PENDING_PREFIX}${state}`;
+  const pending = readPending(storage, key);
+  storage.removeItem(key);
+  return pending?.state === state ? pending : null;
 }
 
 /** Runs `work` alone among this browser's tabs, where Web Locks exist. */
@@ -87,10 +130,15 @@ export async function startCloudSignIn(
   await sessionKey(settings.project, store);
   const state = crypto.randomUUID();
   const { verifier, challenge } = await createPkce();
-  pendingStorage()?.setItem(
-    PENDING_KEY,
-    JSON.stringify({ state, verifier, route } satisfies Pending),
-  );
+  const storage = pendingStorage();
+  if (storage) {
+    const started = Date.now();
+    sweepPending(storage, started);
+    storage.setItem(
+      `${PENDING_PREFIX}${state}`,
+      JSON.stringify({ state, verifier, route, started } satisfies Pending),
+    );
+  }
   window.location.assign(
     authorizeUrl(settings, { redirectUri: studioAddress(), state, challenge }),
   );
@@ -143,9 +191,7 @@ export async function finishCloudSignIn(
   const params = callbackParams();
   if (!params) return null;
   const store = options.store ?? sessionStore();
-  const raw = pendingStorage()?.getItem(PENDING_KEY);
-  pendingStorage()?.removeItem(PENDING_KEY);
-  const pending = raw ? (JSON.parse(raw) as Pending) : null;
+  const pending = takePending(params.get('state'));
   const route = pending?.route && !pending.route.startsWith('#/callback') ? pending.route : '#/';
   history.replaceState(history.state, '', `${window.location.pathname}${route}`);
   const error = params.get('error');
@@ -159,7 +205,7 @@ export async function finishCloudSignIn(
     };
   }
   const code = params.get('code');
-  if (!pending || !code || pending.state !== params.get('state')) {
+  if (!pending || !code) {
     return { ok: false, message: 'That sign-in didn’t start here. Try again.' };
   }
   const session = await sessionKey(settings.project, store);
