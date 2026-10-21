@@ -6,6 +6,11 @@
  */
 import { siteName } from 'virtual:vesper/page';
 
+// The screen, then the site, as every screen sets it once the studio runs
+// (DECISIONS.md, "The studio's tab title is always the screen, then the site").
+// "{siteName} · Vesper" read "Vesper · Vesper" on Vesper's own site.
+const title = `Studio · ${siteName}`;
+
 // Vesper's mark, small cut, as /admin's favicon (DECISIONS.md, "Vesper's mark
 // is Launch"). Inline, so it costs no request. A favicon can't read CSS
 // variables, so it carries Pine's content and accent values for each theme.
@@ -27,7 +32,7 @@ const favicon = `data:image/svg+xml,${encodeURIComponent(
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>{siteName} · Vesper</title>
+    <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href={favicon} />
   </head>
   <body>

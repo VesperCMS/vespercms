@@ -130,7 +130,11 @@ test('the skip link moves focus to the main content', async ({ page }) => {
 
 test('the studio shell loads at /admin, deep links included, and says where editing works', async ({
   page,
+  request,
 }) => {
+  // Before the studio runs, the shell's title has every screen's shape: the screen, then the site.
+  const shell = await request.get('/admin/');
+  expect(await shell.text()).toMatch(/<title>Studio · [^<]+<\/title>/);
   // A static build has no back end until GitHub mode (Phase 3); local mode needs astro dev.
   await page.goto('/admin/#/c/blog');
   await expect(page.locator('h1')).toHaveText('Editing isn’t available here yet');
