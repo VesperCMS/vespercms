@@ -66,7 +66,9 @@ The cloud is paid. Editors sign in with an email link instead of a GitHub accoun
 In the dashboard at `app.vespercms.com`:
 
 1. **Add site**, with its production address and any preview and development addresses. The studio signs in only at these.
-2. **Connect repository.** This installs Vesper's GitHub App, VesperCMS, on the repository. You sign in to GitHub once, so the cloud can check the installation is yours, then choose the repository, and its branch and the site's folder if they aren't the defaults. The dashboard warns if a branch rule won't let it publish.
+2. **Connect repository.** This installs Vesper's GitHub App, VesperCMS, on the repository. You sign in to GitHub once, so the cloud can check the installation is yours, then choose the repository, and its branch and the site's folder if they aren't the defaults. In a repository with more than one Astro site, type the site's folder, such as `apps/site`. The dashboard warns if a branch rule won't let it publish.
+
+   If VesperCMS is already on your GitHub account or organization, for another site, use **Choose a repository VesperCMS can reach** instead. Add the repository to the app on GitHub first if it isn't one of them. GitHub doesn't bring you back after you change an installation, so come back to the site's page and choose it there.
 3. **Copy the project ID** from the site's page into your config. It's an identifier, not a secret, and `VESPER_PROJECT` works too.
 
 ```js
@@ -85,10 +87,11 @@ An editor or contributor can be limited to one collection or folder, and "Publis
 
 - **Sign in with Vesper** goes to Vesper's sign-in page, which emails a link that works once, within 15 minutes.
 - **Drafts** save themselves a moment after typing stops, after the same checks as a save. A new entry's first draft is saved with Save draft.
-- **Publish**, or **Request review** for contributors, sends a draft on. Approvers get an email.
-- **Changes**, in the top bar, lists the site's drafts with "Publish 3 changes", and for approvers the reviews waiting for them.
+- **Publish**, or **Request review** for contributors, sends a draft on. Approvers get an email whose link opens Changes in the studio, after signing in if they need to.
+- **Changes**, in the top bar, lists the site's drafts with "Publish 3 changes", and for approvers the reviews waiting for them. An open studio checks for new drafts and reviews once a minute, and whenever its tab comes back into view.
 - **After a publish**, the studio follows the site's build, with a link to it: building, live or failed. A host that reports nothing gets "It will be live after the site is next built."
 - **If Vesper can't be reached**, unsaved changes are kept on the device and saved once it's back.
+- **Signing out** of the studio also signs you out of the dashboard on that browser, and the other way round. Other browsers and devices stay signed in.
 
 The app is the commit's author, so GitHub marks it Verified, and the person who published is named in a `Co-authored-by` trailer with a no-reply address, never their email. If a file changed on GitHub since its draft began, the studio shows both versions side by side and overwrites nothing.
 

@@ -98,7 +98,7 @@ markdoc: {
 - `label` is the block's name. Without one, it's the tag's name in sentence case.
 - `description` is help text for the tag.
 - `summary` names the attribute whose value shows in the block's header, as in "Callout · Warning".
-- Each attribute can have a `label`, a `description`, `labels` for its `matches` values, and a `widget` to choose its control by name, such as `color` for a `String`.
+- Each attribute can have a `label`, a `description`, `labels` for its `matches` values, and a `widget` to choose its control by name. A widget applies as it would to a schema field of the attribute's type: a `String` attribute can take `textarea`, `url`, `color` or a custom widget. `Object` and `Array` attributes are edited as YAML, so a widget such as `geo` doesn't apply to them; naming one warns in the terminal and keeps the YAML field.
 
 ## Partials and conditionals
 

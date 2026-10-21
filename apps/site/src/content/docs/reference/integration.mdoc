@@ -153,7 +153,7 @@ A `url` pattern is built from tokens:
 - `:title`, or any other field's name, is that field's value.
 - `:publishedAt|yyyy`, `|mm` and `|dd` are parts of a date field. A date with a time is read in the site's `timeZone`.
 
-Addresses follow Astro's `base`, `trailingSlash` and `build.format`. The studio, links, redirects, breadcrumbs, search and the build's accessibility report all use the same `url`. For anything a pattern can't say, give a function. Keep it pure, with no server-only imports, because the studio runs it in the browser too:
+Addresses follow Astro's `base`, `trailingSlash` and `build.format`. The studio, links, redirects, breadcrumbs, search and the build's accessibility report all use the same `url`. For anything a pattern can't say, give a function. It gets the entry's `id`, `collection` and `data` (the frontmatter, typed `unknown`, so check a field before using it) and returns its path on the site. Keep it pure, with no server-only imports, because the studio runs it in the browser too:
 
 ```ts
 collections: {
