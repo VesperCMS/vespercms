@@ -31,8 +31,8 @@ Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing
 - CI: `astro check` and `vesper agents --check` for the site, its build, and the `site` e2e project (axe on every page in both colour schemes).
 
 **Next, for Jeremy:**
-- Hosting and DNS for the apex (any static host; Cloudflare Pages beside the cloud is the obvious one).
-- Connect the site to the cloud (`vesper({ cloud: { project } })`, then `studio.deploy` back on), so vespercms.com is edited through the cloud: a second real-world use beside `vesper-github-test`.
+- Done 2026-10-21: live at vespercms.com on Cloudflare Pages, with `/admin` built for its cloud project (`vesper({ cloud: { project } })`).
+- Connect its repository in the dashboard (`jeremybise/vesper`, folder `apps/site`) once vesper-cloud's fix for an already-installed GitHub App is deployed. Then vespercms.com/admin is edited through the cloud: a second real-world use beside `vesper-github-test`.
 - The repository link in the footer (`settings.repository`) once this repository is public.
 - Pricing stays off the site until Phase 5 sets the numbers (§13.4).
 
