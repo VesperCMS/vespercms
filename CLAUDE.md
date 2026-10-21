@@ -212,6 +212,8 @@ Later phases add `packages/create-vesper` and `apps/docs` (Phase 9). The cloud (
 
 **Keep the DPoP key and its tokens in IndexedDB, never a cloud token in localStorage or sessionStorage, and renew inside the Web Lock.** The key can't be exported, so a copied token is useless; two tabs renewing at once would end the sign-in (DECISIONS.md, "Token renewals run one tab at a time").
 
+**Keep a cloud sign-in in progress in `localStorage` under its state, never `sessionStorage`.** An email sign-in link finishes it in the tab the mail client opens (DECISIONS.md, "A sign-in in progress can finish in any tab").
+
 **A cloud draft passes the same checks as a save; the publish gate applies to Publish, never to a draft.** A draft is then always a file the site could build (DECISIONS.md, "A draft passes the same checks as a save").
 
 ## Accessibility is an acceptance criterion
