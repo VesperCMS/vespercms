@@ -2,7 +2,7 @@
 
 The Vesper integration for Astro.
 
-**Status:** Phases 2 to 3 complete. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, renders images with their focal points and crops, checks every built page's accessibility structure, builds the site's search, and in GitHub mode lets editors publish from the deployed site.
+**Status:** Phases 2 to 3 complete, and Phase 4's half in this repository. The integration injects the studio at `/admin`, serves local mode's API in `astro dev`, reads the site's Markdoc config and declared MDX components for the body editor, handles URLs, page trees and redirects, renders images with their focal points and crops, checks every built page's accessibility structure, builds the site's search, and in GitHub mode or through the cloud lets editors publish from the deployed site. Its `vesper` command writes instructions for coding agents from the site's schema.
 
 ## The integration
 

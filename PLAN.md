@@ -17,7 +17,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
 | 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21 and the first repository is connected. Next, the real-world check. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
-| vespercms.com and the docs | Started 2026-10-21, ahead of Phase 9 at Jeremy's request. See "vespercms.com and the docs" below. |
+| vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
 | 4.5 onward | Roadmap below |
 
 ## vespercms.com and the docs
@@ -32,7 +32,8 @@ Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing
 
 **Next, for Jeremy:**
 - Done 2026-10-21: live at vespercms.com on Cloudflare Pages, with `/admin` built for its cloud project (`vesper({ cloud: { project } })`).
-- Connect its repository in the dashboard (`jeremybise/vesper`, folder `apps/site`) once vesper-cloud's fix for an already-installed GitHub App is deployed. Then vespercms.com/admin is edited through the cloud: a second real-world use beside `vesper-github-test`.
+- Connect its repository in the dashboard with "Choose a repository VesperCMS can reach" (`jeremybise/vesper`, folder `apps/site`): vesper-cloud's fix for an account that already has the app is on production (2026-10-21, 3606146). Then vespercms.com/admin is edited through the cloud: a second real-world use beside `vesper-github-test`.
+- Done 2026-10-21, from the docs writers' findings: site search leaves out the index and `/search` when no page of the site uses `<Search>` (DECISIONS.md), and `@vesper/astro`'s README matches the code, with typed `url` functions and the `upload` widget kept to forms.
 - The repository link in the footer (`settings.repository`) once this repository is public.
 - Pricing stays off the site until Phase 5 sets the numbers (§13.4).
 
