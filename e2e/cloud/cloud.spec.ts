@@ -185,6 +185,50 @@ test('a contributor requests review, and an approver publishes it from Changes',
   await approver.context().close();
 });
 
+test('publishes two people’s drafts as one commit that credits each of them', async ({
+  page,
+  browser,
+}) => {
+  // Cal drafts one post in a browser of their own; Ada drafts another and
+  // publishes both from Changes.
+  const cal = await (
+    await browser.newContext({ baseURL: test.info().project.use.baseURL })
+  ).newPage();
+  await signIn(cal, 'u_contributor', '#/c/blog/e/welcome');
+  await cal
+    .getByRole('textbox', { name: 'Title (required)' })
+    .fill('Welcome to the playground, by Cal');
+  await expect(cal.getByText(/^Draft saved/)).toBeVisible();
+  await cal.context().close();
+
+  await signIn(page, 'u_admin', '#/c/blog/e/harbor-at-dawn');
+  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  await expect(title).toHaveValue('Harbor at dawn, reviewed');
+  await title.fill('Harbor at dawn, by Ada');
+  await expect(page.getByText(/^Draft saved/)).toBeVisible();
+  const commits = github.log().length;
+  await page.goto('/admin/#/changes');
+  const drawer = page.getByRole('dialog', { name: 'Changes' });
+  await drawer.getByRole('button', { name: 'Publish 2 changes' }).click();
+  await expect(drawer.getByText('Published 2 changes.')).toBeVisible();
+  const log = github.log();
+  expect(log).toHaveLength(commits + 1);
+  expect(log[0]?.author).toBe('vesper[bot]');
+  // The publisher first, then each draft's author, at no-reply addresses.
+  expect(log[0]?.message).toBe(
+    [
+      'Update "Welcome to the playground, by Cal" in Blog posts, and 1 more change',
+      '',
+      'Vesper-Collection: blog',
+      'Vesper-Editor: u_admin',
+      'Vesper-Editor: u_contributor',
+      'Co-authored-by: Ada Admin <u_admin@users.noreply.vesper.test>',
+      'Co-authored-by: Cal Contributor <u_contributor@users.noreply.vesper.test>',
+    ].join('\n'),
+  );
+  expect(log[0]?.changed).toEqual([`M\t${HARBOR}`, 'M\tsrc/content/blog/welcome.md']);
+});
+
 test('shows a change published elsewhere beside the draft, and keeps the draft on request', async ({
   page,
 }) => {
