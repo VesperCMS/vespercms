@@ -1,0 +1,52 @@
+---
+title: Updating Vesper
+summary: Update one package, check the build, refresh your agent instructions and deploy, so editors get the new studio.
+---
+
+Vesper's packages share one version number, so there's one thing to update: `@vesper/astro`. It brings the studio and the rest of Vesper with it, always at the same version.
+
+{% callout type="note" %}
+Vesper isn't on npm yet. This is how updating works once it is.
+{% /callout %}
+
+## Update the package
+
+In your site's folder:
+
+```sh
+npm install @vesper/astro@latest
+```
+
+Each release's changes are in the package's `CHANGELOG.md`, one plain sentence per change. Read them before you deploy, especially after a jump of more than one version.
+
+Updating never touches your content. Vesper changes a file only when someone saves in the studio.
+
+## Check the build
+
+```sh
+npx astro build
+```
+
+The build checks every entry against your schema, as before. It also checks every built page's accessibility structure and writes the report to `.vesper/a11y-report.json`. A newer Vesper can find something an older one missed, so look at the report even when the build passes.
+
+## Refresh your agent instructions
+
+If you use [`vesper agents`](/docs/agents/), run it again:
+
+```sh
+npx vesper agents
+```
+
+A new release can describe fields, tags or rules differently, so the section in `AGENTS.md` can change even when your schema didn't. In CI, `npx vesper agents --check` fails until you do.
+
+## Deploy, so editors get the new studio
+
+The studio at `/admin` is built with your site. Editors keep the studio they have until you deploy: on GitHub mode and the cloud, after your next push and build; for a site edited only locally, the next time you run `astro dev`.
+
+The cloud itself is updated by Vesper, not by you. The relay you deployed for GitHub mode is your own copy of `templates/oauth-relay`, and updating `@vesper/astro` doesn't change it.
+
+## Astro and React
+
+- **Astro:** Vesper supports the current major version of Astro and the one before it, 7 and 6 today. Before moving your site to a new major version, check that your Vesper version supports it.
+- **React:** the studio needs React 19, the copy your site installs. With an older one, `astro dev`, and `astro build` when it builds `/admin`, stop with a message that says which version to install.
+- **Optional packages:** `lucide` is needed only when `vesper.config.ts` names collection icons, and `sharp` is the copy Astro's own image service already uses. Update them as you would any other dependency.
