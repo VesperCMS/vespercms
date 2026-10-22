@@ -947,6 +947,7 @@ Hosts that check authors: Netlify holds a private repository's deploys from auth
 - The credit is built in core, so the fake and the real cloud can't drift, and a draft's own `Vesper-Editor` or `Co-authored-by` trailers are dropped: only the cloud names people. A name goes on one line, without a `<` or `>` that could end its address early, and the address is the member's ID at the no-reply domain, never an email.
 - Trailers merge by name, each value once, so a publish across collections names each `Vesper-Collection`; before, the last draft's won. A name with one value stays a string, as the studio sends it and as drafts already stored hold it.
 - Rejected: crediting each draft's `updatedBy`. Drafts belong to the site, so a second editor's small fix would have erased the first author.
+- The cloud's half went to production on 2026-10-22 (vesper-cloud b900e99, its DECISIONS.md). Drafts saved before it load with whoever saved them last as their only author: the cloud didn't keep more.
 
 `runCloudContract` checks it: each draft lists its authors, and a publish of several people's drafts names each once, in that order, at an address made from their ID, never their email. The cloud's half (its submodule, storing `authors`, passing the publisher) is in PLAN.md, "Phase 4: progress".
 
