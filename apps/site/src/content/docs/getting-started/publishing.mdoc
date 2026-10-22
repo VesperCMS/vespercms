@@ -93,7 +93,7 @@ An editor or contributor can be limited to one collection or folder, and "Publis
 - **If Vesper can't be reached**, unsaved changes are kept on the device and saved once it's back.
 - **Signing out** of the studio also signs you out of the dashboard on that browser, and the other way round. Other browsers and devices stay signed in.
 
-The app is the commit's author, so GitHub marks it Verified, and the person who published is named in a `Co-authored-by` trailer with a no-reply address, never their email. If a file changed on GitHub since its draft began, the studio shows both versions side by side and overwrites nothing.
+The app is the commit's author, so GitHub marks it Verified. The person who published, then everyone whose drafts the publish carries, is named in a `Co-authored-by` trailer, each once, with a no-reply address, never their email. If a file changed on GitHub since its draft began, the studio shows both versions side by side and overwrites nothing.
 
 On a private repository, Netlify and Vercel may hold or skip builds of commits by authors they don't know, the app included. Check that its commits build, or build with GitHub Actions or Cloudflare Pages. A Content Security Policy needs `connect-src` for `https://api.vespercms.com`, and `img-src blob:`.
 
