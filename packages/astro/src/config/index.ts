@@ -295,7 +295,7 @@ function checkMarkdoc(markdoc: unknown): Problem[] {
         problems.push(
           ...unknownKeys(
             attributeHint,
-            ['label', 'description', 'labels', 'widget'],
+            ['label', 'description', 'labels', 'widget', 'schema'],
             `${where}.attributes.${attribute}`,
           ),
         );

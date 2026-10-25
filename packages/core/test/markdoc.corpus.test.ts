@@ -127,5 +127,27 @@ describe('jazzy-astro5 Markdoc corpus, with the site’s own tags', () => {
         expect(issues.filter((i) => i.level === 'error')).toEqual([]);
       }
     });
+
+    const faqs = tags.filter((tag) => /^\{%\s*faq\b/.test(body.slice(tag.start, tag.end)));
+    if (faqs.length > 0) {
+      it(`${name}: changing one answer in a FAQ, written one question per line, changes one line`, () => {
+        for (const tag of faqs) {
+          const opening = body.slice(tag.start, tag.end);
+          const items = markdocTags(opening)[0]?.attributes.find((a) => a.name === 'items')?.value;
+          expect(Array.isArray(items)).toBe(true);
+          const next = (items as Record<string, unknown>[]).map((item, index) =>
+            index === 0 ? { ...item, answer: 'Changed.' } : item,
+          );
+          const changed = editMarkdocTag(opening, [['items', next]]) ?? '';
+          const before = opening.split(/\r?\n/);
+          const after = changed.split(/\r?\n/);
+          expect(after.length).toBe(before.length);
+          expect(after.filter((line, i) => line !== before[i])).toHaveLength(1);
+          expect(
+            markdocTags(changed)[0]?.attributes.find((a) => a.name === 'items')?.value,
+          ).toEqual(next);
+        }
+      });
+    }
   }
 });

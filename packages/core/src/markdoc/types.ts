@@ -91,7 +91,19 @@ export type MarkdocTagHint = {
   summary?: string;
   attributes?: Record<
     string,
-    { label?: string; description?: string; labels?: Record<string, string>; widget?: string }
+    {
+      label?: string;
+      description?: string;
+      labels?: Record<string, string>;
+      widget?: string;
+      /**
+       * A Zod schema for an `Array` or `Object` attribute, whose contents
+       * Markdoc can't describe: the settings form then uses the frontmatter's
+       * widgets (DECISIONS.md, "Markdoc list and object attributes take a
+       * shape"). Markdoc's own validation still decides what saves.
+       */
+      schema?: unknown;
+    }
   >;
 };
 

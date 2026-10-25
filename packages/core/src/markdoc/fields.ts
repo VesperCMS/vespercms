@@ -1,5 +1,6 @@
 import type { FieldModel } from '../field-model.ts';
 import { humanize } from '../schema/humanize.ts';
+import { walkField } from '../schema/walk.ts';
 import type { MarkdocAttributeManifest, MarkdocTagHint, MarkdocTagManifest } from './types.ts';
 
 /*
@@ -12,6 +13,7 @@ import type { MarkdocAttributeManifest, MarkdocTagHint, MarkdocTagManifest } fro
  * | String, or a custom class    | Text field (the class validates on save) |
  * | Number                       | Number field                             |
  * | Boolean                      | Switch                                   |
+ * | Array, Object, with a schema | The frontmatter's widgets for that shape |
  * | Array, Object, anything else | Raw YAML field                           |
  */
 
@@ -70,6 +72,15 @@ function fieldOf(
     };
   }
   if (single === 'Number') return { ...base, kind: 'number' };
+  // Markdoc can't say what's inside a list or an object; a schema hint can.
+  if (hint?.schema !== undefined && attribute.types.some((t) => t === 'Array' || t === 'Object')) {
+    const shaped = walkField(hint.schema, [attribute.name], { diagnostics: [], seen: new Set() });
+    if (shaped.kind !== 'unknown') {
+      // Markdoc's own required, default, label and help win: they're what the site checks.
+      const { required: _required, default: _default, ...shape } = shaped;
+      return { ...shape, ...base };
+    }
+  }
   if (single === 'Boolean') return { ...base, kind: 'boolean' };
   return {
     ...base,

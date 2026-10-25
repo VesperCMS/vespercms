@@ -1,5 +1,6 @@
 import type { Nodes, Root } from 'mdast';
 import { parseMdast } from './mdast.ts';
+import { sameValue, spliceList } from './list-value.ts';
 
 /*
  * One MDX element's opening tag: its attributes as micromark's MDX parser
@@ -127,6 +128,25 @@ export function jsxAttribute(name: string, value: unknown): string {
   return `${name}={${JSON.stringify(value)}}`;
 }
 
+/**
+ * A changed prop's text. An array prop written one item per line changes
+ * item by item, as `editMarkdocTag`'s lists do, when it reads back as meant;
+ * anything else is written whole.
+ */
+function writeAttribute(text: string, existing: JsxAttribute, value: unknown): string {
+  const whole = jsxAttribute(existing.name, value);
+  if (!Array.isArray(value) || !Array.isArray(existing.value)) return whole;
+  const written = /^([^=]+=\{)(\s*)(\[[\s\S]*\])(\s*)\}$/.exec(
+    text.slice(existing.start, existing.end),
+  );
+  if (!written) return whole;
+  const [, opening = '', lead = '', list = '', trail = ''] = written;
+  const spliced = spliceList(list, existing.value, value, (item) => JSON.stringify(item));
+  if (spliced === null) return whole;
+  const read = readJsLiteral(`${lead}${spliced}${trail}`);
+  return read.ok && sameValue(read.value, value) ? `${opening}${lead}${spliced}${trail}}` : whole;
+}
+
 /** A new opening tag in house style, attributes in the order given. */
 export function jsxOpening(
   name: string,
@@ -165,7 +185,10 @@ export function editJsxTag(
         while (from > 0 && /\s/.test(out[from - 1] ?? '')) from--;
         out = out.slice(0, from) + out.slice(existing.end);
       } else {
-        out = out.slice(0, existing.start) + jsxAttribute(key, value) + out.slice(existing.end);
+        out =
+          out.slice(0, existing.start) +
+          writeAttribute(out, existing, value) +
+          out.slice(existing.end);
       }
       continue;
     }

@@ -216,7 +216,7 @@ markdoc: {
 },
 ```
 
-Hints cover a friendly name, help text, the summary attribute, value labels and a `widget` per attribute. A widget applies as it would to a schema field of the attribute's type: a `String` attribute can take `textarea`, `url` or `color` (the full picker, since hints carry no `widgetOptions`), or a custom widget. `Object` and `Array` attributes are edited as YAML, so `geo` can't apply; naming it warns in the terminal and keeps the YAML field.
+Hints cover a friendly name, help text, the summary attribute, value labels and a `widget` per attribute. A widget applies as it would to a schema field of the attribute's type: a `String` attribute can take `textarea`, `url` or `color` (the full picker, since hints carry no `widgetOptions`), or a custom widget. `Object` and `Array` attributes are edited as YAML, so `geo` can't apply; naming it warns in the terminal and keeps the YAML field. An `Array` or `Object` attribute can take a `schema` hint instead, a Zod schema for what's inside (`z.array(z.object({ question: z.string(), answer: z.string() }))`), and its settings then use the frontmatter's controls; Markdoc's own validation still decides what saves. A list written one item, or one key, per line changes item by item.
 
 MDX components don't declare their props anywhere the editor can read, so they are blocks only when declared here with a Zod props schema (from `astro/zod`). Undeclared components, expressions, imports and exports stay protected source blocks:
 

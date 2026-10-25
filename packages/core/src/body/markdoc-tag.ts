@@ -1,4 +1,5 @@
 import Markdoc from '@markdoc/markdoc';
+import { sameValue, spliceList } from './list-value.ts';
 
 /*
  * One Markdoc tag's text: where it is, what Markdoc reads in it, and where
@@ -274,6 +275,32 @@ export function markdocClosing(name: string): string {
  *   tag has (else before the nearest later one, else after the last).
  * Returns null when the tag can't be edited in place (the caller keeps it).
  */
+/**
+ * A changed value's text. A list written one item per line changes item by
+ * item, when what Markdoc reads back is what was meant; anything else is
+ * written whole.
+ */
+function writeValue(text: string, span: MarkdocAttributeSpan, value: unknown): string {
+  const whole = markdocValue(value);
+  if (!Array.isArray(value)) return whole;
+  const before = markdocTags(text)[0]?.attributes.find(
+    (a) => a.type === 'attribute' && a.name === span.key,
+  )?.value;
+  if (!Array.isArray(before)) return whole;
+  const spliced = spliceList(
+    text.slice(span.valueStart, span.valueEnd),
+    before,
+    value,
+    markdocValue,
+  );
+  if (spliced === null) return whole;
+  const edited = text.slice(0, span.valueStart) + spliced + text.slice(span.valueEnd);
+  const read = markdocTags(edited)[0]?.attributes.find(
+    (a) => a.type === 'attribute' && a.name === span.key,
+  )?.value;
+  return sameValue(read, value) ? spliced : whole;
+}
+
 export function editMarkdocTag(
   tagText: string,
   changes: readonly (readonly [string, unknown])[],
@@ -291,7 +318,9 @@ export function editMarkdocTag(
         text = text.slice(0, from) + text.slice(existing.end);
       } else {
         text =
-          text.slice(0, existing.valueStart) + markdocValue(value) + text.slice(existing.valueEnd);
+          text.slice(0, existing.valueStart) +
+          writeValue(text, existing, value) +
+          text.slice(existing.valueEnd);
       }
       continue;
     }
