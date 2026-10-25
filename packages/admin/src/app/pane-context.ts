@@ -8,6 +8,10 @@ export type PaneInfo = {
   level: 1 | 2;
   /** The deepest pane takes focus after a navigation, and names the browser tab. */
   focusTarget: boolean;
+  /** How wide it is: the narrow panes get tighter padding and a smaller heading. */
+  width: 'structure' | 'list' | 'flex';
+  /** Folds the pane into a strip, when people may: every pane but the deepest. */
+  onCollapse?: () => void;
 };
 
 export const PaneContext = createContext<PaneInfo | null>(null);

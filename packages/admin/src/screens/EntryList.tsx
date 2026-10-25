@@ -145,7 +145,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
   );
 }
 
-const TITLE_KEYS = new Set(['title', 'name', 'heading', 'label']);
+export const TITLE_KEYS = new Set(['title', 'name', 'heading', 'label']);
 
 function Cell({ entry, column }: { entry: EntrySummary; column: string }) {
   if (column === 'title') {
@@ -194,13 +194,13 @@ export function formatListValue(encoded: unknown): string {
   return String(value);
 }
 
-function labelFor(collection: CollectionManifest, key: string): string {
+export function labelFor(collection: CollectionManifest, key: string): string {
   return (
     collection.fields?.find((f) => f.path.length === 1 && f.path[0] === key)?.label ?? humanize(key)
   );
 }
 
-function defaultSort(collection: CollectionManifest): SortDescriptor {
+export function defaultSort(collection: CollectionManifest): SortDescriptor {
   const dateKey = (collection.presentation.listFields ?? []).find((key) =>
     collection.fields?.some((f) => f.path[0] === key && f.path.length === 1 && f.kind === 'date'),
   );
@@ -218,7 +218,7 @@ function sortValue(entry: EntrySummary, column: string): string | number {
   return formatListValue(entry.fields[column.slice('field:'.length)]).toLowerCase();
 }
 
-function compareBy(sort: SortDescriptor) {
+export function compareBy(sort: SortDescriptor) {
   const column = String(sort.column);
   const direction = sort.direction === 'descending' ? -1 : 1;
   return (a: EntrySummary, b: EntrySummary) => {

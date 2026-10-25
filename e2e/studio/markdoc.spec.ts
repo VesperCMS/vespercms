@@ -83,7 +83,7 @@ async function save(page: Page, expected: string) {
 
 /** Waits until the live region says which block is selected, so the next key acts on it. */
 async function selected(page: Page, label: string) {
-  await expect(page.locator('p.sr-only[role="status"]')).toHaveText(
+  await expect(page.getByRole('main').locator('p.sr-only[role="status"]')).toHaveText(
     `${label} selected. Press Enter for its settings.`,
   );
 }
@@ -250,7 +250,7 @@ test('abbreviations at both ends of a line: ⌘← and ⌘→ go past them', asy
   await openAtEnd(page);
   // An empty status means no chip is selected, so `selected` below can't
   // pass on what an earlier key announced.
-  const status = page.locator('p.sr-only[role="status"]');
+  const status = page.getByRole('main').locator('p.sr-only[role="status"]');
 
   // The caret right after the first chip, put there the way the browser
   // moves it (inside the text that follows), then ⌘←. The right arrow then
@@ -283,7 +283,7 @@ test('abbreviations mid-line: ⇧⌘← and ⇧⌘→ select past them to the en
   const before = read(DOC).replace('\nLast line.\n', `\n${line}\n`);
   write(DOC, before);
   await openAtEnd(page);
-  const status = page.locator('p.sr-only[role="status"]');
+  const status = page.getByRole('main').locator('p.sr-only[role="status"]');
 
   // The caret right after the first chip, arrowed to through the text, then
   // ⇧⌘←. A letter typed next replaces the selection, so the saved line shows

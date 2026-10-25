@@ -1,5 +1,14 @@
-import { cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
-import { useContext, useEffect, useRef, type ReactNode } from 'react';
+import {
+  cx,
+  Icon,
+  IconButton,
+  Menu,
+  Tooltip,
+  VesperMark,
+  type IconName,
+  type IconNode,
+} from '@vesper/ui';
+import { useContext, useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 import { shownTo } from '../cloud/access.ts';
 import { ChangesButton } from '../cloud/changes.tsx';
 import { useStudio, VESPER_NAME } from './context.tsx';
@@ -43,51 +52,29 @@ export function Screen({
   icon,
   children,
 }: ScreenProps) {
-  const { siteName } = useStudio();
-  const navigation = useContext(NavigationContext);
   const pane = usePane();
   const heading = useRef<HTMLHeadingElement>(null);
-  // Among panes, only the deepest names the tab and takes focus.
-  const leads = !pane || pane.focusTarget;
-
-  useEffect(() => {
-    if (leads) document.title = `${title} · ${siteName}`;
-  }, [title, siteName, leads]);
-
-  useEffect(() => {
-    if (leads && navigation.count > 0) heading.current?.focus({ preventScroll: false });
-  }, [navigation.count, leads]);
+  useLeadHeading(title, heading);
 
   if (pane) {
-    const Heading = pane.level === 1 ? 'h1' : 'h2';
-    const Landmark = pane.landmark === 'main' ? 'main' : 'section';
     return (
-      <Landmark
-        {...(pane.landmark === 'main' ? { id: 'main', tabIndex: -1 } : {})}
-        className={cx('flex min-h-0 flex-1 flex-col outline-none', afterglow && 'afterglow')}
+      <PaneFrame
+        title={title}
+        headingRef={heading}
+        hideTitle={hideTitle}
+        icon={icon}
+        actions={bar}
+        className={cx(afterglow && 'afterglow')}
       >
-        <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-6 py-2">
-          <Heading
-            ref={heading}
-            tabIndex={-1}
-            className={
-              hideTitle
-                ? 'sr-only'
-                : cx(
-                    'min-w-0 truncate text-heading-3 text-content outline-none',
-                    icon && 'flex items-center gap-2',
-                  )
-            }
-          >
-            {icon && !hideTitle && <Icon {...icon} size={20} className="text-content-muted" />}
-            {title}
-          </Heading>
-          {bar}
+        <div
+          className={cx(
+            'min-h-0 flex-1 overflow-y-auto',
+            pane.width === 'flex' ? 'px-6 pt-8 pb-16' : 'px-3 pt-3 pb-6',
+          )}
+        >
+          {children}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="px-6 pt-8 pb-16">{children}</div>
-        </div>
-      </Landmark>
+      </PaneFrame>
     );
   }
 
@@ -117,6 +104,102 @@ export function Screen({
         </h1>
         {children}
       </main>
+    </div>
+  );
+}
+
+/**
+ * The pane, or the screen, that leads names the browser tab, and takes focus
+ * after an in-app navigation (spec §10.6). Among panes that's the deepest.
+ */
+export function useLeadHeading(title: string, heading: RefObject<HTMLElement | null>): void {
+  const { siteName } = useStudio();
+  const navigation = useContext(NavigationContext);
+  const pane = usePane();
+  const leads = !pane || pane.focusTarget;
+
+  useEffect(() => {
+    if (leads) document.title = `${title} · ${siteName}`;
+  }, [title, siteName, leads]);
+
+  useEffect(() => {
+    if (leads && navigation.count > 0) heading.current?.focus({ preventScroll: false });
+  }, [navigation.count, leads, heading]);
+}
+
+/**
+ * A pane's frame: a landmark named by its heading, a header with the heading,
+ * the pane's actions and its collapse button, then the pane's body. The
+ * deepest pane is the page's `main`, with its `h1`; the others are
+ * navigation, with `h2`s. The element stays the same as a pane's role
+ * changes, so what's in it isn't drawn afresh when an entry opens beside it.
+ */
+export function PaneFrame({
+  title,
+  headingRef,
+  hideTitle = false,
+  icon,
+  actions,
+  className,
+  children,
+}: {
+  title: string;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  hideTitle?: boolean;
+  icon?: { node: IconNode } | { name: IconName } | undefined;
+  actions?: ReactNode;
+  className?: string | false | undefined;
+  children: ReactNode;
+}) {
+  const pane = usePane();
+  const id = useId();
+  const main = pane?.landmark !== 'nav';
+  const Heading = pane?.level === 2 ? 'h2' : 'h1';
+  return (
+    <div
+      role={main ? 'main' : 'navigation'}
+      aria-labelledby={id}
+      {...(main ? { id: 'main', tabIndex: -1 } : {})}
+      className={cx('flex min-h-0 flex-1 flex-col outline-none', className)}
+    >
+      <div
+        className={cx(
+          'flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border py-2',
+          pane?.width === 'flex' ? 'px-6' : 'px-4',
+        )}
+      >
+        <Heading
+          id={id}
+          ref={headingRef}
+          tabIndex={-1}
+          className={
+            hideTitle
+              ? 'sr-only'
+              : cx(
+                  'min-w-0 flex-1 truncate outline-none',
+                  pane?.width === 'flex' ? 'text-heading-3' : 'text-label',
+                  'text-content',
+                  icon && 'flex items-center gap-2',
+                )
+          }
+        >
+          {icon && !hideTitle && <Icon {...icon} size={18} className="text-content-muted" />}
+          {title}
+        </Heading>
+        {actions}
+        {pane?.onCollapse && (
+          <Tooltip text={`Collapse ${title}`}>
+            <IconButton
+              data-collapse=""
+              icon="pane-collapse"
+              label={`Collapse ${title}`}
+              onPress={pane.onCollapse}
+              className="-mr-2"
+            />
+          </Tooltip>
+        )}
+      </div>
+      {children}
     </div>
   );
 }

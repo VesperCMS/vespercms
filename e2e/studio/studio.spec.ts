@@ -94,7 +94,7 @@ test('every screen passes axe: home, list, editor, media', async ({ page }) => {
   await expectAccessible(page);
 
   await page.goto('/admin/#/c/blog');
-  await expect(page.getByRole('grid', { name: 'Blog posts' })).toBeVisible();
+  await expect(page.getByRole('treegrid', { name: 'Blog posts' })).toBeVisible();
   await expectAccessible(page);
 
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
@@ -110,7 +110,7 @@ test('every screen passes axe in the dark theme too', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   const screens: [string, ReturnType<Page['getByRole']>][] = [
     ['/admin/', page.getByRole('heading', { level: 1, name: 'Content' })],
-    ['/admin/#/c/blog', page.getByRole('grid', { name: 'Blog posts' })],
+    ['/admin/#/c/blog', page.getByRole('treegrid', { name: 'Blog posts' })],
     ['/admin/#/c/pages', page.getByRole('treegrid', { name: 'Pages' })],
     ['/admin/#/c/blog/e/harbor-at-dawn', page.getByRole('textbox', { name: 'Body' })],
     ['/admin/#/media', page.getByRole('heading', { level: 2, name: 'harbor-at-dawn.jpg' })],
@@ -190,6 +190,27 @@ test('by keyboard: panes, full width: the collections, the list and the entry, f
   ).toBeVisible();
   await expectAccessible(page);
 
+  // With no entry open the list is still a pane, with its tools.
+  await structure.getByRole('link', { name: /Blog posts/ }).click();
+  const whole = page.getByRole('main', { name: 'Blog posts' });
+  await expect(whole.getByRole('treegrid', { name: 'Blog posts' })).toBeVisible();
+  await expect(whole.getByRole('button', { name: /^Sort: / })).toBeVisible();
+  await expect(whole.getByRole('link', { name: 'New entry' })).toBeVisible();
+  await expectAccessible(page);
+
+  // Any pane but the deepest collapses into a strip, and stays collapsed until it's shown again.
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  await structure.getByRole('button', { name: 'Collapse Content' }).focus();
+  await page.keyboard.press('Enter');
+  const show = page.getByRole('button', { name: 'Show Content' });
+  await expect(show).toBeFocused();
+  await page.reload();
+  await expect(show).toBeVisible();
+  await expect(structure).toHaveCount(0);
+  await show.focus();
+  await page.keyboard.press('Enter');
+  await expect(structure.getByRole('button', { name: 'Collapse Content' })).toBeFocused();
+
   // Too narrow for every pane: the collections fold into a strip, which opens again.
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
   await page.setViewportSize({ width: 1000, height: 800 });
@@ -229,7 +250,7 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
   await title.focus();
   await page.keyboard.press(keys.lineEnd);
   await page.keyboard.type(', again');
-  await expect(page.getByRole('status').first()).toHaveText('Unsaved changes');
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText('Unsaved changes');
   await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
 

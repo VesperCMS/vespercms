@@ -1,6 +1,13 @@
 import type { CollectionManifest } from '@vesper/core';
 import { cx, focusRing, Icon } from '@vesper/ui';
-import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { shownTo } from '../cloud/access.ts';
 import { EntryEditor } from '../screens/EntryEditor.tsx';
 import { EntryList } from '../screens/EntryList.tsx';
@@ -14,31 +21,33 @@ import { collectionIcon } from './collection-icon.ts';
 import type { Studio } from './context.tsx';
 import { useLoad } from './load.ts';
 import { hrefFor, type Route } from './router.ts';
-import { PaneContext, usePane, type PaneInfo } from './pane-context.ts';
-import { StudioHeader } from './Screen.tsx';
+import { PaneContext, type PaneInfo } from './pane-context.ts';
+import { PaneFrame, StudioHeader, useLeadHeading } from './Screen.tsx';
 
 /*
  * The studio on wide screens, full width: panes side by side, Sanity-style
  * (DECISIONS.md, "The studio is panes, full width"). The structure pane
  * lists the site's collections and is always there, so getting back to them
- * is one click; a collection's list comes next; an entry opens beside it.
- * Each pane scrolls on its own. When they don't all fit, the earlier panes
- * fold into narrow strips, and a strip opens again with a click. Narrower
- * than 48rem the studio is one screen at a time, as before.
+ * is one click. A collection's list is always a pane of its own, with all of
+ * the list's tools, and an entry opens beside it. Each pane scrolls on its
+ * own. People can collapse any pane but the deepest into a strip, and the
+ * studio folds the earlier ones itself when they don't all fit; a strip
+ * opens again with a click. Narrower than 48rem the studio is one screen at
+ * a time, as before.
  */
 
 /** Wide enough for panes: below it, one screen at a time. */
 export const PANES = '(min-width: 48rem)';
 
-type Width = 'structure' | 'list' | 'flex';
+type Width = PaneInfo['width'];
 
 /** Least widths in rem. A folded pane is a strip. */
-const WIDTH: Record<Width, number> = { structure: 15, list: 20, flex: 30 };
+const WIDTH: Record<Width, number> = { structure: 15, list: 22, flex: 30 };
 const STRIP = 2.75;
 
 const widthClass: Record<Width, string> = {
   structure: 'w-60 shrink-0',
-  list: 'w-80 shrink-0',
+  list: 'w-88 shrink-0',
   flex: 'min-w-0 flex-1',
 };
 
@@ -55,23 +64,70 @@ function useWindowRem(): number {
   );
 }
 
+/** The panes people may collapse, by kind, so a choice holds from one collection to the next. */
+type Kind = 'structure' | 'list';
+
 type PaneSpec = {
   id: string;
+  kind?: Kind;
   title: string;
   width: Width;
   content: ReactNode;
 };
 
-/** Which panes fold, earliest first, keeping the last one and the one asked for open. */
-function folded(panes: PaneSpec[], room: number, keep: string | null): Set<string> {
-  const out = new Set<string>();
+const COLLAPSED_KEY = 'vesper:collapsed-panes';
+
+function readCollapsed(): Set<Kind> {
+  try {
+    const value = localStorage.getItem(COLLAPSED_KEY) ?? '';
+    return new Set(value.split(',').filter((k): k is Kind => k === 'structure' || k === 'list'));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Panes people collapsed, kept per viewer in this browser. */
+function useCollapsed(): [Set<Kind>, (kind: Kind, collapsed: boolean) => void] {
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const set = useCallback((kind: Kind, value: boolean) => {
+    setCollapsed((now) => {
+      const next = new Set(now);
+      if (value) next.add(kind);
+      else next.delete(kind);
+      try {
+        localStorage.setItem(COLLAPSED_KEY, [...next].join(','));
+      } catch {
+        // Kept for this visit only.
+      }
+      return next;
+    });
+  }, []);
+  return [collapsed, set];
+}
+
+/**
+ * Which panes fold: the ones people collapsed, then, while they don't fit,
+ * the earliest, keeping the deepest and the one opened by hand.
+ */
+function folded(
+  panes: PaneSpec[],
+  room: number,
+  collapsed: Set<Kind>,
+  keep: string | null,
+): Set<string> {
+  const last = panes.at(-1);
+  const out = new Set(
+    panes
+      .filter((pane) => pane !== last && pane.kind !== undefined && collapsed.has(pane.kind))
+      .map((pane) => pane.id),
+  );
   const need = () =>
     panes.reduce((sum, pane) => sum + (out.has(pane.id) ? STRIP : WIDTH[pane.width]), 0);
   for (const pane of panes.slice(0, -1)) {
     if (need() <= room) break;
     if (pane.id !== keep) out.add(pane.id);
   }
-  // Still too wide with the asked-for pane open: fold it too, rather than the last.
+  // Still too wide with the opened pane open: fold it too, rather than the deepest.
   for (const pane of panes.slice(0, -1)) {
     if (need() <= room) break;
     out.add(pane.id);
@@ -94,40 +150,68 @@ export function PaneShell({
   wide: boolean;
 }) {
   const room = useWindowRem();
+  const [collapsed, setCollapsed] = useCollapsed();
   const [opened, setOpened] = useState<{ key: string; pane: string } | null>(null);
   const routeKey = JSON.stringify(route);
-  const all = panesFor(route, studio);
+  const all = panesFor(route, studio, wide);
   const panes = wide ? all : all.slice(-1);
-  // A strip opened by hand stays open until the next navigation.
+  // A strip the studio folded, opened by hand, stays open until the next navigation.
   const keep = opened?.key === routeKey ? opened.pane : null;
-  const fold = wide ? folded(panes, room, keep) : new Set<string>();
+  const fold = wide ? folded(panes, room, collapsed, keep) : new Set<string>();
+  const last = panes.at(-1);
+
+  // Collapsing removes the button that was pressed, so focus goes to the strip in its place,
+  // and back to the collapse button when the strip opens the pane again.
+  const row = useRef<HTMLDivElement>(null);
+  const focusNext = useRef<string | null>(null);
+  useEffect(() => {
+    const selector = focusNext.current;
+    if (selector === null) return;
+    focusNext.current = null;
+    row.current?.querySelector<HTMLElement>(selector)?.focus();
+  });
 
   return (
     <div className={wide ? 'flex h-dvh flex-col' : undefined}>
       {wide && <StudioHeader />}
-      <div className={wide ? 'flex min-h-0 flex-1' : undefined}>
-        {panes.map((pane, index) => {
-          const last = index === panes.length - 1;
+      <div ref={row} className={wide ? 'flex min-h-0 flex-1' : undefined}>
+        {panes.map((pane) => {
+          const deepest = pane === last;
+          const kind = pane.kind;
           const info: PaneInfo | null = wide
-            ? { landmark: last ? 'main' : 'nav', level: last ? 1 : 2, focusTarget: last }
+            ? {
+                landmark: deepest ? 'main' : 'nav',
+                level: deepest ? 1 : 2,
+                focusTarget: deepest,
+                width: pane.width,
+                ...(!deepest && kind
+                  ? {
+                      onCollapse: () => {
+                        focusNext.current = `[data-strip="${CSS.escape(pane.id)}"]`;
+                        setCollapsed(kind, true);
+                      },
+                    }
+                  : {}),
+              }
             : null;
           return fold.has(pane.id) ? (
             <PaneStrip
               key={pane.id}
+              id={pane.id}
               title={pane.title}
               onOpen={() => {
-                setOpened({ key: routeKey, pane: pane.id });
+                focusNext.current = `[data-pane="${CSS.escape(pane.id)}"] [data-collapse]`;
+                if (kind && collapsed.has(kind)) setCollapsed(kind, false);
+                else setOpened({ key: routeKey, pane: pane.id });
               }}
             />
           ) : (
             <div
               key={pane.id}
+              data-pane={pane.id}
               className={
                 wide
-                  ? cx(
-                      'flex min-h-0 flex-col border-r border-border last:border-r-0',
-                      widthClass[pane.width],
-                    )
+                  ? cx('flex min-h-0 flex-col border-r border-border', widthClass[pane.width])
                   : undefined
               }
             >
@@ -135,24 +219,30 @@ export function PaneShell({
             </div>
           );
         })}
+        {/* Room for the entry a list opens: empty until one is chosen. */}
+        {wide && last && last.width !== 'flex' && (
+          <div aria-hidden="true" className="min-w-0 flex-1 bg-surface-sunken" />
+        )}
       </div>
     </div>
   );
 }
 
 /** A folded pane: its name, sideways, and a button that opens it again. */
-function PaneStrip({ title, onOpen }: { title: string; onOpen: () => void }) {
+function PaneStrip({ id, title, onOpen }: { id: string; title: string; onOpen: () => void }) {
   return (
     <button
       type="button"
+      data-strip={id}
       onClick={onOpen}
       aria-label={`Show ${title}`}
+      title={`Show ${title}`}
       className={cx(
         'flex w-11 shrink-0 flex-col items-center gap-3 border-r border-border pt-4 text-small text-content-muted hover:bg-surface-sunken hover:text-content',
         focusRing,
       )}
     >
-      <Icon name="list-pane" size={18} />
+      <Icon name="pane-expand" size={18} />
       <span aria-hidden="true" className="[writing-mode:vertical-rl]">
         {title}
       </span>
@@ -161,9 +251,10 @@ function PaneStrip({ title, onOpen }: { title: string; onOpen: () => void }) {
 }
 
 /** The panes a route shows, from the structure pane to the deepest. */
-function panesFor(route: Route, studio: Studio): PaneSpec[] {
+function panesFor(route: Route, studio: Studio, wide: boolean): PaneSpec[] {
   const structure: PaneSpec = {
     id: 'structure',
+    kind: 'structure',
     title: 'Content',
     width: 'structure',
     content: <StructurePane route={route} studio={studio} />,
@@ -193,41 +284,42 @@ function panesFor(route: Route, studio: Studio): PaneSpec[] {
         ),
       ];
     }
+    const currentId = route.screen === 'edit' ? route.id : null;
+    const editor =
+      route.screen === 'list' ? null : (
+        <EntryEditor
+          key={JSON.stringify(route)}
+          collection={collection}
+          id={currentId}
+          {...(route.screen === 'new' && route.parent !== undefined
+            ? { parent: route.parent }
+            : {})}
+        />
+      );
     const tree = collection.presentation.tree === true && collection.source.loader === 'glob';
-    if (route.screen === 'list') {
-      // Nothing open yet: the whole list, with its columns, filters and the outline's moves.
+    // A singleton's list only leads to its one entry, so it opens beside the collections.
+    if (collection.presentation.singleton) {
       return [
         structure,
-        flex(
-          `list:${collection.name}`,
-          collection.label,
-          tree ? <PageTree collection={collection} /> : <EntryList collection={collection} />,
-        ),
+        flex('entry', collection.label, editor ?? <EntryList collection={collection} />),
       ];
     }
-    const editor = (
-      <EntryEditor
-        key={JSON.stringify(route)}
-        collection={collection}
-        id={route.screen === 'edit' ? route.id : null}
-        {...(route.screen === 'new' && route.parent !== undefined ? { parent: route.parent } : {})}
-      />
-    );
-    if (collection.presentation.singleton) {
-      return [structure, flex(`entry`, collection.label, editor)];
-    }
-    return [
-      structure,
-      {
-        id: `pane-list:${collection.name}`,
-        title: collection.label,
-        width: 'list',
-        content: (
-          <ListPane collection={collection} currentId={route.screen === 'edit' ? route.id : null} />
-        ),
-      },
-      flex('entry', 'Entry', editor),
-    ];
+    // The list is a pane of its own, with all its tools, whether or not an entry is open
+    // beside it. One screen at a time, a flat collection's list is its table.
+    const list: PaneSpec = {
+      id: `list:${collection.name}`,
+      kind: 'list',
+      title: collection.label,
+      width: 'list',
+      content: tree ? (
+        <PageTree collection={collection} currentId={currentId} />
+      ) : wide ? (
+        <ListPane collection={collection} currentId={currentId} />
+      ) : (
+        <EntryList collection={collection} />
+      ),
+    };
+    return editor ? [structure, list, flex('entry', 'Entry', editor)] : [structure, list];
   }
   return [structure, flex('missing', 'Not found', <NotFound />)];
 }
@@ -247,6 +339,8 @@ function hereOf(route: Route): string | null {
 function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
   const { manifest, api, cloud, siteUrl } = studio;
   const [summary] = useLoad(() => api.summary(), 'structure');
+  const heading = useRef<HTMLHeadingElement>(null);
+  useLeadHeading('Content', heading);
   const counts = new Map(
     summary.state === 'ready' ? summary.value.map((s) => [s.collection, s.count]) : [],
   );
@@ -254,7 +348,6 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
   const collections = shown.filter((c) => !c.presentation.singleton);
   const singletons = shown.filter((c) => c.presentation.singleton);
   const here = hereOf(route);
-  const pane = usePane();
 
   const item = (
     key: string,
@@ -295,15 +388,9 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
         : undefined,
     );
   };
-  const Heading = pane?.level === 1 ? 'h1' : 'h2';
 
   return (
-    <nav aria-labelledby="structure-heading" className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-14 items-center border-b border-border px-4">
-        <Heading id="structure-heading" className="text-label text-content">
-          Content
-        </Heading>
-      </div>
+    <PaneFrame title="Content" headingRef={heading}>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         <ul className="flex flex-col gap-0.5">{collections.map(collectionItem)}</ul>
         {singletons.length > 0 && (
@@ -341,6 +428,6 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
           )}
         </ul>
       </div>
-    </nav>
+    </PaneFrame>
   );
 }

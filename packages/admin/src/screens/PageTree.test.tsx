@@ -2,7 +2,8 @@
 import type { MoveResult, PageTree as Tree, PageTreeNode } from '@vesper/core';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PANES } from '../app/panes.tsx';
 import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
 import { planText } from './PageTree.tsx';
 
@@ -212,6 +213,64 @@ describe('the page outline (spec §6.15.2)', () => {
     await user.click(await screen.findByRole('button', { name: 'More actions for Admissions' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Create section page' }));
     expect(api.createSection).toHaveBeenCalledWith('pages', 'admissions');
+  });
+});
+
+describe('the page outline among panes', () => {
+  beforeEach(() => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+      matches: query === PANES,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+    Object.defineProperty(window, 'innerWidth', { value: 1440, configurable: true });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
+  });
+
+  it('marks the page open beside it, with its folders open, and New page heads the pane', async () => {
+    const id = 'academics/nursing/rn-to-bsn';
+    renderStudio(`#/c/pages/e/${encodeURIComponent(id)}`, {
+      api: fakeApi({
+        trees: { pages: tree },
+        documents: {
+          [`pages/${id}`]: {
+            collection: 'pages',
+            id,
+            path: `${P}${id}.md`,
+            version: 'v1',
+            format: 'md',
+            status: 'editable',
+            data: { title: 'RN to BSN bridge' },
+            body: '\nText.\n',
+          },
+        },
+      }),
+    });
+    const pane = await screen.findByRole('navigation', { name: 'Pages' });
+    expect(
+      await within(pane).findByRole('row', { name: 'RN to BSN bridge, open now' }),
+    ).toBeInTheDocument();
+    expect(within(pane).getByRole('row', { name: 'Academics' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(within(pane).getByRole('row', { name: 'Nursing' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(within(pane).getByRole('link', { name: 'New page' })).toHaveAttribute(
+      'href',
+      '#/c/pages/new',
+    );
+    await expectNoViolations();
   });
 });
 

@@ -67,6 +67,7 @@ function open(hash = '#/c/blog/e/harbor-at-dawn') {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   window.location.hash = '';
   vi.restoreAllMocks();
   windowWidth(1024);
@@ -143,12 +144,79 @@ describe('the studio as panes', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows a collection’s whole list beside the collections when no entry is open', async () => {
+  it('shows a collection’s list as a pane, with its tools, when no entry is open', async () => {
     open('#/c/blog');
-    const main = await screen.findByRole('main');
+    const main = await screen.findByRole('main', { name: 'Blog posts' });
     expect(within(main).getByRole('heading', { level: 1, name: 'Blog posts' })).toBeInTheDocument();
-    expect(await within(main).findByRole('grid', { name: 'Blog posts' })).toBeInTheDocument();
+    expect(await within(main).findByRole('treegrid', { name: 'Blog posts' })).toBeInTheDocument();
+    expect(within(main).getByRole('searchbox', { name: 'Search' })).toBeInTheDocument();
+    expect(within(main).getByRole('button', { name: /^Sort: / })).toBeInTheDocument();
+    expect(within(main).getByRole('button', { name: 'Show: All entries' })).toBeInTheDocument();
+    expect(within(main).getByRole('link', { name: 'New entry' })).toHaveAttribute(
+      'href',
+      '#/c/blog/new',
+    );
+    // The deepest pane is never folded, so it has no collapse button.
+    expect(within(main).queryByRole('button', { name: /^Collapse/ })).toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Content' })).toBeInTheDocument();
+    await expectNoViolations();
+  });
+
+  it('sorts and filters the list pane from its menus', async () => {
+    const { user } = open('#/c/blog');
+    const main = await screen.findByRole('main', { name: 'Blog posts' });
+    await within(main).findByRole('row', { name: /Harbor at dawn/ });
+    const titles = () =>
+      within(main)
+        .getAllByRole('row')
+        .map((row) => row.textContent);
+    expect(titles()[0]).toMatch(/^Harbor at dawn/);
+
+    await user.click(within(main).getByRole('button', { name: 'Show: All entries' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Drafts' }));
+    await waitFor(() => {
+      expect(titles()).toHaveLength(1);
+    });
+    expect(titles()[0]).toMatch(/^The winter market opens/);
+    expect(within(main).getByRole('status')).toHaveTextContent('1 of 2 entries shown.');
+  });
+
+  it('collapses a pane into a strip on request, and keeps it collapsed', async () => {
+    const { user } = open();
+    const structure = await screen.findByRole('navigation', { name: 'Content' });
+    // The entry is the deepest pane: it can't be collapsed.
+    expect(
+      within(screen.getByRole('main')).queryByRole('button', { name: /^Collapse/ }),
+    ).toBeNull();
+    await user.click(within(structure).getByRole('button', { name: 'Collapse Content' }));
+    expect(screen.queryByRole('navigation', { name: 'Content' })).toBeNull();
+    // The button went with the pane, so focus moves to the strip in its place.
+    expect(screen.getByRole('button', { name: 'Show Content' })).toHaveFocus();
+    expect(localStorage.getItem('vesper:collapsed-panes')).toBe('structure');
+
+    // Collapsed panes stay collapsed from one entry to the next.
+    window.location.hash = '#/c/blog/e/winter-market';
+    await screen.findByRole('heading', { level: 1, name: 'The winter market opens' });
+    expect(screen.queryByRole('navigation', { name: 'Content' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Show Content' }));
+    const reopened = await screen.findByRole('navigation', { name: 'Content' });
+    expect(within(reopened).getByRole('button', { name: 'Collapse Content' })).toHaveFocus();
+    expect(localStorage.getItem('vesper:collapsed-panes')).toBe('');
+  });
+
+  it('collapses the list beside an entry, and the strip brings it back', async () => {
+    const { user } = open();
+    const list = await screen.findByRole('navigation', { name: 'Blog posts' });
+    await user.click(within(list).getByRole('button', { name: 'Collapse Blog posts' }));
     expect(screen.queryByRole('navigation', { name: 'Blog posts' })).toBeNull();
+    // Collapsed, it isn't the list's whole page: the list route still shows it, as the deepest pane.
+    window.location.hash = '#/c/blog';
+    expect(await screen.findByRole('main', { name: 'Blog posts' })).toBeInTheDocument();
+    window.location.hash = '#/c/blog/e/harbor-at-dawn';
+    await screen.findByRole('heading', { level: 1, name: 'Harbor at dawn' });
+    await user.click(screen.getByRole('button', { name: 'Show Blog posts' }));
+    expect(await screen.findByRole('navigation', { name: 'Blog posts' })).toBeInTheDocument();
   });
 
   it('opens a singleton beside the collections, with no list', async () => {

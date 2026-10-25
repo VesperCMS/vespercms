@@ -47,7 +47,7 @@ import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
 import { usePane } from '../app/pane-context.ts';
-import { entriesChanged } from './ListPane.tsx';
+import { entriesChanged } from '../app/entries-changed.ts';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
