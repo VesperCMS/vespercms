@@ -57,8 +57,13 @@ export type CollectionConfig = {
   newEntryPath?: string;
   schedule?: boolean | { unpublish?: boolean; publishAt?: string; unpublishAt?: string };
   search?: boolean;
-  /** Editor placement per top-level field key, overriding `.meta({ placement })`. */
-  placement?: Record<string, 'main' | 'details'>;
+  /**
+   * Editor tab per top-level field key, overriding `.meta({ placement })`:
+   * `main` (Content), `details`, or a tab from `tabs`.
+   */
+  placement?: Record<string, string>;
+  /** Editor tabs beside Content and Details, by id with their labels, in order: `{ seo: 'SEO' }`. */
+  tabs?: Record<string, string>;
   /** For tree collections: the deepest a page may be (spec §6.15.4). No default. */
   maxDepth?: number;
   /** The level the body's top headings should have (spec §6.18). 2 by default. */
@@ -368,7 +373,9 @@ function buildCollection(
     fields = walk.fields
       ? withPlacement(
           resolveWidgets(walk.fields, diagnostics, { custom: widgets, collection: input.name }),
-          config.placement,
+          config,
+          diagnostics,
+          input.name,
         )
       : null;
     extraKeys = walk.extraKeys;
@@ -440,14 +447,36 @@ function urlDiagnostics(
   return found;
 }
 
+/** The tab ids a collection's fields may name: Content, Details and the ones vesper.config.ts declares. */
+function tabIds(config: CollectionConfig): Set<string> {
+  return new Set(['main', 'details', ...Object.keys(config.tabs ?? {})]);
+}
+
+/**
+ * Each top-level field's tab: vesper.config.ts's `placement` over the
+ * schema's `.meta({ placement })`. A tab nobody declared is left out, with
+ * a warning, and the field stays on Content.
+ */
 function withPlacement(
   fields: FieldModel[],
-  placement: CollectionConfig['placement'],
+  config: CollectionConfig,
+  diagnostics: Diagnostic[],
+  collection: string,
 ): FieldModel[] {
-  if (!placement) return fields;
+  const known = tabIds(config);
   return fields.map((field) => {
-    const where = placement[field.path[0] ?? ''];
-    return where === 'main' || where === 'details' ? { ...field, placement: where } : field;
+    const key = field.path[0] ?? '';
+    const where = config.placement?.[key] ?? field.placement;
+    if (where === undefined) return field;
+    if (known.has(where)) return { ...field, placement: where };
+    diagnostics.push({
+      level: 'warning',
+      code: 'unknown-tab',
+      message: `"${key}" in ${collection} is placed on a tab called "${where}", which vesper.config.ts doesn't declare in collections.${collection}.tabs. It stays on Content.`,
+      collection,
+    });
+    const { placement: _dropped, ...rest } = field;
+    return rest;
   });
 }
 
@@ -486,6 +515,10 @@ function presentationOf(
   if (config.schedule) presentation.schedule = scheduleOf(config.schedule);
   if (config.search !== undefined) presentation.search = config.search;
   if (config.maxDepth !== undefined) presentation.maxDepth = config.maxDepth;
+  const tabs = Object.entries(config.tabs ?? {}).filter(
+    ([id, label]) => id !== 'main' && id !== 'details' && typeof label === 'string' && label !== '',
+  );
+  if (tabs.length > 0) presentation.tabs = tabs.map(([id, label]) => ({ id, label }));
   const start = config.headingStart;
   if (typeof start === 'number' && Number.isInteger(start) && start >= 1 && start <= 6)
     presentation.headingStart = start;
