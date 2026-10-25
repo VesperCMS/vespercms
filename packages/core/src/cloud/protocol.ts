@@ -32,7 +32,17 @@ export type CloudStudioSettings = {
   api: string;
 };
 
-export type CloudUser = { id: string; name: string; email: string };
+export type CloudUser = {
+  id: string;
+  name: string;
+  email: string;
+  /**
+   * The person's picture, when they have one: an address on the API's own
+   * origin that loads without a token (content-hashed, so it never changes).
+   * The cloud stores it from GitHub or from the dashboard's account page.
+   */
+  avatar?: string;
+};
 
 /** `POST /token`, with a DPoP proof. */
 export type TokenRequest =

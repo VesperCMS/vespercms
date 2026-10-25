@@ -18,6 +18,8 @@ export type CloudPerson = {
   email: string;
   role: SiteRole;
   grants?: Grant[] | null;
+  /** Serve a picture for them, as the cloud does for someone who has one. */
+  picture?: boolean;
 };
 
 export type CloudFakeState = {

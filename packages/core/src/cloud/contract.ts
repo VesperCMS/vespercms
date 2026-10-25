@@ -122,6 +122,25 @@ export function runCloudContract(
       ok(again instanceof CloudError, 'a code works once, even after a failed try');
     });
 
+    it('serves a person’s picture from the API’s own origin, without a token', async () => {
+      const fixture = await create();
+      for (const person of ['admin', 'editor', 'contributor', 'viewer'] as const) {
+        const { user } = await signIn(fixture, person);
+        if (user.avatar === undefined) continue;
+        equal(
+          new URL(user.avatar).origin,
+          new URL(fixture.settings.api).origin,
+          'a picture never comes from a third party',
+        );
+        const picture = await fixture.fetch(user.avatar);
+        equal(picture.status, 200, 'a picture loads without a token');
+        ok(
+          (picture.headers.get('content-type') ?? '').startsWith('image/'),
+          'a picture is an image',
+        );
+      }
+    });
+
     it('refuses an address the site hasn’t registered', async () => {
       const fixture = await create();
       fixture.signInAs('admin');

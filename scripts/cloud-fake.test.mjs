@@ -62,7 +62,7 @@ function setup() {
     manifest,
     site: { id: 'site_test', name: 'Test site', origins: [ORIGIN] },
     people: [
-      { id: 'u_admin', name: 'Ada Admin', email: 'ada@example.edu', role: 'admin' },
+      { id: 'u_admin', name: 'Ada Admin', email: 'ada@example.edu', role: 'admin', picture: true },
       {
         id: 'u_editor',
         name: 'Eve Editor',

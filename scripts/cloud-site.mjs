@@ -30,7 +30,7 @@ const SKIP = new Set(['node_modules', 'dist', '.astro', '.vesper']);
 
 /** The site's members, by role, as a site admin would have set them up in the dashboard. */
 export const PEOPLE = [
-  { id: 'u_admin', name: 'Ada Admin', email: 'ada@example.edu', role: 'admin' },
+  { id: 'u_admin', name: 'Ada Admin', email: 'ada@example.edu', role: 'admin', picture: true },
   { id: 'u_contributor', name: 'Cal Contributor', email: 'cal@example.edu', role: 'contributor' },
   {
     id: 'u_nurse',

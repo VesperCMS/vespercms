@@ -42,7 +42,7 @@ const REFRESH_MAX = 7 * 24 * 3600;
  *   github: import('./github-fake.mjs').GitHubFake,
  *   manifest: import('@vesper/core').Manifest,
  *   site: { id: string, name: string, origins: string[], root?: string },
- *   people: { id: string, name: string, email: string, role: import('@vesper/core').SiteRole, grants?: import('@vesper/core').Grant[] | null }[],
+ *   people: { id: string, name: string, email: string, role: import('@vesper/core').SiteRole, grants?: import('@vesper/core').Grant[] | null, picture?: boolean }[],
  *   base?: string,
  * }} options
  */
@@ -128,7 +128,12 @@ export function createCloudFake(options) {
       token_type: 'DPoP',
       expires_in: ACCESS_TTL,
       refresh_token: refresh,
-      user: { id: p.id, name: p.name, email: p.email },
+      user: {
+        id: p.id,
+        name: p.name,
+        email: p.email,
+        ...(p.picture ? { avatar: `${base}/api/avatars/${p.id}.svg` } : {}),
+      },
       site: { id: site.id, name: site.name },
       member: memberOf(p),
     };
@@ -477,6 +482,21 @@ export function createCloudFake(options) {
     return error(request, 404, 'not_found', 'Not found.');
   }
 
+  /** A person's picture, as the cloud serves one: no token, cached for good. */
+  function pictureOf(id) {
+    const p = person(id);
+    if (!p?.picture) return new Response('Not found.', { status: 404 });
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#226b63"/><circle cx="32" cy="26" r="12" fill="#f3ede7"/><rect x="14" y="42" width="36" height="22" rx="11" fill="#f3ede7"/></svg>`;
+    return new Response(svg, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
   async function handle(request) {
     const url = new URL(request.url);
     state.log.push(`${request.method} ${url.pathname}${url.search}`);
@@ -489,6 +509,8 @@ export function createCloudFake(options) {
     const rest = path.slice('/api'.length);
     if (rest === '/token' && request.method === 'POST') return exchange(request);
     if (rest === '/sign-out' && request.method === 'POST') return signOutOf(request);
+    const avatar = /^\/avatars\/([\w-]+)\.svg$/.exec(rest);
+    if (avatar && request.method === 'GET') return pictureOf(avatar[1]);
     const match = /^\/sites\/([\w-]+)(\/.*)$/.exec(rest);
     if (!match || match[1] !== site.id)
       return error(request, 404, 'not_found', 'There’s no such site.');
