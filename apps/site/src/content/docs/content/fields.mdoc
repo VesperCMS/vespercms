@@ -16,15 +16,15 @@ Every field in a collection's schema becomes a control in the studio's editor. T
 | `z.enum([...])` | Radio buttons for four options or fewer, otherwise a select |
 | `z.array(z.string())` | A tag list: type a value and press Enter |
 | `z.array(z.enum([...]))` | A multi-select |
-| `z.object({ ... })` | A group of fields under its own heading |
-| `z.array(z.object({ ... }))` | A repeater: add, remove and reorder items |
+| `z.object({ ... })` | A group of fields under its own heading. At the top of the form it's a section, set off by a line. |
+| `z.array(z.object({ ... }))` | A list of items, each a row named by its content that opens in place. Each row's "…" menu moves, duplicates and removes it; Alt+↑ and Alt+↓ on a row move it too. |
 | `reference('authors')` | A searchable list of that collection's entries. The file stores the entry's ID. |
 | `z.array(reference('posts'))` | An ordered list of entries, with Move up, Move down and Remove |
 | `image()` | An image picker. See [Images](/docs/content/images/). |
 
 A few more rules:
 
-- `.optional()` and `.default()` make a field optional, and a default fills in new entries.
+- `.optional()` and `.default()` make a field optional, and a default fills in new entries. Most fields are required, so the studio marks the ones that aren't: "(optional)" after the label.
 - A union of string literals counts as an enum.
 - `.refine()` keeps the field's control. The refinement still runs when the entry is saved.
 - Fields appear in schema order. The first text field called `title`, `name`, `heading` or `label` becomes the page's heading in the editor.
@@ -62,6 +62,7 @@ summary: z.string().meta({
 | `hidden` | Leaves the field out of the editor. Saves don't change its value. |
 | `readOnly` | Shows the value, but editors can't change it |
 | `autocomplete` | The browser's autofill hint, such as `email` |
+| `summary` | On a list of objects: the item field that names each row, such as `'question'`. Without it, the first of `title`, `name`, `label`, `heading` and `text` names it. |
 
 `.meta()` works before or after `.optional()` and `.default()`. Values must be plain data: a function in `widgetOptions` is dropped, with a warning.
 
