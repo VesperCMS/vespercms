@@ -347,6 +347,9 @@ describe('the studio and the cloud', () => {
     expect(screen.getByRole('textbox', { name: 'Title (required)' })).toBeDisabled();
   });
 
+  // Two publishes, a conflict and an axe pass over the comparison, all in
+  // jsdom: about 4 s on CI's Ubuntu runner, but 15 s and then 23.2 s on its
+  // Windows runner for the same code (October 2026), past the suite's 20 s.
   it('compares both versions when someone published since the draft began, and keeps the draft on request', async () => {
     await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
     render(gate());
@@ -389,7 +392,7 @@ describe('the studio and the cloud', () => {
     expect(new TextDecoder().decode(github.files()[path])).toContain(
       'title: Harbor at dawn, mine\n',
     );
-  });
+  }, 60_000);
 
   it('keeps changes on this device while the cloud can’t be reached, and saves them when it’s back', async () => {
     await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
