@@ -77,6 +77,13 @@ describe('walkSchema: the spec §6.2 mapping', () => {
     expect(list?.children?.[0]?.children?.[0]?.path).toEqual(['list', '[]', 'name']);
   });
 
+  it('keeps a list’s summary hint, which names its items’ rows in the editor', () => {
+    const faq = field(
+      z.array(z.object({ question: z.string(), answer: z.string() })).meta({ summary: 'question' }),
+    );
+    expect(faq).toMatchObject({ kind: 'array', summary: 'question' });
+  });
+
   it('labels fields from meta, or by humanizing the key', () => {
     const [a, b, c] = fields({
       publishedAt: z.date(),

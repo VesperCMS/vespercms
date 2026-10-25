@@ -79,6 +79,8 @@ export type FieldModel = {
   safeToEcho?: boolean;
   /** `hide`: the boolean from `fields.hideFromSearch()`, which keeps the entry out of site search (spec §6.19). */
   search?: 'hide';
+  /** Lists of objects: the item field that names each item's row in the editor ("question"). */
+  summary?: string;
 };
 
 export type DiagnosticLevel = 'error' | 'warning' | 'info';
