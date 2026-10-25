@@ -162,6 +162,10 @@ test('by keyboard: panes, full width: the collections, the list and the entry, f
   );
   await expect(list.getByRole('row', { name: /^Harbor at dawn.*open now$/ })).toBeVisible();
   await expectAccessible(page);
+  // The panes fill the window, and the page itself never scrolls past them.
+  expect(
+    await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+  ).toBe(0);
 
   // Enter on a row opens it beside the list, and focus lands on its heading.
   await list.getByRole('row', { name: /^Welcome to the playground/ }).focus();

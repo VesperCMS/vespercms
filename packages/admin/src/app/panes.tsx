@@ -174,7 +174,9 @@ export function PaneShell({
   return (
     <div className={wide ? 'flex h-dvh flex-col' : undefined}>
       {wide && <StudioHeader />}
-      <div ref={row} className={wide ? 'flex min-h-0 flex-1' : undefined}>
+      {/* Positioned and clipped: screen-reader-only text deep in a pane's scrolling content is
+          positioned absolutely, and with no positioned ancestor it lengthened the page itself. */}
+      <div ref={row} className={wide ? 'relative flex min-h-0 flex-1 overflow-hidden' : undefined}>
         {panes.map((pane) => {
           const deepest = pane === last;
           const kind = pane.kind;
