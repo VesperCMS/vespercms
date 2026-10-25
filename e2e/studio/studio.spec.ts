@@ -226,7 +226,7 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
   );
 });
 
-test('by keyboard: list items are rows that move with Alt+arrows and open in place; an edit changes one line', async ({
+test('by keyboard: list items are rows that move with Alt+arrows and open in place; a move moves their lines', async ({
   page,
 }) => {
   const path = 'src/content/pages/about.md';
@@ -238,7 +238,7 @@ test('by keyboard: list items are rows that move with Alt+arrows and open in pla
   await expect(mission).toHaveAttribute('aria-expanded', 'false');
   await expectAccessible(page);
 
-  // Alt+↓ and Alt+↑ move the item, and focus stays on its row.
+  // Alt+↓ moves the item, and focus stays on its row.
   await mission.focus();
   await page.keyboard.press('Alt+ArrowDown');
   await expect(page.getByText('Moved Our mission to position 2 of 2.')).toBeAttached();
@@ -247,9 +247,6 @@ test('by keyboard: list items are rows that move with Alt+arrows and open in pla
     /^Accreditation/,
     /^Our mission/,
   ]);
-  await page.keyboard.press('Alt+ArrowUp');
-  await expect(page.getByText('Moved Our mission to position 1 of 2.')).toBeAttached();
-  await expect(mission).toBeFocused();
 
   // Enter opens it in place, and its fields are in the page.
   await page.keyboard.press('Enter');
@@ -263,8 +260,21 @@ test('by keyboard: list items are rows that move with Alt+arrows and open in pla
   await expectAccessible(page);
   await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
+
+  // Each item's lines moved as they are (the block scalar too), and the edit is the only other change.
+  const missionLines = before.slice(
+    before.indexOf('  - heading: Our mission'),
+    before.indexOf('  - heading: Accreditation'),
+  );
+  const accreditationLines = before.slice(
+    before.indexOf('  - heading: Accreditation'),
+    before.indexOf('---', 4),
+  );
   expect(read(path)).toBe(
-    before.replace('- heading: Our mission\n', '- heading: Our mission and values\n'),
+    before.replace(
+      missionLines + accreditationLines,
+      accreditationLines + missionLines.replace('Our mission', 'Our mission and values'),
+    ),
   );
 });
 

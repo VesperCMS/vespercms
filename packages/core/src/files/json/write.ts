@@ -9,7 +9,7 @@ import {
 } from 'jsonc-parser';
 import { deepEqual, type DataValue } from '../equal.ts';
 import { SerializationError } from '../errors.ts';
-import { diffValues } from '../patch.ts';
+import { diffValues, type Patch } from '../patch.ts';
 import { lineEndings } from '../text.ts';
 
 export type JsonRead =
@@ -139,6 +139,54 @@ export function detectJsonFormatting(text: string): FormattingOptions {
 
 export type JsonWriteResult = { text: string; changed: boolean };
 
+function readsBackAs(text: string | null, next: DataValue): boolean {
+  if (text === null) return false;
+  const read = readJson(text);
+  return read.editable && deepEqual(read.value, next);
+}
+
+/**
+ * Applies patches to JSON text: edits, removals and appends through
+ * jsonc-parser, then each `order` by moving whole items, so each keeps its
+ * own text (DECISIONS.md, "A moved list item moves its text as it is").
+ * Null when a list can't be moved that way.
+ */
+function applyJsonPatches(text: string, patches: readonly Patch[]): string | null {
+  const formattingOptions = detectJsonFormatting(text);
+  let out = text;
+  for (const patch of patches) {
+    if (patch.op === 'order') continue;
+    const path = [...patch.path];
+    const edits =
+      patch.op === 'push'
+        ? (inlineAppend(out, path, patch.value) ??
+          blockAppend(out, path, patch.value, formattingOptions) ??
+          modify(out, [...path, -1], patch.value, { formattingOptions, isArrayInsertion: true }))
+        : modify(out, path, patch.op === 'delete' ? undefined : patch.value, { formattingOptions });
+    out = applyEdits(out, edits);
+  }
+  for (const patch of patches) {
+    if (patch.op !== 'order') continue;
+    const tree = parseTree(out);
+    const list =
+      tree && (patch.path.length === 0 ? tree : findNodeAtLocation(tree, [...patch.path]));
+    const items = list?.type === 'array' ? (list.children ?? []) : null;
+    if (!items || items.length !== patch.order.length) return null;
+    const before = out;
+    // From the last item back, so the earlier items' offsets still hold.
+    for (let j = items.length - 1; j >= 0; j--) {
+      const slot = items[j];
+      const from = items[patch.order[j] ?? -1];
+      if (!slot || !from) return null;
+      out =
+        out.slice(0, slot.offset) +
+        before.slice(from.offset, from.offset + from.length) +
+        out.slice(slot.offset + slot.length);
+    }
+  }
+  return out;
+}
+
 /**
  * Writes `next` into JSON text, changing only what differs. It uses
  * jsonc-parser's formatting-preserving edits, so untouched properties keep
@@ -151,21 +199,12 @@ export function writeJson(text: string, next: DataValue): JsonWriteResult {
   const patches = diffValues(read.value, next);
   if (patches.length === 0) return { text, changed: false };
 
-  const formattingOptions = detectJsonFormatting(text);
-  let out = text;
-  for (const patch of patches) {
-    const path = [...patch.path];
-    const edits =
-      patch.op === 'push'
-        ? (inlineAppend(out, path, patch.value) ??
-          blockAppend(out, path, patch.value, formattingOptions) ??
-          modify(out, [...path, -1], patch.value, { formattingOptions, isArrayInsertion: true }))
-        : modify(out, path, patch.op === 'delete' ? undefined : patch.value, { formattingOptions });
-    out = applyEdits(out, edits);
+  let out = applyJsonPatches(text, patches);
+  if (patches.some((patch) => patch.op === 'order') && !readsBackAs(out, next)) {
+    // Items that couldn't move as they are are compared by position, as before.
+    out = applyJsonPatches(text, diffValues(read.value, next, [], { moves: false }));
   }
-
-  const reread = readJson(out);
-  if (!reread.editable || !deepEqual(reread.value, next)) {
+  if (out === null || !readsBackAs(out, next)) {
     throw new SerializationError(
       'verification-failed',
       "This change couldn't be saved without altering other content, so nothing was saved.",

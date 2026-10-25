@@ -58,6 +58,19 @@ describe('writeJson', () => {
     expect(edit('{"a":1,"b":[1,2]}\n', (v) => (v.a = 5))).toBe('{"a":5,"b":[1,2]}\n');
   });
 
+  it('moves an item’s text as it is, in multi-line and one-line arrays', () => {
+    const pretty = '[\n  {\n    "id": "a",\n    "note": "x"\n  },\n  { "id": "b" }\n]\n';
+    const read = readJson(pretty);
+    if (!read.editable) throw new Error('not editable');
+    const swapped = [...(read.value as DataValue[])].reverse();
+    expect(writeJson(pretty, swapped).text).toBe(
+      '[\n  { "id": "b" },\n  {\n    "id": "a",\n    "note": "x"\n  }\n]\n',
+    );
+    expect(edit('{"t":["a", "b",  "c"]}', (v) => (v.t = ['c', 'a', 'b']))).toBe(
+      '{"t":["c", "a",  "b"]}',
+    );
+  });
+
   it('returns the input unchanged when nothing changed', () => {
     const text = '{ "odd" :   1 }';
     expect(writeJson(text, { odd: 1 })).toEqual({ text, changed: false });

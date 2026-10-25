@@ -246,6 +246,97 @@ describe('writeYaml: block sequences', () => {
   it('writes [] when every item is removed', () => {
     expect(text('\ntags:\n  - a\nz: 1\n', (v) => (v.tags = []))).toBe('\ntags: []\nz: 1\n');
   });
+
+  // The playground's About page, whose second section's body is a block scalar.
+  const about = [
+    '',
+    'title: About the college',
+    'sections:',
+    '  - heading: Our mission',
+    '    body: Open doors, *practical* degrees, and a campus where people know your name.',
+    '  - heading: Accreditation',
+    '    body: |-',
+    '      Accredited by the regional commission since 1972.',
+    '      The next review is in 2029.',
+    'nav: x',
+    '',
+  ].join('\n');
+  const sections = (v: Record<string, DataValue>) => v.sections as Record<string, DataValue>[];
+  const lines = (raw: string) => raw.split('\n');
+
+  it('moves an item’s lines as they are, block scalars and all', () => {
+    const swapped = text(about, (v) => {
+      sections(v).reverse();
+    });
+    const [blank, title, key, m1, m2, a1, a2, a3, a4, rest, end] = lines(about);
+    expect(lines(swapped)).toEqual([blank, title, key, a1, a2, a3, a4, m1, m2, rest, end]);
+  });
+
+  it('moves an item and edits it in the same save: the edit is the only line that changes', () => {
+    const edited = text(about, (v) => {
+      const [mission, accreditation] = sections(v);
+      if (!mission || !accreditation) throw new Error('no sections');
+      mission.heading = 'Our mission and values';
+      v.sections = [accreditation, mission];
+    });
+    const [blank, title, key, , m2, a1, a2, a3, a4, rest, end] = lines(about);
+    expect(lines(edited)).toEqual([
+      blank,
+      title,
+      key,
+      a1,
+      a2,
+      a3,
+      a4,
+      '  - heading: Our mission and values',
+      m2,
+      rest,
+      end,
+    ]);
+  });
+
+  it('adds an item in the middle in the list’s own layout', () => {
+    const added = text(about, (v) => {
+      sections(v).splice(1, 0, { heading: 'History', body: 'Founded in 1967.' });
+    });
+    expect(added).toBe(
+      about.replace(
+        '  - heading: Accreditation',
+        '  - heading: History\n    body: Founded in 1967.\n  - heading: Accreditation',
+      ),
+    );
+  });
+
+  it('moves the names in _order.yaml, keeping the comment where it was', () => {
+    const raw = '# Page order\n- about\n- "academics"\n- admissions # last\n';
+    expect(
+      edit(
+        raw,
+        (v) => {
+          const list = v as unknown as string[];
+          list.splice(0, list.length, 'admissions', 'about', 'academics');
+        },
+        'any',
+      ).text,
+    ).toBe('# Page order\n- admissions\n- about\n- "academics" # last\n');
+  });
+
+  it('moves a nested list’s items inside a moved item', () => {
+    const raw = '\nlist:\n  - name: a\n    tags:\n      - x\n      - y\n  - name: b\n';
+    expect(
+      text(raw, (v) => {
+        const list = v.list as { name: string; tags?: string[] }[];
+        list.reverse();
+        list[1]?.tags?.reverse();
+      }),
+    ).toBe('\nlist:\n  - name: b\n  - name: a\n    tags:\n      - y\n      - x\n');
+  });
+
+  it('compares a flow list by position, as before', () => {
+    expect(text('\ntags: [a, "b", c]\n', (v) => (v.tags = ['c', 'a', 'b']))).toBe(
+      '\ntags: [c, "a", b]\n',
+    );
+  });
 });
 
 describe('writeYaml: whole files', () => {

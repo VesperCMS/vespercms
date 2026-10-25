@@ -2,6 +2,7 @@ import {
   CST,
   isAlias,
   isMap,
+  isNode,
   isPair,
   isScalar,
   isSeq,
@@ -67,7 +68,34 @@ export function writeYaml(
   if (patches.length === 0) return { text: raw, changed: false, reformatted: false };
 
   const style = detectStyle(read.doc, raw);
-  const spliced = spliceYaml(raw, read.doc, patches, style);
+  if (patches.some((patch) => patch.op === 'order')) {
+    // Items that moved take their text with them (DECISIONS.md, "A moved list item moves its text as it is").
+    const moved = spliceWithMoves(raw, read.doc, patches, style);
+    if (moved !== null && readsBackAs(moved, next, expect)) {
+      return { text: moved, changed: true, reformatted: false };
+    }
+    // A list whose items can't move as they are (a flow list, anchors) is compared by position, as before.
+    return writePatches(
+      raw,
+      read.doc,
+      consolidate(diffValues(read.value, next, [], { moves: false }), read.value, next),
+      style,
+      next,
+      expect,
+    );
+  }
+  return writePatches(raw, read.doc, patches, style, next, expect);
+}
+
+function writePatches(
+  raw: string,
+  doc: Document.Parsed,
+  patches: readonly Patch[],
+  style: YamlStyle,
+  next: DataValue,
+  expect: 'map' | 'any',
+): YamlWriteResult {
+  const spliced = spliceYaml(raw, doc, patches, style);
   if (spliced !== null && readsBackAs(spliced, next, expect)) {
     return { text: spliced, changed: true, reformatted: false };
   }
@@ -79,6 +107,57 @@ export function writeYaml(
     'verification-failed',
     "This change couldn't be saved without altering other content, so nothing was saved.",
   );
+}
+
+/**
+ * Applies the other patches by splicing, then each `order` patch by moving
+ * whole items: the text of item `order[j]` goes into slot `j`, so each item
+ * keeps its own bytes (its quoting, its block scalars, its comments inside).
+ * Null when a list can't be moved that way.
+ */
+function spliceWithMoves(
+  raw: string,
+  doc: Document.Parsed,
+  patches: readonly Patch[],
+  style: YamlStyle,
+): string | null {
+  const others = patches.filter((patch) => patch.op !== 'order');
+  let text = others.length > 0 ? spliceYaml(raw, doc, others, style) : raw;
+  for (const patch of patches) {
+    if (text === null) return null;
+    if (patch.op === 'order') text = moveItems(text, patch.path, patch.order);
+  }
+  return text;
+}
+
+/** The block sequence at `path` with its items' text rearranged, or null. */
+export function moveItems(text: string, path: Path, order: readonly number[]): string | null {
+  const doc = parseDocument(text, { ...ASTRO_YAML_OPTIONS });
+  if (doc.errors.length > 0) return null;
+  const seq: unknown = path.length === 0 ? doc.contents : doc.getIn(path, true);
+  if (!isSeq(seq) || seq.flow === true || seq.items.length !== order.length) return null;
+  const slots: { start: number; end: number }[] = [];
+  for (const item of seq.items) {
+    if (!isNode(item) || isAlias(item) || item.anchor !== undefined || item.tag !== undefined) {
+      return null;
+    }
+    const range = item.range;
+    if (!range) return null;
+    let end = range[1];
+    while (end > range[0] && /\s/.test(text[end - 1] ?? '')) end--;
+    const previous = slots.at(-1);
+    if (previous && range[0] < previous.end) return null;
+    slots.push({ start: range[0], end });
+  }
+  let out = text;
+  // From the last slot back, so the earlier slots' offsets still hold.
+  for (let j = slots.length - 1; j >= 0; j--) {
+    const slot = slots[j];
+    const from = slots[order[j] ?? -1];
+    if (!slot || !from) return null;
+    out = out.slice(0, slot.start) + text.slice(from.start, from.end) + out.slice(slot.end);
+  }
+  return out;
 }
 
 function readsBackAs(text: string, expected: DataValue, expect: 'map' | 'any'): boolean {
@@ -186,6 +265,8 @@ class Splicer {
   // ------------------------------------------------------------------ patches
 
   private applyPatch(patch: Patch): void {
+    // Moves are applied afterwards, to the spliced text (`spliceWithMoves`).
+    if (patch.op === 'order') throw new NeedsFallback();
     if (patch.op === 'push') {
       const seq = this.nodeAt(patch.path);
       if (!isSeq(seq)) throw new NeedsFallback();
@@ -576,8 +657,11 @@ function documentFallback(raw: string, patches: readonly Patch[], style: YamlSty
       else doc.setIn(patch.path, patch.value);
     } else if (patch.op === 'delete') {
       doc.deleteIn(patch.path);
-    } else {
+    } else if (patch.op === 'push') {
       doc.addIn(patch.path, patch.value);
+    } else {
+      const seq: unknown = patch.path.length === 0 ? doc.contents : doc.getIn(patch.path, true);
+      if (isSeq(seq)) seq.items = patch.order.map((i) => seq.items[i]);
     }
   }
   const rendered = doc.toString({

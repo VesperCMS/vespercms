@@ -11,22 +11,43 @@ export type Path = readonly PathSegment[];
  * - `set`: replace the value at `path`, or add a new map key.
  * - `delete`: remove a map key or a sequence item.
  * - `push`: append to the sequence at `path`.
+ * - `order`: rearrange the sequence at `path`: item `j` becomes the item
+ *   that was at `order[j]`. Serializers move each item's text as it is.
+ *
+ * `set`, `delete` and `push` paths are the original value's. `order`
+ * patches come after all the others, and their paths and indices are the
+ * value's once those are applied; an inner list's come before its outer
+ * list's.
  */
 export type Patch =
   | { op: 'set'; path: Path; value: DataValue }
   | { op: 'delete'; path: Path }
-  | { op: 'push'; path: Path; value: DataValue };
+  | { op: 'push'; path: Path; value: DataValue }
+  | { op: 'order'; path: Path; order: number[] };
 
 const present = (value: DataValue) => value !== undefined;
 
 /**
- * Diffs two parsed values. Objects are compared key by key. Sequences of the
- * same length are compared item by item. Appending items or removing some (in
- * place) becomes `push`/`delete`. Any other sequence change (inserting in the
- * middle, reordering) compares the items both share by position, then pushes
- * or deletes the rest.
+ * Diffs two parsed values. Objects are compared key by key. In a sequence,
+ * appending items or removing some (in place) becomes `push`/`delete`, and
+ * anything else matches items up: an unchanged item is found wherever it
+ * went, and the changed ones are edits of the rest, in order. Items that
+ * moved then move as they are, with an `order` patch, so their text moves
+ * with them (DECISIONS.md, "A moved list item moves its text as it is").
+ * With `moves: false`, sequences compare by position instead: the fallback
+ * when a serializer can't move an item's text.
  */
-export function diffValues(before: DataValue, after: DataValue, path: Path = []): Patch[] {
+export function diffValues(
+  before: DataValue,
+  after: DataValue,
+  path: Path = [],
+  options: { moves?: boolean } = {},
+): Patch[] {
+  const patches = diff(before, after, path, options.moves !== false);
+  return [...patches.filter((p) => p.op !== 'order'), ...patches.filter((p) => p.op === 'order')];
+}
+
+function diff(before: DataValue, after: DataValue, path: Path, moves: boolean): Patch[] {
   if (deepEqual(before, after)) return [];
 
   if (isPlainObject(before) && isPlainObject(after)) {
@@ -40,17 +61,14 @@ export function diffValues(before: DataValue, after: DataValue, path: Path = [])
       if (!present(next)) continue;
       const prev = before[key];
       if (!present(prev)) patches.push({ op: 'set', path: [...path, key], value: next });
-      else patches.push(...diffValues(prev, next, [...path, key]));
+      else patches.push(...diff(prev, next, [...path, key], moves));
     }
     return patches;
   }
 
   if (Array.isArray(before) && Array.isArray(after)) {
-    const aligned = alignById(before, after, path);
+    const aligned = alignById(before, after, path, moves);
     if (aligned) return aligned;
-    if (before.length === after.length) {
-      return before.flatMap((item, i) => diffValues(item, after[i], [...path, i]));
-    }
     if (after.length > before.length && before.every((item, i) => deepEqual(item, after[i]))) {
       return after.slice(before.length).map((value) => ({ op: 'push', path, value }) as const);
     }
@@ -59,14 +77,18 @@ export function diffValues(before: DataValue, after: DataValue, path: Path = [])
       // Highest index first, so earlier indices stay valid while applying.
       return removed.reverse().map((i) => ({ op: 'delete', path: [...path, i] }) as const);
     }
-    // Anything else (reordered, edited and resized at once, like an
-    // `_order.yaml` or a redirects list): item by item, then push or delete
-    // at the end. Replacing the list whole would re-render it, and at a
-    // file's root that loses its comments and its one-line flow maps.
+    if (moves) return matchItems(before, after, path);
+    if (before.length === after.length) {
+      return before.flatMap((item, i) => diff(item, after[i], [...path, i], false));
+    }
+    // Reordered, or edited and resized at once, compared by position: item by
+    // item, then push or delete at the end. Replacing the list whole would
+    // re-render it, and at a file's root that loses its comments and its
+    // one-line flow maps.
     const shared = Math.min(before.length, after.length);
     const sets = after
       .slice(0, shared)
-      .flatMap((item, i) => diffValues(before[i], item, [...path, i]));
+      .flatMap((item, i) => diff(before[i], item, [...path, i], false));
     const pushes = after.slice(shared).map((value) => ({ op: 'push', path, value }) as const);
     const deletes = before
       .slice(shared)
@@ -75,6 +97,115 @@ export function diffValues(before: DataValue, after: DataValue, path: Path = [])
   }
 
   return [{ op: 'set', path, value: after }];
+}
+
+/** An inner list's `order` patch, at the index its outer item has once removals are done. */
+function shifted(patch: Patch, at: number, index: number): Patch {
+  if (patch.op !== 'order') return patch;
+  return { ...patch, path: patch.path.map((segment, i) => (i === at ? index : segment)) };
+}
+
+/** How much of `b` is already in `a`, from 0 to 1: equal values, matching keys, list items found. */
+function likeness(a: DataValue, b: DataValue): number {
+  if (deepEqual(a, b)) return 1;
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(
+      (key) => present(a[key]) || present(b[key]),
+    );
+    if (keys.length === 0) return 1;
+    return keys.reduce((sum, key) => sum + likeness(a[key], b[key]), 0) / keys.length;
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const left = [...a];
+    let found = 0;
+    for (const item of b) {
+      const at = left.findIndex((other) => deepEqual(other, item));
+      if (at !== -1) {
+        left.splice(at, 1);
+        found++;
+      }
+    }
+    return found / Math.max(a.length, b.length, 1);
+  }
+  return 0;
+}
+
+/**
+ * Matches a sequence's items: unchanged ones in place, then unchanged ones
+ * wherever they went, then each changed one as an edit of the unused old
+ * item it most resembles. Old items left over are deleted, new ones pushed,
+ * and an `order` patch moves them all where they belong.
+ */
+function matchItems(
+  before: readonly DataValue[],
+  after: readonly DataValue[],
+  path: Path,
+): Patch[] {
+  const source: number[] = after.map(() => -1);
+  const used = new Set<number>();
+  after.forEach((item, j) => {
+    if (j < before.length && deepEqual(before[j], item)) {
+      source[j] = j;
+      used.add(j);
+    }
+  });
+  after.forEach((item, j) => {
+    if (source[j] !== -1) return;
+    const i = before.findIndex((old, at) => !used.has(at) && deepEqual(old, item));
+    if (i !== -1) {
+      source[j] = i;
+      used.add(i);
+    }
+  });
+  // A changed item is an edit of the old one it most resembles: removing one
+  // item and editing another in the same save then edits the right one.
+  const unused = new Set(before.map((_, i) => i).filter((i) => !used.has(i)));
+  after.forEach((item, j) => {
+    if (source[j] !== -1 || unused.size === 0) return;
+    let best = -1;
+    let score = -1;
+    for (const i of unused) {
+      const like = likeness(before[i], item);
+      if (like > score) {
+        best = i;
+        score = like;
+      }
+    }
+    source[j] = best;
+    unused.delete(best);
+  });
+  const deleted = unused;
+  const kept = before.map((_, i) => i).filter((i) => !deleted.has(i));
+  const position = new Map(kept.map((i, at) => [i, at]));
+
+  const edits: Patch[] = [];
+  const inner: Patch[] = [];
+  after.forEach((item, j) => {
+    const i = source[j] ?? -1;
+    if (i === -1) return;
+    for (const patch of diff(before[i], item, [...path, i], true)) {
+      if (patch.op === 'order') inner.push(shifted(patch, path.length, position.get(i) ?? i));
+      else edits.push(patch);
+    }
+  });
+  const deletes = [...deleted]
+    .sort((a, b) => b - a)
+    .map((i) => ({ op: 'delete', path: [...path, i] }) as const);
+  const added = after.map((_, j) => j).filter((j) => source[j] === -1);
+  const pushes = added.map((j) => ({ op: 'push', path, value: after[j] }) as const);
+  // Once those are applied, the list holds the kept items in their old order, then the new ones.
+  const order = after.map((_, j) => {
+    const i = source[j] ?? -1;
+    return i === -1 ? kept.length + added.indexOf(j) : (position.get(i) ?? j);
+  });
+  const moved = order.some((at, j) => at !== j);
+  return [
+    ...edits,
+    ...deletes,
+    ...pushes,
+    ...inner,
+    ...(moved ? [{ op: 'order', path, order } as const] : []),
+  ];
 }
 
 const identityOf = (item: DataValue): string | null => {
@@ -98,6 +229,7 @@ function alignById(
   before: readonly DataValue[],
   after: readonly DataValue[],
   path: Path,
+  moves: boolean,
 ): Patch[] | null {
   if (before.length === 0 || after.length === 0) return null;
   const beforeIds = before.map(identityOf);
@@ -122,9 +254,16 @@ function alignById(
   }
 
   const kept = new Set(afterIds);
+  // An inner list's moves happen once removals are done, when fewer items come before it.
+  const removedBefore = (index: number) =>
+    beforeIds.slice(0, index).filter((id) => !kept.has(id)).length;
   const edits = after.flatMap((item, i) => {
     const index = position.get(afterIds[i] ?? '');
-    return index === undefined ? [] : diffValues(before[index], item, [...path, index]);
+    return index === undefined
+      ? []
+      : diff(before[index], item, [...path, index], moves).map((patch) =>
+          shifted(patch, path.length, index - removedBefore(index)),
+        );
   });
   const removals = beforeIds
     .map((id, i) => (kept.has(id) ? -1 : i))
@@ -160,6 +299,13 @@ export function applyPatches(value: DataValue, patches: readonly Patch[]): DataV
 }
 
 function applyOne(root: DataValue, patch: Patch): DataValue {
+  if (patch.op === 'order') {
+    const list = getAt(root, patch.path);
+    if (!Array.isArray(list)) throw new Error(`Not a sequence at ${patch.path.join('.')}`);
+    const reordered = patch.order.map((i) => list[i]);
+    list.splice(0, list.length, ...reordered);
+    return root;
+  }
   if (patch.path.length === 0) {
     if (patch.op === 'set') return structuredClone(patch.value);
     if (patch.op === 'push' && Array.isArray(root)) return [...root, structuredClone(patch.value)];

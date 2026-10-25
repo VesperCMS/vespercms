@@ -50,21 +50,80 @@ describe('diffValues', () => {
     ]);
   });
 
-  it('changes plain values item by item when a list is reordered and resized', () => {
+  it('moves items that moved, so their text can move as it is', () => {
     expect(diffValues({ t: ['a', 'b'] }, { t: ['b', 'a', 'c'] })).toEqual([
+      { op: 'push', path: ['t'], value: 'c' },
+      { op: 'order', path: ['t'], order: [1, 0, 2] },
+    ]);
+    expect(diffValues(['a', 'b', 'c', 'd'], ['d', 'a'])).toEqual([
+      { op: 'delete', path: [2] },
+      { op: 'delete', path: [1] },
+      { op: 'order', path: [], order: [1, 0] },
+    ]);
+    // A moved item that was also edited: the edit at its old place, then the move.
+    expect(diffValues([{ h: 'A' }, { h: 'B' }], [{ h: 'B' }, { h: 'A!' }])).toEqual([
+      { op: 'set', path: [0, 'h'], value: 'A!' },
+      { op: 'order', path: [], order: [1, 0] },
+    ]);
+    // A new item added in the middle is pushed, then moved there.
+    expect(diffValues(['a', 'b'], ['a', 'x', 'b'])).toEqual([
+      { op: 'push', path: [], value: 'x' },
+      { op: 'order', path: [], order: [0, 2, 1] },
+    ]);
+    for (const [before, after] of [
+      [
+        ['a', 'b', 'c', 'd'],
+        ['c', 'a', 'x', 'b', 'd'],
+      ],
+      [
+        ['a', 'b', 'c'],
+        ['c', 'b', 'a'],
+      ],
+      [
+        [1, 2, 3, 4, 5],
+        [5, 9, 1],
+      ],
+    ] as const) {
+      expect(applyPatches([...before], diffValues([...before], [...after]))).toEqual(after);
+    }
+  });
+
+  it('moves an inner list’s items at the index its outer item has once removals are done', () => {
+    const before = { s: [{ p: [1] }, { p: [2, 3] }, { p: [4] }] };
+    const after = { s: [{ p: [3, 2] }, { p: [4] }] };
+    const patches = diffValues(before, after);
+    expect(patches).toEqual([
+      { op: 'delete', path: ['s', 0] },
+      { op: 'order', path: ['s', 0, 'p'], order: [1, 0] },
+    ]);
+    expect(applyPatches(before, patches)).toEqual(after);
+  });
+
+  it('edits the item a changed one most resembles, when another was removed in the same save', () => {
+    const before = [
+      { heading: 'Clubs', body: 'Forty of them.' },
+      { heading: 'Sports', body: 'Every season.' },
+      { heading: 'Arts', body: 'Open late.' },
+    ];
+    const after = [
+      { heading: 'Sports', body: 'Every season, all year.' },
+      { heading: 'Arts', body: 'Open late.' },
+    ];
+    expect(diffValues(before, after)).toEqual([
+      { op: 'set', path: [1, 'body'], value: 'Every season, all year.' },
+      { op: 'delete', path: [0] },
+    ]);
+  });
+
+  it('compares by position with moves off, as writers do when items can’t move', () => {
+    expect(diffValues({ t: ['a', 'b'] }, { t: ['b', 'a', 'c'] }, [], { moves: false })).toEqual([
       { op: 'set', path: ['t', 0], value: 'b' },
       { op: 'set', path: ['t', 1], value: 'a' },
       { op: 'push', path: ['t'], value: 'c' },
     ]);
-    expect(diffValues(['a', 'b', 'c', 'd'], ['d', 'a'])).toEqual([
-      { op: 'set', path: [0], value: 'd' },
-      { op: 'set', path: [1], value: 'a' },
-      { op: 'delete', path: [3] },
-      { op: 'delete', path: [2] },
-    ]);
     const before = ['a', 'b', 'c', 'd'];
     const after = ['c', 'a', 'x', 'b', 'd'];
-    expect(applyPatches(before, diffValues(before, after))).toEqual(after);
+    expect(applyPatches(before, diffValues(before, after, [], { moves: false }))).toEqual(after);
   });
 
   it('replaces the value when its type changes', () => {
