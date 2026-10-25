@@ -1,9 +1,18 @@
 name: CI
 
+# Every publish from vespercms.com's studio is a push to main that changes
+# only its content. Those skip CI, which would spend about 46 billed minutes
+# (Windows counts double) on a one-line edit: Cloudflare Pages still builds
+# them, and a content error fails that build. A push that changes anything
+# else as well runs everything.
 on:
   pull_request:
+    paths-ignore:
+      - 'apps/site/src/content/**'
   push:
     branches: [main]
+    paths-ignore:
+      - 'apps/site/src/content/**'
 
 # A newer push to the same branch makes an older run's result irrelevant.
 concurrency:

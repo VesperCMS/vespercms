@@ -1245,3 +1245,11 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 ### 2026-10-21: The docs are Markdown too
 
 **Every docs page has a Markdown copy at its address with `.md` in place of the trailing slash (`/docs.md` for the root), `/llms.txt` lists them in menu order with each page's summary, and `/llms-full.txt` is all of them in one file.** They're static endpoints built from the same tree as the menu, so they follow every move. Each page links to its copy, and `<head>` names `llms.txt`. The copies are the Markdoc source with the title and summary on top: callouts read fine as tags, and no conversion can drift from the page.
+
+### 2026-10-25: CI skips pushes that only change the site's content
+
+**Jeremy chose on 2026-10-25: CI doesn't run for a push or pull request whose every changed file is under `apps/site/src/content/` (`paths-ignore` in `.github/workflows/ci.yml`). A push that changes anything else as well runs all of it.** Every publish from vespercms.com's studio is such a push, and since the repository moved to the organization, which is on GitHub's free plan, its private-repository minutes are 2,000 a month. One full run is about 22 Linux minutes and 12 Windows minutes, which count double: about 46 billed minutes, so roughly 40 runs a month, spent on one-line edits.
+- What a content-only push still gets: Cloudflare Pages builds it, Astro checks every entry against its schema there, and a content error fails that build. The build also writes the accessibility report, which only reports.
+- What it no longer gets: the site's e2e (axe on every page in both colour schemes) for that change alone. The next push that touches code runs it on the content as it then is.
+- If the repository goes public with required status checks, a skipped run leaves its checks waiting on a content-only pull request. Required checks would then need a path-aware alternative, such as a job that always runs and passes for content.
+- Rejected: skipping only the Windows job for content (still about 22 minutes a publish), and `[skip ci]` in the cloud's commit messages (the cloud serves every site, and a customer's CI is theirs to decide).
