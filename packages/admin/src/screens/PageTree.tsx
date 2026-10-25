@@ -35,6 +35,10 @@ import { Screen } from '../app/Screen.tsx';
  *
  * Among panes it's the collection's pane, the same outline with every action,
  * and the page open beside it is marked and in view.
+ *
+ * Search narrows it to the pages whose title or slug matches, under the
+ * pages above them, all open. Dragging is off while it does: a drop between
+ * the rows left would land among siblings that are out of sight.
  */
 
 /** A node as the outline shows it: keyed by its path in the tree, with its entry ID apart. */
@@ -68,6 +72,8 @@ export function PageTree({
   const [problem, setProblem] = useState<string | null>(null);
   const [moving, setMoving] = useState<Moving | null>(null);
   const [deleting, setDeleting] = useState<Row | null>(null);
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
 
   // In the cloud a folder grant shows its branches, and the pages above them for context,
   // which the member can open but not change (spec §6.15.2, §7.5).
@@ -86,7 +92,11 @@ export function PageTree({
   const maxDepth = load.state === 'ready' ? load.value.maxDepth : undefined;
   const editable = collection.editable;
   // Fresh rows when the open page changes: the tree reuses a row whose item is the same object.
-  const shown = useMemo(() => withCurrent(rows, currentId), [rows, currentId]);
+  const shown = useMemo(
+    () => withCurrent(matching(rows, needle), currentId),
+    [rows, needle, currentId],
+  );
+  const matches = needle ? flatten(rows).filter((row) => hits(row, needle)).length : 0;
   const currentKey =
     currentId === null
       ? null
@@ -183,7 +193,10 @@ export function PageTree({
 
   // Drag and drop, on top of the menu: between siblings reorders, onto a page moves under it.
   // A move to another parent opens the same dialog as "Move to…", so its effects are confirmed.
+  // Off while searching through `isDisabled`, never by leaving the hooks out: the tree calls
+  // them only when it's given them, so dropping them mid-render breaks the order of its hooks.
   const { dragAndDropHooks } = useDragAndDrop<Row>({
+    isDisabled: needle !== '',
     getItems: (keys) => [...keys].map((key) => ({ 'text/plain': String(key) })),
     onMove: (event) => {
       // A drop onto a page is onItemDrop's: it moves the page under that one.
@@ -250,9 +263,19 @@ export function PageTree({
         </p>
       )}
       {pane ? (
-        <p className="mb-3 px-1 text-small text-content-muted">
-          Each page’s “…” menu adds a page under it or moves it. Alt+↑ and Alt+↓ change its order.
-        </p>
+        <>
+          <TextField
+            label="Search"
+            type="search"
+            icon="search"
+            value={query}
+            onChange={setQuery}
+            className="mb-3"
+          />
+          <p className="mb-3 px-1 text-small text-content-muted">
+            Each page’s “…” menu adds a page under it or moves it. Alt+↑ and Alt+↓ change its order.
+          </p>
+        </>
       ) : (
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <p className="max-w-2xl text-content-muted">
@@ -268,6 +291,16 @@ export function PageTree({
           )}
         </div>
       )}
+      {!pane && (
+        <TextField
+          label="Search"
+          type="search"
+          icon="search"
+          value={query}
+          onChange={setQuery}
+          className="mb-6 w-full max-w-xs"
+        />
+      )}
       {problem && (
         <p role="alert" className="mb-4 text-danger">
           {problem}
@@ -281,14 +314,17 @@ export function PageTree({
           items={shown}
           // A row's name is this text: the title first, for type-ahead.
           textValue={(row) => (row.current ? `${row.title}, open now` : row.title)}
-          expandedKeys={expanded}
-          onExpandedChange={setExpanded}
+          // While searching, every page above a match is open, and the outline's own state waits.
+          expandedKeys={needle ? allKeys(shown) : expanded}
+          onExpandedChange={(keys) => {
+            if (!needle) setExpanded(keys);
+          }}
           onAction={(row) => {
             if (row.entryId !== undefined) onMenu(row, 'open');
           }}
           onRowKeyDown={onRowKeyDown}
           {...(editable && covered('') ? { dragAndDropHooks } : {})}
-          emptyState="No pages yet."
+          emptyState={rows.length === 0 ? 'No pages yet.' : 'No pages match.'}
           currentKey={currentKey}
           renderRow={(row) => (
             <>
@@ -316,6 +352,9 @@ export function PageTree({
       )}
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
+      </p>
+      <p className="sr-only" role="status">
+        {needle ? `${String(matches)} ${matches === 1 ? 'page matches' : 'pages match'}.` : ''}
       </p>
 
       {moving && (
@@ -615,6 +654,27 @@ function pruneRows(rows: Row[], covered: (path: string) => boolean): Row[] {
     const children = pruneRows(row.children, covered);
     return covered(row.path) || children.length > 0 ? [{ ...row, children }] : [];
   });
+}
+
+function hits(row: Row, needle: string): boolean {
+  return row.title.toLowerCase().includes(needle) || row.slug.toLowerCase().includes(needle);
+}
+
+/** Pages that match, with the pages above them, so each keeps its place. */
+function matching(rows: Row[], needle: string): Row[] {
+  if (!needle) return rows;
+  return rows.flatMap((row) => {
+    const children = matching(row.children, needle);
+    return hits(row, needle) || children.length > 0 ? [{ ...row, children }] : [];
+  });
+}
+
+function allKeys(rows: Row[]): Set<Key> {
+  return new Set(
+    flatten(rows)
+      .filter((row) => row.children.length > 0)
+      .map((row) => row.id),
+  );
 }
 
 /** Copies of the rows, so each is drawn again with the page that's open now. */

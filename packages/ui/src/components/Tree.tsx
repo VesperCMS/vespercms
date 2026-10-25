@@ -110,6 +110,8 @@ export function Tree<T extends TreeNode>({
                 slot="drag"
                 className={cx(
                   'inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md text-content-muted data-[hovered]:text-content',
+                  // Dragging off for now (the outline while it's searched): its place is kept, so rows don't shift.
+                  'data-[disabled]:invisible',
                   focusRing,
                 )}
               >

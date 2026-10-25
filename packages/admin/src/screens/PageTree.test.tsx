@@ -82,6 +82,49 @@ describe('the page outline (spec §6.15.2)', () => {
     await expectNoViolations();
   });
 
+  it('narrows to the pages that match, under the pages above them, and back', async () => {
+    const user = userEvent.setup();
+    setup();
+    const grid = await screen.findByRole('treegrid', { name: 'Pages' });
+    await within(grid).findByRole('row', { name: 'Academics' });
+    const labels = () =>
+      within(grid)
+        .getAllByRole('row')
+        .map((r) => r.getAttribute('aria-label'));
+    const search = screen.getByRole('searchbox', { name: 'Search' });
+
+    await user.type(search, 'nurs');
+    await waitFor(() => {
+      expect(labels()).toEqual(['Academics', 'Nursing']);
+    });
+    expect(within(grid).getByRole('row', { name: 'Academics' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByText('1 page matches.')).toBeInTheDocument();
+    // Dragging waits while the outline is narrowed: a drop would land among pages out of sight.
+    expect(within(grid).getByRole('button', { name: 'Drag Nursing' })).toBeDisabled();
+
+    await user.clear(search);
+    await waitFor(() => {
+      expect(labels()).toEqual([
+        'Vesper playground',
+        'About the college',
+        'Academics',
+        'Admissions',
+      ]);
+    });
+    // The outline's own open folders come back as they were.
+    expect(within(grid).getByRole('row', { name: 'Academics' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(within(grid).getByRole('button', { name: 'Drag Academics' })).toBeEnabled();
+
+    await user.type(search, 'zzz');
+    expect(await within(grid).findByText('No pages match.')).toBeInTheDocument();
+  });
+
   it('expands with the arrow keys and opens a page with Enter', async () => {
     const user = userEvent.setup();
     setup();

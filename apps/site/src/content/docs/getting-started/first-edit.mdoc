@@ -27,7 +27,7 @@ The top bar also has the entry's status ("Unsaved changes", "Saved just now"), S
 
 ## Panes
 
-On a screen 768 pixels wide or more, the studio is panes, side by side across the whole width: your collections first, then a collection's list, then the entry. Choosing a collection opens its list in a pane beside the collections, and an entry you open from it opens beside the list, which stays as it is, with the open entry marked. The list pane has a search field, Sort and New entry, and Show when some entries are drafts or need a developer; a collection of pages shows its outline there instead, with each page's “…” menu and New page. Each pane scrolls on its own, and the collections are always one click away. To make more room, collapse a pane with the button at the end of its header: it becomes a narrow strip, and stays one in this browser until you click the strip. When the panes don't all fit, the studio folds the earlier ones into strips itself. Moving to another entry asks first when the open one has unsaved changes. Narrower than 768 pixels, the studio shows one screen at a time, with the top bar's menus.
+On a screen 768 pixels wide or more, the studio is panes, side by side across the whole width: your collections first, then a collection's list, then the entry. Choosing a collection opens its list in a pane beside the collections, and an entry you open from it opens beside the list, which stays as it is, with the open entry marked. The list pane has a search field, Sort and New entry, and Show when some entries are drafts or need a developer; a collection of pages shows its outline there instead, with a search field, each page's “…” menu and New page. Each pane scrolls on its own, and the collections are always one click away. To make more room, collapse a pane with the button at the end of its header: it becomes a narrow strip, and stays one in this browser until you click the strip. When the panes don't all fit, the studio folds the earlier ones into strips itself. Moving to another entry asks first when the open one has unsaved changes. Narrower than 768 pixels, the studio shows one screen at a time, with the top bar's menus.
 
 ## What Save does
 
@@ -66,7 +66,7 @@ New images go to `src/assets/<collection>/`, or beside the image they replace, a
 
 ## Pages in a tree
 
-A collection with `tree: true` opens as an outline: pages as they nest on the site, each with its address. Each page's "…" menu has Add child page, Move to…, Move up, Move down and Delete. From a page, the right arrow or Shift+F10 reaches its menu, and Alt+↑ and Alt+↓ move it. You can drag pages too.
+A collection with `tree: true` opens as an outline: pages as they nest on the site, each with its address. Each page's "…" menu has Add child page, Move to…, Move up, Move down and Delete. From a page, the right arrow or Shift+F10 reaches its menu, and Alt+↑ and Alt+↓ move it. You can drag pages too. The search field above the outline narrows it to the pages that match.
 
 - **Move up** and **Move down** rewrite the folder's `_order.yaml`.
 - **Add child page** opens a new page under that one. Saving it adds it to the folder's `_order.yaml`, if there is one. A parent that's a single file becomes a folder's section page, so `about.md` moves to `about/index.md`, at the same address.

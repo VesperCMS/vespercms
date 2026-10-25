@@ -84,6 +84,23 @@ async function enterOutline(page: Page, grid: Locator) {
 
 const announcement = (page: Page) => page.locator('[role="status"][aria-live="polite"]');
 
+test('searching the outline shows the pages that match under the pages above them', async ({
+  page,
+}) => {
+  const grid = await openOutline(page);
+  const search = page.getByRole('searchbox', { name: 'Search' });
+  await search.fill('nurs');
+  await expect(grid.getByRole('row')).toHaveCount(2);
+  await expect(grid.getByRole('row', { name: 'Academics' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  await expect(grid.getByRole('row', { name: 'Nursing' })).toBeVisible();
+  await expectAccessible(page);
+  await search.fill('');
+  await expect(grid.getByRole('row', { name: 'About the college' })).toBeVisible();
+});
+
 test('the outline, its menu and its dialogs pass axe; Redirects too', async ({ page }) => {
   const grid = await openOutline(page);
   await expectAccessible(page);
