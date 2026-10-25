@@ -30,7 +30,7 @@ type State =
   | { kind: 'signed-out'; message?: string }
   | { kind: 'no-access'; login: string }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; session: Session; login: string };
+  | { kind: 'ready'; session: Session; login: string; name: string; picture: string };
 
 export function GitHubGate({
   settings,
@@ -77,7 +77,10 @@ export function GitHubGate({
           return;
         }
         const user = await fetcher(`${apiUrl}/user`, { headers });
-        const login = user.ok ? (((await user.json()) as { login?: string }).login ?? '') : '';
+        const profile = user.ok
+          ? ((await user.json()) as { login?: string; name?: string | null; avatar_url?: string })
+          : {};
+        const login = profile.login ?? '';
         const permissions = repo.ok
           ? ((await repo.json()) as { permissions?: { push?: boolean } }).permissions
           : undefined;
@@ -85,7 +88,13 @@ export function GitHubGate({
           set({ kind: 'no-access', login });
           return;
         }
-        set({ kind: 'ready', session, login });
+        set({
+          kind: 'ready',
+          session,
+          login,
+          name: profile.name?.trim() || `@${login}`,
+          picture: avatarAt(profile.avatar_url ?? '', 64),
+        });
       } catch {
         set({
           kind: 'error',
@@ -134,6 +143,8 @@ export function GitHubGate({
       state.kind === 'ready'
         ? {
             label: `@${state.login}`,
+            name: state.name,
+            ...(state.picture ? { picture: state.picture } : {}),
             description: `Signed in to GitHub as @${state.login}`,
             signOutLabel: 'Sign out of GitHub',
             signOut: leave,
@@ -219,5 +230,21 @@ function titleOf(state: State): string {
       return 'GitHub couldn’t be reached';
     default:
       return 'Sign in to edit this site';
+  }
+}
+
+/**
+ * GitHub's picture at a size (`s`), or nothing when GitHub gave no address.
+ * It loads from GitHub's image host, which GitHub mode already trusts with
+ * every read and save (DECISIONS.md, "GitHub mode loads the editor's picture from GitHub").
+ */
+export function avatarAt(address: string, size: number): string {
+  if (!address) return '';
+  try {
+    const url = new URL(address);
+    url.searchParams.set('s', String(size));
+    return url.href;
+  } catch {
+    return '';
   }
 }

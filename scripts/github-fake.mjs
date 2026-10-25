@@ -207,6 +207,13 @@ export function createGitHubFake(options) {
     state.log.push(`${request.method} ${path}${url.search}`);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
+    // GitHub's image host serves pictures to anyone; the fake serves the editor's.
+    if (path === `/avatars/${login}` && request.method === 'GET') {
+      const svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#63ccc0"/><circle cx="32" cy="26" r="12" fill="#282019"/><rect x="14" y="42" width="36" height="22" rx="11" fill="#282019"/></svg>';
+      return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml', ...CORS } });
+    }
+
     // OAuth, as GitHub's web flow does it: sign in and approve at once.
     if (path === '/login/oauth/authorize') {
       const code = randomBytes(10).toString('hex');
@@ -265,7 +272,10 @@ export function createGitHubFake(options) {
       );
     }
 
-    if (path === '/user') return json(200, { login, name: 'Test Editor', avatar_url: '' });
+    if (path === '/user') {
+      const avatar = new URL(`/avatars/${login}`, url.origin).href;
+      return json(200, { login, name: 'Test Editor', avatar_url: avatar });
+    }
     if (path === '/graphql' && request.method === 'POST') {
       const { query } = await request.json();
       const repository = {};

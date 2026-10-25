@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -6,7 +7,7 @@ import { join } from 'node:path';
 import { extractMarkdocSchema, markdocFields, type Manifest } from '@vesper/core';
 import { z } from 'astro/zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createDevApi, refusal } from './dev-api.ts';
+import { createDevApi, gitUserName, refusal } from './dev-api.ts';
 
 const manifest: Manifest = {
   manifestVersion: 1,
@@ -150,6 +151,18 @@ describe('the dev API', () => {
   it('refuses requests without the studio header', async () => {
     const response = await fetch(`${base}/summary`);
     expect(response.status).toBe(403);
+    expect((await fetch(`${base}/person`)).status).toBe(403);
+  });
+
+  it('names the person editing from git’s user.name, with no shell', async () => {
+    const git = (...args: string[]) =>
+      execFileSync('git', args, { cwd: root, stdio: 'ignore', windowsHide: true });
+    git('init', '--quiet');
+    git('config', 'user.name', 'Test Editor; echo no');
+    expect(await (await fetch(`${base}/person`, { headers: studio })).json()).toEqual({
+      name: 'Test Editor; echo no',
+    });
+    expect(await gitUserName(join(root, 'no-such-folder'))).toBeNull();
   });
 
   it('lists, reads and saves entries on disk', async () => {

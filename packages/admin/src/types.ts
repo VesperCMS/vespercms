@@ -59,6 +59,10 @@ export type StudioOptions = {
 export type Account = {
   /** The user menu's button: `@login` on GitHub, the person's name on Vesper. */
   label: string;
+  /** The person's name, at the top of the open menu and for their initials. */
+  name: string;
+  /** Their picture's address, beside the name; without one, their initials show. */
+  picture?: string;
   /** The menu's name: "Signed in to GitHub as @login". */
   description: string;
   /** The menu's way out: "Sign out of GitHub", "Sign out of Vesper". */

@@ -65,6 +65,11 @@ test('signs in with Vesper, and every screen on the way passes axe', async ({ pa
   // The one-time code never stays in the address.
   expect(page.url()).not.toContain('code=');
   await axe(page);
+  // The cloud's picture, from the API's own origin (DECISIONS.md, "The user menu shows the person's picture").
+  await expect(page.getByRole('button', { name: 'Ada Admin' }).locator('img')).toHaveAttribute(
+    'src',
+    /\/api\/avatars\/u_admin\.svg$/,
+  );
   await page.getByRole('button', { name: 'Ada Admin' }).click();
   await expect(page.getByRole('menuitem', { name: 'Open dashboard' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Sign out of Vesper' })).toBeVisible();

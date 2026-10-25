@@ -53,9 +53,17 @@ test('signs in through the relay, and every screen on the way passes axe', async
   // The code and state never stay in the address.
   expect(new URL(page.url()).search).toBe('');
   await axe(page);
-  // By keyboard: Enter opens the menu on its first item, Enter signs out.
-  await page.getByRole('button', { name: '@editor' }).focus();
+  // GitHub's picture beside the login, from GitHub's image host (here, the fake's).
+  const account = page.getByRole('button', { name: '@editor' });
+  await expect(account.locator('img')).toHaveAttribute('src', /\/avatars\/editor\?s=64$/);
+  await expect
+    .poll(() => account.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
+  // By keyboard: Enter opens the menu on Appearance's first option; End reaches Sign out.
+  await account.focus();
   await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
+  await page.keyboard.press('End');
   await expect(page.getByRole('menuitem', { name: 'Sign out of GitHub' })).toBeFocused();
   await axe(page);
   await page.keyboard.press('Enter');

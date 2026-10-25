@@ -56,6 +56,37 @@ test.afterEach(() => {
   touched.clear();
 });
 
+test('Appearance in the user menu: Dark is kept across a reload, and passes axe', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/admin/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
+  // Local mode's menu is named by git's user on this computer, or "You".
+  const menu = page.getByRole('navigation', { name: 'Studio' }).getByRole('button').last();
+  await menu.click();
+  await expect(page.getByRole('menuitemradio', { name: 'System' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const dark = await background();
+  await expectAccessible(page);
+
+  await page.reload();
+  // Applied by the page's own script, before the studio starts.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
+  expect(await background()).toBe(dark);
+
+  await menu.click();
+  await page.getByRole('menuitemradio', { name: 'System' }).click();
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /./);
+  expect(await background()).not.toBe(dark);
+});
+
 test('every screen passes axe: home, list, editor, media', async ({ page }) => {
   await page.goto('/admin/');
   await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();

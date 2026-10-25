@@ -135,6 +135,8 @@ test('the studio shell loads at /admin, deep links included, and says where edit
   // Before the studio runs, the shell's title has every screen's shape: the screen, then the site.
   const shell = await request.get('/admin/');
   expect(await shell.text()).toMatch(/<title>Studio · [^<]+<\/title>/);
+  // The Light or Dark choice is applied before the page paints, from the page itself.
+  expect(await shell.text()).toContain("localStorage.getItem('vesper:appearance')");
   // A static build has no back end until GitHub mode (Phase 3); local mode needs astro dev.
   await page.goto('/admin/#/c/blog');
   await expect(page.locator('h1')).toHaveText('Editing isn’t available here yet');

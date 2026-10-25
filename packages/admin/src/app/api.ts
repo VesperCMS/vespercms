@@ -64,6 +64,11 @@ export interface StudioApi {
    * this computer (local mode), where the site's publish gate can be saved past.
    */
   publishesOnSave(): boolean;
+  /**
+   * Local mode only: who is editing, from git's `user.name` on this computer,
+   * for the user menu (DECISIONS.md, "Appearance is in the user menu").
+   */
+  person?(): Promise<{ name: string | null }>;
 }
 
 export class ApiError extends Error {
@@ -127,6 +132,7 @@ export function createLocalApi(base: string, fetcher: typeof fetch = fetch): Stu
 
   return {
     publishesOnSave: () => false,
+    person: () => call('/person'),
     summary: () => call('/summary'),
     listEntries: (collection) => call(`/entries${query({ collection })}`),
     readEntry: (collection, id) => call(`/entry${query({ collection, id })}`),

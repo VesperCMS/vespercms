@@ -1,4 +1,4 @@
-import { Button, cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
+import { cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { shownTo } from '../cloud/access.ts';
 import { ChangesButton } from '../cloud/changes.tsx';
@@ -6,6 +6,7 @@ import { useStudio, VESPER_NAME } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
 import { collectionIcon } from './collection-icon.ts';
 import { hrefFor, navigate, parseRoute } from './router.ts';
+import { UserMenu } from './UserMenu.tsx';
 
 export type ScreenProps = {
   /** The screen's one `h1`, and the start of the page title. */
@@ -116,7 +117,7 @@ export function Screen({
 
 /** The top bar on every screen but the editor: the Content menu and the site menu. */
 function DefaultBar() {
-  const { manifest, siteUrl, account, cloud } = useStudio();
+  const { manifest, siteUrl, cloud } = useStudio();
   const route = parseRoute(window.location.hash);
   const here = 'collection' in route ? route.collection : null;
   const items = manifest.collections
@@ -158,28 +159,7 @@ function DefaultBar() {
         }}
       />
       <ChangesButton />
-      {/* GitHub mode and the cloud: who is signed in, and the way out (spec §6.9). */}
-      {account &&
-        (account.expired ? (
-          <Button variant="quiet" onPress={account.signInAgain}>
-            Sign in again
-          </Button>
-        ) : (
-          <Menu
-            label={account.description}
-            triggerText={account.label}
-            items={[
-              ...(account.dashboardUrl ? [{ id: 'dashboard', label: 'Open dashboard' }] : []),
-              { id: 'sign-out', label: account.signOutLabel },
-            ]}
-            onAction={(id) => {
-              if (id === 'dashboard' && account.dashboardUrl) {
-                window.open(account.dashboardUrl, '_blank', 'noopener');
-              }
-              if (id === 'sign-out') account.signOut();
-            }}
-          />
-        ))}
+      <UserMenu />
     </nav>
   );
 }

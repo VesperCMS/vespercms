@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   ContentService,
@@ -74,6 +75,11 @@ export function createDevApi(options: DevApiOptions): Handler {
     const method = req.method ?? 'GET';
     if (route === 'file' && (method === 'GET' || method === 'HEAD')) {
       await serveFile(res, query.get('path') ?? '', method === 'HEAD');
+      return;
+    }
+
+    if (route === 'person' && method === 'GET') {
+      send(res, 200, { name: await gitUserName(options.root) });
       return;
     }
 
@@ -255,4 +261,22 @@ async function readBody(req: IncomingMessage): Promise<Buffer> {
 async function readJson(req: IncomingMessage): Promise<unknown> {
   const text = (await readBody(req)).toString('utf8');
   return text ? (JSON.parse(text) as unknown) : {};
+}
+
+/**
+ * Who is editing on this computer, for the user menu: git's `user.name`, as
+ * git puts it on the commits made here. No shell; null without git or a name.
+ */
+export function gitUserName(root: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    execFile(
+      'git',
+      ['config', '--get', 'user.name'],
+      { cwd: root, timeout: 3000, windowsHide: true },
+      (error, stdout) => {
+        const name = error ? '' : stdout.trim();
+        resolve(name || null);
+      },
+    );
+  });
 }

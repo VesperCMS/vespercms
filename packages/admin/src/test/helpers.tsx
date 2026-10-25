@@ -43,10 +43,14 @@ export type FakeData = {
   pages?: PageLink[];
   trees?: Record<string, PageTree>;
   redirects?: RedirectsDocument;
+  /** Local mode's git user, for the user menu. */
+  person?: string;
 };
 
 /** An in-memory StudioApi. Every method is a `vi.fn`, so tests can assert on calls. */
-export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<StudioApi[K]> } {
+export function fakeApi(data: FakeData = {}): {
+  [K in keyof StudioApi]-?: Mock<NonNullable<StudioApi[K]>>;
+} {
   const notFound = (what: string) => Promise.reject(new Error(`${what} not found`));
   return {
     summary: vi.fn(() => Promise.resolve(data.summary ?? [])),
@@ -96,6 +100,7 @@ export function fakeApi(data: FakeData = {}): { [K in keyof StudioApi]: Mock<Stu
       Promise.resolve({ ok: true, version: 'v2', redirects: request.redirects, warnings: [] }),
     ),
     publishesOnSave: vi.fn(() => false),
+    person: vi.fn(() => Promise.resolve({ name: data.person ?? null })),
   } as never;
 }
 

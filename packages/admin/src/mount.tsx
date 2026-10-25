@@ -1,10 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App.tsx';
+import { applyAppearance, readAppearance } from './app/appearance.ts';
 import type { StudioOptions } from './types.ts';
 
 /** Renders the studio into `element`. Returns a function that unmounts it. */
 export function mountStudio(element: Element, options: StudioOptions): () => void {
+  // Again, after admin.astro's script: a site whose policy blocks inline scripts still gets the choice.
+  applyAppearance(readAppearance());
   const root = createRoot(element);
   root.render(
     <StrictMode>

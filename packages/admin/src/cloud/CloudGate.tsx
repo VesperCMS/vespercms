@@ -150,6 +150,10 @@ export function CloudGate({
       connected
         ? {
             label: connected.connection.user.name,
+            name: connected.connection.user.name,
+            ...(connected.connection.user.avatar
+              ? { picture: connected.connection.user.avatar }
+              : {}),
             description: `Signed in to Vesper as ${connected.connection.user.name}`,
             signOutLabel: 'Sign out of Vesper',
             dashboardUrl: connected.connection.dashboardUrl,
