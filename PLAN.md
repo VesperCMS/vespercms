@@ -351,7 +351,7 @@ After editing vespercms.com, Jeremy found the studio "stark", with a lot of clic
 
 Two of the calls depart from written rules, and DECISIONS.md has a dated note for each, under "Studio design":
 - the list pane (item 2) departs from spec §10.3's "single centered column" and §10.2's "not permanently visible" ("The entry list sits beside the editor on wide screens");
-- GitHub's pictures in GitHub mode (item 3, call A2) narrow the rule that `/admin` never requests anything from Google or a CDN to fonts, scripts and styles ("GitHub mode loads the editor's picture from GitHub"). CLAUDE.md's wording changes in the commit that adds the pictures.
+- GitHub's pictures in GitHub mode (item 3, call A2) narrow the rule that `/admin` never requests anything from Google or a CDN to fonts, scripts and styles ("GitHub mode loads the editor's picture from GitHub"). CLAUDE.md's wording changed when the pictures landed (2026-10-25).
 
 What the studio showed, measured 2026-10-25 on vespercms.com's home page at 1440×1000 (the 4408 preview):
 - The form is 9,628px tall, about ten screens. It holds 49 controls, 30 fieldsets and 66 Move up, Move down and Remove buttons.
@@ -649,6 +649,25 @@ Step 1 of the dogfooding additions is built. Duplicate (4), Tables (1), History 
 Each lands as its own step with an outcome note, as the dogfooding steps do.
 
 **The calls (decided 2026-10-25):** F1 to F3 (fields), L1 and L2 (the list pane), A1 to A3 (Appearance and pictures), M1 to M3 (Markdoc), each as recommended: (a), and (b) on L1. They're built between phases, in the order above, as the dogfooding additions are.
+
+**Outcome (2026-10-25).** Jeremy asked for all four at once, so they were built the same day, in the order above but with the list pane before Duplicate. Duplicate (step 2 of the dogfooding order) will add its item to the editor's "…" menu beside the pane's List button.
+- **Appearance and pictures (3).**
+  - The kit's `Menu` has a header, a picture before its trigger's words, and one choice as a radio group; `Avatar` shows a picture or initials.
+  - The user menu holds Appearance in every mode: `data-theme` and `localStorage` (`vesper:appearance`), applied by `admin.astro` before paint. Local mode's menu is named by git's `user.name`, from the dev API's new `person` route.
+  - GitHub mode shows the editor's GitHub picture and name. `CloudUser.avatar` is in the contract, the fake cloud serves one, and the studio shows it.
+- **Fields (1).**
+  - Top-level objects and lists are sections (an `h2` in the legend), objects lose their frames for an indent guide, and lists of objects or images are rows that open in place, with a "…" menu (Move up, Move down, Duplicate, Remove), Alt+↑/↓, Shift+F10, Open all, and `focusWhenShown` opening closed items.
+  - The `summary` hint is in core. Labels say "(optional)" instead of "(required)".
+  - On vespercms.com's home page the form went from 9,628px to 1,840px tall.
+- **Markdoc (4).** The `schema` hint shapes list and object attributes, and `editMarkdocTag` and `editJsxTag` write lists item by item, one item or one key per line. Each of Jazzy's nine FAQs now changes by one line for one changed answer.
+- **The list pane (2).** At 80rem and wider the editor shows its collection's list or outline in a `nav` before `<main>`, with search, the open entry marked, and "New entry" or "New page". It keeps its state across entries, follows saves, and hides with the List button (kept per viewer). It isn't shown for singletons or on narrower screens.
+- **Docs and rules.** `content/fields.mdoc`, `content/markdoc-and-mdx.mdoc` and `getting-started/first-edit.mdoc` describe the rows, the hints, "(optional)", Appearance and the list. `@vesper/astro`'s README describes the `schema` hint. CLAUDE.md has the narrowed font rule and two new ones (optional marks, `focusWhenShown`). DECISIONS.md's entries say what was built and what changed.
+- **Not done, or open:**
+  - **Cloud pictures.** The cloud's half (storing pictures from GitHub, the dashboard's upload) is vespercms-cloud's. Until it's built, cloud members get initials.
+  - **The caret fix (item 4).** On a Mac, ⇧⌘← with a chip selected still leaves a caret. It can only be checked on macOS, and this was built on Windows.
+  - **`aria-required` on selects.** The kit's Select, tag and reference comboboxes don't carry `aria-required` yet (DECISIONS.md, "The studio marks what's optional").
+  - **Moving a YAML list item.** Moving an item in a list in frontmatter rewrites the items it passes by position, keeping each slot's scalar style. A block scalar can then become a quoted string, as the studio e2e test first showed. The page is the same, but the change isn't "lines move as they are". It was so before rows too (Move up and Move down), but rows make moving easier. Worth a step: core's YAML list writer moving items' text, as the attribute lists now do.
+  - **Screen reader passes.** With the rest, before launch.
 
 ## Calls of 2026-10-19
 

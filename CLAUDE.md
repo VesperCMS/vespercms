@@ -119,7 +119,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Parse Markdoc bodies with `parseBody` / `parseMarkdoc` and the manifest's Markdoc options, never `Markdoc.parse(text)`.** Astro parses with its own tokenizer options (`allowComments`, plus `html` with `allowHTML`), and Markdoc's defaults read HTML comments and inline HTML differently.
 
-**Change a tag through `editMarkdocTag` or `editJsxTag`, and never run `Markdoc.format()` over content.** They change one attribute's bytes and keep the rest of the tag; `format` normalizes everything it touches.
+**Change a tag through `editMarkdocTag` or `editJsxTag`, and never run `Markdoc.format()` over content.** They change one attribute's bytes and keep the rest of the tag, and a list written one item (or one key) per line changes item by item; `format` normalizes everything it touches.
 
 ### URLs, hierarchy and redirects
 
@@ -183,7 +183,11 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **The accent is Pine, and fixed: no picker, setting or config key chooses another.** Choosing an accent is white-label, the higher paid tier, in Phase 9 (DECISIONS.md, 2026-10-18).
 
-**The studio's font is Figtree 400 and 600, self-hosted in `@vesper/admin`; `/admin` never requests anything from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree").
+**The studio's font is Figtree 400 and 600, self-hosted in `@vesper/admin`; `/admin` loads no font, script or style from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree"). GitHub mode's user picture loads from GitHub's image host, which that mode already talks to for every read and save (DECISIONS.md, "GitHub mode loads the editor's picture from GitHub").
+
+**Studio labels mark what's optional, "(optional)", and say nothing on required fields; required controls carry `aria-required`.** Most schema fields are required, so "(required)" repeated on nearly every label (DECISIONS.md, "The studio marks what's optional"). Public `<Form>`s keep "(required)".
+
+**Move focus to a field with `focusWhenShown` (`editor/reveal.ts`), never `element.focus()` alone.** A field inside a closed list item, or a closed Details, is in the page but hidden; it asks every item around the field to open first (DECISIONS.md, "Top-level groups are sections, and list items are rows that open in place").
 
 **Pair every `outline-2` with `outline-solid` (`data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid`).** Tailwind 4's `outline-none` sets the outline style to `none` through a variable `outline-2` reuses, so the ring otherwise isn't drawn; the budget test checks it (DECISIONS.md, "Every focus outline is drawn solid").
 

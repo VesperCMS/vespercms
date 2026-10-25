@@ -413,7 +413,7 @@ Rejected: binding Shift-Mod-ArrowLeft and -Right to commands that select to the 
 
 ### 2026-10-25: Studio layout and fields are built between phases
 
-**After editing vespercms.com, Jeremy found the studio stark, with a lot of clicking back and forth between a list and its entries, and long forms with lists hard to scan. On 2026-10-25 he took every recommendation in PLAN.md's "Studio layout and fields (design)": sections and list rows in the form, the entry list beside the editor on wide screens, Appearance and pictures in the user menu, and list attributes for Markdoc tags. They're built between phases, in that section's order, as the dogfooding additions are.** The entries below record each call. Two are exceptions, recorded under "Studio design": the list pane departs from spec §10.3, and GitHub's pictures narrow the rule from "The studio self-hosts Figtree". None is built yet, so CLAUDE.md's rules change only as each one lands.
+**After editing vespercms.com, Jeremy found the studio stark, with a lot of clicking back and forth between a list and its entries, and long forms with lists hard to scan. On 2026-10-25 he took every recommendation in PLAN.md's "Studio layout and fields (design)": sections and list rows in the form, the entry list beside the editor on wide screens, Appearance and pictures in the user menu, and list attributes for Markdoc tags. They're built between phases, in that section's order, as the dogfooding additions are.** The entries below record each call. Two are exceptions, recorded under "Studio design": the list pane departs from spec §10.3, and GitHub's pictures narrow the rule from "The studio self-hosts Figtree". Built 2026-10-25, the same day, but for the cloud's own half of pictures (in vespercms-cloud) and the caret fix; PLAN.md's outcome note has the details. CLAUDE.md's rules changed with them: the narrowed font rule, labels that mark what's optional, and `focusWhenShown`.
 
 ### 2026-10-25: Top-level groups are sections, and list items are rows that open in place
 
@@ -434,13 +434,19 @@ Rejected:
 - Only restyling, with every item open, which leaves the page several screens long.
 - Drag handles now. Drop targets inside open, nested lists are hard to get right, and §10.6 asks for the keyboard way first. Drag can follow with React Aria's drag and drop, as the outline has it.
 
+Built 2026-10-25. Two details settled while building:
+- A row with no title-like field is named by its first text field ("Parking?"), before the numbered fallback ("Question 2"); a FAQ's rows read badly otherwise. A row's name and its detail are separated by a spoken comma ("No second schema, 3 points"), since they're apart on screen but would otherwise run together for a screen reader.
+- Item ids live in the widget's state, not a ref, and a refused save opens items by comparing issues with the last ones seen, during render; the React Compiler's lint refuses refs read during render and state set in effects.
+
 ### 2026-10-25: The studio marks what's optional
 
 **Studio labels say "(optional)" on fields that aren't required, and nothing on required ones. Required controls carry `aria-required`, so screen readers still say it. List items say neither (call F2). Public forms (`<Form>`, spec §6.13) keep "(required)", where visitors expect it.** In a Zod schema a field is required unless it says otherwise, so most forms have far more required fields than optional ones. vespercms.com's home page had 65 "(required)" labels, and would have 13 "(optional)" ones. Spec §6.5.1's line for `required: true` is changed to match. Rejected: keeping "(required)", which stays on 43 labels of that page even without list items; and marking whichever is rarer per form, where a label with no mark would mean different things in different entries.
 
+Built 2026-10-25. `aria-required` is on the controls the studio draws itself (text, numbers, dates, the Markdown fields, raw YAML, an image's alt text) and on the title. The kit's Select, tag and reference comboboxes don't take it yet: passing `isRequired` turns on React Aria's native validation, which would show an empty required field as invalid as soon as it's committed, before any save.
+
 ### 2026-10-25: Appearance is in the user menu, and local mode has a user menu
 
-**The user menu gains "Appearance": System, Light and Dark, as a single-choice section. The choice sets `data-theme` on `<html>`, or removes it for System. It's kept per viewer in `localStorage` (`vesper:appearance`), and an inline script in `admin.astro` applies it before the page paints. Local mode gets a user menu too, named by git's `user.name` (else "You"), holding only Appearance (call A1). The editor's bar still doesn't carry the user menu.** The tokens already switched on `html[data-theme]`, but nothing set it. Rejected: Appearance in the Site menu in local mode only, which would move it between modes; and a separate "Appearance" menu in local mode.
+**The user menu gains "Appearance": System, Light and Dark, as a single-choice section. The choice sets `data-theme` on `<html>`, or removes it for System. It's kept per viewer in `localStorage` (`vesper:appearance`), and an inline script in `admin.astro` applies it before the page paints. Local mode gets a user menu too, named by git's `user.name` (else "You"), holding only Appearance (call A1). The editor's bar still doesn't carry the user menu.** The tokens already switched on `html[data-theme]`, but nothing set it. Rejected: Appearance in the Site menu in local mode only, which would move it between modes; and a separate "Appearance" menu in local mode. Built 2026-10-25. The menu opens on Appearance's first option, so Sign out is now its last item (End reaches it).
 
 ### 2026-10-25: The user menu shows the person's picture, or their initials
 
@@ -449,7 +455,7 @@ Rejected:
 - **The cloud:** `CloudUser` gains `avatar`, an address on the API's own domain (call A3). The cloud stores the GitHub picture of people who sign in with GitHub, and an upload from the dashboard's account page for anyone. Uploads are resized, re-encoded and stripped of metadata.
 - **Everyone else, and any picture that fails to load,** gets initials in `accent` on `accent-subtle`.
 
-The cloud's contract changes first, one change at a time with History's and Phase 4.5's. Account settings stay in the dashboard, so the studio never uploads a picture.
+The cloud's contract changes first, one change at a time with History's and Phase 4.5's. Account settings stay in the dashboard, so the studio never uploads a picture. Built here 2026-10-25: `CloudUser.avatar`, the contract's check that a picture comes from the API's own origin and loads without a token, the fake cloud serving one, and the studio showing it. Storing and serving pictures, and the dashboard's upload, are vespercms-cloud's to build; until then the cloud's members get initials.
 
 Rejected:
 - Gravatar, which would send a hash of the person's email address from `/admin` to a third party.
@@ -463,6 +469,8 @@ Rejected:
 Why: Markdoc can't describe what's inside an `Array`. MDX components' `props` (spec §6.5.2) are the precedent for giving a component a shape in `vesper.config.ts`. Jazzy's `faq` tag, a list of questions on 9 pages, is the real case. Spec §6.5.1's table and its list of hints are changed to match.
 
 Rejected: guessing the shape from the values in the file. A new tag has nothing to guess from, and one odd item changes the form.
+
+Built 2026-10-25. The settings form had only ever set whole attributes, so a field inside a list attribute replaced the list with its own value; it now applies a nested change to the attribute's value.
 
 ## Schema introspection
 
@@ -611,6 +619,8 @@ Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a f
 Why: `editMarkdocTag` writes a changed value with `markdocValue`, on one line. Changing one answer in Jazzy's seven-question `faq` would rewrite about 2,200 characters as a single line, against "No unrelated diff". `editJsxTag`'s `JSON.stringify` does the same. It's the attribute counterpart of "Lists that are edited and resized change item by item".
 
 Rejected: always writing the whole value.
+
+Built 2026-10-25. Two of Jazzy's nine FAQs write each question over several lines, one key per line, so that layout is handled too: a changed object rewrites only its changed keys' lines, and a new one is written one key per line like its neighbours. All nine now change by one line for one changed answer.
 
 ## URLs, hierarchy and redirects
 
@@ -1304,13 +1314,15 @@ Rejected:
 - Sanity's columns (collections, entries, the entry, a nested item). They break the single column and the two-level rule, and the editor gets narrow by the third column. At 320px or 200% zoom they'd fall back to one column anyway.
 - No pane, only the palette with previous and next, which doesn't change how the studio feels.
 
+Built 2026-10-25. Every entry is a screen of its own, remounted, so the pane is too; its list, search, open folders and scroll are kept in module memory for the visit, and a save tells it to read the list again. A flat list uses the kit's `Tree` too, without chevrons, so both kinds are one Tab stop with the same keys. A row's name is its type-ahead text, so it carries the row's status and "open now" after the title.
+
 ### 2026-10-25: GitHub mode loads the editor's picture from GitHub (a narrowing of "The studio self-hosts Figtree")
 
 **In GitHub mode the user menu's picture loads from GitHub's image host (`avatars.githubusercontent.com`), at 64px, with no referrer (call A2). The rule from "The studio self-hosts Figtree" becomes: `/admin` loads no font, script or style from Google or a CDN. CLAUDE.md's wording changes in the commit that adds the pictures.**
 
 Why: in GitHub mode the studio already talks to GitHub for every read and save, so a picture tells GitHub nothing new. The rule was about the studio's own assets: a studio that loads with no third party in the way, and no font host seeing who opens it. The map's tiles (OpenFreeMap) and GitHub's API were already requests from `/admin` to other hosts.
 
-Rejected: initials only in GitHub mode, which would keep the rule's wording for no gain in privacy.
+Rejected: initials only in GitHub mode, which would keep the rule's wording for no gain in privacy. Built 2026-10-25, with CLAUDE.md's rule narrowed in the same change.
 
 ---
 
