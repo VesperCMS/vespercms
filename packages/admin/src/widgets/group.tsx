@@ -54,8 +54,9 @@ function imageSource(value: DataValue): string {
 const plain = (text: string) => text.replace(/[*_`]/g, '').trim();
 
 /**
- * A list item's name, from its own content: the `summary` hint's field, else
- * a title-like field, else an image's alt text or file name, else "Point 3".
+ * A list item's name, from its own content: an image's alt text or file
+ * name; otherwise the `summary` hint's field, a title-like field, or its
+ * first text, in that order; else "Point 3".
  */
 export function itemSummary(
   value: DataValue,
@@ -72,7 +73,9 @@ export function itemSummary(
     return src ? { name: fileName(src), key: 'src' } : fallback;
   }
   if (!isPlainObject(value)) return fallback;
-  for (const key of [list.summary, ...NAME_KEYS]) {
+  // The hint, then a title-like field, then the item's first text field, in schema order.
+  const order = (list.children?.[0]?.children ?? []).filter((c) => !c.hidden).map(keyOf);
+  for (const key of [list.summary, ...NAME_KEYS, ...order]) {
     if (!key) continue;
     const text = value[key];
     if (typeof text === 'string' && text.trim()) return { name: plain(text), key };

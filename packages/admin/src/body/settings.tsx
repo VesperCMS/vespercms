@@ -15,7 +15,7 @@ import { Button, Dialog, Select, TextArea, TextField } from '@vesper/ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
-import { pathKey, type ValuePath } from '../editor/values.ts';
+import { pathKey, setIn, type ValuePath } from '../editor/values.ts';
 import { fallbackLabel, type BlockKind } from './catalog.ts';
 import { chipInfo, tagValues } from './chips.ts';
 import { sourceLabel } from './document.ts';
@@ -256,8 +256,10 @@ function TagForm({ editor, target, kind }: { editor: Editor; target: Target; kin
     issues: issueMap,
     disabled: ui.disabled,
     idPrefix: `block${String(target.pos)}`,
-    setValue: (path: ValuePath, value: DataValue) => {
+    setValue: (path: ValuePath, changed: DataValue) => {
       const key = String(path[0]);
+      // A field inside a list or object attribute changes its part of the attribute's value.
+      const value = path.length > 1 ? (setIn(display, path, changed)[key] ?? null) : changed;
       const field = kind.fields.find((f) => f.path[0] === key);
       // A value set back to its default is left out of the tag (house style).
       const next =

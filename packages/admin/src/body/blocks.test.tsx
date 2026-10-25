@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
-import type { EntryDocument, SaveRequest } from '@vesper/core';
+import type { EntryDocument, FieldModel, SaveRequest } from '@vesper/core';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
+import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 
 /*
  * Markdoc tags and MDX components in the writing view (spec §6.5.1,
@@ -157,6 +157,82 @@ describe('Markdoc tags in the writing view', () => {
       expect(api.saveEntry).toHaveBeenCalled();
     });
     expect(savedBody(api)).toBe(`${BODY.replace('type="tip"', 'type="warning"')}\n`);
+  });
+
+  it('edits a list attribute shaped by a schema hint as rows, and saves only the changed item’s line', async () => {
+    const manifest = structuredClone(playgroundManifest);
+    const items: FieldModel = {
+      path: ['items'],
+      kind: 'array',
+      label: 'Questions',
+      required: true,
+      inferredWidget: 'repeater',
+      children: [
+        {
+          path: ['items', '[]'],
+          kind: 'object',
+          label: 'Item',
+          required: true,
+          inferredWidget: 'group',
+          children: [
+            {
+              path: ['items', '[]', 'question'],
+              kind: 'string',
+              label: 'Question',
+              required: true,
+            },
+            { path: ['items', '[]', 'answer'], kind: 'string', label: 'Answer', required: true },
+          ],
+        },
+      ],
+    };
+    manifest.markdoc?.tags.push({
+      name: 'faq',
+      label: 'FAQ',
+      selfClosing: true,
+      attributes: [{ name: 'items', types: ['Array'], required: true }],
+      fields: [items],
+    });
+    const faq = [
+      '{% faq items=[',
+      '  { question: "Open late?", answer: "Until ten." },',
+      '  { question: "Parking?", answer: "Behind the library." }',
+      '] /%}',
+    ].join('\n');
+    const api = fakeApi({
+      documents: { 'docs/getting-started': { ...doc, body: `\n\n${faq}\n` } },
+      partials: PARTIALS,
+    });
+    renderStudio('#/c/docs/e/getting-started', { api, manifest });
+    const user = userEvent.setup();
+    const editor = await editorOf();
+    // A self-closing tag is a card.
+    selectNode(
+      editor,
+      findNode(editor, 'vesperCard', (a) => a.name === 'faq'),
+    );
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog', { name: 'FAQ settings' });
+    const parking = within(dialog).getByRole('button', { name: 'Parking?, Behind the library.' });
+    await user.click(parking);
+    const answer = within(within(dialog).getByRole('group', { name: 'Parking?' })).getByRole(
+      'textbox',
+      { name: 'Answer' },
+    );
+    await user.clear(answer);
+    await user.type(answer, 'In the garage.');
+    await expectNoViolations();
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+    expect(savedBody(api)).toBe(
+      `${faq.replace(
+        '  { question: "Parking?", answer: "Behind the library." }',
+        '  {question: "Parking?", answer: "In the garage."}',
+      )}\n`,
+    );
   });
 
   it('moves and removes a tag from its settings, by keyboard alone', async () => {
