@@ -42,6 +42,8 @@ export type TreeProps<T extends TreeNode> = {
   /** Keys pressed on a focused row (Alt+arrows to move it, say). Stop the event to keep it from the tree. */
   onRowKeyDown?: (item: T, event: KeyboardEvent<HTMLDivElement>) => void;
   emptyState?: ReactNode;
+  /** The row that's open now (the editor's list pane): accent-subtle and its halo. Its words say so too. */
+  currentKey?: Key | null;
 };
 
 export function Tree<T extends TreeNode>({
@@ -55,6 +57,7 @@ export function Tree<T extends TreeNode>({
   dragAndDropHooks,
   onRowKeyDown,
   emptyState,
+  currentKey,
 }: TreeProps<T>) {
   // React Aria's rows keep their own key handling, so row keys are read on the
   // way down, from whichever row has focus.
@@ -92,6 +95,7 @@ export function Tree<T extends TreeNode>({
         'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
         // Where a dragged page would land is the current item: accent-subtle and its halo.
         'data-[drop-target]:bg-accent-subtle data-[drop-target]:shadow-glow-selected data-[dragging]:opacity-50',
+        item.id === currentKey && 'bg-accent-subtle shadow-glow-selected',
         colorTransition,
       )}
     >

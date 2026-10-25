@@ -1,5 +1,5 @@
 import type { CollectionManifest, EntrySummary, PageTree, PageTreeNode } from '@vesper/core';
-import { ButtonLink, cx, Link, TextField, Tree, type Key, type TreeNode } from '@vesper/ui';
+import { ButtonLink, Link, TextField, Tree, type Key, type TreeNode } from '@vesper/ui';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { StudioApi } from '../app/api.ts';
 import { useStudio } from '../app/context.tsx';
@@ -160,6 +160,7 @@ export function ListPane({
     return flatRows(listed.entries.filter((entry) => entryShownTo(cloud, entry.path)));
   }, [listed, cloud]);
   const shown = useMemo(() => matching(rows, query.trim().toLowerCase()), [rows, query]);
+  const currentRow = currentId === null ? null : (findRow(rows, currentId)?.id ?? null);
 
   // The open entry's folders are open, so it's in view.
   const [opened, setOpened] = useState<string | null>(null);
@@ -232,15 +233,10 @@ export function ListPane({
               }
             }}
             emptyState={rows.length === 0 ? 'No entries yet.' : 'Nothing matches.'}
+            currentKey={currentRow}
             renderRow={(row) => {
-              const current = row.entryId !== undefined && row.entryId === currentId;
               return (
-                <span
-                  className={cx(
-                    'min-w-0 flex-1 rounded-sm px-2 py-1',
-                    current && 'bg-accent-subtle shadow-glow-selected',
-                  )}
-                >
+                <span className="min-w-0 flex-1 px-2 py-1">
                   <span className="block truncate text-small font-semibold text-content">
                     {row.title}
                   </span>
@@ -276,4 +272,13 @@ function allKeys(rows: Row[]): Set<Key> {
   };
   walk(rows);
   return keys;
+}
+
+function findRow(rows: Row[], entryId: string): Row | undefined {
+  for (const row of rows) {
+    if (row.entryId === entryId) return row;
+    const below = findRow(row.children, entryId);
+    if (below) return below;
+  }
+  return undefined;
 }
