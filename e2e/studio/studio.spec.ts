@@ -155,6 +155,42 @@ test('by keyboard: Details is a drawer on a wide screen and the closing section 
   await expectAccessible(page);
 });
 
+test('by keyboard: the list beside the editor opens another entry, asks before leaving changes, and follows a save', async ({
+  page,
+}) => {
+  touches('src/content/blog/welcome.md');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  const pane = page.getByRole('navigation', { name: 'Blog posts' });
+  await expect(pane.getByRole('row', { name: /^Harbor at dawn.*open now$/ })).toBeVisible();
+  await expectAccessible(page);
+
+  // Enter on a row opens it, and focus lands on the new screen's heading.
+  await pane.getByRole('row', { name: /^Welcome to the playground/ }).focus();
+  await page.keyboard.press('Enter');
+  const title = page.getByRole('textbox', { name: 'Title' });
+  await expect(title).toHaveValue('Welcome to the playground');
+  await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+
+  // Unsaved changes ask first.
+  await title.focus();
+  await page.keyboard.press(keys.lineEnd);
+  await page.keyboard.type(', again');
+  await pane.getByRole('row', { name: /^Harbor at dawn/ }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('alertdialog', { name: 'Leave without saving?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Keep editing' }).click();
+  await page.keyboard.press(keys.save);
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  // The list follows the save.
+  await expect(pane.getByRole('row', { name: /^Welcome to the playground, again/ })).toBeVisible();
+
+  // Narrower, the editor is the single column again.
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await expect(pane).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'List' })).toHaveCount(0);
+});
+
 test('a deep link survives a reload', async ({ page }) => {
   await page.goto('/admin/#/c/pages/e/academics%2Fnursing');
   await expect(page.getByRole('textbox', { name: 'Title' })).toBeVisible();

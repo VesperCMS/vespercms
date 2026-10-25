@@ -21,6 +21,11 @@ export type ScreenProps = {
   column?: boolean;
   /** An icon before the heading: a collection's. */
   icon?: { node: IconNode } | { name: IconName };
+  /**
+   * Navigation beside the content, before `<main>`: the editor's list pane on
+   * wide screens. `<main>` still starts with the screen's `h1`.
+   */
+  aside?: ReactNode;
   children: ReactNode;
 };
 
@@ -37,6 +42,7 @@ export function Screen({
   afterglow = false,
   column = false,
   icon,
+  aside,
   children,
 }: ScreenProps) {
   const { siteName } = useStudio();
@@ -50,6 +56,36 @@ export function Screen({
   useEffect(() => {
     if (navigation.count > 0) heading.current?.focus({ preventScroll: false });
   }, [navigation.count]);
+
+  const main = (
+    <main
+      id="main"
+      tabIndex={-1}
+      className={cx(
+        'pb-16 outline-none',
+        aside ? 'min-w-0' : 'mx-auto max-w-6xl px-4',
+        hideTitle ? 'pt-8' : 'pt-12',
+      )}
+    >
+      <h1
+        ref={heading}
+        tabIndex={-1}
+        className={
+          hideTitle
+            ? 'sr-only'
+            : cx(
+                'mb-8 text-heading-1 text-content outline-none',
+                icon && 'flex items-center gap-3',
+                column && 'mx-auto max-w-editor',
+              )
+        }
+      >
+        {icon && !hideTitle && <Icon {...icon} size={24} className="text-content-muted" />}
+        {title}
+      </h1>
+      {children}
+    </main>
+  );
 
   return (
     <div className={cx('min-h-screen', afterglow && 'afterglow')}>
@@ -88,29 +124,14 @@ export function Screen({
           {bar ?? <DefaultBar />}
         </div>
       </header>
-      <main
-        id="main"
-        tabIndex={-1}
-        className={cx('mx-auto max-w-6xl px-4 pb-16 outline-none', hideTitle ? 'pt-8' : 'pt-12')}
-      >
-        <h1
-          ref={heading}
-          tabIndex={-1}
-          className={
-            hideTitle
-              ? 'sr-only'
-              : cx(
-                  'mb-8 text-heading-1 text-content outline-none',
-                  icon && 'flex items-center gap-3',
-                  column && 'mx-auto max-w-editor',
-                )
-          }
-        >
-          {icon && !hideTitle && <Icon {...icon} size={24} className="text-content-muted" />}
-          {title}
-        </h1>
-        {children}
-      </main>
+      {aside ? (
+        <div className="mx-auto grid max-w-6xl grid-cols-[18rem_minmax(0,1fr)] gap-10 px-4">
+          {aside}
+          {main}
+        </div>
+      ) : (
+        main
+      )}
     </div>
   );
 }

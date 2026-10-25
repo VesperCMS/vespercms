@@ -25,3 +25,10 @@ export function useMediaQuery(query: string): boolean {
  * laptop's window is narrower than this.
  */
 export const WIDE_EDITOR = '(min-width: 68.75rem)';
+
+/**
+ * Wide enough for the collection's list beside the editor's column (DECISIONS.md,
+ * "The entry list sits beside the editor on wide screens"): 18rem, a gap and
+ * the 45rem column inside the top bar's 72rem.
+ */
+export const LIST_PANE = '(min-width: 80rem)';

@@ -38,7 +38,9 @@ import { ApiError } from '../app/api.ts';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
-import { useMediaQuery, WIDE_EDITOR } from '../app/media.ts';
+import { LIST_PANE, useMediaQuery, WIDE_EDITOR } from '../app/media.ts';
+import { entriesChanged, ListPane } from './ListPane.tsx';
+import { usePaneShown } from '../app/pane.ts';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
@@ -205,6 +207,9 @@ function EntryForm({
    */
   const [detailsOpen, setDetailsOpen] = useState(false);
   const wide = useMediaQuery(WIDE_EDITOR);
+  // The collection's list beside the column, on wide screens (DECISIONS.md).
+  const listWide = useMediaQuery(LIST_PANE);
+  const [paneShown, setPaneShown] = usePaneShown();
   /** Each successful save glows Save once (glow-accent). */
   const [savedPulse, setSavedPulse] = useState(0);
 
@@ -479,6 +484,8 @@ function EntryForm({
           setDraftBlocked(false);
           setRetries(0);
           setNotice({ kind: 'saved', at: new Date(), reformatted: result.reformatted });
+          // The list beside the editor shows the new title or status.
+          entriesChanged(collection.name);
           if (!auto) setSavedPulse((n) => n + 1);
           // "Save anyway" goes with the summary, so focus moves to Save.
           if (pastGate) focusWhenShown(SAVE_ID);
@@ -765,6 +772,7 @@ function EntryForm({
     : { href: hrefFor({ screen: 'list', collection: collection.name }), label: collection.label };
 
   const statusLine = [draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ');
+  const hasPane = listWide && collection.presentation.singleton !== true;
   const hasDetails = !sourceOnly && arranged.details.length > 0;
   const detailKeys = new Set(arranged.details.map(keyOf));
   const detailProblems = issues.filter((issue) => detailKeys.has(String(issue.path[0]))).length;
@@ -773,6 +781,19 @@ function EntryForm({
       <Link icon="back" href={back.href} className="text-small">
         {back.label}
       </Link>
+      {hasPane && (
+        <Button
+          variant="quiet"
+          icon="list-pane"
+          aria-expanded={paneShown}
+          {...(paneShown ? { 'aria-controls': PANE_ID } : {})}
+          onPress={() => {
+            setPaneShown(!paneShown);
+          }}
+        >
+          List
+        </Button>
+      )}
       {/* On a narrow screen the title field is just below, so the bar leaves it out. */}
       <span className="hidden min-w-0 flex-1 truncate font-semibold text-content sm:block">
         {titleText}
@@ -874,7 +895,15 @@ function EntryForm({
   ];
 
   return (
-    <Screen title={titleText} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar} column>
+    <Screen
+      title={titleText}
+      hideTitle={Boolean(arranged.title) && !sourceOnly}
+      bar={bar}
+      column
+      {...(hasPane && paneShown
+        ? { aside: <ListPane collection={collection} currentId={entryId} id={PANE_ID} /> }
+        : {})}
+    >
       <EditorContext.Provider value={editor}>
         <div className="mx-auto flex max-w-editor flex-col gap-6">
           {doc?.message && (
@@ -1188,6 +1217,7 @@ function CloudNotices({
 }
 
 const SAVE_ID = 'entry-save';
+const PANE_ID = 'list-pane';
 
 /** Where a new page will go in the tree: under its parent, named by title. */
 function ParentNote({ collection, parent }: { collection: CollectionManifest; parent: string }) {
