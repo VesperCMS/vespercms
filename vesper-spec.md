@@ -213,6 +213,7 @@ const blog = defineCollection({
 - `widget`, `widgetOptions` (§6.3), `placeholder` (never used as a label)
 - `hidden`, `readOnly`
 - `autocomplete` (also used for forms)
+- `summary`, on a list of objects: the item field that names each item's row in the editor (decided October 25, 2026)
 
 **Implementation notes**
 
@@ -400,8 +401,8 @@ export default defineMarkdocConfig({
 | `String` | Text field |
 | `Number` | Number field |
 | `Boolean` | Switch |
-| `Array` / `Object` | Raw YAML field in v1 |
-| `required: true` | Marked required in text |
+| `Array` / `Object` | Raw YAML field, or the frontmatter's widgets when its hint gives a Zod `schema` (decided October 25, 2026) |
+| `required: true` | Marked in text: the studio marks optional attributes "(optional)", and required controls carry `aria-required` (decided October 25, 2026) |
 | `default` | Prefilled, and omitted from the source when unchanged |
 | Custom attribute type classes | Text field, plus that class's own validation |
 
@@ -416,7 +417,7 @@ markdoc: {
 },
 ```
 
-Hints cover: label, help text, the summary attribute, value labels, and a `widget` per attribute (so `color` and `geo` work inside tags too).
+Hints cover: label, help text, the summary attribute, value labels, a `widget` per attribute (so `color` and `geo` work inside tags too), and a Zod `schema` for an `Array` or `Object` attribute, as MDX components' `props` have (decided October 25, 2026).
 
 **Validation**
 - Run `Markdoc.validate()` against the site's real config as the editor types (debounced).
@@ -1365,7 +1366,7 @@ The component library isn't the problem. Taproot uses a few Radix primitives wit
 
 ### 10.2 Principles
 
-1. **One primary thing per screen.** On the editor screen it's the document. Everything else is one click away, not permanently visible.
+1. **One primary thing per screen.** On the editor screen it's the document. Everything else is one click away, not permanently visible. The one exception is the entry list beside the editor on wide screens (§10.3, decided October 25, 2026).
 2. **Typography and space do the work, not boxes.** Hierarchy comes from size, weight and spacing. Avoid cards inside cards, stacked borders and shadows (shadows only on overlays).
 3. **One accent color**, used only for the primary action, links, the current-location marker and focus. Everything else is neutral.
 4. **Words over badges and icons.** Status is short text ("Draft · saved just now"), optionally with one small neutral dot. An icon never stands alone without a visible label, except a universal close button that has an accessible name.
@@ -1376,8 +1377,8 @@ The component library isn't the problem. Taproot uses a few Radix primitives wit
 ### 10.3 Layout
 
 **App shell**
-- A top bar holds: site name (site switcher if the user has several), a "Content" menu listing collections, a search/command palette (⌘K), and a user menu.
-- No permanent left sidebar.
+- A top bar holds: site name (site switcher if the user has several), a "Content" menu listing collections, a search/command palette (⌘K), and a user menu. The user menu holds Appearance (System, Light or Dark), in every mode (decided October 25, 2026).
+- No permanent left sidebar. The editor's entry list on wide screens is the one exception (see Editor).
 - The home screen is a plain list of collections and singletons, with entry counts and "last edited."
 
 **Entry list**
@@ -1387,8 +1388,9 @@ The component library isn't the problem. Taproot uses a few Radix primitives wit
 - Controls are one search box and one status filter. Sort by clicking column headers.
 
 **Editor**
-- A single centered column, about 720px max.
+- A single centered column, about 720px max. On screens 1280px and wider, the collection's entry list sits in a pane to its left, shown until the person hides it (decided October 25, 2026).
 - The title field is styled as the document heading. Body fields flow beneath it in schema order.
+- Top-level objects and lists are sections with their own headings, and a list's items are rows that open in place (decided October 25, 2026).
 - Secondary frontmatter (slug, dates, tags, SEO fields, anything in `vesper.config.ts` marked `placement: 'details'`) goes in one collapsible **Details** section at the bottom, or a toggleable right drawer on wide screens. It is never permanently open.
 - **Top bar contents:** back link, entry title (truncated), status text, Preview toggle, the primary button (Publish or Request review), and a "…" menu. The menu holds everything else: history, duplicate, delete, copy link, view on site.
 - **Preview:** toggles a split view (editor and preview side by side), or full-screen on small screens. Its state is remembered per user.

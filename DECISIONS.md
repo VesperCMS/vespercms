@@ -411,6 +411,59 @@ Rejected: binding Shift-Mod-ArrowLeft and -Right to commands that select to the 
 
 **The `/admin` page's own title becomes "Studio · {siteName}", the same pattern every screen already sets ("Content · {siteName}"), instead of "{siteName} · Vesper" (call N1).** On vespercms.com the old title read "Vesper · Vesper". Vesper's name was in the tab only until the first screen opened anyway, and the favicon is Vesper's mark. One pattern everywhere is also one less thing for white-label to replace. Rejected: dropping the suffix only when the site is called Vesper, and changing vespercms.com's `siteName`, which would work around the studio instead of fixing it. Built 2026-10-21.
 
+### 2026-10-25: Studio layout and fields are built between phases
+
+**After editing vespercms.com, Jeremy found the studio stark, with a lot of clicking back and forth between a list and its entries, and long forms with lists hard to scan. On 2026-10-25 he took every recommendation in PLAN.md's "Studio layout and fields (design)": sections and list rows in the form, the entry list beside the editor on wide screens, Appearance and pictures in the user menu, and list attributes for Markdoc tags. They're built between phases, in that section's order, as the dogfooding additions are.** The entries below record each call. Two are exceptions, recorded under "Studio design": the list pane departs from spec §10.3, and GitHub's pictures narrow the rule from "The studio self-hosts Figtree". None is built yet, so CLAUDE.md's rules change only as each one lands.
+
+### 2026-10-25: Top-level groups are sections, and list items are rows that open in place
+
+**In the editor, a top-level object or list is a section: a hairline above it, its legend holding an `h2` in `text-heading-3`, and more space above it than between plain fields. Objects inside the form lose their frames and get an indent guide instead. The image and geo widgets keep their frames, which hold a preview or a map.**
+
+**A list of objects or images shows each item as one row:**
+- **Its name** comes from the item's content: the field a `summary` hint names, else `title`, `name`, `label`, `heading` or `text`.
+- **A muted detail** follows the name.
+- **A "…" menu** holds Move up, Move down, Duplicate and Remove. Alt+↑/↓ on the row also moves the item.
+
+**Rows open in place, as the kit's `Disclosure` (call F1). They're closed when an entry opens, except a new item and any item holding a field that a refused save or Go to field leads to. Closed items stay mounted, `hidden="until-found"`, so the browser's find still reaches them. No drag handles yet (F3).**
+
+Why: on vespercms.com's home page the form was 9,628px tall, with 66 move and remove buttons. 22 of its 30 groups were named "Item N (required)", and a group's legend looked exactly like a field's label. Spec §10.2 asks for typography and space, not boxes.
+
+Rejected:
+- Opening an item in a view of its own with a trail, as Sanity now does. The rest of the entry goes out of sight, Back means two things, and a refused save has to send people into the right view.
+- A dialog or drawer per item, since nested lists then stack dialogs.
+- Only restyling, with every item open, which leaves the page several screens long.
+- Drag handles now. Drop targets inside open, nested lists are hard to get right, and §10.6 asks for the keyboard way first. Drag can follow with React Aria's drag and drop, as the outline has it.
+
+### 2026-10-25: The studio marks what's optional
+
+**Studio labels say "(optional)" on fields that aren't required, and nothing on required ones. Required controls carry `aria-required`, so screen readers still say it. List items say neither (call F2). Public forms (`<Form>`, spec §6.13) keep "(required)", where visitors expect it.** In a Zod schema a field is required unless it says otherwise, so most forms have far more required fields than optional ones. vespercms.com's home page had 65 "(required)" labels, and would have 13 "(optional)" ones. Spec §6.5.1's line for `required: true` is changed to match. Rejected: keeping "(required)", which stays on 43 labels of that page even without list items; and marking whichever is rarer per form, where a label with no mark would mean different things in different entries.
+
+### 2026-10-25: Appearance is in the user menu, and local mode has a user menu
+
+**The user menu gains "Appearance": System, Light and Dark, as a single-choice section. The choice sets `data-theme` on `<html>`, or removes it for System. It's kept per viewer in `localStorage` (`vesper:appearance`), and an inline script in `admin.astro` applies it before the page paints. Local mode gets a user menu too, named by git's `user.name` (else "You"), holding only Appearance (call A1). The editor's bar still doesn't carry the user menu.** The tokens already switched on `html[data-theme]`, but nothing set it. Rejected: Appearance in the Site menu in local mode only, which would move it between modes; and a separate "Appearance" menu in local mode.
+
+### 2026-10-25: The user menu shows the person's picture, or their initials
+
+**The user menu's button shows a picture beside the name, never alone.**
+- **GitHub mode** uses `avatar_url` from the `/user` call it already makes. The request is covered under "Studio design", "GitHub mode loads the editor's picture from GitHub".
+- **The cloud:** `CloudUser` gains `avatar`, an address on the API's own domain (call A3). The cloud stores the GitHub picture of people who sign in with GitHub, and an upload from the dashboard's account page for anyone. Uploads are resized, re-encoded and stripped of metadata.
+- **Everyone else, and any picture that fails to load,** gets initials in `accent` on `accent-subtle`.
+
+The cloud's contract changes first, one change at a time with History's and Phase 4.5's. Account settings stay in the dashboard, so the studio never uploads a picture.
+
+Rejected:
+- Gravatar, which would send a hash of the person's email address from `/admin` to a third party.
+- Initials only in the cloud.
+- An upload from the studio's own menu, which would put account settings in two places and give the studio an upload to the cloud that isn't content.
+
+### 2026-10-25: Markdoc list and object attributes take a shape from `vesper.config.ts`
+
+**A Markdoc attribute of type `Array` or `Object` can take a Zod `schema` hint among `vesper.config.ts`'s Markdoc hints. Its Settings dialog then renders it with the frontmatter's widgets, rows included. Without a hint it stays the raw YAML field. Markdoc's own validation stays the authority when saving (call M1). Variables and conditions stay protected chips until a site uses them (M3).**
+
+Why: Markdoc can't describe what's inside an `Array`. MDX components' `props` (spec §6.5.2) are the precedent for giving a component a shape in `vesper.config.ts`. Jazzy's `faq` tag, a list of questions on 9 pages, is the real case. Spec §6.5.1's table and its list of hints are changed to match.
+
+Rejected: guessing the shape from the values in the file. A new tag has nothing to guess from, and one odd item changes the form.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas
@@ -544,6 +597,20 @@ Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a f
 ### 2026-10-18: A new key beside one-line flow maps is one too
 
 **When a key is added to a block map whose last value is a one-line flow map (or flow list), the new value is written the same way.** Adding a wide crop beside `square: { x: 0.40, y: 0.10, w: 0.45, h: 0.675 }` used to write a five-line block map. It's the map counterpart of Phase 2.6's rule for list items after one-line flow maps. Beside block maps nothing changes, and the corpus suites pass unchanged.
+
+### 2026-10-25: A list attribute written one item per line changes item by item
+
+**When a Markdoc attribute's list was written one item per line:**
+- a changed item rewrites only its own line;
+- a new item is written in the same layout after the last;
+- a removed item goes with its line;
+- a moved item moves its line as it is.
+
+**Any other layout is written whole, as now. The result must read back as intended, or the save is refused. `editJsxTag` does the same for array props (call M2).**
+
+Why: `editMarkdocTag` writes a changed value with `markdocValue`, on one line. Changing one answer in Jazzy's seven-question `faq` would rewrite about 2,200 characters as a single line, against "No unrelated diff". `editJsxTag`'s `JSON.stringify` does the same. It's the attribute counterpart of "Lists that are edited and resized change item by item".
+
+Rejected: always writing the whole value.
 
 ## URLs, hierarchy and redirects
 
@@ -1160,7 +1227,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-18: The studio self-hosts Figtree (a departure from spec §10.5)
 
-**The studio is set in Figtree at 400 and 600, from the `@fontsource/figtree` npm package (OFL-1.1), latin subset, compiled into `@vesper/admin`'s `dist/studio.css`. `/admin` never requests anything from Google or any CDN. Code, slugs and URLs use the system monospace stack, and the system UI stack stays the fallback.** Spec §10.5 says "the system UI stack by default". Jeremy chose Figtree for the direction's warmth. Self-hosting means no third-party request and a studio that works offline, and two weights keep to the §10.4 budget. The design system also names JetBrains Mono for code; it isn't added, because the system monospace stack does the job without another download. The first-load cost is measured in PLAN.md, "Studio design pass: outcome".
+**The studio is set in Figtree at 400 and 600, from the `@fontsource/figtree` npm package (OFL-1.1), latin subset, compiled into `@vesper/admin`'s `dist/studio.css`. `/admin` never requests anything from Google or any CDN. Code, slugs and URLs use the system monospace stack, and the system UI stack stays the fallback.** Spec §10.5 says "the system UI stack by default". Jeremy chose Figtree for the direction's warmth. Self-hosting means no third-party request and a studio that works offline, and two weights keep to the §10.4 budget. The design system also names JetBrains Mono for code; it isn't added, because the system monospace stack does the job without another download. The first-load cost is measured in PLAN.md, "Studio design pass: outcome". (Narrowed 2026-10-25 to fonts, scripts and styles: "GitHub mode loads the editor's picture from GitHub", below.)
 
 ### 2026-10-18: Overlays are 93% glass; the check composites over black and white
 
@@ -1215,6 +1282,35 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 ### 2026-10-19: A site's name shows as written; only Vesper's own is lowercase
 
 **The top bar shows the site's name exactly as the site writes it. Only Vesper's own name, shown when a site gives none, is set lowercase, as its wordmark.** The design pass lowercased every name with CSS, so screen readers still read it as written, but it showed "Highlands College" as "highlands college": a customer's own name, changed in their own studio. Jeremy chose this on 2026-10-19. The integration always passes a name (the site's host, its package name, or "Your site"), so in practice the lowercase wordmark appears only where the studio is mounted without one.
+
+### 2026-10-25: The entry list sits beside the editor on wide screens (an exception to spec §10.3 and §10.2)
+
+**At 80rem (1280px) and wider, the editor screen shows its collection's list in an 18rem pane on its left:**
+- a search field and the entries;
+- for a tree, the outline, read-only;
+- no pane for a singleton.
+
+**It's shown until someone hides it with the quiet "List" button beside the back link, and that choice is kept per viewer (calls L1 (b) and L2 (a)). Narrower, including at 200% zoom on a laptop, the editor is the single column, as before. Phase 7's preview takes the pane's place while it's on.**
+
+Why: Jeremy found the studio stark, with a lot of clicking back and forth. Every move between entries was a full screen each way, and the editor's bar has no Content menu.
+
+Spec §10.3 asks for "a single centered column" and "no permanent left sidebar", and §10.2 says everything but the document is "not permanently visible". This is the exception, and the spec's §10.2 and §10.3 now say so. What holds:
+- The 720px writing column stays.
+- The pane is the editor screen's only navigation, so §10.4's two levels hold.
+- The current entry uses `glow-selected`, in that glow's named place.
+- The pane is a `nav` landmark before `<main>`, and its entries are one Tab stop. Opening one moves focus to the editor's heading, as every navigation does.
+
+Rejected:
+- Sanity's columns (collections, entries, the entry, a nested item). They break the single column and the two-level rule, and the editor gets narrow by the third column. At 320px or 200% zoom they'd fall back to one column anyway.
+- No pane, only the palette with previous and next, which doesn't change how the studio feels.
+
+### 2026-10-25: GitHub mode loads the editor's picture from GitHub (a narrowing of "The studio self-hosts Figtree")
+
+**In GitHub mode the user menu's picture loads from GitHub's image host (`avatars.githubusercontent.com`), at 64px, with no referrer (call A2). The rule from "The studio self-hosts Figtree" becomes: `/admin` loads no font, script or style from Google or a CDN. CLAUDE.md's wording changes in the commit that adds the pictures.**
+
+Why: in GitHub mode the studio already talks to GitHub for every read and save, so a picture tells GitHub nothing new. The rule was about the studio's own assets: a studio that loads with no third party in the way, and no font host seeing who opens it. The map's tiles (OpenFreeMap) and GitHub's API were already requests from `/admin` to other hosts.
+
+Rejected: initials only in GitHub mode, which would keep the rule's wording for no gain in privacy.
 
 ---
 

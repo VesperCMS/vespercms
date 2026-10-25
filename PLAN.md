@@ -317,8 +317,8 @@ From the follow-up and "Not built" lists above, briefly:
   - task lists, footnotes and links with titles, which also stay protected blocks; each could follow tables, under the same round-trip rule.
 - **With item 2:** restoring a deleted entry, from the history of its collection's folder.
 - **Small, any time:**
-  - a light and dark switch for the studio (it follows the system), kept per viewer in `localStorage`;
-  - DECISIONS.md's open caret item: with a chip selected, ⇧⌘← leaves a caret before it;
+  - a light and dark switch for the studio (it follows the system), kept per viewer in `localStorage` (designed and decided since, as item 3 of "Studio layout and fields", below);
+  - DECISIONS.md's open caret item: with a chip selected, ⇧⌘← leaves a caret before it (listed again in item 4 of "Studio layout and fields");
   - a spinner on a pending button;
   - tags shown inside the combobox's field.
 - **Cloud, later:** dismissing an accessibility note (Phase 2.8: cloud drafts could hold it); the site switcher in the top bar (§10.3), for members of several sites.
@@ -342,6 +342,313 @@ Each lands as its own step with its own outcome note here, as "Icons (after the 
 - **The fallback check, fixed afterwards.** The round-trip check missed whatever Tiptap's parser drops, since it's gone from both sides: a strikethrough, an image, a quote, a rule, a table, a code block, a task list's boxes, a link definition, and in a one-line field a list. Such a field opened without it, and the first edit saved that. `fits()` now first walks marked's tokens and falls back on any the editor doesn't hold, on a GFM footnote and on a named character reference Tiptap doesn't decode (`&nbsp;`). The walk replaced the raw HTML test, so code holding `<` and autolinks open in the editor. Widget tests cover each of those, in one-line and multi-line fields, an edit that keeps the strikethrough, the values the editor does hold, and code ending in a space; the `site` e2e project reads `<title>Studio · Vesper</title>` from vespercms.com's built `/admin/`. Typecheck, lint and the format check pass; Vitest: 4,270 passed, 3 skipped. `npm run e2e` wasn't run for the fix (DECISIONS.md, "The compact Markdown editor checks marked's tokens before the round trip").
 
 **The calls (decided 2026-10-21):** T1 to T4 (tables), H1 to H3 (history, H1 being the tier question), C1 (code), D1 and D2 (duplicate), P1 and P2 (palette), N1 (title), each (a), as recommended. And about all six: they're built between phases, in the order above, not held for Phase 9's polish.
+
+## Studio layout and fields (design)
+
+Proposed 2026-10-25, and **Jeremy took every recommendation the same day: (a) on every call below, except L1, where (b) was the recommendation.** DECISIONS.md records each, under "Studio", "Content files" and "Studio design". Spec §6.3, §6.5.1, §10.2 and §10.3 now match. Nothing here is built yet; the order is at the end.
+
+After editing vespercms.com, Jeremy found the studio "stark", with a lot of clicking back and forth. Long forms with lists were hard to scan. He wanted a light and dark switch and his picture in the user menu, and asked what's left for Markdoc tags. Each item below ends with its calls, and each call had a recommendation.
+
+Two of the calls depart from written rules, and DECISIONS.md has a dated note for each, under "Studio design":
+- the list pane (item 2) departs from spec §10.3's "single centered column" and §10.2's "not permanently visible" ("The entry list sits beside the editor on wide screens");
+- GitHub's pictures in GitHub mode (item 3, call A2) narrow the rule that `/admin` never requests anything from Google or a CDN to fonts, scripts and styles ("GitHub mode loads the editor's picture from GitHub"). CLAUDE.md's wording changes in the commit that adds the pictures.
+
+What the studio showed, measured 2026-10-25 on vespercms.com's home page at 1440×1000 (the 4408 preview):
+- The form is 9,628px tall, about ten screens. It holds 49 controls, 30 fieldsets and 66 Move up, Move down and Remove buttons.
+- 22 of the 30 fieldsets are named "Item N (required)": 2 actions, 5 sections and their 15 points. The real names ("No second schema", "Hints where you need them") are already worked out by `itemSummary` in `packages/admin/src/widgets/group.tsx`, but only for accessible names and announcements.
+- 65 of the 78 labels and legends say "(required)". Only the lists with a default and the two optional fields (Hero, Intro) don't.
+- A group's legend ("Hero", "Sections") is `text-label`, 15px semibold, exactly like a text field's label (`packages/admin/src/editor/Field.tsx`), so nothing marks where a part of the page begins. Objects are `'boxed'` (`widgets/registry.ts`), so a point's fields sit two frames deep, and every item is open with its three buttons under it.
+- Moving between entries is always a full screen: list, entry, back to the list, the next entry. On the editor screen the top bar holds the entry's own controls, so the Content menu isn't there either.
+
+### 1. Fields that are easy to scan
+
+**Seen.** As measured above. Spec §10.2's principle "typography and space do the work, not boxes" is what the nesting breaks: the form's structure is drawn with frames, and its type has one level.
+
+**Design.**
+- **Sections.** A top-level object or list (the `group` and `repeater` widgets, at the first level) becomes a section:
+  - a hairline above it;
+  - its legend in `text-heading-3`, holding an `h2`, as GOV.UK puts a heading inside a legend;
+  - its description beneath.
+
+  Screen reader users can then move through a long form by heading, which they can't today. Plain fields between sections keep `text-label`. Sections get `gap-10` (40px) above them, and plain fields keep `gap-6` (24px) between them.
+- **No frames inside the form.** Objects lose their frame. A nested object gets an indent guide instead: a hairline on its left and `pl-4`, with its legend in `text-label`. The image and geo widgets keep their frames, since those hold a preview or a map. No new token.
+- **Items as rows.** A list of objects or images shows each item as one row:
+  - **The item's name.** It comes from the field a `summary` hint names. Without a hint, it's the first of `title`, `name`, `label`, `heading` and `text`, as `itemSummary` does now. Failing both, it's "Point 3", from the item's own label. An image item shows its alt text, or else its file name, with a 40px thumbnail through `useFileUrl`.
+  - **A muted detail after it.** The count of its first nested list ("3 points"), or else its second text value, truncated. A problem shows as text after it: "1 problem" in `danger`, "1 note" in muted text (notes stay text, never badges).
+  - **A "…" menu**, the overflow button §10.4 allows: Move up, Move down, Duplicate and Remove, with Remove as the danger item. Duplicating an item is new and costs little.
+  - **Opening in place.** The row's name is the trigger of the kit's `Disclosure`, with its chevron. Open, the item's fields sit under the row behind the indent guide.
+- **Which items are open** (call F1). All are closed when an entry opens, except:
+  - a new item, which opens with focus on its first field;
+  - items holding a field a refused save names, since the error summary's links open every item on the way to that field, as they open Details now;
+  - an item a notes drawer's Go to field leads into.
+
+  A quiet "Open all" button, which becomes "Close all", sits on the list's legend line once a list has three items, for reading everything through.
+- **Closed items stay in the page.** The kit's `Disclosure` already closes its panel with `hidden="until-found"`, so the browser's find opens the item that matches, where the browser supports it. Elsewhere React Aria falls back to `hidden`, and find misses closed items. Nothing unmounts, so the editors inside keep their state and their undo history. The page renders the same controls it renders today, so mounting costs no more.
+- **Stable identity.** Each item gets an id when the entry loads, as the tables design gives rows, so the open state and focus follow an item through a move. The ids never reach the file.
+- **The `summary` hint**, `.meta({ summary: 'question' })` on the list, joins `META_KEYS` in `packages/core/src/schema/walk.ts`. It's the same word Markdoc tags use for their frames' summary, and it's needed only when the guess picks the wrong field.
+- **Labels inside lists.** An item no longer says "Item 2 (required)": it's named by its content, and an item never says "(required)", since it either exists or doesn't. The rest of the required question is call F2.
+- **Other lists.** Lists of numbers or dates keep one control per item, and the "…" menu replaces their three buttons. Lists of strings, choices and references already have their own widgets (tags, multiselect, references) and don't change. A custom widget that claims a list, like the playground's store hours, isn't affected.
+- Markdoc tags' settings dialogs use the same widgets, so item 4's list attributes get rows from this.
+
+Estimated effect on vespercms.com's home page: with every item closed, the form is the title, the summary, the hero (two fields and two action rows) and five section rows, under 2,000px. To be measured once it's built.
+
+**Where it lives.** In the form itself. There's no new screen, panel or colour: rows are `surface-raised` with hairlines, a problem is `danger` text, and the indent guide is `border`. The "…" menu is §10.4's overflow exception. Dragging is call F3.
+
+**Keyboard and screen readers.**
+- A row's name is a button with `aria-expanded` and `aria-controls` (React Aria's `Disclosure`), named by the item and its detail: "No second schema, 3 points". Rows of a top-level list sit in `h3`s, so heading navigation reaches each section and each of its items. Deeper rows are plain buttons.
+- Enter or Space opens and closes a row. Alt+↑ and Alt+↓ on a row move its item, as in the page outline, announced in the list's polite status ("Moved No second schema to position 2 of 5."), with focus staying on the row.
+- The "…" button follows its row in the Tab order. Shift+F10 on a row opens it too, as "Table actions" does on a cell.
+- Remove moves focus to the next row, or else the previous one, or else "Add …", and is announced, as now. Add opens the new item, focuses its first field and announces "Added point 4."
+- With every item closed, the home page's Tab stops in the lists fall from 66 move and remove buttons plus every field to two per row (its name and its "…").
+
+**Tests.**
+- Unit: `itemSummary` with and without the hint, image items, the fallback name; ids survive moves and removals.
+- Admin (jsdom):
+  - rows named by their content;
+  - opening and closing, and Open all;
+  - Alt+↑/↓ with its announcement and focus;
+  - the menu's items and Duplicate;
+  - focus after Remove and Add;
+  - a refused save opening the item with the error, and Go to field opening nested items;
+  - closed panels are `hidden="until-found"`;
+  - sections are `h2` and top-level rows `h3`;
+  - axe with rows closed, one open, and the menu open.
+- e2e (`studio`, keys only), on the playground's pages: move a section with Alt+↓, edit a field inside a point, remove one and add one. The file is checked byte for byte: only the changed lines differ. axe with an item open.
+- Docs: `content/fields.mdoc` describes lists and the `summary` hint. `vesper agents` lists the hint (its snapshot and `apps/site/AGENTS.md` regenerated).
+
+**Size.** Medium: about 7 commits (sections and frames; rows and their menu; the open state and reveal on errors; the hint through core and the manifest; tests; docs and the agent guide).
+
+**Risks.**
+- Someone who liked seeing everything at once. Open all covers that, one click per list.
+- Find in a browser without `until-found` misses closed items; the fallback is Open all.
+- Closed items hold Tiptap editors (the one-line Markdown fields) inside hidden panels, which must work as before once shown. jsdom can't show the browser's find either, so the e2e test checks both in Chromium.
+
+**Free or paid.** Free.
+
+**Calls.**
+- **F1. How list items show.**
+  - (a) Rows, closed when the entry opens, opening in place. Recommended: the entry stays one page, the error summary and the browser's find still reach every field, and it's the disclosure pattern screen readers already know.
+  - (b) Rows that open an item in a view of its own, replacing the column, with a trail ("Home › Sections › No second schema"), as Sanity now does. Deep lists stay calm, but the rest of the entry is out of sight while you edit, Back then means two things, and a refused save has to send people into the right view.
+  - (c) Rows that open an item in a dialog or drawer, as Sanity did before. Nested lists then stack dialogs.
+  - (d) Keep every item open, and only restyle: sections, no frames, items named, the "…" menu. The least change, but the home page stays several screens long.
+- **F2. Required and optional.**
+  - (a) Mark what's optional, "(optional)", say nothing on required fields, and set `aria-required` on required controls so screen readers still say it. Recommended: in a Zod schema a field is required unless it says otherwise, so most forms have far more required fields than optional ones. vespercms.com's home page would mark 13 labels "(optional)" (Hero, Intro and the lists with a default) instead of 65 "(required)". It changes the kit's `FieldLabel`, the editor's `Field`, and spec §6.5.1's table line ("Marked required in text") for the studio. `<Form>` on public pages (§6.13) keeps "(required)", where visitors expect it.
+  - (b) Keep "(required)" as now, minus list items. The least change, and the word stays on 43 labels of that page.
+  - (c) Per form, whichever is rarer, with a line at the top of the form saying which. The fewest words, but a label with no mark then means different things in different entries.
+- **F3. Dragging items.**
+  - (a) Not in this step: Alt+↑/↓ and the menu move items. Recommended: drop targets inside open, nested lists are hard to get right, and §10.6 asks for the keyboard way anyway. Drag can follow later with React Aria's drag and drop, as the outline has it.
+  - (b) A drag handle on every row now (an allowed icon-only button). More code, and nested lists need drop rules.
+
+### 2. The entry list beside the editor
+
+**Seen.** The back-and-forth Jeremy described: going from one entry to the next is a full screen each way. From one vespercms.com docs page to its neighbour means back to Docs, finding it in the outline, and opening it. The editor screen's bar has no Content menu, so even another collection is two screens away. Spec §10.3 asks for "a single centered column, about 720px max", and §10.2's first principle says everything but the document is "one click away, not permanently visible".
+
+**Design** (call L1's (b)).
+- **When.** At 80rem (1280px) and wider, the editor screen shows its collection's list in a pane on the left, 18rem wide, beside the 720px column. The pane, a 2.5rem gap and the column fit in the top bar's 72rem container (65.5rem plus its padding), and the two are centred together. Narrower, including 200% zoom on most laptops, nothing changes: the column alone, with its back link. That's above the Details drawer's 68.75rem, so Details still opens as a drawer over the right side whenever the pane shows.
+- **What it shows.**
+  - A flat collection, or a `file()` one: a search field, then the entries. Each shows its title with the list screen's muted "who · when" beneath, and its status as text when it isn't plainly published ("Draft"). Sorting and the status filter stay on the list screen.
+  - A tree collection: the outline, read-only, with expanding, collapsing and links. Moves, order and the row menus stay on the Pages screen, so `PageService`'s rules don't change.
+  - A singleton: no pane, since there's nothing to list.
+  - "New post" (the collection's own word) as a quiet button at the pane's foot. The editor's one primary button stays Save or Publish.
+- **Moving between entries.** Opening another entry swaps the column. The pane keeps its scroll, search text and open rows for the visit. Unsaved changes ask first, through the leave dialog the router already has ("Leave without saving?", `app/App.tsx`). In the cloud, autosave has already made a draft, so nothing asks.
+- **Keeping up.** After a save, the pane shows the new title and status. A deep link straight into an entry loads the list for the pane: the same summaries the list screen reads, through the SHA cache in GitHub mode and the cloud. In the cloud, the pane shows what the list shows (`shownTo`, `fileAccess`).
+- **Showing and hiding** (call L2). Beside the editor bar's back link, a quiet "List" button with the sidebar icon beside the word shows and hides the pane (`aria-expanded`, `aria-controls`). It appears only at the pane's width. The choice is kept per viewer in `localStorage`. The back link still goes to the full list screen.
+- **Navigation levels.** On the editor screen the pane is the only navigation, since the bar holds the entry's controls. The list and Home screens don't change, so §10.4's "two levels at once" holds.
+- **Phase 7's preview** (side by side) takes the pane's place while it's on: editor and preview, never three columns.
+
+**Where it lives.** The editor screen, on wide screens only. The pane is `surface` with a hairline on its right. The current entry has `glow-selected` and `aria-current="page"`, in that glow's named place ("the current item"). There's no new colour. It departs from §10.3's single column and §10.2's "not permanently visible": the dated note is in DECISIONS.md ("The entry list sits beside the editor on wide screens"), and spec §10.2 and §10.3 say so.
+
+**Keyboard and screen readers.**
+- The pane is a `nav` landmark named for the collection ("Docs"). It comes before `<main>` in the page, as it does on screen: `Screen` gains a slot for it outside `<main>`, so the screen's `h1` stays the first thing in `<main>`.
+- The entries are one Tab stop: a React Aria `GridList` of links, or the kit's `Tree` for an outline. The arrow keys move, Home and End jump, typing finds an entry, and Enter opens one. A 60-page docs tree is then one Tab stop, not 60.
+- Opening an entry moves focus to the editor's heading, as every navigation does now, so focus lands where the person asked to go. Shift+Tab from the heading reaches the pane's list again, and "Skip to content" passes the pane.
+- The List button's state is read as expanded or collapsed.
+
+**Tests.**
+- Admin (jsdom, `matchMedia` mocked as the Details tests do):
+  - the pane above and below its width;
+  - flat, tree, `file()` and singleton collections;
+  - search;
+  - the current entry marked;
+  - opening another entry keeps search and scroll;
+  - unsaved changes ask;
+  - the toggle is kept;
+  - focus after opening;
+  - axe.
+- e2e:
+  - `studio` at 1440×900: open an entry from the pane by keys, edit it, open another (the leave dialog), save, and the pane shows the new title. At 1024px wide and at 200% zoom, no pane. axe with the pane.
+  - `github`: a deep link fills the pane.
+  - `cloud`: a folder grant limits the pane as it limits the list.
+- Docs: the editing page mentions the list beside the editor.
+
+**Size.** Medium: about 8 commits (the compact list and the read-only outline; the layout and its width; the toggle and its storage; state kept across entries; leaving with unsaved changes; tests; docs).
+
+**Risks.**
+- "Stark" may be as much the form's type and spacing as its columns. Item 1 answers that part, and is worth seeing first.
+- A collection of thousands of entries renders every row in the pane, as the list screen does today. `GridList` can be virtualized if it shows.
+- The editor's bar gains a control at wide widths.
+
+**Free or paid.** Free.
+
+**Calls.**
+- **L1. How far to go.**
+  - (a) Sanity's columns: collections, entries, the entry, then a nested item, each a column, with older columns narrowing as you go deeper. It breaks the single column and the two-level rule, the editor gets narrow by the third column, and at 320px or 200% zoom it has to fall back to one column anyway, so there would be two layouts to build and test.
+  - (b) Two panes, the list and the entry, on wide screens only, with nested items opening in place (item 1). Recommended: it removes the back-and-forth between list and entry, keeps the 720px writing column, and stays within two levels.
+  - (c) No pane. The ⌘K palette (step 5 above, decided) and "Previous" and "Next" in the editor's "…" menu. The cheapest, but it doesn't change how the studio feels.
+- **L2. The pane at first.**
+  - (a) Shown at 1280px and wider until someone hides it, then kept per viewer. Recommended: the point is less clicking, and hiding it is one click.
+  - (b) Hidden until someone shows it.
+
+### 3. Light and dark, and who's signed in
+
+**Seen.**
+- The studio follows the system's light or dark, with no way to choose. The tokens already switch on `html[data-theme='light']` and `html[data-theme='dark']` (`packages/ui/src/tokens.css`), but nothing in the studio sets it. The dogfooding section's "Small, any time" list has the switch.
+- The user menu appears on every screen but the editor, and only in GitHub mode (`@login`) and the cloud (the person's name) (`app/Screen.tsx`). Local mode has none.
+- There are no pictures. GitHub's `/user`, which GitHub mode already calls for the login (`github/GitHubGate.tsx`), also returns `avatar_url`. The cloud's user is `{ id, name, email }` (`CloudUser` in `@vesper/core`'s protocol).
+
+**Design.**
+- **Appearance.** The user menu gains a section, "Appearance": System, Light and Dark, one of them chosen (React Aria's `MenuSection` with `selectionMode="single"`, so the items are `menuitemradio`). The kit's `Menu` gains sections and a chosen item. Today it has items with `isCurrent` only.
+  - Choosing sets `data-theme` on `<html>`, or removes it for System, and keeps the choice in `localStorage` as `vesper:appearance`, per viewer and per site. Storage that throws (a private window) leaves the system's choice. The value isn't a credential, so the rule against keeping tokens there doesn't apply.
+  - No flash: `admin.astro` gets a few lines of inline script in `<head>` that set `data-theme` before the page paints. The studio sets it again when it starts, so a site whose CSP blocks inline scripts gets a brief flash and nothing worse.
+  - The favicon keeps following the system, since an SVG favicon can't read the page.
+- **A user menu in every mode** (call A1). In local mode the menu is named by git's `user.name`, which the dev API reads with `execFile` as History's design does. Without git, it's named "You". There it holds only Appearance, since there's nothing to sign out of on your own computer.
+- **The editor.** Its bar holds the entry's own controls (§10.3), and the user menu stays off it, as now. Appearance is one screen away, and in the ⌘K palette once that's built ("Appearance: Dark").
+- **Pictures.** The menu's button shows a 24px round picture before the name. Inside the menu, the first line shows it at 32px with the full name and the sign-in line ("Signed in to GitHub as @jeremybise").
+  - GitHub mode: `avatar_url` from the `/user` call it already makes, at 64px (`&s=64`), with no referrer (call A2).
+  - The cloud (call A3): `CloudUser` gains `avatar?: string`, an address on the API's own domain. That's a contract change first: `runCloudContract`, `CloudClient` and `scripts/cloud-fake.mjs` follow. The cloud fills it from GitHub when someone signs in with GitHub (fetched by the API and stored), and from an upload on the dashboard's account page for anyone. Uploads are resized to 128px square, re-encoded, and stripped of metadata such as a photo's location. It's served at an unguessable, content-hashed address with long caching, so an `<img>` loads it without the DPoP token. As with GitHub's pictures, anyone with the address can see it.
+  - Everywhere else, and whenever a picture fails to load: the person's initials (at most two) in `accent` on `accent-subtle`, a pair added to `a11y:contrast`'s checks. No request.
+  - No Gravatar: it would send a hash of the person's email address from `/admin` to a third party.
+  - The picture is `alt=""`, since the name is beside it. It never stands alone, so §10.4 needs no new icon-only exception. On a narrow screen the name truncates.
+- **Later, not in this step:** pictures beside names in Changes, reviews and History.
+
+**Where it lives.** The user menu in the top bar, on every screen but the editor. `accent` and `accent-subtle` are already in the budget.
+
+**Keyboard and screen readers.** The menu button keeps the account's description as its name ("Signed in to GitHub as @jeremybise"). In local mode, with no sign-in to describe, it's named for what it holds: "Appearance, for Jeremy Bise". The appearance items are `menuitemradio` with `aria-checked`. Enter or Space chooses one, closes the menu and returns focus to the button, and the colours change at once. axe runs in both schemes, as the `site` project's tests already do.
+
+**Tests.**
+- Kit (jsdom): `Menu` sections and single choice; axe.
+- Admin:
+  - the choice sets and clears `data-theme` and is kept;
+  - storage that throws;
+  - initials;
+  - a picture that fails falls back to initials;
+  - local mode's menu with and without a git name.
+- Astro: the built `/admin` holds the inline script (the static test reads it); the dev API reads git's name with `execFile`, with no shell, and returns none without git.
+- Contract: the cloud's `avatar`, against the fake here and the real API in the cloud's repository.
+- e2e:
+  - `studio`: choose Dark, reload, and it's still dark; axe in both schemes;
+  - `github`: the fake GitHub's `/user` returns an `avatar_url` it serves itself (it's empty today), and the menu shows the picture.
+- Docs: a line on Appearance in the editing docs; the cloud docs on the picture.
+
+**Size.** Small here: about 4 commits (the kit's menu sections; Appearance and the inline script; the menu in local mode; pictures and initials). The cloud's half is a contract commit here, then storage and the dashboard's upload in `vespercms-cloud`.
+
+**Risks.** A site that already has a CSP on `/admin` without `'unsafe-inline'` sees a brief flash in a dark choice on a light system. A cloud picture's address is public to whoever has it, as GitHub's are.
+
+**Free or paid.** Appearance is free in every mode, and so are GitHub's pictures in GitHub mode. The cloud's pictures are part of the cloud, as its accounts are.
+
+**Calls.**
+- **A1. Appearance in local mode, which has no user menu.**
+  - (a) A user menu named by git's `user.name`, else "You", holding Appearance. Recommended: Appearance is in the same place in every mode, and the name is the one git puts on local commits.
+  - (b) Appearance in the Site menu, in local mode only. No dev API change, but Appearance then moves between modes.
+  - (c) A quiet "Appearance" menu in local mode's top bar.
+- **A2. GitHub's pictures in GitHub mode.** They come from `avatars.githubusercontent.com`, GitHub's own image host.
+  - (a) Load them from there, with no referrer. Recommended: in GitHub mode the studio already talks to GitHub for every read and save, so GitHub learns nothing new. A dated note in DECISIONS.md narrows CLAUDE.md's rule to "no fonts, scripts or styles from Google or a CDN".
+  - (b) Initials only in GitHub mode, and the rule stays as written.
+- **A3. Pictures in the cloud.**
+  - (a) From GitHub for people who sign in with GitHub, and an upload on the dashboard's account page for anyone, all served from the cloud's own domain. Recommended: email-only accounts get a picture too, and the studio stays an editor (account settings stay in the dashboard).
+  - (b) Initials only in the cloud for now.
+  - (c) As (a), plus an upload from the studio's user menu. More convenient, but account settings would live in two places, and the studio would gain an upload to the cloud that isn't content.
+
+### 4. What's left for Markdoc tags
+
+**Seen.** Phase 2.5 met its five criteria (its outcome, below), and nothing in its design is unbuilt. What's left came later, or is v2 in the spec:
+- **Tables in the writing view.** Designed and decided (item 1 of "Studio additions from dogfooding", calls T1 to T4), and step 3 of that section's order. Not built. Task lists, footnotes and links with titles are noted to follow it.
+- **List and object attributes are edited as raw YAML, and an edit puts them on one line.**
+  - A Markdoc attribute of type `Array` or `Object` gets the raw YAML field (`packages/core/src/markdoc/fields.ts`), since Markdoc says nothing about what's inside it.
+  - The corpus has a real one. Jazzy's `faq` tag has `items`, a list of `{ question, answer }`, on 9 pages, written one question per line (`edibles-calculator.mdoc` has 7).
+  - `editMarkdocTag` replaces the attribute's whole value with `markdocValue`'s output, which is one line. So changing one answer rewrites all seven questions as a single line of about 2,200 characters. The page is the same, but the change is the whole list, against DECISIONS.md's "No unrelated diff".
+  - `editJsxTag` writes an MDX prop's array with `JSON.stringify`, so it has the same problem.
+- **Variables, functions, `{% if %}` and annotations** are protected source chips, as §6.5.1 says for v1. Outside the playground's fixtures, which test them, no content in this repository or the corpus uses a variable, and `{% if %}` appears only on vespercms.com's Markdoc docs page, which explains it.
+- **The real component inside a block** (§6.5.1's v2) is Phase 7, through the dev server and preview deployments.
+- **The caret.** On a Mac, with an inline chip itself selected, ⇧⌘← leaves a caret before it (DECISIONS.md, "⇧⌘← and ⇧⌘→ beside a chip are the browser's", still open).
+- **Size of the editor's code.** The body editor (512 KB) and the body checks (513 KB) are lazy chunks over Vite's 500 KB warning. Neither is in the first load.
+
+**Design.**
+- **List and object attributes as fields** (call M1). A hint in `vesper.config.ts` gives such an attribute its shape as a Zod schema, as MDX components' `props` already do (spec §6.5.2):
+
+  ```ts
+  markdoc: {
+    tags: {
+      faq: {
+        label: 'FAQ',
+        attributes: {
+          items: {
+            label: 'Questions',
+            schema: z.array(z.object({ question: z.string(), answer: z.string().meta({ widget: 'textarea' }) })),
+          },
+        },
+      },
+    },
+  },
+  ```
+
+  The settings dialog then renders it with the frontmatter's widgets, item 1's rows included. Markdoc's own validation stays the authority when saving. The schema only shapes the form and checks it as a field is checked. Without a hint, the raw YAML field stays.
+- **Writing items, not the whole list** (call M2). When a value was written one item per line, as Jazzy's is:
+  - a changed item rewrites only its own line;
+  - a new item is written in the same layout after the last;
+  - a removed item goes with its line;
+  - a moved item moves its line as it is.
+
+  Any other layout (one line, or one the scanner doesn't recognize) is written whole, as now. As with tables, the result is parsed again and must read back as the intended value, or the save is refused. This lives in core beside `editMarkdocTag`, and `editJsxTag` gets the same for array props.
+- **The caret fix,** small, on its own.
+- **Not now** (call M3): variables and conditions as more than chips, and component rendering, which is Phase 7.
+
+**Where it lives.** In the tag's Settings dialog, as now, with the hint in `vesper.config.ts`. No new interface.
+
+**Keyboard and screen readers.** The dialog's lists use item 1's rows and keys. Nothing else changes.
+
+**Tests.**
+- Core:
+  - the hint's schema becomes field models;
+  - item splicing: a change, an addition, a removal and a move each touch only their lines;
+  - one-line values are written as now;
+  - a refused read-back;
+  - the Jazzy corpus with a hint for `faq`: changing one answer in each of the 9 tags changes one line.
+- Admin (jsdom): a dialog with a list attribute; axe.
+- e2e (`studio`): a new playground FAQ tag with a list attribute, edited by keys, with the file checked byte for byte.
+- Docs: `content/markdoc-and-mdx.mdoc`, the integration's README, and `vesper agents` (the hint).
+
+**Size.** Small to medium: about 5 commits (the hint and its fields; item splicing in core; the fixture and tests; docs). The caret is one more.
+
+**Risks.**
+- Markdoc's object syntax has variants (quoted and unquoted keys, spacing inside braces). The scanner must agree with Markdoc's parser, or the value is written whole as now, so it's never wrong.
+- A Zod shape in `vesper.config.ts` leans toward field definitions there, which §6.4 rules out for collections. The precedent is MDX props, which also have no other source.
+
+**Free or paid.** Free, as the body editor is.
+
+**Calls.**
+- **M1. List and object attributes.**
+  - (a) A Zod `schema` hint per attribute in `vesper.config.ts`, as MDX props have. Recommended: Markdoc can't describe what's inside, and this is the one place Vesper already takes a shape for a component.
+  - (b) Guess the shape from the values in the file: Jazzy's items all have `question` and `answer`. No config, but a new tag has nothing to guess from, and one odd item changes the form.
+  - (c) Keep raw YAML, with M2's item-by-item writing so edits at least stay small.
+- **M2. Writing a changed list.**
+  - (a) Item by item when it was written one per line, else whole, as now. Recommended: one changed answer is one changed line, as "No unrelated diff" asks.
+  - (b) Always whole, as now.
+- **M3. Variables and conditions.**
+  - (a) They stay protected chips until a site uses them. Recommended: no real site's content in the corpus uses a variable.
+  - (b) A variable picker in "/" from the config's variables, and `{% if %}` as a labelled frame with its condition as text, now.
+
+### Order, and how these fit
+
+Step 1 of the dogfooding additions is built. Duplicate (4), Tables (1), History (2) and the palette (5) aren't, and Phase 4.5 waits for Phase 4's last item. The order:
+1. **Appearance, and pictures in GitHub mode (3),** first. They're small, and they touch the kit's `Menu`, `Screen.tsx` and `admin.astro`, which neither 4.5 nor Duplicate changes. The cloud's pictures follow as a contract change, one at a time with History's and 4.5's, as that section's order already asks.
+2. **Fields (1),** next. They change `widgets/group.tsx`, `editor/Field.tsx` and the editor column's spacing and reveal, and they answer the scanning problem and part of "stark" before any layout change.
+3. **Markdoc list attributes (4),** after fields, since its dialog uses the rows. Not beside Tables, which changes the same core files under `packages/core/src/body`.
+4. **The list pane (2),** after Duplicate, since both change the editor's bar. It's designed together with the palette, since both are about getting around, so the pane's List button and the palette's Search button are settled at once.
+
+Each lands as its own step with an outcome note, as the dogfooding steps do.
+
+**The calls (decided 2026-10-25):** F1 to F3 (fields), L1 and L2 (the list pane), A1 to A3 (Appearance and pictures), M1 to M3 (Markdoc), each as recommended: (a), and (b) on L1. They're built between phases, in the order above, as the dogfooding additions are.
 
 ## Calls of 2026-10-19
 
