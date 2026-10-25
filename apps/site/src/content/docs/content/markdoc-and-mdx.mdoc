@@ -61,6 +61,7 @@ Each frame and card is named after its tag, with a Settings button. Its settings
 | `String`, or a custom type | A text field |
 | `Number` | A number field |
 | `Boolean` | A switch |
+| `Array` or `Object`, with a `schema` hint | The controls that schema gives a field: a list of rows, a group |
 | `Array`, `Object` or anything else | A raw YAML field |
 
 Changes apply as you make them, so Ctrl+Z undoes them like typing. Changing a setting changes only that attribute's bytes in the tag. The rest of the tag, its content and its closing stay as written. A new tag is written with its attributes in schema order, leaving out empty values and defaults.
@@ -99,6 +100,8 @@ markdoc: {
 - `description` is help text for the tag.
 - `summary` names the attribute whose value shows in the block's header, as in "Callout · Warning".
 - Each attribute can have a `label`, a `description`, `labels` for its `matches` values, and a `widget` to choose its control by name. A widget applies as it would to a schema field of the attribute's type: a `String` attribute can take `textarea`, `url`, `color` or a custom widget. `Object` and `Array` attributes are edited as YAML, so a widget such as `geo` doesn't apply to them; naming one warns in the terminal and keeps the YAML field.
+- An `Array` or `Object` attribute can also have a `schema`: a Zod schema for what's inside, written as for a content field, such as `z.array(z.object({ question: z.string(), answer: z.string() }))`. Markdoc can't describe what's inside a list, so this gives it real controls: each item a row, as lists of objects are in the form. Markdoc's own rules still decide what saves.
+- A list attribute written one item per line, or one key per line, keeps that layout: changing one item rewrites only its lines, and new items follow the same layout. A list written on one line is written whole, as before. The same holds for an MDX component's array props.
 
 ## Partials and conditionals
 
