@@ -54,6 +54,7 @@ export {
   type DrawerProps,
   type MenuProps,
   type MenuItem,
+  type MenuChoice,
   type DisclosureProps,
 } from './components/overlays.tsx';
 export {
@@ -77,6 +78,7 @@ export {
   type FieldTextProps,
 } from './components/shared.tsx';
 export { VesperMark, type VesperMarkProps } from './components/Mark.tsx';
+export { Avatar, initialsOf, type AvatarProps } from './components/Avatar.tsx';
 export {
   Toolbar,
   ToolbarSeparator,

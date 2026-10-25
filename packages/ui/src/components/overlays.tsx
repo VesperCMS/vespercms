@@ -1,12 +1,15 @@
 import type { ReactElement, ReactNode } from 'react';
 import {
   Button as RACButton,
+  Collection,
   Dialog as RACDialog,
   Disclosure as RACDisclosure,
   DisclosurePanel,
+  Header,
   Heading,
   Menu as RACMenu,
   MenuItem as RACMenuItem,
+  MenuSection,
   MenuTrigger,
   Modal,
   ModalOverlay,
@@ -129,6 +132,14 @@ export type MenuItem = {
   icon?: IconName | IconNode;
 };
 
+export type MenuChoice = {
+  /** The group's name, shown above its options ("Appearance"). */
+  title: string;
+  options: { id: string; label: string }[];
+  selected: string;
+  onChange: (id: string) => void;
+};
+
 export type MenuProps = {
   /** Accessible name of the "…" trigger, e.g. "More actions for Harbor at dawn". */
   label: string;
@@ -138,6 +149,15 @@ export type MenuProps = {
   triggerText?: string;
   /** An icon before a text trigger's words ("+ Insert"). */
   triggerIcon?: IconName;
+  /** A picture before a text trigger's words, in the icon's place: the user menu's `Avatar`. */
+  triggerPicture?: ReactNode;
+  /**
+   * Shown at the top of the open menu, above its items: who is signed in.
+   * Hidden from screen readers, since the trigger's name says the same.
+   */
+  header?: ReactNode;
+  /** One choice among options, as a group of its own before the items (the user menu's Appearance). */
+  choice?: MenuChoice;
 };
 
 /** The 16px chevron beside a text trigger. It points down; a disclosure turns it. */
@@ -164,71 +184,162 @@ export function Tooltip({ text, children }: { text: string; children: ReactEleme
   );
 }
 
+const menuItemClass = cx(
+  'flex min-h-9 cursor-default items-center rounded-md px-3 text-body outline-none',
+  'data-[focused]:bg-accent-subtle data-[disabled]:opacity-50',
+  // The ring too, inside the item, so keyboard focus never rests on a fill alone.
+  'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
+);
+
+/** A hairline above an item, drawn so it isn't a stop. */
+const hairlineAbove =
+  "relative mt-2 before:pointer-events-none before:absolute before:inset-x-2 before:-top-1 before:border-t before:border-border before:content-['']";
+
+function renderItem(items: MenuItem[], item: MenuItem, afterChoice: boolean) {
+  const index = items.indexOf(item);
+  // Destructive items go last, after a hairline; so does the first item after a choice.
+  const afterHairline =
+    (item.isDanger === true && index > 0 && !items[index - 1]?.isDanger) ||
+    (afterChoice && index === 0);
+  return (
+    <RACMenuItem
+      id={item.id}
+      textValue={item.label}
+      className={cx(
+        menuItemClass,
+        item.isDanger ? 'text-danger' : 'text-content',
+        item.isCurrent && 'bg-accent-subtle shadow-glow-selected',
+        afterHairline && hairlineAbove,
+      )}
+    >
+      {item.icon && (
+        <Icon
+          {...(typeof item.icon === 'string' ? { name: item.icon } : { node: item.icon })}
+          size={18}
+          className={cx('mr-2', !item.isDanger && 'text-content-muted')}
+        />
+      )}
+      {item.label}
+    </RACMenuItem>
+  );
+}
+
+type MenuGroup = { id: 'choice'; choice: MenuChoice } | { id: 'items'; items: MenuItem[] };
+
 /** The "…" menu (spec §10.3): everything that isn't the one primary action. */
-export function Menu({ label, items, onAction, triggerText, triggerIcon }: MenuProps) {
+export function Menu({
+  label,
+  items,
+  onAction,
+  triggerText,
+  triggerIcon,
+  triggerPicture,
+  header,
+  choice,
+}: MenuProps) {
+  const choiceIds = new Set(choice?.options.map((option) => option.id));
+  const groups: MenuGroup[] = choice
+    ? [{ id: 'choice', choice }, ...(items.length > 0 ? [{ id: 'items' as const, items }] : [])]
+    : [];
   return (
     <MenuTrigger>
       {triggerText ? (
         <RACButton
           className={cx(
-            'inline-flex min-h-10 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
+            'inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
             colorTransition,
             focusRing,
           )}
         >
-          {triggerIcon && <Icon name={triggerIcon} size={18} />}
-          {triggerText}
+          {triggerPicture ? (
+            <span className="mr-1 flex">{triggerPicture}</span>
+          ) : (
+            triggerIcon && <Icon name={triggerIcon} size={18} />
+          )}
+          <span className="min-w-0 truncate">{triggerText}</span>
           <Chevron />
         </RACButton>
       ) : (
         <IconButton icon="more" label={label} />
       )}
       <Popover placement="bottom end" className={cx('min-w-56', popoverClass)}>
-        <RACMenu
-          aria-label={label}
-          onAction={(key: Key) => {
-            onAction(String(key));
-          }}
-          items={items}
-          disabledKeys={items.filter((item) => item.isDisabled).map((item) => item.id)}
-          className="outline-none"
-        >
-          {/*
-           * Rendered from `items`, not as static children: opened from the
-           * keyboard, React Aria then focuses the first item itself.
-           */}
-          {(item) => {
-            const index = items.indexOf(item);
-            // Destructive items go last, after a hairline (drawn, so it isn't a stop).
-            const afterHairline =
-              item.isDanger === true && index > 0 && !items[index - 1]?.isDanger;
-            return (
-              <RACMenuItem
-                id={item.id}
-                textValue={item.label}
-                className={cx(
-                  'flex min-h-9 cursor-default items-center rounded-md px-3 text-body outline-none',
-                  'data-[focused]:bg-accent-subtle data-[disabled]:opacity-50',
-                  // The ring too, inside the item, so keyboard focus never rests on a fill alone.
-                  'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
-                  item.isDanger ? 'text-danger' : 'text-content',
-                  item.isCurrent && 'bg-accent-subtle shadow-glow-selected',
-                  afterHairline &&
-                    "relative mt-2 before:pointer-events-none before:absolute before:inset-x-2 before:-top-1 before:border-t before:border-border before:content-['']",
-                )}
-              >
-                {item.icon && (
-                  <Icon
-                    {...(typeof item.icon === 'string' ? { name: item.icon } : { node: item.icon })}
-                    size={18}
-                    className={cx('mr-2', !item.isDanger && 'text-content-muted')}
-                  />
-                )}
-                {item.label}
-              </RACMenuItem>
-            );
-          }}
-        </RACMenu>
+        {header && (
+          <div aria-hidden="true" className="mb-1 border-b border-border px-3 pt-2 pb-3">
+            {header}
+          </div>
+        )}
+        {choice ? (
+          <RACMenu
+            aria-label={label}
+            onAction={(key: Key) => {
+              // Choosing an option is a selection, not an action.
+              if (!choiceIds.has(String(key))) onAction(String(key));
+            }}
+            items={groups}
+            disabledKeys={items.filter((item) => item.isDisabled).map((item) => item.id)}
+            className="outline-none"
+          >
+            {(group) =>
+              group.id === 'choice' ? (
+                <MenuSection
+                  id="choice"
+                  selectionMode="single"
+                  disallowEmptySelection
+                  selectedKeys={[group.choice.selected]}
+                  onSelectionChange={(keys) => {
+                    if (keys === 'all') return;
+                    const [key] = [...keys];
+                    if (key !== undefined) group.choice.onChange(String(key));
+                  }}
+                >
+                  <Header className="px-3 pt-1 pb-1 text-small text-content-muted">
+                    {group.choice.title}
+                  </Header>
+                  <Collection items={group.choice.options}>
+                    {(option) => (
+                      <RACMenuItem
+                        id={option.id}
+                        textValue={option.label}
+                        className={cx(menuItemClass, 'gap-2 text-content')}
+                      >
+                        {({ isSelected }) => (
+                          <>
+                            <Icon
+                              name="check"
+                              size={18}
+                              className={cx('text-accent', !isSelected && 'invisible')}
+                            />
+                            {option.label}
+                          </>
+                        )}
+                      </RACMenuItem>
+                    )}
+                  </Collection>
+                </MenuSection>
+              ) : (
+                <MenuSection id="items" aria-label={label} items={group.items}>
+                  {(item) => renderItem(group.items, item, true)}
+                </MenuSection>
+              )
+            }
+          </RACMenu>
+        ) : (
+          <RACMenu
+            aria-label={label}
+            onAction={(key: Key) => {
+              onAction(String(key));
+            }}
+            items={items}
+            disabledKeys={items.filter((item) => item.isDisabled).map((item) => item.id)}
+            className="outline-none"
+          >
+            {/*
+             * Rendered from `items`, not as static children: opened from the
+             * keyboard, React Aria then focuses the first item itself.
+             */}
+            {(item) => renderItem(items, item, false)}
+          </RACMenu>
+        )}
       </Popover>
     </MenuTrigger>
   );

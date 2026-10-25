@@ -5,6 +5,7 @@ import axe from 'axe-core';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  Avatar,
   Button,
   Checkbox,
   Combobox,
@@ -26,6 +27,7 @@ import {
   ToolButton,
   Icon,
   VesperMark,
+  initialsOf,
 } from '../index.ts';
 
 afterEach(cleanup);
@@ -303,6 +305,69 @@ describe('Dialog, Menu and Disclosure', () => {
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'History' })).toHaveFocus());
     await user.keyboard('{ArrowDown}{Enter}');
     expect(onAction).toHaveBeenCalledWith('delete');
+  });
+
+  it('Menu offers one choice as radio items, apart from its actions', async () => {
+    const onAction = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <Menu
+        label="Signed in to GitHub as @ada"
+        triggerText="@ada"
+        triggerPicture={<Avatar name="Ada Lovelace" />}
+        header={<p>Ada Lovelace</p>}
+        choice={{
+          title: 'Appearance',
+          options: [
+            { id: 'system', label: 'System' },
+            { id: 'light', label: 'Light' },
+            { id: 'dark', label: 'Dark' },
+          ],
+          selected: 'system',
+          onChange,
+        }}
+        items={[{ id: 'sign-out', label: 'Sign out of GitHub' }]}
+        onAction={onAction}
+      />,
+    );
+    const user = userEvent.setup();
+    // The picture is beside the words, so the button is named by them alone.
+    await user.click(screen.getByRole('button', { name: '@ada' }));
+    const menu = await screen.findByRole('menu');
+    expect(screen.getByRole('group', { name: 'Appearance' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Signed in to GitHub as @ada' })).toBeInTheDocument();
+    const system = screen.getByRole('menuitemradio', { name: 'System' });
+    expect(system.getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('menuitemradio', { name: 'Dark' }).getAttribute('aria-checked')).toBe(
+      'false',
+    );
+    // Shown, not read: the trigger says who is signed in.
+    expect(screen.getByText('Ada Lovelace').closest('[aria-hidden="true"]')).not.toBeNull();
+    await expectNoViolations(menu.closest('[data-trigger]') ?? document.body);
+    await user.click(screen.getByRole('menuitemradio', { name: 'Dark' }));
+    expect(onChange).toHaveBeenCalledWith('dark');
+    expect(onAction).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: '@ada' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out of GitHub' }));
+    expect(onAction).toHaveBeenCalledWith('sign-out');
+  });
+
+  it('Avatar shows a picture, or initials when there is none or it fails', () => {
+    expect(initialsOf('Ada Lovelace King')).toBe('AL');
+    expect(initialsOf('@jeremybise')).toBe('J');
+    expect(initialsOf('élodie')).toBe('É');
+    const { container, rerender } = render(<Avatar name="Ada Lovelace" />);
+    expect(container.textContent).toBe('AL');
+    rerender(<Avatar name="Ada Lovelace" src="https://example.test/ada.png" />);
+    const img = container.querySelector('img');
+    expect(img?.getAttribute('alt')).toBe('');
+    expect(img?.getAttribute('referrerpolicy')).toBe('no-referrer');
+    if (img) img.dispatchEvent(new Event('error'));
+    return waitFor(() => {
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.textContent).toBe('AL');
+    });
   });
 
   it('Disclosure toggles its panel and reports aria-expanded', async () => {
