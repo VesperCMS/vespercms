@@ -1259,6 +1259,8 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-18: Details is a drawer on wide screens
 
+(Superseded on the `studio-panes` branch, 2026-10-25: Details is a tab. See "The entry editor has tabs".)
+
 **At 1100px and wider (`(min-width: 68.75rem)`, the design system's breakpoint), a quiet "Details" button in the editor's top bar opens the secondary fields in the glass drawer. Narrower, including at 200% zoom on a laptop, Details stays the closing section of the column, as before.** Jeremy approved it at the checkpoint. Spec §10.3 allows either ("or a toggleable right drawer on wide screens"). One open state serves both, so resizing keeps it open or closed. The drawer is modal, so focus goes in and comes back to the button. A failed save doesn't open it, since it would take focus from the error summary. Instead the button counts its problems in words ("Details (1 problem)"), and the summary's links open the drawer before focusing a field in it. Go to field in the notes drawer opens it the same way.
 
 ### 2026-10-18: Transitions never touch focus
@@ -1305,6 +1307,8 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-25: The entry list sits beside the editor on wide screens (an exception to spec §10.3 and §10.2)
 
+(Superseded on the `studio-panes` branch, the same day: "The studio is panes, full width".)
+
 **At 80rem (1280px) and wider, the editor screen shows its collection's list in an 18rem pane on its left:**
 - a search field and the entries;
 - for a tree, the outline, read-only;
@@ -1325,6 +1329,43 @@ Rejected:
 - No pane, only the palette with previous and next, which doesn't change how the studio feels.
 
 Built 2026-10-25. Every entry is a screen of its own, remounted, so the pane is too; its list, search, open folders and scroll are kept in module memory for the visit, and a save tells it to read the list again. A flat list uses the kit's `Tree` too, without chevrons, so both kinds are one Tab stop with the same keys. A row's name is its type-ahead text, so it carries the row's status and "open now" after the title.
+
+### 2026-10-25: The studio is panes, full width (on the `studio-panes` branch; an exception to spec §10.3 and §10.2)
+
+**At 48rem (768px) and wider, the studio fills the window with panes side by side, Sanity-style:**
+- a structure pane: every collection with its count, then Settings, then Site (Media, Redirects, View site);
+- a collection's list: its whole list screen, with columns, filters and the outline's moves, when no entry is open; a narrower pane (search, the entries or the outline, the open one marked) when one is;
+- the entry, Media or Redirects, filling the rest.
+
+**Each pane scrolls on its own, and the top bar spans the width, with Changes and the user menu. When the panes don't fit, the earlier ones fold into strips, the structure pane first; a strip opens with a click, folding the next one instead, until the next navigation. Narrower than 48rem, the deepest pane alone is the screen, with the top bar's menus, as before.** This supersedes "The entry list sits beside the editor on wide screens" on this branch.
+
+Why: Jeremy found the single column stark, and wanted the site's collections one click away from anywhere, Sanity-style, all the way through.
+
+What holds:
+- List items still open in place (Jeremy's call, 2026-10-25).
+- The entry's writing column is still 720px, centred in its pane.
+- Two levels of navigation (collections, then entries), so §10.4 holds.
+- Landmarks follow the panes: the structure and list panes are `nav`s, and the deepest pane is `<main>`, whose heading is the page's only `h1`. It takes focus after a navigation and names the browser tab.
+
+Notes on how it's built:
+- One component tree serves both widths, so crossing 48rem keeps the open entry, its tab and its unsaved changes.
+- The list pane stays mounted while entries change beside it. Its rows get fresh objects when the open entry changes, since React Aria's tree reuses a row whose item is the same object.
+
+Rejected:
+- Folding by hiding panes entirely, which loses the way back that strips keep.
+- Opening list items as further panes, which would put the rest of the entry out of sight.
+
+### 2026-10-25: The entry editor has tabs (on the `studio-panes` branch; an exception to spec §10.4)
+
+**Below the title, the entry editor has tabs: Content (the main fields and the body), then any tabs the collection declares, then Details. A collection declares tabs in vesper.config.ts (`tabs: { seo: 'SEO' }`), and fields go on them through `placement`, from `.meta()` or vesper.config.ts, which wins. A placement naming an undeclared tab warns and stays on Content. With only Content there's no tab list. A tab with problems from the last save says so in its name ("Details (1 problem)"). Going to a field on another tab, from the error summary or Go to field, chooses that tab first.** Every panel stays mounted while another is chosen, `inert` and `hidden`, so fields keep their state. The chosen tab is styled as the current item: accent-subtle and its halo. The Details drawer and the closing Details section are gone.
+
+Why: Jeremy found Details too separate from the rest of the content, and wanted sites to be able to group fields, such as SEO, the way Sanity's field groups do.
+
+Spec §10.4 says "No tabs inside the editor", a lesson from Taproot, whose editor had Content, SEO and Accessibility tabs alongside a sidebar and a preview. Here the tabs replace the Details drawer rather than adding to it, and they hold only the entry's own fields.
+
+Rejected:
+- Keeping Details as a drawer.
+- Making Details a pane beside the entry.
 
 ### 2026-10-25: GitHub mode loads the editor's picture from GitHub (a narrowing of "The studio self-hosts Figtree")
 

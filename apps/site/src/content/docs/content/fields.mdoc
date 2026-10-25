@@ -58,7 +58,7 @@ summary: z.string().meta({
 | `widget` | The control to use instead of the one the type implies |
 | `widgetOptions` | Settings for that control, such as `{ labels }` for an enum's options |
 | `placeholder` | Sample text in an empty field. It's never a label. |
-| `placement` | `'main'` or `'details'`: see below |
+| `placement` | The editor tab the field is on: `'main'`, `'details'` or one you declare. See below. |
 | `hidden` | Leaves the field out of the editor. Saves don't change its value. |
 | `readOnly` | Shows the value, but editors can't change it |
 | `autocomplete` | The browser's autofill hint, such as `email` |
@@ -107,9 +107,9 @@ Options you pass go into `widgetOptions`, as they would in the raw form. What th
 - `select()` takes a list of values, an object of values and labels (`{ news: 'News' }`), or `[{ value, label }]`. The file stores the value.
 - `hideFromSearch()` keeps the entry's page out of the site's own search: see [Site search](/docs/site/search/).
 
-## Main column and Details
+## Tabs: Content, Details and your own
 
-The editor shows the title as the page's heading, then the main fields. Secondary fields go to Details, at the end of the form. On wide screens, a Details button in the top bar opens them in a drawer instead. Details gets:
+The editor shows the title as the page's heading, then tabs: Content holds the main fields and the body, and Details the secondary fields. With only main fields there are no tabs. A tab with a problem from the last save says so in its name, such as "Details (1 problem)", and a link in the error summary chooses the tab before it moves to the field. Details gets:
 
 - slugs, dates and tags
 - ordering and layout fields, such as `order`, `weight`, `layout` and `template`
@@ -123,6 +123,20 @@ collections: {
   events: { placement: { startsAt: 'main', endsAt: 'main' } },
 },
 ```
+
+A collection can have tabs of its own, between Content and Details. Declare them in `vesper.config.ts`, by id with their labels, in order, and place fields on them by id:
+
+```ts
+// vesper.config.ts
+collections: {
+  blog: {
+    tabs: { seo: 'SEO' },
+    placement: { seoTitle: 'seo', metaDescription: 'seo', ogImage: 'seo' },
+  },
+},
+```
+
+`.meta({ placement: 'seo' })` works too. A field placed on a tab nobody declared stays on Content, and Vesper warns in the terminal.
 
 ## Custom widgets
 

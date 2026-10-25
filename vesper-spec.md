@@ -1408,7 +1408,7 @@ Treat these like lint rules. Breaking one requires a note in `DECISIONS.md`.
 - **No colored status badges.** Status is text.
 - **No icon-only buttons** except close, overflow ("…") and drag handles, and all of them have accessible names.
 - No more than **five** color tokens in use on any screen, beyond neutrals: accent, accent-subtle, danger, focus, plus one optional warning.
-- **No tabs inside the editor.** Use sections and the Details drawer.
+- **No tabs inside the editor.** Use sections and the Details drawer. (The `studio-panes` branch, October 25, 2026: tabs for Content, Details and a collection's own replace the drawer; see DECISIONS.md.)
 - Body text 15–16px, line-height ≥ 1.5. Two font weights (regular and semibold).
 - Spacing comes only from the token scale. Hairline (1px) borders only.
 - Every new feature must state in its PR where it lives in the UI and what it hides behind.

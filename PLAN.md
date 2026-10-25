@@ -675,6 +675,34 @@ Each lands as its own step with an outcome note, as the dogfooding steps do.
   - **Moving a YAML list item: done the same day.** The list diff now matches items up and emits an `order` patch. The YAML and JSON writers move each item's text as it is, and fall back to comparing by position when they can't (DECISIONS.md, "A moved list item moves its text as it is"). The studio e2e test moves the About page's first section down and checks the file byte for byte: the block scalar moves as written. Vitest: 4,335 passed. The studio, GitHub and cloud e2e projects: 46 passed and 2 skipped.
   - **Screen reader passes.** With the rest, before launch.
 
+## Studio panes and tabs (the `studio-panes` branch, exploration)
+
+Started 2026-10-25, the same day as "Studio layout and fields", because Jeremy wanted to see the studio go further toward Sanity:
+- full width;
+- panes beside each other, all the way through, with the site's collections always one click away;
+- tabs at the top of the entry (Content, Details and a site's own, such as SEO) instead of a separate Details.
+
+It's on its own branch so `main` stays as it is until he's seen it. DECISIONS.md has both entries ("The studio is panes, full width" and "The entry editor has tabs"), marked as this branch's, with what each supersedes.
+
+**Built (2026-10-25):**
+- **Panes.** At 48rem and wider: the structure pane (collections with counts, Settings, Site), then a collection's list (the whole list screen when no entry is open, a narrower pane beside an entry), then the entry, Media or Redirects. Each scrolls on its own, and the top bar spans the width. Earlier panes fold into strips when they don't fit. One component tree serves both widths, so resizing keeps the open entry as it is. This replaced main's list pane and its List button.
+- **Tabs.** Content, the collection's own tabs (`tabs` and `placement` in vesper.config.ts, or `.meta({ placement })`), then Details. Problem counts are in the tab names, and the error summary and Go to field choose the right tab first. The kit has `Tabs`. The Details drawer and closing section are gone.
+- **Docs.** `getting-started/first-edit.mdoc` (Panes, the editor's tabs), `content/fields.mdoc` (tabs, placement), `reference/integration.mdoc` (`tabs`).
+- **Checks.**
+  - Typecheck, lint and the format check pass.
+  - Vitest passes, with new tests for the panes (landmarks, keys, search kept, the leave dialog, trees, singletons, folding, narrow) and the tabs (layout, keys, problem counts, the summary choosing a tab, declared tabs in core and in the arrangement).
+  - The studio, GitHub and cloud e2e projects pass, with e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px.
+
+**Open, for Jeremy, before it merges:**
+- **Merge or keep exploring.** If it merges, spec §10.2 to §10.4 and CLAUDE.md's budget get rewritten for panes and tabs, not just annotated.
+- **The home pane.** With nothing chosen, the pane beside the collections is the old Home screen, which repeats them with counts and last edits. Alternatives: recent edits across the site, or nothing (as Sanity shows).
+- **Where tabs go in a tag's settings dialog.** Not at all, today: a tag's attributes are one form.
+- **Moving between collections.** The list pane remounts when the collection changes, so its scroll and search start again, kept per collection.
+- **Not done here.**
+  - A screen reader pass.
+  - The static and vespercms.com e2e projects with this branch's build.
+  - The dark theme's axe pass at pane widths. The studio e2e project runs axe in both themes at 1280px, which is now panes.
+
 ## Calls of 2026-10-19
 
 Jeremy took the recommendation on every open item on 2026-10-19: the earlier phases' "Open, for Jeremy" lists, the Phase 2.9 calls and spec §13. The spec's §13 records the product calls, and DECISIONS.md the reasons. What changes in the code:
