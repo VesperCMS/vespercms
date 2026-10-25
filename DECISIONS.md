@@ -1354,6 +1354,8 @@ What holds:
 Notes on how it's built:
 - One component tree serves both widths, so crossing 48rem keeps the open entry, its tab and its unsaved changes.
 - The list pane stays mounted while entries change beside it. Its rows get fresh objects when the open entry changes, since React Aria's tree reuses a row whose item is the same object.
+- The row of panes is positioned and clips its overflow. Screen-reader-only text is positioned absolutely, and with no positioned ancestor, text deep in the editor's scrolling content lengthened the page itself by several hundred pixels (found by Jeremy, 2026-10-25).
+- The outline pane has search too (2026-10-25): it narrows the outline to pages whose title or slug matches, under the pages above them, all open. Dragging is off while it does, since a drop would land among siblings out of sight, and the handles keep their place but aren't drawn. It's switched off through `useDragAndDrop`'s `isDisabled`: React Aria's tree calls the drag hooks only when it's given them, so leaving them out mid-render broke the order of its hooks and blanked the studio.
 
 Rejected:
 - Folding by hiding panes entirely, which loses the way back that strips keep.

@@ -690,6 +690,7 @@ It was built on its own branch, `studio-panes`, so `main` stayed as it was until
   - A collection's list is always one pane, entry open or not, with the list screen's tools: search, Show, Sort, the list fields under each title, and New entry (the outline's New page for a tree). The whole-list screen among panes is gone.
   - Any pane but the deepest collapses into its strip from a button in its header, and stays collapsed in this browser until its strip opens it.
   - The chosen tab is an accent underline instead of the current item's fill and halo.
+- **After the merge (2026-10-25).** The outline pane has search, and the page no longer scrolls past the panes.
 - **Tabs.** Content, the collection's own tabs (`tabs` and `placement` in vesper.config.ts, or `.meta({ placement })`), then Details. Problem counts are in the tab names, and the error summary and Go to field choose the right tab first. The kit has `Tabs`. The Details drawer and closing section are gone.
 - **Docs.** `getting-started/first-edit.mdoc` (Panes, the editor's tabs), `content/fields.mdoc` (tabs, placement), `reference/integration.mdoc` (`tabs`).
 - **Checks.**
@@ -702,7 +703,6 @@ It was built on its own branch, `studio-panes`, so `main` stayed as it was until
 - **Where tabs go in a tag's settings dialog.** Not at all, today: a tag's attributes are one form.
 - **Moving between collections.** The list pane remounts when the collection changes, so its scroll and search start again, kept per collection.
 - **The collapse button.** It's icon-only, an exception to §10.4 noted in DECISIONS.md. Words ("Hide") would be the alternative.
-- **Search in the outline pane.** A tree collection's pane has the outline's actions but no search, as the outline screen never had. Search would filter to matching pages and the folders above them, as the earlier pane did.
 - **Not done here:** a screen reader pass.
 
 ## Calls of 2026-10-19
