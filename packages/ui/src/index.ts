@@ -80,6 +80,7 @@ export {
 } from './components/shared.tsx';
 export { VesperMark, type VesperMarkProps } from './components/Mark.tsx';
 export { Avatar, initialsOf, type AvatarProps } from './components/Avatar.tsx';
+export { Tabs, type TabItem, type TabsProps } from './components/Tabs.tsx';
 export {
   Toolbar,
   ToolbarSeparator,
