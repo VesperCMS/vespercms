@@ -42,8 +42,6 @@ const PLACES: [string, RegExp, string[]][] = [
       'packages/ui/src/components/choices.tsx',
       'packages/ui/src/components/overlays.tsx',
       'packages/ui/src/components/Tree.tsx',
-      // The chosen tab of the entry editor (DECISIONS.md, "The entry editor has tabs").
-      'packages/ui/src/components/Tabs.tsx',
     ],
   ],
   [
