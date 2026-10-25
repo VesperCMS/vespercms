@@ -662,6 +662,12 @@ Each lands as its own step with an outcome note, as the dogfooding steps do.
 - **Markdoc (4).** The `schema` hint shapes list and object attributes, and `editMarkdocTag` and `editJsxTag` write lists item by item, one item or one key per line. Each of Jazzy's nine FAQs now changes by one line for one changed answer.
 - **The list pane (2).** At 80rem and wider the editor shows its collection's list or outline in a `nav` before `<main>`, with search, the open entry marked, and "New entry" or "New page". It keeps its state across entries, follows saves, and hides with the List button (kept per viewer). It isn't shown for singletons or on narrower screens.
 - **Docs and rules.** `content/fields.mdoc`, `content/markdoc-and-mdx.mdoc` and `getting-started/first-edit.mdoc` describe the rows, the hints, "(optional)", Appearance and the list. `@vesper/astro`'s README describes the `schema` hint. CLAUDE.md has the narrowed font rule and two new ones (optional marks, `focusWhenShown`). DECISIONS.md's entries say what was built and what changed.
+- **Checks.**
+  - Typecheck, lint, the format check, `a11y:contrast` and `vesper agents --check` pass.
+  - Vitest: 4,325 passed.
+  - `npm run e2e`, after building the playground and the site: 170 passed and 2 skipped (the macOS-only keys).
+  - The design-budget test then caught the pane drawing `glow-selected` outside the kit. The kit's `Tree` takes a `currentKey` instead, and the pane's e2e test passes again after that change.
+  - Checked by hand in the app's browser pane: Light kept across a reload, git's name in local mode, the home page's rows, and the docs outline beside the editor.
 - **Not done, or open:**
   - **Cloud pictures.** The cloud's half (storing pictures from GitHub, the dashboard's upload) is vespercms-cloud's. Until it's built, cloud members get initials.
   - **The caret fix (item 4).** On a Mac, ⇧⌘← with a chip selected still leaves a caret. It can only be checked on macOS, and this was built on Windows.
