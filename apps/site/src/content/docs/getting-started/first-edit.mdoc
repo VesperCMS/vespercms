@@ -11,7 +11,7 @@ npm run dev
 
 ## Home
 
-The first screen, headed Content, lists your collections, with how many entries each has and when one was last edited. Collections with `singleton: true`, such as site settings, are listed under Settings. The top bar's Content menu reaches the same collections, and its Site menu has Media, Redirects and View site. The menu at its end, under your name, has Appearance: System follows your computer's light or dark setting, and Light or Dark keeps the studio that way in this browser. In local mode the name is git's `user.name`; signed in, it's your account, and in GitHub mode your GitHub picture sits beside it.
+The first screen, headed Content, lists your collections, with how many entries each has and when one was last edited. Collections with `singleton: true`, such as site settings, are listed under Settings. On a wide screen they stay in a pane on the left, with Media, Redirects and View site under Site (see "Panes" below). On a narrow one, the top bar's Content menu reaches the same collections, and its Site menu has Media, Redirects and View site. The menu at its end, under your name, has Appearance: System follows your computer's light or dark setting, and Light or Dark keeps the studio that way in this browser. In local mode the name is git's `user.name`; signed in, it's your account, and in GitHub mode your GitHub picture sits beside it.
 
 ## A collection's list
 
@@ -21,13 +21,13 @@ New entry starts one. Its file is named after its title the first time you save 
 
 ## The entry editor
 
-The title field is the page's heading. Below it come the main fields, in your schema's order, then the body.
-
-**Details** holds secondary fields: slugs, dates, tags, `draft`, ordering and SEO. On a wide screen the Details button in the top bar opens them in a drawer; on a narrow one they're a section at the end of the form. A field's `.meta({ placement: 'details' })` or `'main'` overrides the rule.
+The title field is the page's heading. Below it are tabs: **Content** holds the main fields, in your schema's order, then the body, and **Details** the secondary fields: slugs, dates, tags, `draft`, ordering and SEO. The arrow keys move between tabs. A field's `.meta({ placement: 'details' })` or `'main'` overrides the rule, and a collection can add tabs of its own, such as SEO (see [Fields](/docs/content/fields/)).
 
 The top bar also has the entry's status ("Unsaved changes", "Saved just now"), Save, and a "…" menu with Delete and, for a collection with a `url`, View on site.
 
-On a screen 1280 pixels wide or more, the collection's list sits beside the editor: search it, and press Enter on an entry, or click it, to open it in the editor. A page tree shows as its outline. The list keeps its search and scroll as you move between entries, and asks first when the open entry has unsaved changes. The List button in the top bar hides it, and the studio remembers that in this browser.
+## Panes
+
+On a screen 768 pixels wide or more, the studio is panes, side by side across the whole width: your collections first, then a collection's list, then the entry. Choosing a collection opens its list in a pane beside the collections, and an entry you open from it opens beside the list, which stays as it is, with the open entry marked. The list pane has a search field, Sort and New entry, and Show when some entries are drafts or need a developer; a collection of pages shows its outline there instead, with each page's “…” menu and New page. Each pane scrolls on its own, and the collections are always one click away. To make more room, collapse a pane with the button at the end of its header: it becomes a narrow strip, and stays one in this browser until you click the strip. When the panes don't all fit, the studio folds the earlier ones into strips itself. Moving to another entry asks first when the open one has unsaved changes. Narrower than 768 pixels, the studio shows one screen at a time, with the top bar's menus.
 
 ## What Save does
 

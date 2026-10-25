@@ -3,8 +3,7 @@ import type { EntryDocument, EntrySummary, SaveRequest } from '@vesper/core';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { Icon } from '@vesper/ui';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { WIDE_EDITOR } from '../app/media.ts';
+import { afterEach, describe, expect, it } from 'vitest';
 import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
@@ -136,7 +135,7 @@ describe('the entry list', () => {
 });
 
 describe('the entry editor', () => {
-  it('lays out the title, main fields, body and a closed Details section', async () => {
+  it('lays out the title, then tabs: the main fields and body on Content, the rest on Details', async () => {
     setup('#/c/blog/e/harbor-at-dawn');
     const title = await screen.findByRole('textbox', { name: 'Title' });
     expect(title).toHaveValue('Harbor at dawn');
@@ -145,9 +144,11 @@ describe('the entry editor', () => {
     expect(await screen.findByRole('textbox', { name: 'Body' })).toHaveTextContent(
       'The first boats go out around five.',
     );
-    // Dates and tags wait in Details, which starts closed.
-    const details = screen.getByRole('button', { name: 'Details' });
-    expect(details).toHaveAttribute('aria-expanded', 'false');
+    // Dates and tags wait on Details; Content is chosen.
+    expect(screen.getByRole('tablist', { name: 'Harbor at dawn' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByRole('combobox', { name: /^Tags/ })).not.toBeInTheDocument();
     // A union the editor can't map is edited as YAML.
     expect(screen.getByRole('textbox', { name: 'Series (optional)' })).toHaveValue(
       'name: Waterfront walks\npart: 1',
@@ -218,82 +219,41 @@ describe('the entry editor', () => {
     expect(alt).toHaveAccessibleDescription(
       'Describe what this image communicates on this page. Describe this image, or mark it decorative.',
     );
-    // The date error is in Details, so Details opens.
-    expect(screen.getByRole('button', { name: 'Details' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    // The date's problem is on Details: its tab says so in words, before it's chosen.
+    expect(screen.getByRole('tab', { name: 'Details (1 problem)' })).toHaveAttribute(
+      'aria-selected',
+      'false',
     );
     await user.click(within(summary).getByRole('link', { name: /Hero, alt:/ }));
     expect(alt).toHaveFocus();
+    // A link to a field on another tab chooses that tab, then focuses the field.
+    await user.click(within(summary).getByRole('link', { name: /Enter a valid date\./ }));
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Details (1 problem)' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toHaveAttribute('aria-invalid', 'true');
+    });
     expect(window.location.hash).toBe('#/c/blog/e/harbor-at-dawn');
   });
 
-  describe('on a wide screen', () => {
-    beforeEach(() => {
-      vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
-        matches: query === WIDE_EDITOR,
-        media: query,
-        onchange: null,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-        addListener: () => undefined,
-        removeListener: () => undefined,
-        dispatchEvent: () => false,
-      }));
-    });
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    it('opens Details as a drawer from the top bar, and returns focus there', async () => {
-      const { user } = setup('#/c/blog/e/harbor-at-dawn');
-      await screen.findByRole('textbox', { name: 'Title' });
-      // No section in the column: a button in the bar instead.
-      const button = screen.getByRole('button', { name: 'Details' });
-      expect(button).not.toHaveAttribute('aria-expanded');
-      expect(screen.queryByRole('textbox', { name: /^Tags/ })).not.toBeInTheDocument();
-
-      await user.click(button);
-      const drawer = await screen.findByRole('dialog', { name: 'Details' });
-      expect(within(drawer).getByRole('combobox', { name: /^Tags/ })).toBeInTheDocument();
-      await expectNoViolations();
-
-      await user.keyboard('{Escape}');
-      await waitFor(() => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      });
-      await waitFor(() => {
-        expect(button).toHaveFocus();
-      });
-    });
-
-    it('counts Details’ problems in its button, and a summary link opens the drawer at the field', async () => {
-      const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
-      api.saveEntry.mockResolvedValueOnce({
-        ok: false,
-        reason: 'invalid',
-        issues: [{ path: ['publishedAt'], message: 'Enter a valid date.' }],
-      });
-      await screen.findByRole('textbox', { name: 'Title' });
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-
-      const summary = await screen.findByRole('alert');
-      await waitFor(() => {
-        expect(summary).toHaveFocus();
-      });
-      // The drawer doesn't open on its own: it would take focus from the summary.
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Details (1 problem)' })).toBeInTheDocument();
-
-      await user.click(within(summary).getByRole('link', { name: /Enter a valid date\./ }));
-      const drawer = await screen.findByRole('dialog', { name: 'Details' });
-      // The drawer takes focus as it opens, then hands it to the field once it's rendered.
-      await waitFor(() => {
-        expect(drawer).toContainElement(document.activeElement as HTMLElement);
-        expect(document.activeElement).toHaveAttribute('aria-invalid', 'true');
-      });
-      expect(window.location.hash).toBe('#/c/blog/e/harbor-at-dawn');
-    });
+  it('moves between tabs with the arrow keys, keeping each tab’s fields as they were', async () => {
+    const { user } = setup('#/c/blog/e/harbor-at-dawn');
+    const summary = await screen.findByRole('textbox', { name: 'Summary' });
+    await user.type(summary, ' Kept.');
+    const content = screen.getByRole('tab', { name: 'Content' });
+    content.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('combobox', { name: /^Tags/ })).toBeInTheDocument();
+    await expectNoViolations();
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('textbox', { name: 'Summary' })).toHaveValue(
+      'The fishing fleet leaves before sunrise. Kept.',
+    );
   });
 
   it('explains a conflict and offers to reload', async () => {

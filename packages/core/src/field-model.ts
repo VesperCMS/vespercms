@@ -73,8 +73,12 @@ export type FieldModel = {
   readOnly?: boolean;
   placeholder?: string;
   autocomplete?: string;
-  /** Where the editor shows the field: in the main column or the Details section (spec §10.3). */
-  placement?: 'main' | 'details';
+  /**
+   * The editor tab the field is on: Content (`main`), Details (`details`), or
+   * a tab the collection declares in vesper.config.ts, such as `seo`
+   * (DECISIONS.md, "The entry editor has tabs").
+   */
+  placement?: string;
   /** Forms: the value may be repeated in a confirmation email (D20). */
   safeToEcho?: boolean;
   /** `hide`: the boolean from `fields.hideFromSearch()`, which keeps the entry out of site search (spec §6.19). */

@@ -131,7 +131,7 @@ test('saves a draft as the editor types, and publishes it as one commit by the a
   expect(github.log()).toHaveLength(commits);
   expect(text(HARBOR)).toBe(before);
 
-  await page.getByRole('button', { name: 'Publish' }).click();
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
   // The host has started building the commit (the fake reports so at once).
   await expect(page.getByText('Published. The site is building now.')).toBeVisible();
   const log = github.log();
@@ -158,7 +158,7 @@ test('a contributor requests review, and an approver publishes it from Changes',
   const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Harbor at dawn, drafted');
   await title.fill('Harbor at dawn, reviewed');
-  await expect(page.getByRole('button', { name: 'Publish' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Publish', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Request review' }).click();
   const dialog = page.getByRole('dialog', { name: 'Request review' });
   await dialog.getByRole('textbox', { name: 'Note for the approver (optional)' }).fill('New title');
@@ -183,7 +183,7 @@ test('a contributor requests review, and an approver publishes it from Changes',
   const review = drawer.getByRole('article', { name: /^Cal Contributor asked/ });
   await expect(review.getByText('New title')).toBeVisible();
   await axe(approver);
-  await review.getByRole('button', { name: 'Publish' }).click();
+  await review.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(drawer.getByText('Published 1 change.')).toBeVisible();
   expect(github.log()).toHaveLength(commits + 1);
   expect(text(HARBOR)).toContain('title: Harbor at dawn, reviewed\n');
@@ -244,7 +244,7 @@ test('shows a change published elsewhere beside the draft, and keeps the draft o
     'Elsewhere',
     'someone-else',
   );
-  await page.getByRole('button', { name: 'Publish' }).click();
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
   const compare = page.getByRole('region', {
     name: 'Someone published this entry since your draft began',
   });
@@ -253,7 +253,7 @@ test('shows a change published elsewhere beside the draft, and keeps the draft o
   await axe(page);
   await compare.getByRole('button', { name: 'Keep my draft' }).click();
   await expect(page.getByText(/Your draft is kept/)).toBeVisible();
-  await page.getByRole('button', { name: 'Publish' }).click();
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(page.getByText('Published. The site is building now.')).toBeVisible();
   expect(text(HARBOR)).toContain('title: Harbor at dawn, mine\n');
 });

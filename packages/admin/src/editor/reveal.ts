@@ -9,14 +9,14 @@
 
 export const REVEAL_EVENT = 'vesper:reveal';
 
-/** True while `element` or something around it is hidden: a closed item or a closed Details. */
+/** True while `element` or something around it is hidden: a closed item, or a tab not chosen. */
 function isHidden(element: Element): boolean {
-  return element.closest('[hidden]') !== null;
+  return element.closest('[hidden], [inert]') !== null;
 }
 
 /**
- * Focuses an element as soon as it's on screen (a field inside Details
- * renders once Details opens; one inside a closed list item shows once the
+ * Focuses an element as soon as it's on screen (a field on another tab
+ * shows once its tab is chosen; one inside a closed list item, once the
  * item opens), and scrolls it into view.
  */
 export function focusWhenShown(id: string, tries = 20, asked = false): void {

@@ -210,7 +210,7 @@ describe('slug', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Ada Moreno');
     // The slug waits in Details.
-    await user.click(screen.getByRole('button', { name: 'Details' }));
+    await user.click(screen.getByRole('tab', { name: 'Details' }));
     const handle = screen.getByRole('textbox', { name: 'Handle (optional)' });
     expect(handle).toHaveValue('ada-moreno');
     expect(handle).toHaveAccessibleDescription('Follows the name until you edit it.');

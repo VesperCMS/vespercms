@@ -3,6 +3,7 @@ import {
   Button,
   ButtonLink,
   Combobox,
+  cx,
   Dialog,
   Menu,
   TextField,
@@ -12,12 +13,14 @@ import {
   type MenuItem,
   type Option,
 } from '@vesper/ui';
-import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useStudio } from '../app/context.tsx';
+import { onEntriesChanged } from '../app/entries-changed.ts';
 import { mayCreateIn, treeCovered } from '../cloud/access.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
+import { usePane } from '../app/pane-context.ts';
 import { Screen } from '../app/Screen.tsx';
 
 /*
@@ -29,12 +32,17 @@ import { Screen } from '../app/Screen.tsx';
  * them: arrows move and expand, Enter opens a page, Alt+↑/↓ move it among
  * its siblings. Dragging is offered and never required. Each move is
  * announced politely ("Nursing moved under Academics, position 1 of 3").
+ *
+ * Among panes it's the collection's pane, the same outline with every action,
+ * and the page open beside it is marked and in view.
  */
 
 /** A node as the outline shows it: keyed by its path in the tree, with its entry ID apart. */
 type Row = Omit<PageTreeNode, 'id' | 'children'> & {
   id: string;
   entryId?: string;
+  /** The page open beside the outline. */
+  current?: boolean;
   children: Row[];
 };
 
@@ -42,9 +50,19 @@ type Moving = { row: Row; parent: string };
 
 const TOP = '/';
 
-export function PageTree({ collection }: { collection: CollectionManifest }) {
+export function PageTree({
+  collection,
+  currentId = null,
+}: {
+  collection: CollectionManifest;
+  /** The page open beside the outline, among panes. */
+  currentId?: string | null;
+}) {
   const { api, cloud } = useStudio();
+  const pane = usePane();
   const [load, reload] = useLoad(() => api.pageTree(collection.name), collection.name);
+  // A save beside the outline can change a title or a status.
+  useEffect(() => onEntriesChanged(collection.name, reload), [collection.name, reload]);
   const [expanded, setExpanded] = useState<Set<Key>>(() => new Set());
   const [announcement, setAnnouncement] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
@@ -67,6 +85,20 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
   const byKey = useMemo(() => new Map(flatten(rows).map((row) => [row.id, row])), [rows]);
   const maxDepth = load.state === 'ready' ? load.value.maxDepth : undefined;
   const editable = collection.editable;
+  // Fresh rows when the open page changes: the tree reuses a row whose item is the same object.
+  const shown = useMemo(() => withCurrent(rows, currentId), [rows, currentId]);
+  const currentKey =
+    currentId === null
+      ? null
+      : (flatten(rows).find((row) => row.entryId === currentId)?.id ?? null);
+
+  // The open page's folders are open, so it's in view.
+  const [revealed, setRevealed] = useState<string | null>(null);
+  if (currentKey !== null && revealed !== currentKey) {
+    setRevealed(currentKey);
+    const folders = ancestorsOf(byKey.get(currentKey)?.path ?? '');
+    if (folders.some((key) => !expanded.has(key))) setExpanded(new Set([...expanded, ...folders]));
+  }
 
   const announce = (text: string) => {
     // A repeated message must still be read out: clear, then set.
@@ -186,40 +218,56 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
     },
   });
 
+  const newPage =
+    editable && mayCreateIn(cloud, collection)
+      ? hrefFor({ screen: 'new', collection: collection.name })
+      : null;
+
   return (
     <Screen
       title={collection.label}
       icon={collectionIcon(collection)}
       afterglow={load.state === 'ready' && rows.length === 0}
+      // Among panes, New page heads the pane, quiet: the entry beside it has the primary button.
+      {...(pane && newPage
+        ? {
+            bar: (
+              <ButtonLink variant="quiet" icon="add" href={newPage}>
+                New page
+              </ButtonLink>
+            ),
+          }
+        : {})}
     >
       {!editable && (
-        <p className="mb-6 max-w-2xl text-content-muted">
+        <p className={cx('max-w-2xl text-content-muted', pane ? 'mb-3 text-small' : 'mb-6')}>
           {collection.label} can be read here but not edited.
         </p>
       )}
       {load.state === 'failed' && (
-        <p role="alert" className="mb-6 text-danger">
+        <p role="alert" className={cx('text-danger', pane ? 'mb-3 text-small' : 'mb-6')}>
           Couldn’t load the pages: {load.message}
         </p>
       )}
-      <div className="mb-6 flex flex-wrap items-end gap-4">
-        <p className="max-w-2xl text-content-muted">
-          Pages are listed as they nest on the site. Each page’s “…” menu adds a page under it,
-          moves it or changes its order. From a page, the right arrow or Shift+F10 reaches its menu,
-          and Alt+↑ and Alt+↓ move it.
+      {pane ? (
+        <p className="mb-3 px-1 text-small text-content-muted">
+          Each page’s “…” menu adds a page under it or moves it. Alt+↑ and Alt+↓ change its order.
         </p>
-        {editable && mayCreateIn(cloud, collection) && (
-          // The screen's one primary action.
-          <ButtonLink
-            variant="primary"
-            icon="add"
-            href={hrefFor({ screen: 'new', collection: collection.name })}
-            className="ml-auto"
-          >
-            New page
-          </ButtonLink>
-        )}
-      </div>
+      ) : (
+        <div className="mb-6 flex flex-wrap items-end gap-4">
+          <p className="max-w-2xl text-content-muted">
+            Pages are listed as they nest on the site. Each page’s “…” menu adds a page under it,
+            moves it or changes its order. From a page, the right arrow or Shift+F10 reaches its
+            menu, and Alt+↑ and Alt+↓ move it.
+          </p>
+          {newPage && (
+            // The screen's one primary action.
+            <ButtonLink variant="primary" icon="add" href={newPage} className="ml-auto">
+              New page
+            </ButtonLink>
+          )}
+        </div>
+      )}
       {problem && (
         <p role="alert" className="mb-4 text-danger">
           {problem}
@@ -230,8 +278,9 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
       ) : (
         <Tree<Row>
           label={collection.label}
-          items={rows}
-          textValue={(row) => row.title}
+          items={shown}
+          // A row's name is this text: the title first, for type-ahead.
+          textValue={(row) => (row.current ? `${row.title}, open now` : row.title)}
           expandedKeys={expanded}
           onExpandedChange={setExpanded}
           onAction={(row) => {
@@ -240,6 +289,7 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
           onRowKeyDown={onRowKeyDown}
           {...(editable && covered('') ? { dragAndDropHooks } : {})}
           emptyState="No pages yet."
+          currentKey={currentKey}
           renderRow={(row) => (
             <>
               <span className="min-w-0 flex-1 px-1">
@@ -251,7 +301,11 @@ export function PageTree({ collection }: { collection: CollectionManifest }) {
               <span className="shrink-0 text-small text-content-muted">{statusOf(row)}</span>
               <Menu
                 label={`More actions for ${row.title}`}
-                items={menuItems(row, rows, byPath, { editable, maxDepth, covered })}
+                items={menuItems(byKey.get(row.id) ?? row, rows, byPath, {
+                  editable,
+                  maxDepth,
+                  covered,
+                })}
                 onAction={(action) => {
                   onMenu(row, action);
                 }}
@@ -561,6 +615,15 @@ function pruneRows(rows: Row[], covered: (path: string) => boolean): Row[] {
     const children = pruneRows(row.children, covered);
     return covered(row.path) || children.length > 0 ? [{ ...row, children }] : [];
   });
+}
+
+/** Copies of the rows, so each is drawn again with the page that's open now. */
+function withCurrent(rows: Row[], currentId: string | null): Row[] {
+  return rows.map((row) => ({
+    ...row,
+    current: row.entryId !== undefined && row.entryId === currentId,
+    children: withCurrent(row.children, currentId),
+  }));
 }
 
 function flatten(rows: Row[]): Row[] {

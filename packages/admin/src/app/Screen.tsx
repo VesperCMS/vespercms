@@ -1,11 +1,21 @@
-import { cx, Icon, Menu, VesperMark, type IconName, type IconNode } from '@vesper/ui';
-import { useContext, useEffect, useRef, type ReactNode } from 'react';
+import {
+  cx,
+  Icon,
+  IconButton,
+  Menu,
+  Tooltip,
+  VesperMark,
+  type IconName,
+  type IconNode,
+} from '@vesper/ui';
+import { useContext, useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 import { shownTo } from '../cloud/access.ts';
 import { ChangesButton } from '../cloud/changes.tsx';
 import { useStudio, VESPER_NAME } from './context.tsx';
 import { NavigationContext } from './navigation.ts';
 import { collectionIcon } from './collection-icon.ts';
 import { hrefFor, navigate, parseRoute } from './router.ts';
+import { usePane } from './pane-context.ts';
 import { UserMenu } from './UserMenu.tsx';
 
 export type ScreenProps = {
@@ -21,11 +31,6 @@ export type ScreenProps = {
   column?: boolean;
   /** An icon before the heading: a collection's. */
   icon?: { node: IconNode } | { name: IconName };
-  /**
-   * Navigation beside the content, before `<main>`: the editor's list pane on
-   * wide screens. `<main>` still starts with the screen's `h1`.
-   */
-  aside?: ReactNode;
   children: ReactNode;
 };
 
@@ -34,6 +39,9 @@ export type ScreenProps = {
  * `h1` (spec §10.6). After an in-app navigation, focus moves to the new
  * screen's heading, so keyboard and screen-reader users land on the content
  * they asked for instead of at the top of the page.
+ *
+ * Inside the pane shell (app/panes.tsx) a screen is the deepest pane
+ * instead: its heading and bar head the pane, and it scrolls on its own.
  */
 export function Screen({
   title,
@@ -42,53 +50,170 @@ export function Screen({
   afterglow = false,
   column = false,
   icon,
-  aside,
   children,
 }: ScreenProps) {
-  const { siteName } = useStudio();
-  const navigation = useContext(NavigationContext);
+  const pane = usePane();
   const heading = useRef<HTMLHeadingElement>(null);
+  useLeadHeading(title, heading);
 
-  useEffect(() => {
-    document.title = `${title} · ${siteName}`;
-  }, [title, siteName]);
-
-  useEffect(() => {
-    if (navigation.count > 0) heading.current?.focus({ preventScroll: false });
-  }, [navigation.count]);
-
-  const main = (
-    <main
-      id="main"
-      tabIndex={-1}
-      className={cx(
-        'pb-16 outline-none',
-        aside ? 'min-w-0' : 'mx-auto max-w-6xl px-4',
-        hideTitle ? 'pt-8' : 'pt-12',
-      )}
-    >
-      <h1
-        ref={heading}
-        tabIndex={-1}
-        className={
-          hideTitle
-            ? 'sr-only'
-            : cx(
-                'mb-8 text-heading-1 text-content outline-none',
-                icon && 'flex items-center gap-3',
-                column && 'mx-auto max-w-editor',
-              )
-        }
+  if (pane) {
+    return (
+      <PaneFrame
+        title={title}
+        headingRef={heading}
+        hideTitle={hideTitle}
+        icon={icon}
+        actions={bar}
+        className={cx(afterglow && 'afterglow')}
       >
-        {icon && !hideTitle && <Icon {...icon} size={24} className="text-content-muted" />}
-        {title}
-      </h1>
-      {children}
-    </main>
-  );
+        <div
+          className={cx(
+            'min-h-0 flex-1 overflow-y-auto',
+            pane.width === 'flex' ? 'px-6 pt-8 pb-16' : 'px-3 pt-3 pb-6',
+          )}
+        >
+          {children}
+        </div>
+      </PaneFrame>
+    );
+  }
 
   return (
     <div className={cx('min-h-screen', afterglow && 'afterglow')}>
+      <StudioHeader bar={bar ?? <DefaultBar />} />
+      <main
+        id="main"
+        tabIndex={-1}
+        className={cx('mx-auto max-w-6xl px-4 pb-16 outline-none', hideTitle ? 'pt-8' : 'pt-12')}
+      >
+        <h1
+          ref={heading}
+          tabIndex={-1}
+          className={
+            hideTitle
+              ? 'sr-only'
+              : cx(
+                  'mb-8 text-heading-1 text-content outline-none',
+                  icon && 'flex items-center gap-3',
+                  column && 'mx-auto max-w-editor',
+                )
+          }
+        >
+          {icon && !hideTitle && <Icon {...icon} size={24} className="text-content-muted" />}
+          {title}
+        </h1>
+        {children}
+      </main>
+    </div>
+  );
+}
+
+/**
+ * The pane, or the screen, that leads names the browser tab, and takes focus
+ * after an in-app navigation (spec §10.6). Among panes that's the deepest.
+ */
+export function useLeadHeading(title: string, heading: RefObject<HTMLElement | null>): void {
+  const { siteName } = useStudio();
+  const navigation = useContext(NavigationContext);
+  const pane = usePane();
+  const leads = !pane || pane.focusTarget;
+
+  useEffect(() => {
+    if (leads) document.title = `${title} · ${siteName}`;
+  }, [title, siteName, leads]);
+
+  useEffect(() => {
+    if (leads && navigation.count > 0) heading.current?.focus({ preventScroll: false });
+  }, [navigation.count, leads, heading]);
+}
+
+/**
+ * A pane's frame: a landmark named by its heading, a header with the heading,
+ * the pane's actions and its collapse button, then the pane's body. The
+ * deepest pane is the page's `main`, with its `h1`; the others are
+ * navigation, with `h2`s. The element stays the same as a pane's role
+ * changes, so what's in it isn't drawn afresh when an entry opens beside it.
+ */
+export function PaneFrame({
+  title,
+  headingRef,
+  hideTitle = false,
+  icon,
+  actions,
+  className,
+  children,
+}: {
+  title: string;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  hideTitle?: boolean;
+  icon?: { node: IconNode } | { name: IconName } | undefined;
+  actions?: ReactNode;
+  className?: string | false | undefined;
+  children: ReactNode;
+}) {
+  const pane = usePane();
+  const id = useId();
+  const main = pane?.landmark !== 'nav';
+  const Heading = pane?.level === 2 ? 'h2' : 'h1';
+  return (
+    <div
+      role={main ? 'main' : 'navigation'}
+      aria-labelledby={id}
+      {...(main ? { id: 'main', tabIndex: -1 } : {})}
+      className={cx('flex min-h-0 flex-1 flex-col outline-none', className)}
+    >
+      <div
+        className={cx(
+          'flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border py-2',
+          pane?.width === 'flex' ? 'px-6' : 'px-4',
+        )}
+      >
+        <Heading
+          id={id}
+          ref={headingRef}
+          tabIndex={-1}
+          className={
+            hideTitle
+              ? 'sr-only'
+              : cx(
+                  'min-w-0 flex-1 truncate outline-none',
+                  pane?.width === 'flex' ? 'text-heading-3' : 'text-label',
+                  'text-content',
+                  icon && 'flex items-center gap-2',
+                )
+          }
+        >
+          {icon && !hideTitle && <Icon {...icon} size={18} className="text-content-muted" />}
+          {title}
+        </Heading>
+        {actions}
+        {pane?.onCollapse && (
+          <Tooltip text={`Collapse ${title}`}>
+            <IconButton
+              data-collapse=""
+              icon="pane-collapse"
+              label={`Collapse ${title}`}
+              onPress={pane.onCollapse}
+              className="-mr-2"
+            />
+          </Tooltip>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The skip link and the top bar. One screen at a time, it holds the screen's
+ * bar (the menus, or the editor's own); among panes it spans the full width
+ * and holds what's the person's, since the structure pane holds the site's.
+ */
+export function StudioHeader({ bar }: { bar?: ReactNode }) {
+  const { siteName } = useStudio();
+  const pane = usePane();
+  return (
+    <>
       <a
         href="#main"
         onClick={(event) => {
@@ -102,7 +227,12 @@ export function Screen({
       </a>
       {/* Sticky and frosted, so the page stays present as it scrolls beneath. */}
       <header className="glass-bar sticky top-0 z-40 shadow-glass-edge">
-        <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:gap-x-4">
+        <div
+          className={cx(
+            'flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:gap-x-4',
+            bar !== undefined && !pane && 'mx-auto max-w-6xl',
+          )}
+        >
           <a
             href={hrefFor({ screen: 'home' })}
             className={cx(
@@ -121,18 +251,15 @@ export function Screen({
             <VesperMark size={20} className="hidden sm:block" />
             {siteName}
           </a>
-          {bar ?? <DefaultBar />}
+          {bar ?? (
+            <div className="ml-auto flex items-center gap-2">
+              <ChangesButton />
+              <UserMenu />
+            </div>
+          )}
         </div>
       </header>
-      {aside ? (
-        <div className="mx-auto grid max-w-6xl grid-cols-[18rem_minmax(0,1fr)] gap-10 px-4">
-          {aside}
-          {main}
-        </div>
-      ) : (
-        main
-      )}
-    </div>
+    </>
   );
 }
 

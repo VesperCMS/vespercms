@@ -109,6 +109,8 @@ export type CollectionPresentation = {
   headingStart?: number;
   /** The Lucide icon vesper.config.ts names for it, with its drawing (DECISIONS.md). */
   icon?: { name: string; node: IconNode };
+  /** Editor tabs vesper.config.ts declares beside Content and Details, in order ("SEO"). */
+  tabs?: { id: string; label: string }[];
 };
 
 export type CollectionManifest = {

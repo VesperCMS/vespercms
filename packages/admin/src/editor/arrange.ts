@@ -2,11 +2,13 @@ import type { CollectionManifest, FieldModel } from '@vesper/core';
 import { keyOf } from './values.ts';
 
 /*
- * Where each field goes in the editor (spec §10.3): the title as the
- * document heading, the main fields beneath it in schema order, and
- * secondary frontmatter in the Details section at the bottom. A field's
- * `placement` (from `.meta()` or vesper.config.ts) always wins; otherwise
- * slugs, dates, tags, ordering, SEO fields and scheduling go to Details.
+ * Where each field goes in the editor (spec §10.3, and DECISIONS.md, "The
+ * entry editor has tabs"): the title as the document heading, above the
+ * tabs; the main fields on Content, in schema order; secondary frontmatter
+ * on Details; and fields placed on a tab vesper.config.ts declares, on that
+ * tab. A field's `placement` (from `.meta()` or vesper.config.ts) always
+ * wins; otherwise slugs, dates, tags, ordering, SEO fields and scheduling
+ * go to Details.
  * "Hide from site search" is absent, not disabled, where the collection
  * isn't searched or has no pages (spec §6.19): the manifest then names no
  * `searchHidden` field.
@@ -40,6 +42,8 @@ export type ArrangedFields = {
   title: FieldModel | undefined;
   main: FieldModel[];
   details: FieldModel[];
+  /** The collection's own tabs, in the order it declares them, each with its fields. */
+  tabs: { id: string; label: string; fields: FieldModel[] }[];
 };
 
 export function arrangeFields(collection: CollectionManifest): ArrangedFields {
@@ -56,13 +60,19 @@ export function arrangeFields(collection: CollectionManifest): ArrangedFields {
 
   const main: FieldModel[] = [];
   const details: FieldModel[] = [];
+  const tabs = (collection.presentation.tabs ?? []).map((tab) => ({
+    ...tab,
+    fields: [] as FieldModel[],
+  }));
   for (const field of fields) {
     if (field === title) continue;
-    if (field.placement === 'main') main.push(field);
+    const own = tabs.find((tab) => tab.id === field.placement);
+    if (own) own.fields.push(field);
+    else if (field.placement === 'main') main.push(field);
     else if (field.placement === 'details' || isDetail(field, scheduled)) details.push(field);
     else main.push(field);
   }
-  return { title, main, details };
+  return { title, main, details, tabs: tabs.filter((tab) => tab.fields.length > 0) };
 }
 
 function isDetail(field: FieldModel, scheduled: ReadonlySet<string>): boolean {

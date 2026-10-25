@@ -93,7 +93,7 @@ test('publishes an edit and a new image as one commit, changing nothing else', a
   // Held for the publish: nothing is committed yet.
   expect(github.log()).toHaveLength(commits);
 
-  await page.getByRole('button', { name: 'Publish' }).click();
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(
     page.getByText('Published. It will be live after the site is next built.'),
   ).toBeVisible();
@@ -131,7 +131,7 @@ test('reports a change published elsewhere as a conflict, and offers to reload',
     [path]: current.replace('title: Getting started', 'title: Getting started now'),
   });
   await title.fill('Getting started here');
-  await page.getByRole('button', { name: 'Publish' }).click();
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
   const alert = page.getByRole('alert').filter({ hasText: 'changed' });
   await expect(alert).toBeVisible();
   await alert.getByRole('button', { name: 'Reload this entry' }).click();

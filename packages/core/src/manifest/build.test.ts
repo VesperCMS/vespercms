@@ -339,6 +339,40 @@ describe('buildManifest: collection icons', () => {
   });
 });
 
+describe('buildManifest: editor tabs', () => {
+  it('keeps the tabs vesper.config.ts declares, and places fields on them', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [
+        {
+          name: 'blog',
+          loader: { kind: 'glob', base: './src/content/blog', pattern: '**/*.md', customId: false },
+          schema: z.object({
+            title: z.string(),
+            seoTitle: z.string().optional().meta({ placement: 'seo' }),
+            ogImage: z.string().optional(),
+            note: z.string().optional().meta({ placement: 'nowhere' }),
+          }),
+        },
+      ] as ManifestInput['collections'],
+      config: {
+        collections: {
+          blog: { tabs: { seo: 'SEO', details: 'Ignored' }, placement: { ogImage: 'seo' } },
+        },
+      },
+    });
+    const blog = manifest.collections[0];
+    expect(blog?.presentation.tabs).toEqual([{ id: 'seo', label: 'SEO' }]);
+    expect(blog?.fields?.map((f) => [f.path[0], f.placement])).toEqual([
+      ['title', undefined],
+      ['seoTitle', 'seo'],
+      ['ogImage', 'seo'],
+      ['note', undefined],
+    ]);
+    expect(manifest.diagnostics.map((d) => d.code)).toContain('unknown-tab');
+  });
+});
+
 describe('buildManifest: hide from site search', () => {
   const pages = (schema: z.ZodType) => ({
     name: 'pages',

@@ -115,6 +115,7 @@ const KNOWN_COLLECTION = new Set([
   'schedule',
   'search',
   'placement',
+  'tabs',
   'maxDepth',
   'headingStart',
   'icon',

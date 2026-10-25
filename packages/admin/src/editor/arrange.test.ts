@@ -37,6 +37,27 @@ function collection(presentation: CollectionManifest['presentation']): Collectio
 const keys = (fields: FieldModel[]) => fields.map((f) => f.path.join('.'));
 
 describe('arrangeFields', () => {
+  it('puts fields on the tabs the collection declares, in its order, and leaves out empty ones', () => {
+    const pages = collection({
+      tabs: [
+        { id: 'seo', label: 'SEO' },
+        { id: 'social', label: 'Social' },
+      ],
+    });
+    pages.fields = [
+      field('title'),
+      field('summary'),
+      field('seoTitle', { placement: 'seo' }),
+      field('publishedAt', { kind: 'date' }),
+    ];
+    const arranged = arrangeFields(pages);
+    expect(keys(arranged.main)).toEqual(['summary']);
+    expect(arranged.tabs.map((tab) => [tab.label, keys(tab.fields)])).toEqual([
+      ['SEO', ['seoTitle']],
+    ]);
+    expect(keys(arranged.details)).toEqual(['publishedAt']);
+  });
+
   it('puts "Hide from site search" in Details where the collection is searched', () => {
     const arranged = arrangeFields(collection({ url: '/:id', searchHidden: ['hidden'] }));
     expect(arranged.title?.path).toEqual(['title']);

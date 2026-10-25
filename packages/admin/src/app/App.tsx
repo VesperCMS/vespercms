@@ -1,13 +1,6 @@
 import type { CollectionManifest } from '@vesper/core';
 import { Button, Dialog } from '@vesper/ui';
 import { lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { EntryEditor } from '../screens/EntryEditor.tsx';
-import { EntryList } from '../screens/EntryList.tsx';
-import { Home } from '../screens/Home.tsx';
-import { MediaBrowser } from '../screens/MediaBrowser.tsx';
-import { NotFound } from '../screens/NotFound.tsx';
-import { PageTree } from '../screens/PageTree.tsx';
-import { Redirects } from '../screens/Redirects.tsx';
 import { Unavailable } from '../screens/Unavailable.tsx';
 import { ChangesProvider } from '../cloud/changes.tsx';
 import { CloudGate } from '../cloud/CloudGate.tsx';
@@ -15,7 +8,9 @@ import { GitHubGate } from '../github/GitHubGate.tsx';
 import { readSession } from '../github/session.ts';
 import type { StudioOptions, WidgetComponent, WidgetLoader } from '../types.ts';
 import { StudioContext, VESPER_NAME, type Studio } from './context.tsx';
+import { useMediaQuery } from './media.ts';
 import { NavigationContext } from './navigation.ts';
+import { PANES, PaneShell } from './panes.tsx';
 import { useRouter, type Route } from './router.ts';
 
 const NO_WIDGETS: Record<string, WidgetLoader> = {};
@@ -36,6 +31,7 @@ export function App({
   connection,
 }: StudioOptions) {
   const { route, pending, leave, stay } = useRouter();
+  const panes = useMediaQuery(PANES);
   const navigation = useNavigationCount(route);
 
   const studio = useMemo<Studio | null>(() => {
@@ -79,7 +75,8 @@ export function App({
     return <Unavailable siteName={siteName} />;
   }
 
-  const screen = <CurrentScreen route={route} studio={studio} key={routeKey(route)} />;
+  // Wide: panes, full width; narrow: one screen at a time (app/panes.tsx).
+  const screen = <PaneShell route={route} studio={studio} wide={panes} />;
   return (
     <StudioContext.Provider value={studio}>
       <NavigationContext.Provider value={navigation}>
@@ -108,37 +105,6 @@ export function App({
       </NavigationContext.Provider>
     </StudioContext.Provider>
   );
-}
-
-function CurrentScreen({ route, studio }: { route: Route; studio: Studio }) {
-  if (route.screen === 'home' || route.screen === 'changes') return <Home />;
-  if (route.screen === 'media') return <MediaBrowser />;
-  if (route.screen === 'redirects') return <Redirects />;
-  if (route.screen === 'list' || route.screen === 'edit' || route.screen === 'new') {
-    const collection = studio.collection(route.collection);
-    if (!collection) {
-      return <NotFound message={`This site has no collection called “${route.collection}”.`} />;
-    }
-    if (route.screen === 'list') {
-      // Tree collections are an outline of pages instead of a flat list (spec §6.15.2).
-      return collection.presentation.tree && collection.source.loader === 'glob' ? (
-        <PageTree collection={collection} />
-      ) : (
-        <EntryList collection={collection} />
-      );
-    }
-    if (route.screen === 'new') {
-      return (
-        <EntryEditor
-          collection={collection}
-          id={null}
-          {...(route.parent !== undefined ? { parent: route.parent } : {})}
-        />
-      );
-    }
-    return <EntryEditor collection={collection} id={route.id} />;
-  }
-  return <NotFound />;
 }
 
 const lazyCache = new WeakMap<WidgetLoader, WidgetComponent>();
