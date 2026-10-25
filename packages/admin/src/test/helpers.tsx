@@ -8,7 +8,7 @@ import type {
   PageTree,
   RedirectsDocument,
 } from '@vesper/core';
-import { render } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
 import { expect, vi, type Mock } from 'vitest';
 import snapshot from '../../../astro/test/__snapshots__/playground.manifest.json' with { type: 'json' };
@@ -112,4 +112,26 @@ export function renderStudio(hash: string, options: Partial<StudioOptions> = {})
     <App manifest={playgroundManifest} siteName="Playground" {...options} api={api} />,
   );
   return { ...result, api };
+}
+
+/**
+ * Opens every closed list item, nested ones too, as an editor would one by
+ * one: items start closed, and their fields are hidden until they open.
+ */
+export async function openItems(): Promise<void> {
+  await waitFor(() => {
+    expect(document.querySelector('[id*="-row-"]')).not.toBeNull();
+  });
+  for (;;) {
+    const closed = [
+      ...document.querySelectorAll<HTMLElement>('[id*="-row-"][aria-expanded="false"]'),
+    ];
+    if (closed.length === 0) return;
+    for (const row of closed) {
+      await act(async () => {
+        row.click();
+        await Promise.resolve();
+      });
+    }
+  }
 }

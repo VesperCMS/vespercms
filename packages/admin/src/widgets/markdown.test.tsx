@@ -4,7 +4,13 @@ import type { EntryDocument, Manifest, SaveRequest } from '@vesper/core';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
+import {
+  expectNoViolations,
+  fakeApi,
+  openItems,
+  playgroundManifest,
+  renderStudio,
+} from '../test/helpers.tsx';
 
 afterEach(() => {
   cleanup();
@@ -79,11 +85,16 @@ function multiLine(): Manifest {
   return manifest;
 }
 
+/** The Sections list: its items' Body fields, apart from the entry's own body (also named Body). */
+function sections() {
+  return within(screen.getByRole('group', { name: /^Sections/ }));
+}
+
 /** Every section's Body, once each has opened as plain text (`TEXTAREA`) or in the editor (`DIV`). */
 async function bodies(count: number, tag: 'TEXTAREA' | 'DIV'): Promise<HTMLElement[]> {
   return waitFor(
     () => {
-      const fields = screen.getAllByRole('textbox', { name: 'Body (required)' });
+      const fields = sections().getAllByRole('textbox', { name: 'Body' });
       expect(fields.map((field) => field.tagName)).toEqual(Array<string>(count).fill(tag));
       // The editor is empty until it has checked the value and filled in.
       if (tag === 'DIV') expect(fields.every((field) => field.textContent !== '')).toBe(true);
@@ -112,11 +123,12 @@ describe('the compact Markdown field', () => {
   it('shows formatting, and edits as Markdown only where it changes', async () => {
     const api = fakeApi({ documents: { 'pages/about': about } });
     renderStudio('#/c/pages/e/about', { api });
+    await openItems();
     const user = userEvent.setup();
     // The editor loads on first use, then fills in; query afresh until it has.
     await waitFor(
       () => {
-        const [first] = screen.getAllByRole('textbox', { name: 'Body (required)' });
+        const [first] = sections().getAllByRole('textbox', { name: 'Body' });
         expect(first?.querySelector('em')).toHaveTextContent('practical');
       },
       { timeout: 5000 },
@@ -126,8 +138,8 @@ describe('the compact Markdown field', () => {
     );
 
     // Code shows as code, with the other formatting beside it.
-    const developers = screen
-      .getAllByRole('textbox', { name: 'Body (required)' })
+    const developers = sections()
+      .getAllByRole('textbox', { name: 'Body' })
       .find((field) => field.querySelector('code'));
     expect(developers?.querySelector('code')).toHaveTextContent('src/content.config.ts');
     expect(developers?.querySelector('strong')).toHaveTextContent('written');
@@ -144,6 +156,7 @@ describe('the compact Markdown field', () => {
 
   it('falls back to plain text for Markdown it can’t show in one line, and says so', async () => {
     renderStudio('#/c/pages/e/about', { api: fakeApi({ documents: { 'pages/about': about } }) });
+    await openItems();
     const fallback = await screen.findByText(
       'This uses Markdown the compact editor can’t show, so it’s edited as text.',
     );
@@ -154,10 +167,11 @@ describe('the compact Markdown field', () => {
   it('toggles code with its tool and with Ctrl+E, and saves it as backticks', async () => {
     const api = fakeApi({ documents: { 'pages/guide': guide } });
     renderStudio('#/c/pages/e/guide', { api });
+    await openItems();
     const user = userEvent.setup();
     const field = await waitFor(
       () => {
-        const found = screen.getByRole('textbox', { name: 'Body (required)' });
+        const found = sections().getByRole('textbox', { name: 'Body' });
         expect(found.querySelector('code')).toHaveTextContent('src/content.config.ts');
         return found;
       },
@@ -208,10 +222,11 @@ describe('the compact Markdown field', () => {
     };
     const api = fakeApi({ documents: { 'pages/guide': backtick } });
     renderStudio('#/c/pages/e/guide', { api });
+    await openItems();
     const user = userEvent.setup();
     await waitFor(
       () => {
-        const field = screen.getByRole('textbox', { name: 'Body (required)' });
+        const field = sections().getByRole('textbox', { name: 'Body' });
         expect(field.querySelector('code')).toHaveTextContent('a`b');
       },
       { timeout: 5000 },
@@ -247,6 +262,7 @@ describe('the compact Markdown field', () => {
     const entry = withBodies(lossy);
     const api = fakeApi({ documents: { 'pages/about': entry } });
     renderStudio('#/c/pages/e/about', { api });
+    await openItems();
     const user = userEvent.setup();
     const fields = await bodies(lossy.length, 'TEXTAREA');
     expect(fields.map((field) => (field as HTMLTextAreaElement).value)).toEqual(lossy);
@@ -278,10 +294,11 @@ describe('the compact Markdown field', () => {
     const entry = withBodies([...lossy, '- One\n- Two']);
     const api = fakeApi({ documents: { 'pages/about': entry } });
     renderStudio('#/c/pages/e/about', { api, manifest: multiLine() });
+    await openItems();
     const user = userEvent.setup();
     await waitFor(
       () => {
-        const fields = screen.getAllByRole('textbox', { name: 'Body (required)' });
+        const fields = sections().getAllByRole('textbox', { name: 'Body' });
         expect(
           fields.map((field) =>
             field instanceof HTMLTextAreaElement
@@ -314,6 +331,7 @@ describe('the compact Markdown field', () => {
     const entry = withBodies(held);
     const api = fakeApi({ documents: { 'pages/about': entry } });
     renderStudio('#/c/pages/e/about', { api });
+    await openItems();
     const user = userEvent.setup();
     const fields = await bodies(held.length, 'DIV');
     expect(screen.queryByText(FALLBACK)).not.toBeInTheDocument();

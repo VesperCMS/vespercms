@@ -90,7 +90,7 @@ describe('VesperMark', () => {
 });
 
 describe('TextField and TextArea', () => {
-  it('link the label, help and error, and say "(required)" in words', async () => {
+  it('link the label, help and error, and mark a required control for assistive technology', async () => {
     render(
       <>
         <TextField
@@ -103,8 +103,10 @@ describe('TextField and TextArea', () => {
         <TextArea label="Summary" description="One or two sentences." />
       </>,
     );
-    const title = screen.getByRole('textbox', { name: /Title/ });
-    expect(screen.getByText('(required)')).toBeTruthy();
+    // Studio labels mark what's optional, so a required one says nothing in words.
+    const title = screen.getByRole('textbox', { name: 'Title' });
+    expect(screen.queryByText('(required)')).toBeNull();
+    expect(title).toBeRequired();
     expect(title.getAttribute('aria-invalid')).toBe('true');
     const describedBy = (title.getAttribute('aria-describedby') ?? '').split(' ');
     const described = describedBy.map((id) => document.getElementById(id)?.textContent);

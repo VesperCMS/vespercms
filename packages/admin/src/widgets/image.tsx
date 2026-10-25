@@ -197,7 +197,7 @@ export function ImageWidget({
       {hasAlt && !decorative && (
         <div className="flex flex-col gap-1">
           <label htmlFor={`${id}-alt`} className="text-label text-content">
-            Alt text <span className="font-normal text-content-muted">(required)</span>
+            Alt text
           </label>
           <textarea
             id={`${id}-alt`}
@@ -216,6 +216,7 @@ export function ImageWidget({
               .filter(Boolean)
               .join(' ')}
             aria-invalid={invalid || undefined}
+            aria-required="true"
             disabled={disabled}
             className={cx(inputClass, 'resize-y')}
           />

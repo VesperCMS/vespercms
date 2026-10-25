@@ -29,11 +29,17 @@ export type BuiltinWidget = {
   component: ComponentType<BuiltinWidgetProps>;
   /**
    * Renders as a fieldset whose legend is the label (objects, lists, radio
-   * groups); `'boxed'` also draws a hairline around it.
+   * groups); `'boxed'` also draws a hairline around it (an image, a map).
    */
   group?: true | 'boxed';
   /** Renders each child (or item) as its own field, so their errors show there. */
   rendersChildren?: true;
+  /**
+   * At the form's first level it's a section: a hairline above, its own
+   * heading, more space (DECISIONS.md, "Top-level groups are sections").
+   * Deeper, an object is set off by an indent guide instead of a frame.
+   */
+  section?: true;
   /** Ids of controls it renders for some of its children, as suffixes of its own id (`alt` → `-alt`). */
   childControls?: Readonly<Record<string, string>>;
 };
@@ -51,8 +57,8 @@ const BUILTIN: Record<string, BuiltinWidget> = {
   radio: { component: RadioWidget, group: true },
   tags: { component: TagsWidget },
   multiselect: { component: TagsWidget },
-  group: { component: GroupWidget, group: 'boxed', rendersChildren: true },
-  repeater: { component: RepeaterWidget, group: true, rendersChildren: true },
+  group: { component: GroupWidget, group: true, rendersChildren: true, section: true },
+  repeater: { component: RepeaterWidget, group: true, rendersChildren: true, section: true },
   raw: { component: RawWidget },
   markdown: { component: LazyMarkdownWidget },
   slug: { component: SlugWidget },

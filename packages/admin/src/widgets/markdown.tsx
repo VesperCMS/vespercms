@@ -149,6 +149,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
         'aria-labelledby': `${id}-label`,
         'aria-describedby': [describedBy, `${id}-md`].filter(Boolean).join(' '),
         ...(invalid ? { 'aria-invalid': 'true' } : {}),
+        ...(field.required ? { 'aria-required': 'true' } : {}),
         class: cx(
           'vesper-body w-full px-3 py-2 text-body text-content outline-none',
           inline ? 'min-h-10' : 'min-h-24',
@@ -192,6 +193,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
           }}
           aria-describedby={[describedBy, `${id}-md`].filter(Boolean).join(' ')}
           aria-invalid={invalid || undefined}
+          aria-required={field.required || undefined}
           disabled={disabled}
           className={cx(inputClass, 'resize-y font-mono text-small')}
         />

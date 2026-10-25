@@ -1,8 +1,13 @@
-import { isPlainObject, type DataValue, type FieldModel } from '@vesper/core';
-import { Button } from '@vesper/ui';
-import { useRef } from 'react';
+import { isPlainObject, resolveMediaPath, type DataValue, type FieldModel } from '@vesper/core';
+import { Button, Chevron, cx, focusRing, Menu, type MenuItem } from '@vesper/ui';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Button as RACButton, Disclosure, DisclosurePanel, Heading } from 'react-aria-components';
+import { useFileUrl } from '../app/file-url.tsx';
+import { formatCount } from '../app/format.ts';
+import { useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
-import { keyOf, type ValuePath } from '../editor/values.ts';
+import { REVEAL_EVENT } from '../editor/reveal.ts';
+import { keyOf, pathKey, type ValuePath } from '../editor/values.ts';
 import type { WidgetProps } from '../types.ts';
 
 type GroupProps = WidgetProps<DataValue> & { path: ValuePath };
@@ -19,19 +24,93 @@ export function GroupWidget({ field, path }: GroupProps) {
   );
 }
 
-/** A short name for a list item, from its first text-like value. */
-function itemSummary(value: DataValue, index: number, itemLabel: string): string {
-  if (typeof value === 'string' && value.trim()) return value.trim();
-  if (isPlainObject(value)) {
-    for (const key of ['title', 'name', 'label', 'heading', 'text']) {
-      const text = value[key];
-      if (typeof text === 'string' && text.trim()) return text.trim();
-    }
-  }
-  return `${itemLabel} ${String(index + 1)}`;
+/** What one item and several are called: "point" and "points", from the list's own label. */
+export function itemNames(list: FieldModel): { one: string; many: string } {
+  const item = list.children?.[0];
+  const many = list.label.toLowerCase();
+  const own = item?.label && item.label !== '[]' && item.label !== 'Item' ? item.label : '';
+  const one = own ? own.toLowerCase() : /[^s]s$/.test(many) ? many.slice(0, -1) : many;
+  return { one, many };
 }
 
-/** What an empty new item holds: `{}` for objects, nothing for scalars. */
+const capital = (text: string) => text.charAt(0).toLocaleUpperCase() + text.slice(1);
+
+const NAME_KEYS = ['title', 'name', 'label', 'heading', 'text'];
+
+function isImageItem(item: FieldModel | undefined): boolean {
+  return item?.kind === 'image' || item?.widget === 'image' || item?.inferredWidget === 'image';
+}
+
+function fileName(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
+}
+
+function imageSource(value: DataValue): string {
+  const src = isPlainObject(value) ? value.src : value;
+  return typeof src === 'string' ? src : '';
+}
+
+/** Markdown's marks would read as noise in a one-line name. */
+const plain = (text: string) => text.replace(/[*_`]/g, '').trim();
+
+/**
+ * A list item's name, from its own content: the `summary` hint's field, else
+ * a title-like field, else an image's alt text or file name, else "Point 3".
+ */
+export function itemSummary(
+  value: DataValue,
+  index: number,
+  list: FieldModel,
+): { name: string; key: string | undefined } {
+  const fallback = { name: `${capital(itemNames(list).one)} ${String(index + 1)}`, key: undefined };
+  if (typeof value === 'string')
+    return value.trim() ? { name: plain(value), key: undefined } : fallback;
+  if (isImageItem(list.children?.[0])) {
+    const alt = isPlainObject(value) && typeof value.alt === 'string' ? value.alt.trim() : '';
+    const src = imageSource(value);
+    if (alt) return { name: alt, key: 'alt' };
+    return src ? { name: fileName(src), key: 'src' } : fallback;
+  }
+  if (!isPlainObject(value)) return fallback;
+  for (const key of [list.summary, ...NAME_KEYS]) {
+    if (!key) continue;
+    const text = value[key];
+    if (typeof text === 'string' && text.trim()) return { name: plain(text), key };
+  }
+  return fallback;
+}
+
+/** The muted words after an item's name: how many of its first list it holds, else its next text. */
+function itemDetail(value: DataValue, item: FieldModel, nameKey: string | undefined): string {
+  if (!isPlainObject(value)) return '';
+  const children = item.children ?? [];
+  const list = children.find((child) => child.kind === 'array' && !child.hidden);
+  if (list) {
+    const held = value[keyOf(list)];
+    const { one, many } = itemNames(list);
+    return formatCount(Array.isArray(held) ? held.length : 0, one, many);
+  }
+  for (const child of children) {
+    const key = keyOf(child);
+    const text = value[key];
+    if (key !== nameKey && !child.hidden && typeof text === 'string' && text.trim()) {
+      return plain(text);
+    }
+  }
+  return '';
+}
+
+/** How many of the item's fields have something to say: problems from the last save, or notes. */
+function countUnder(map: ReadonlyMap<string, readonly unknown[]> | undefined, key: string): number {
+  if (!map) return 0;
+  let count = 0;
+  for (const [at, list] of map) {
+    if ((at === key || at.startsWith(`${key}.`)) && list.length > 0) count += list.length;
+  }
+  return count;
+}
+
+/** What a new item holds: `{}` for objects, nothing for scalars. */
 function emptyItem(item: FieldModel | undefined): DataValue {
   if (!item) return null;
   if (item.default !== undefined && !item.defaultDynamic)
@@ -43,114 +122,372 @@ function emptyItem(item: FieldModel | undefined): DataValue {
   return '';
 }
 
+let lastItemId = 0;
+const newItemId = () => `item${String(++lastItemId)}`;
+
 /**
- * The repeater (spec §6.3.2): a list of items, each in its own group with
- * Move up, Move down and Remove buttons, so order never depends on
- * drag-and-drop (spec §10.6). After a move or removal, focus follows the
- * item or lands on a sensible neighbour, and the change is announced.
+ * The repeater (spec §6.3.2). A list of objects or images shows each item as
+ * a row named by its content, which opens in place (DECISIONS.md, "Top-level
+ * groups are sections, and list items are rows that open in place"). Rows
+ * are closed when the entry opens, except a new item and any holding a field
+ * that a refused save names. Order never depends on drag-and-drop (spec
+ * §10.6): each item's "…" menu moves it, and Alt+↑/↓ on a row does too.
+ * Closed items stay in the page (`hidden="until-found"`), so the browser's
+ * find, the error summary and Go to field still reach every field.
  */
 export function RepeaterWidget({ value, onChange, field, path, disabled, id }: GroupProps) {
+  const editor = useEditor();
   const items: DataValue[] = Array.isArray(value) ? value : [];
   const item = field.children?.[0];
-  const itemLabel = item?.label && item.label !== '[]' ? item.label : 'Item';
+  const names = itemNames(field);
+  const asRows = item?.kind === 'object' || isImageItem(item);
   const status = useRef<HTMLParagraphElement>(null);
+  const list = useRef<HTMLOListElement>(null);
+
+  // Items have no identity in the file. Each gets one for this visit, so the
+  // open rows and focus follow an item through moves; the file never sees it.
+  const [kept, setKept] = useState<readonly string[]>(() => items.map(() => newItemId()));
+  let ids = kept;
+  if (kept.length !== items.length) {
+    // A change from elsewhere (a reload, a restore) changed the count: ids follow by position.
+    ids = items.map((_, index) => kept[index] ?? newItemId());
+    setKept(ids);
+  }
+
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const toggle = (itemId: string, expanded: boolean) => {
+    setOpen((now) => {
+      if (now.has(itemId) === expanded) return now;
+      const next = new Set(now);
+      if (expanded) next.add(itemId);
+      else next.delete(itemId);
+      return next;
+    });
+  };
+
+  // A refused save opens every item holding a field it names, so the message shows by its field.
+  const [seenIssues, setSeenIssues] = useState(editor.issues);
+  if (seenIssues !== editor.issues) {
+    setSeenIssues(editor.issues);
+    const failed = ids.filter(
+      (_, index) => countUnder(editor.issues, pathKey([...path, index])) > 0,
+    );
+    if (failed.length > 0) setOpen((now) => new Set([...now, ...failed]));
+  }
+
+  // Going to a field inside a closed item (the error summary, Go to field) opens it first.
+  useEffect(() => {
+    const element = list.current;
+    if (!element) return;
+    const reveal = (event: Event) => {
+      const target = event.target as Node;
+      const index = [...element.children].findIndex((child) => child.contains(target));
+      const itemId = ids[index];
+      if (itemId) setOpen((now) => (now.has(itemId) ? now : new Set([...now, itemId])));
+    };
+    element.addEventListener(REVEAL_EVENT, reveal);
+    return () => {
+      element.removeEventListener(REVEAL_EVENT, reveal);
+    };
+  }, [ids]);
 
   const announce = (text: string) => {
     if (status.current) status.current.textContent = text;
   };
-  const focusItem = (index: number) => {
-    requestAnimationFrame(() => {
-      document.getElementById(`${id}-item-${String(index)}`)?.focus();
-    });
+  /** After the next render: a row's own button, a new item's first control, or Add. */
+  const focusLater = (selector: () => HTMLElement | null) => {
+    // A timeout, not an animation frame: React Aria returns focus to a closed menu's button in one.
+    setTimeout(() => {
+      selector()?.focus();
+    }, 0);
   };
+  const moreButton = (itemId: string) =>
+    document.getElementById(`${id}-more-${itemId}`)?.querySelector('button') ?? null;
+  const rowButton = (itemId: string) => () =>
+    asRows ? document.getElementById(`${id}-row-${itemId}`) : moreButton(itemId);
   const update = (next: DataValue[]) => {
     onChange(next.length === 0 && !field.required ? undefined : next);
   };
+  const nameAt = (index: number) => itemSummary(items[index] ?? null, index, field).name;
+
   const move = (from: number, to: number) => {
+    if (to < 0 || to >= items.length || disabled) return;
+    const name = nameAt(from);
     const next = [...items];
     const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
+    next.splice(to, 0, moved ?? null);
+    const nextIds = [...ids];
+    const [movedId = newItemId()] = nextIds.splice(from, 1);
+    nextIds.splice(to, 0, movedId);
+    setKept(nextIds);
     update(next);
-    announce(
-      `Moved ${itemSummary(moved, from, itemLabel)} to position ${String(to + 1)} of ${String(next.length)}.`,
+    announce(`Moved ${name} to position ${String(to + 1)} of ${String(next.length)}.`);
+    focusLater(rowButton(movedId));
+  };
+  const duplicate = (index: number) => {
+    const copy = structuredClone(items[index] ?? null);
+    const copyId = newItemId();
+    setKept([...ids.slice(0, index + 1), copyId, ...ids.slice(index + 1)]);
+    update([...items.slice(0, index + 1), copy, ...items.slice(index + 1)]);
+    announce(`Duplicated ${nameAt(index)} as ${names.one} ${String(index + 2)}.`);
+    focusLater(rowButton(copyId));
+  };
+  const remove = (index: number) => {
+    const name = nameAt(index);
+    const nextIds = ids.filter((_, i) => i !== index);
+    const next = items.filter((_, i) => i !== index);
+    setKept(nextIds);
+    update(next);
+    announce(`Removed ${name}.`);
+    const neighbour = nextIds[Math.min(index, next.length - 1)];
+    focusLater(neighbour ? rowButton(neighbour) : () => document.getElementById(`${id}-add`));
+  };
+  const add = () => {
+    const newId = newItemId();
+    setKept([...ids, newId]);
+    if (asRows) toggle(newId, true);
+    update([...items, emptyItem(item)]);
+    announce(`Added ${names.one} ${String(items.length + 1)}.`);
+    focusLater(
+      () =>
+        document
+          .getElementById(`${id}-panel-${newId}`)
+          ?.querySelector<HTMLElement>('input, textarea, [contenteditable="true"], button') ??
+        moreButton(newId),
     );
-    focusItem(to);
   };
 
+  const actions = (index: number): MenuItem[] => [
+    { id: 'up', label: 'Move up', icon: 'move-up', isDisabled: disabled || index === 0 },
+    {
+      id: 'down',
+      label: 'Move down',
+      icon: 'move-down',
+      isDisabled: disabled || index === items.length - 1,
+    },
+    { id: 'duplicate', label: 'Duplicate', icon: 'duplicate', isDisabled: disabled },
+    { id: 'remove', label: 'Remove', icon: 'delete', isDanger: true, isDisabled: disabled },
+  ];
+  const act = (index: number) => (action: string) => {
+    if (action === 'up') move(index, index - 1);
+    if (action === 'down') move(index, index + 1);
+    if (action === 'duplicate') duplicate(index);
+    if (action === 'remove') remove(index);
+  };
+  const itemMenu = (index: number, itemId: string, name: string) => (
+    <ItemMenu
+      id={`${id}-more-${itemId}`}
+      label={`Actions for ${name}`}
+      items={actions(index)}
+      onAction={act(index)}
+      isOpen={menuFor === itemId}
+      onOpenChange={(isOpen) => {
+        setMenuFor(isOpen ? itemId : null);
+      }}
+    />
+  );
+
+  const allOpen = items.length > 0 && ids.every((itemId) => open.has(itemId));
   return (
     <div className="flex flex-col gap-3">
+      {asRows && items.length >= 3 && (
+        <div className="-mt-1 flex justify-end">
+          <Button
+            variant="quiet"
+            onPress={() => {
+              setOpen(allOpen ? new Set() : new Set(ids));
+            }}
+          >
+            {allOpen ? 'Close all' : 'Open all'}
+          </Button>
+        </div>
+      )}
       {items.length === 0 && <p className="text-small text-content-muted">None yet.</p>}
-      <ol className="flex flex-col gap-3">
+      <ol ref={list} className={cx('flex flex-col', asRows ? 'gap-2' : 'gap-3')}>
         {items.map((entry, index) => {
-          const name = itemSummary(entry, index, itemLabel);
+          const itemId = ids[index] ?? String(index);
+          const { name, key } = itemSummary(entry, index, field);
+          if (!item) return null;
+          if (!asRows) {
+            return (
+              <li key={itemId} className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
+                  <Field
+                    field={item}
+                    path={[...path, index]}
+                    label={`${capital(names.one)} ${String(index + 1)}`}
+                    item="inline"
+                  />
+                </div>
+                {itemMenu(index, itemId, name)}
+              </li>
+            );
+          }
+          const at = pathKey([...path, index]);
           return (
-            <li
-              // Items have no stable identity of their own; the index is the identity here.
-              key={index}
-              id={`${id}-item-${String(index)}`}
-              tabIndex={-1}
-              aria-label={name}
-              className="flex flex-col gap-2 rounded-md outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-focus"
-            >
-              {item && (
-                <Field
-                  field={item}
-                  path={[...path, index]}
-                  label={`${itemLabel} ${String(index + 1)}`}
-                />
-              )}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="quiet"
-                  isDisabled={disabled || index === 0}
-                  onPress={() => {
+            <li key={itemId}>
+              <ItemRow
+                id={id}
+                itemId={itemId}
+                name={name}
+                detail={itemDetail(entry, item, key)}
+                problems={countUnder(editor.issues, at)}
+                notes={countUnder(editor.notes, at)}
+                image={isImageItem(item) ? imageSource(entry) : null}
+                headingLevel={path.length === 1 ? 3 : null}
+                isOpen={open.has(itemId)}
+                onOpenChange={(expanded) => {
+                  toggle(itemId, expanded);
+                }}
+                onKeyDown={(event) => {
+                  if (event.altKey && event.key === 'ArrowUp') {
+                    event.preventDefault();
                     move(index, index - 1);
-                  }}
-                  aria-label={`Move ${name} up`}
-                >
-                  Move up
-                </Button>
-                <Button
-                  variant="quiet"
-                  isDisabled={disabled || index === items.length - 1}
-                  onPress={() => {
+                  } else if (event.altKey && event.key === 'ArrowDown') {
+                    event.preventDefault();
                     move(index, index + 1);
-                  }}
-                  aria-label={`Move ${name} down`}
-                >
-                  Move down
-                </Button>
-                <Button
-                  variant="quiet"
-                  isDisabled={disabled}
-                  onPress={() => {
-                    update(items.filter((_, i) => i !== index));
-                    announce(`Removed ${name}.`);
-                    focusItem(Math.min(index, items.length - 2));
-                  }}
-                  aria-label={`Remove ${name}`}
-                >
-                  Remove
-                </Button>
-              </div>
+                  } else if (
+                    (event.shiftKey && event.key === 'F10') ||
+                    event.key === 'ContextMenu'
+                  ) {
+                    event.preventDefault();
+                    setMenuFor(itemId);
+                  }
+                }}
+                menu={itemMenu(index, itemId, name)}
+                editor={editor}
+              >
+                <Field field={item} path={[...path, index]} label={name} item="row" />
+              </ItemRow>
             </li>
           );
         })}
       </ol>
       <div>
-        <Button
-          icon="add"
-          isDisabled={disabled}
-          onPress={() => {
-            update([...items, emptyItem(item)]);
-            announce(`Added ${itemLabel.toLowerCase()} ${String(items.length + 1)}.`);
-            focusItem(items.length);
-          }}
-        >
-          Add {itemLabel.toLowerCase()}
+        <Button id={`${id}-add`} icon="add" isDisabled={disabled} onPress={add}>
+          Add {names.one}
         </Button>
       </div>
       <p ref={status} role="status" className="sr-only" />
     </div>
+  );
+}
+
+/** An item's "…": named for the item, so a list of them reads as "Actions for No second schema". */
+function ItemMenu(props: {
+  id: string;
+  label: string;
+  items: MenuItem[];
+  onAction: (action: string) => void;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+}) {
+  const { id, ...menu } = props;
+  // The kit's "…" button takes no id, so the wrapper carries one to find it by.
+  return (
+    <span id={id} className="flex shrink-0">
+      <Menu {...menu} />
+    </span>
+  );
+}
+
+function RowThumbnail({ src, entryPath }: { src: string; entryPath: string }) {
+  const url = useFileUrl(src ? resolveMediaPath(src, entryPath) : null);
+  return url ? (
+    <img src={url} alt="" className="size-10 shrink-0 rounded-sm object-cover" />
+  ) : (
+    <span aria-hidden="true" className="size-10 shrink-0 rounded-sm bg-surface-sunken" />
+  );
+}
+
+/** One item: a row that names it and opens in place, with its "…" menu beside it. */
+function ItemRow({
+  id,
+  itemId,
+  name,
+  detail,
+  problems,
+  notes,
+  image,
+  headingLevel,
+  isOpen,
+  onOpenChange,
+  onKeyDown,
+  menu,
+  editor,
+  children,
+}: {
+  id: string;
+  itemId: string;
+  name: string;
+  detail: string;
+  problems: number;
+  notes: number;
+  image: string | null;
+  headingLevel: 3 | null;
+  isOpen: boolean;
+  onOpenChange: (expanded: boolean) => void;
+  onKeyDown: (event: KeyboardEvent) => void;
+  menu: ReactNode;
+  editor: EditorState;
+  children: ReactNode;
+}) {
+  const trigger = (
+    <RACButton
+      slot="trigger"
+      id={`${id}-row-${itemId}`}
+      onKeyDown={onKeyDown}
+      className={cx(
+        'flex min-h-11 w-full min-w-0 items-center gap-2 rounded-md py-1 pl-2 text-left text-body text-content',
+        focusRing,
+      )}
+    >
+      {/* Turned at once: a transition here would hold back React Aria's focus moves. */}
+      <Chevron className="shrink-0 -rotate-90 group-data-[expanded]:rotate-0" />
+      {image !== null && <RowThumbnail src={image} entryPath={editor.entryPath} />}
+      {/* The name wins the room; the detail takes what's left. */}
+      <span className="max-w-2/3 min-w-0 shrink-0 truncate">{name}</span>
+      {/* Spoken as "No second schema, 3 points": the parts are apart on screen, not in words. */}
+      {detail && (
+        <span className="min-w-0 flex-1 truncate text-small text-content-muted">
+          <span className="sr-only">,</span> {detail}
+        </span>
+      )}
+      {problems > 0 && (
+        <span className="shrink-0 text-small text-danger">
+          <span className="sr-only">,</span> {formatCount(problems, 'problem', 'problems')}
+        </span>
+      )}
+      {notes > 0 && (
+        <span className="shrink-0 text-small text-content-muted">
+          <span className="sr-only">,</span> {formatCount(notes, 'note', 'notes')}
+        </span>
+      )}
+    </RACButton>
+  );
+  return (
+    <Disclosure
+      id={itemId}
+      isExpanded={isOpen}
+      onExpandedChange={onOpenChange}
+      className="group rounded-md border border-border bg-surface-raised"
+    >
+      <div className="flex items-center gap-1 pr-1">
+        {headingLevel ? (
+          <Heading level={headingLevel} className="m-0 min-w-0 flex-1">
+            {trigger}
+          </Heading>
+        ) : (
+          <div className="min-w-0 flex-1">{trigger}</div>
+        )}
+        {menu}
+      </div>
+      <DisclosurePanel>
+        <div id={`${id}-panel-${itemId}`} className="border-t border-border px-4 pt-3 pb-4">
+          {children}
+        </div>
+      </DisclosurePanel>
+    </Disclosure>
   );
 }

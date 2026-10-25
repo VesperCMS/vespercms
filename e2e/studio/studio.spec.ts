@@ -98,9 +98,7 @@ test('every screen passes axe: home, list, editor, media', async ({ page }) => {
   await expectAccessible(page);
 
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toHaveValue(
-    'Harbor at dawn',
-  );
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Harbor at dawn');
   await expectAccessible(page);
 
   await page.goto('/admin/#/media');
@@ -130,16 +128,14 @@ test('by keyboard: Details is a drawer on a wide screen and the closing section 
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toHaveValue(
-    'Harbor at dawn',
-  );
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Harbor at dawn');
   // Wide: a button in the top bar opens the drawer, focus goes in and comes back.
   const button = page.getByRole('banner').getByRole('button', { name: 'Details', exact: true });
   await button.focus();
   await page.keyboard.press('Enter');
   const drawer = page.getByRole('dialog', { name: 'Details' });
   await expect(drawer).toBeVisible();
-  await expect(drawer.getByLabel('Published at (required)')).toBeVisible();
+  await expect(drawer.getByLabel('Published at')).toBeVisible();
   await page.keyboard.press('Tab');
   await expect(drawer.locator(':focus')).toHaveCount(1);
   await expectAccessible(page);
@@ -155,16 +151,16 @@ test('by keyboard: Details is a drawer on a wide screen and the closing section 
   await section.focus();
   await page.keyboard.press('Enter');
   await expect(section).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByLabel('Published at (required)')).toBeVisible();
+  await expect(page.getByLabel('Published at')).toBeVisible();
   await expectAccessible(page);
 });
 
 test('a deep link survives a reload', async ({ page }) => {
   await page.goto('/admin/#/c/pages/e/academics%2Fnursing');
-  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
   await page.reload();
   await expect(page).toHaveURL(/#\/c\/pages\/e\/academics%2Fnursing$/);
-  await expect(page.getByRole('textbox', { name: 'Title (required)' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
 });
 
 test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only that line changes', async ({
@@ -176,7 +172,7 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
   const row = page.getByRole('row', { name: /Welcome to the playground/ });
   await row.focus();
   await page.keyboard.press('Enter');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Welcome to the playground');
   await title.focus();
   await page.keyboard.press(keys.lineEnd);
@@ -191,6 +187,48 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
       'title: "Welcome to the playground"',
       'title: "Welcome to the playground, again"',
     ),
+  );
+});
+
+test('by keyboard: list items are rows that move with Alt+arrows and open in place; an edit changes one line', async ({
+  page,
+}) => {
+  const path = 'src/content/pages/about.md';
+  touches(path);
+  const before = read(path);
+  await page.goto('/admin/#/c/pages/e/about');
+  await expect(page.getByRole('heading', { level: 2, name: /^Sections/ })).toBeVisible();
+  const mission = page.getByRole('button', { name: /^Our mission/ });
+  await expect(mission).toHaveAttribute('aria-expanded', 'false');
+  await expectAccessible(page);
+
+  // Alt+↓ and Alt+↑ move the item, and focus stays on its row.
+  await mission.focus();
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect(page.getByText('Moved Our mission to position 2 of 2.')).toBeAttached();
+  await expect(mission).toBeFocused();
+  await expect(page.getByRole('heading', { level: 3 })).toHaveText([
+    /^Accreditation/,
+    /^Our mission/,
+  ]);
+  await page.keyboard.press('Alt+ArrowUp');
+  await expect(page.getByText('Moved Our mission to position 1 of 2.')).toBeAttached();
+  await expect(mission).toBeFocused();
+
+  // Enter opens it in place, and its fields are in the page.
+  await page.keyboard.press('Enter');
+  await expect(mission).toHaveAttribute('aria-expanded', 'true');
+  const heading = page
+    .getByRole('group', { name: 'Our mission' })
+    .getByRole('textbox', { name: 'Heading' });
+  await heading.focus();
+  await page.keyboard.press(keys.lineEnd);
+  await page.keyboard.type(' and values');
+  await expectAccessible(page);
+  await page.keyboard.press(keys.save);
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  expect(read(path)).toBe(
+    before.replace('- heading: Our mission\n', '- heading: Our mission and values\n'),
   );
 });
 
@@ -255,7 +293,7 @@ test('an SVG with scripts is sanitized; HEIC is explained where it can’t be co
 test('a custom widget edits its field', async ({ page }) => {
   touches('src/data/locations.yaml');
   await page.goto('/admin/#/c/locations/e/main-campus');
-  const hours = page.getByRole('group', { name: 'Hours' });
+  const hours = page.getByRole('group', { name: 'Hours (optional)' });
   await expect(hours.getByLabel('Days, row 1')).toHaveValue('Mon–Fri');
   await hours.getByRole('button', { name: 'Add opening hours' }).click();
   await hours.getByLabel('Days, row 3').fill('Holidays');

@@ -60,7 +60,7 @@ async function open() {
   const api = fakeApi({ documents: { 'blog/harbor-at-dawn': harbor } });
   renderStudio('#/c/blog/e/harbor-at-dawn', { api });
   const user = userEvent.setup();
-  const group = await screen.findByRole('group', { name: 'Hero' });
+  const group = await screen.findByRole('group', { name: 'Hero (optional)' });
   await user.click(within(group).getByRole('button', { name: 'Focal point & crops' }));
   loadImage(group);
   return { api, user, group, crops: await within(group).findByRole('list', { name: 'Crops' }) };

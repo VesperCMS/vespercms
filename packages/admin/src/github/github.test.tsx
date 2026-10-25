@@ -141,11 +141,7 @@ describe('GitHub mode in the studio', () => {
     window.history.replaceState(null, '', '/admin/#/c/blog/e/harbor-at-dawn');
     render(<GitHubGate settings={settings} options={options} fetcher={fetcher} />);
     const user = userEvent.setup();
-    const title = await screen.findByRole(
-      'textbox',
-      { name: 'Title (required)' },
-      { timeout: 10_000 },
-    );
+    const title = await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
     await user.type(title, ', again');
     await user.click(screen.getByRole('button', { name: 'Publish' }));
     expect(
@@ -170,11 +166,7 @@ describe('GitHub mode in the studio', () => {
     window.history.replaceState(null, '', '/admin/#/c/blog/e/harbor-at-dawn');
     render(<GitHubGate settings={settings} options={options} fetcher={fetcher} />);
     const user = userEvent.setup();
-    const title = await screen.findByRole(
-      'textbox',
-      { name: 'Title (required)' },
-      { timeout: 10_000 },
-    );
+    const title = await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
     await user.type(title, ', later');
     fake.state.token = 'a-new-token-the-studio-doesnt-have';
     await user.click(screen.getByRole('button', { name: 'Publish' }));

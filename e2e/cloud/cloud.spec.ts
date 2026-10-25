@@ -123,7 +123,7 @@ test('saves a draft as the editor types, and publishes it as one commit by the a
   const before = text(HARBOR);
   const commits = github.log().length;
   await signIn(page, 'u_admin', '#/c/blog/e/harbor-at-dawn');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Harbor at dawn');
   await title.fill('Harbor at dawn, drafted');
   await expect(page.getByText(/^Draft saved/)).toBeVisible();
@@ -155,7 +155,7 @@ test('a contributor requests review, and an approver publishes it from Changes',
   browser,
 }) => {
   await signIn(page, 'u_contributor', '#/c/blog/e/harbor-at-dawn');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Harbor at dawn, drafted');
   await title.fill('Harbor at dawn, reviewed');
   await expect(page.getByRole('button', { name: 'Publish' })).toHaveCount(0);
@@ -200,14 +200,12 @@ test('publishes two people’s drafts as one commit that credits each of them', 
     await browser.newContext({ baseURL: test.info().project.use.baseURL })
   ).newPage();
   await signIn(cal, 'u_contributor', '#/c/blog/e/welcome');
-  await cal
-    .getByRole('textbox', { name: 'Title (required)' })
-    .fill('Welcome to the playground, by Cal');
+  await cal.getByRole('textbox', { name: 'Title' }).fill('Welcome to the playground, by Cal');
   await expect(cal.getByText(/^Draft saved/)).toBeVisible();
   await cal.context().close();
 
   await signIn(page, 'u_admin', '#/c/blog/e/harbor-at-dawn');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Harbor at dawn, reviewed');
   await title.fill('Harbor at dawn, by Ada');
   await expect(page.getByText(/^Draft saved/)).toBeVisible();
@@ -238,7 +236,7 @@ test('shows a change published elsewhere beside the draft, and keeps the draft o
   page,
 }) => {
   await signIn(page, 'u_admin', '#/c/blog/e/harbor-at-dawn');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await title.fill('Harbor at dawn, mine');
   await expect(page.getByText(/^Draft saved/)).toBeVisible();
   github.commitFiles(
@@ -264,7 +262,7 @@ test('keeps unsaved changes on this device while the cloud is down, through a re
   page,
 }) => {
   await signIn(page, 'u_admin', '#/c/blog/e/harbor-at-dawn');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Harbor at dawn, mine');
   await control('down', { down: true });
   await title.fill('Harbor at dawn, offline');

@@ -96,10 +96,10 @@ async function lastSave(user: ReturnType<typeof userEvent.setup>, api: ReturnTyp
 describe('the image field', () => {
   it('previews the image from its path relative to the entry, with alt text written for this page', async () => {
     const { api } = setup();
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     expect(api.fileUrl).toHaveBeenCalledWith('src/assets/blog/harbor-at-dawn.jpg');
     expect(within(hero).getByText('harbor-at-dawn.jpg')).toBeInTheDocument();
-    const alt = within(hero).getByRole('textbox', { name: 'Alt text (required)' });
+    const alt = within(hero).getByRole('textbox', { name: 'Alt text' });
     expect(alt).toHaveValue('An orange sun over a harbor');
     expect(alt).toHaveAccessibleDescription('Describe what this image communicates on this page.');
     await expectNoViolations();
@@ -107,7 +107,7 @@ describe('the image field', () => {
 
   it('marks an image decorative, which stores an empty alt', async () => {
     const { api, user } = setup();
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     await user.click(within(hero).getByRole('checkbox', { name: /Decorative image/ }));
     expect(within(hero).queryByRole('textbox', { name: /Alt text/ })).not.toBeInTheDocument();
     const saved = await lastSave(user, api);
@@ -122,7 +122,7 @@ describe('the image field', () => {
 
   it('replaces the image with one already in the site, stored relative to the entry', async () => {
     const { api, user } = setup();
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     await user.click(within(hero).getByRole('button', { name: 'Replace image' }));
     const dialog = await screen.findByRole('dialog', { name: 'Choose an image' });
     // Only images are offered for an image field.
@@ -141,12 +141,12 @@ describe('the image field', () => {
         crops: { square: { x: 0.2, y: 0, w: 0.5625, h: 1 } },
       }),
     });
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     expect(within(hero).queryByText(REPLACED)).not.toBeInTheDocument();
     await choose(user, 'Replace image', /winter-market\.jpg/);
 
     // Beside the alt text and in its description, never in the live status.
-    const alt = within(hero).getByRole('textbox', { name: 'Alt text (required)' });
+    const alt = within(hero).getByRole('textbox', { name: 'Alt text' });
     expect(within(hero).getByText(REPLACED)).toBeInTheDocument();
     expect(alt).toHaveAccessibleDescription(expect.stringContaining(REPLACED) as string);
     expect(within(hero).queryByRole('status')).not.toBeInTheDocument();
@@ -166,7 +166,7 @@ describe('the image field', () => {
     const { api, user } = setup({
       doc: withHero({ src: '../../assets/blog/harbor-at-dawn.jpg', alt: '', decorative: true }),
     });
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     await choose(user, 'Replace image', /winter-market\.jpg/);
     const checkbox = within(hero).getByRole('checkbox', { name: /Decorative image/ });
     expect(checkbox).toHaveAccessibleDescription(
@@ -185,7 +185,7 @@ describe('the image field', () => {
 
   it('chooses a first image with no note', async () => {
     const { api, user } = setup({ doc: withHero(undefined) });
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     await choose(user, 'Choose image', /winter-market\.jpg/);
     expect(within(hero).getByText('winter-market.jpg')).toBeInTheDocument();
     expect(within(hero).queryByText(/You replaced the image/)).not.toBeInTheDocument();
@@ -196,7 +196,7 @@ describe('the image field', () => {
 
   it('changes nothing when the same image is chosen again', async () => {
     const { user } = setup();
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     await choose(user, 'Replace image', /harbor-at-dawn\.jpg/);
     expect(within(hero).queryByText(/You replaced the image/)).not.toBeInTheDocument();
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
@@ -227,7 +227,7 @@ describe('the image field', () => {
 
   it('uploads through hygiene into the image’s folder', async () => {
     const { api, user } = setup();
-    const hero = await screen.findByRole('group', { name: 'Hero' });
+    const hero = await screen.findByRole('group', { name: 'Hero (optional)' });
     await user.click(within(hero).getByRole('button', { name: 'Replace image' }));
     const dialog = await screen.findByRole('dialog', { name: 'Choose an image' });
     const svg = readFileSync(join(process.cwd(), 'apps/playground/fixtures/uploads/script.svg'));

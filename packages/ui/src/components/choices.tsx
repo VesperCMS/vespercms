@@ -100,7 +100,7 @@ export function Select({
       placeholder={placeholder ?? 'Choose…'}
       className={cx('flex flex-col gap-2', className)}
     >
-      <FieldLabel label={label} isRequired={props.isRequired} />
+      <FieldLabel label={label} />
       <RACButton
         className={cx(fieldControl, 'flex items-center justify-between text-left', focusRing)}
       >
@@ -156,7 +156,7 @@ export function Combobox({
       menuTrigger="focus"
       className={cx('flex flex-col gap-2', className)}
     >
-      <FieldLabel label={label} isRequired={props.isRequired} />
+      <FieldLabel label={label} />
       <div className="relative">
         <Input placeholder={placeholder} className={cx(fieldControl, 'pr-10')} />
         <RACButton
@@ -265,7 +265,7 @@ export function MultiCombobox({
         menuTrigger="focus"
         className="flex flex-col gap-1"
       >
-        <FieldLabel label={label} isRequired={props.isRequired} />
+        <FieldLabel label={label} />
         <Input className={fieldControl} />
         <FieldHelp description={description} errorMessage={errorMessage} />
         <Popover className={popover}>
@@ -421,17 +421,7 @@ export function RadioGroup({
       orientation={orientation}
       className={cx('flex flex-col gap-2', className)}
     >
-      {label && (
-        <Label className="text-label text-content">
-          {label}
-          {props.isRequired && (
-            <>
-              {' '}
-              <span className="font-normal text-content-muted">(required)</span>
-            </>
-          )}
-        </Label>
-      )}
+      {label && <Label className="text-label text-content">{label}</Label>}
       <div
         className={cx(
           'flex gap-x-6 gap-y-2',
@@ -523,7 +513,7 @@ export function SuggestField({
       menuTrigger="input"
       className={cx('flex flex-col gap-2', className)}
     >
-      <FieldLabel label={label} isRequired={false} />
+      <FieldLabel label={label} />
       <Input placeholder={placeholder} inputMode={inputMode} className={fieldControl} />
       <FieldHelp description={description} errorMessage={errorMessage} />
       <Popover className={popover}>

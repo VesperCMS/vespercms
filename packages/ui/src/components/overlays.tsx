@@ -158,6 +158,9 @@ export type MenuProps = {
   header?: ReactNode;
   /** One choice among options, as a group of its own before the items (the user menu's Appearance). */
   choice?: MenuChoice;
+  /** Open it from elsewhere: Shift+F10 on a list item's row opens that item's "…" menu. */
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 /** The 16px chevron beside a text trigger. It points down; a disclosure turns it. */
@@ -236,13 +239,18 @@ export function Menu({
   triggerPicture,
   header,
   choice,
+  isOpen,
+  onOpenChange,
 }: MenuProps) {
   const choiceIds = new Set(choice?.options.map((option) => option.id));
   const groups: MenuGroup[] = choice
     ? [{ id: 'choice', choice }, ...(items.length > 0 ? [{ id: 'items' as const, items }] : [])]
     : [];
   return (
-    <MenuTrigger>
+    <MenuTrigger
+      {...(isOpen !== undefined ? { isOpen } : {})}
+      {...(onOpenChange ? { onOpenChange } : {})}
+    >
       {triggerText ? (
         <RACButton
           className={cx(

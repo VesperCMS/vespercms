@@ -74,7 +74,7 @@ test('the focal point and crops, by keyboard alone; only the entry changes', asy
   const before = read(entry);
   const sourcesBefore = sourceHashes();
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-  const hero = page.getByRole('group', { name: 'Hero' });
+  const hero = page.getByRole('group', { name: 'Hero (optional)' });
   const disclosure = hero.getByRole('button', { name: 'Focal point & crops' });
   await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
 
@@ -156,7 +156,7 @@ test('a click sets the focal point, and Escape leaves a crop as it was', async (
   touches(entry);
   const before = read(entry);
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-  const hero = page.getByRole('group', { name: 'Hero' });
+  const hero = page.getByRole('group', { name: 'Hero (optional)' });
   await hero.getByRole('button', { name: 'Focal point & crops' }).click();
   const image = hero.getByRole('button', { name: 'Focal point', exact: true }).locator('img');
   const bounds = await image.boundingBox();
@@ -183,7 +183,7 @@ test('replacing the image drops its focal point and crops, and asks about its al
   const before = read(entry);
   const sourcesBefore = sourceHashes();
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-  const hero = page.getByRole('group', { name: 'Hero' });
+  const hero = page.getByRole('group', { name: 'Hero (optional)' });
   const replace = hero.getByRole('button', { name: 'Replace image' });
   await replace.focus();
   await page.keyboard.press('Enter');
@@ -196,7 +196,7 @@ test('replacing the image drops its focal point and crops, and asks about its al
   const note = 'You replaced the image. Check that the alt text still describes it.';
   await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
-  const alt = hero.getByRole('textbox', { name: 'Alt text (required)' });
+  const alt = hero.getByRole('textbox', { name: 'Alt text' });
   await expect(alt).toBeFocused();
   await expect(alt).toHaveAccessibleDescription(
     /You replaced the image\. Check that the alt text still describes it\./,

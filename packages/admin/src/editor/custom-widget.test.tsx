@@ -56,7 +56,7 @@ describe('custom widgets', () => {
       widgets: { 'store-hours': () => Promise.resolve({ default: FirstDays }) },
     });
     const user = userEvent.setup();
-    const days = await screen.findByRole('textbox', { name: 'Hours' });
+    const days = await screen.findByRole('textbox', { name: 'Hours (optional)' });
     expect(days).toHaveValue('Mon–Fri');
     await user.clear(days);
     await user.type(days, 'Weekdays');
@@ -76,6 +76,6 @@ describe('custom widgets', () => {
     });
     expect(await screen.findByText(/The “store-hours” control couldn’t load/)).toBeInTheDocument();
     // The list editor the field's type implies.
-    expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add hour' })).toBeInTheDocument();
   });
 });

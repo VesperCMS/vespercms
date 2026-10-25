@@ -46,7 +46,7 @@ describe('color', () => {
     });
     renderStudio('#/c/locations/e/main', { api });
     const user = userEvent.setup();
-    const hex = await screen.findByRole('textbox', { name: 'Map pin color (required)' });
+    const hex = await screen.findByRole('textbox', { name: 'Map pin color' });
     expect(hex).toHaveValue('#28335f');
     expect(screen.getByLabelText('Pick map pin color from a colour picker')).toHaveValue('#28335f');
     await user.clear(hex);
@@ -65,7 +65,7 @@ describe('color', () => {
     });
     renderStudio('#/c/settings/e/site', { api, manifest });
     const user = userEvent.setup();
-    const group = await screen.findByRole('radiogroup', { name: 'Brand color (required)' });
+    const group = await screen.findByRole('radiogroup', { name: 'Brand color' });
     expect(within(group).getByRole('radio', { name: 'Indigo (#28335f)' })).toBeChecked();
     await user.click(within(group).getByRole('radio', { name: 'Rust (#b5462a)' }));
     expect((await save(user, api)).data.brandColor).toBe('#b5462a');
@@ -87,7 +87,7 @@ describe('geo', () => {
     });
     renderStudio('#/c/locations/e/main', { api });
     const user = userEvent.setup();
-    const geo = await screen.findByRole('group', { name: 'Map location (required)' });
+    const geo = await screen.findByRole('group', { name: 'Map location' });
     const lat = within(geo).getByRole('spinbutton', { name: 'Latitude' });
     expect(lat).toHaveValue(36.69);
     expect(lat).toHaveAccessibleDescription('−90 to 90, north is positive');
@@ -112,7 +112,7 @@ describe('date and time', () => {
     });
     renderStudio('#/c/events/e/concert', { api });
     const user = userEvent.setup();
-    const starts = await screen.findByLabelText('Starts at (required)');
+    const starts = await screen.findByLabelText('Starts at');
     // 14:00 UTC is 10:00 in New York in October (EDT, -04:00).
     expect(starts).toHaveValue('2026-10-24T10:00');
     expect(starts).toHaveAccessibleDescription('Times are in Eastern Time, the site’s time zone.');
@@ -166,7 +166,7 @@ describe('references', () => {
     });
     renderStudio('#/c/events/e/concert', { api });
     const user = userEvent.setup();
-    const location = await screen.findByRole('combobox', { name: 'Location' });
+    const location = await screen.findByRole('combobox', { name: 'Location (optional)' });
     await user.click(location);
     await user.click(await screen.findByRole('option', { name: 'Main campus' }));
     expect((await save(user, api)).data.location).toBe('main');
@@ -188,7 +188,7 @@ describe('references', () => {
     });
     renderStudio('#/c/blog/e/harbor-at-dawn', { api });
     const user = userEvent.setup();
-    const related = await screen.findByRole('group', { name: 'Related' });
+    const related = await screen.findByRole('group', { name: 'Related (optional)' });
     expect(await within(related).findByText('Welcome to the playground')).toBeInTheDocument();
 
     await user.click(within(related).getByRole('combobox'));
@@ -208,14 +208,14 @@ describe('slug', () => {
     const api = fakeApi();
     renderStudio('#/c/authors/new', { api, manifest });
     const user = userEvent.setup();
-    await user.type(await screen.findByRole('textbox', { name: 'Name (required)' }), 'Ada Moreno');
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Ada Moreno');
     // The slug waits in Details.
     await user.click(screen.getByRole('button', { name: 'Details' }));
-    const handle = screen.getByRole('textbox', { name: 'Handle' });
+    const handle = screen.getByRole('textbox', { name: 'Handle (optional)' });
     expect(handle).toHaveValue('ada-moreno');
     expect(handle).toHaveAccessibleDescription('Follows the name until you edit it.');
     await user.type(handle, '-1');
-    await user.type(screen.getByRole('textbox', { name: 'Name (required)' }), ' Jr');
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), ' Jr');
     expect(handle).toHaveValue('ada-moreno-1');
   });
 });

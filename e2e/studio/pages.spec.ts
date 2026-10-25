@@ -257,7 +257,7 @@ test('by keyboard: add a child page, and create a missing section page', async (
   await expect(
     page.getByText('This page will go under “Business”.', { exact: false }),
   ).toBeVisible();
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await title.focus();
   await page.keyboard.type('Small business');
   await page.keyboard.press(keys.save);

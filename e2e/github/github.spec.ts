@@ -82,7 +82,7 @@ test('publishes an edit and a new image as one commit, changing nothing else', a
   const before = github.files();
   const commits = github.log().length;
   await signIn(page, '#/c/blog/e/harbor-at-dawn');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Harbor at dawn');
   await title.fill('Harbor at dawn, from GitHub');
 
@@ -122,7 +122,7 @@ test('reports a change published elsewhere as a conflict, and offers to reload',
   page,
 }) => {
   await signIn(page, '#/c/docs/e/getting-started');
-  const title = page.getByRole('textbox', { name: 'Title (required)' });
+  const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Getting started');
   // Someone else publishes the same entry meanwhile.
   const path = 'src/content/docs/getting-started.mdoc';

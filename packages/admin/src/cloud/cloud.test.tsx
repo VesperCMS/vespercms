@@ -266,11 +266,7 @@ describe('the studio and the cloud', () => {
     await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
     render(gate());
     const user = userEvent.setup();
-    const title = await screen.findByRole(
-      'textbox',
-      { name: 'Title (required)' },
-      { timeout: 10_000 },
-    );
+    const title = await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
     await user.type(title, ', drafted');
     expect(
       await screen.findByText(/^Draft saved/, undefined, { timeout: 10_000 }),
@@ -304,11 +300,7 @@ describe('the studio and the cloud', () => {
     await returnFromSignIn('u_contributor', '#/c/blog/e/harbor-at-dawn');
     render(gate());
     const user = userEvent.setup();
-    const title = await screen.findByRole(
-      'textbox',
-      { name: 'Title (required)' },
-      { timeout: 10_000 },
-    );
+    const title = await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
     await user.type(title, ', please');
     expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Request review' }));
@@ -344,7 +336,7 @@ describe('the studio and the cloud', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Request review' })).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Title (required)' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Title' })).toBeDisabled();
   });
 
   // Two publishes, a conflict and an axe pass over the comparison, all in
@@ -354,11 +346,7 @@ describe('the studio and the cloud', () => {
     await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
     render(gate());
     const user = userEvent.setup();
-    const title = await screen.findByRole(
-      'textbox',
-      { name: 'Title (required)' },
-      { timeout: 10_000 },
-    );
+    const title = await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
     await user.type(title, ', mine');
     await screen.findByText(/^Draft saved/, undefined, { timeout: 10_000 });
     const path = 'src/content/blog/harbor-at-dawn.md';
@@ -401,11 +389,7 @@ describe('the studio and the cloud', () => {
       down ? Promise.reject(new TypeError('Failed to fetch')) : cloud.fetch(input, init);
     render(<CloudGate settings={settings} options={options} fetcher={fetcher} store={store} />);
     const user = userEvent.setup();
-    const title = await screen.findByRole(
-      'textbox',
-      { name: 'Title (required)' },
-      { timeout: 10_000 },
-    );
+    const title = await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
     down = true;
     await user.type(title, ', offline');
     expect(

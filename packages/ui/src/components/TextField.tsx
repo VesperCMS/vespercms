@@ -39,7 +39,7 @@ export function TextField({
   );
   return (
     <RACTextField {...props} className={cx('flex flex-col gap-2', className)}>
-      <FieldLabel label={label} isRequired={props.isRequired} />
+      <FieldLabel label={label} />
       {icon ? (
         <div className="relative">
           <Icon
@@ -71,7 +71,7 @@ export function TextArea({
 }: TextAreaProps) {
   return (
     <RACTextField {...props} className={cx('flex flex-col gap-2', className)}>
-      <FieldLabel label={label} isRequired={props.isRequired} />
+      <FieldLabel label={label} />
       <RACTextArea
         rows={rows}
         placeholder={placeholder}

@@ -87,6 +87,7 @@ export function ColorWidget({
         }}
         aria-describedby={describedBy}
         aria-invalid={invalid || undefined}
+        aria-required={field.required || undefined}
         disabled={disabled}
         className={cx(inputClass, 'max-w-40 font-mono')}
       />
@@ -151,6 +152,7 @@ export function SlugWidget({
         }}
         aria-describedby={describedByWith(describedBy, following && `${id}-follows`)}
         aria-invalid={invalid || undefined}
+        aria-required={field.required || undefined}
         disabled={disabled}
         className={cx(inputClass, 'font-mono')}
       />
@@ -197,6 +199,7 @@ export function UrlWidget({
         }}
         aria-describedby={describedBy}
         aria-invalid={invalid || undefined}
+        aria-required={field.required || undefined}
         disabled={disabled}
         className={inputClass}
       />
@@ -261,6 +264,7 @@ export function DateTimeWidget({
         }}
         aria-describedby={describedByWith(describedBy, `${id}-zone`)}
         aria-invalid={invalid || undefined}
+        aria-required={field.required || undefined}
         disabled={disabled}
         required={field.required}
         className={cx(inputClass, 'max-w-64')}

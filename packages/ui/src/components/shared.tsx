@@ -45,23 +45,32 @@ export type FieldTextProps = {
   description?: ReactNode;
   /** Error text, shown when the field is invalid and linked with aria-describedby. */
   errorMessage?: ReactNode;
-  /** States "(required)" in the label's text; an asterisk alone isn't enough (spec §6.13). */
+  /**
+   * The control is marked required for assistive technology. The label says
+   * nothing: studio labels mark what's optional instead (DECISIONS.md, "The
+   * studio marks what's optional").
+   */
   isRequired?: boolean;
 };
 
-/** Label, help and error for a React Aria field. The label always says "(required)" in words. */
-export function FieldLabel({ label, isRequired }: Pick<FieldTextProps, 'label' | 'isRequired'>) {
+/** Label, help and error for a React Aria field. `isOptional` says "(optional)" in words. */
+export function FieldLabel({ label, isOptional }: { label?: ReactNode; isOptional?: boolean }) {
   if (!label) return null;
   return (
     <Label className="block text-label text-content">
       {label}
-      {isRequired && (
-        <>
-          {' '}
-          <span className="font-normal text-content-muted">(required)</span>
-        </>
-      )}
+      {isOptional && <OptionalMark />}
     </Label>
+  );
+}
+
+/** " (optional)" after a label, in the label's own text. */
+export function OptionalMark() {
+  return (
+    <>
+      {' '}
+      <span className="font-normal text-content-muted">(optional)</span>
+    </>
   );
 }
 

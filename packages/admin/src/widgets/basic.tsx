@@ -45,6 +45,7 @@ function textProps(props: WidgetProps<string>) {
     },
     'aria-describedby': describedBy,
     'aria-invalid': invalid || undefined,
+    'aria-required': field.required || undefined,
     disabled,
     placeholder: field.placeholder,
     autoComplete: field.autocomplete,
@@ -96,6 +97,7 @@ export function NumberWidget({
       }}
       aria-describedby={describedBy}
       aria-invalid={invalid || undefined}
+      aria-required={field.required || undefined}
       disabled={disabled}
       className={cx(inputClass, 'max-w-48')}
     />
@@ -159,6 +161,7 @@ export function DateWidget({
       }}
       aria-describedby={describedBy}
       aria-invalid={invalid || undefined}
+      aria-required={field.required || undefined}
       disabled={disabled}
       className={cx(inputClass, 'max-w-56')}
     />
@@ -288,6 +291,7 @@ export function RawWidget({
           .filter(Boolean)
           .join(' ')}
         aria-invalid={invalid || problem !== null || undefined}
+        aria-required={field.required || undefined}
         disabled={disabled}
         className={cx(inputClass, 'resize-y font-mono text-small')}
       />

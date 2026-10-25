@@ -138,9 +138,9 @@ describe('the entry list', () => {
 describe('the entry editor', () => {
   it('lays out the title, main fields, body and a closed Details section', async () => {
     setup('#/c/blog/e/harbor-at-dawn');
-    const title = await screen.findByRole('textbox', { name: 'Title (required)' });
+    const title = await screen.findByRole('textbox', { name: 'Title' });
     expect(title).toHaveValue('Harbor at dawn');
-    expect(screen.getByRole('textbox', { name: 'Summary (required)' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Summary' })).toBeInTheDocument();
     // The body opens in the writing view.
     expect(await screen.findByRole('textbox', { name: 'Body' })).toHaveTextContent(
       'The first boats go out around five.',
@@ -149,7 +149,7 @@ describe('the entry editor', () => {
     const details = screen.getByRole('button', { name: 'Details' });
     expect(details).toHaveAttribute('aria-expanded', 'false');
     // A union the editor can't map is edited as YAML.
-    expect(screen.getByRole('textbox', { name: 'Series' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Series (optional)' })).toHaveValue(
       'name: Waterfront walks\npart: 1',
     );
     await expectNoViolations();
@@ -157,7 +157,7 @@ describe('the entry editor', () => {
 
   it('saves edited values, leaves an untouched body out, and says so', async () => {
     const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
-    const title = await screen.findByRole('textbox', { name: 'Title (required)' });
+    const title = await screen.findByRole('textbox', { name: 'Title' });
     await user.clear(title);
     await user.type(title, 'Harbor at first light');
     expect(screen.getAllByRole('status')[0]).toHaveTextContent('Unsaved changes');
@@ -203,7 +203,7 @@ describe('the entry editor', () => {
         { path: ['publishedAt'], message: 'Enter a valid date.' },
       ],
     });
-    await screen.findByRole('textbox', { name: 'Title (required)' });
+    await screen.findByRole('textbox', { name: 'Title' });
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const summary = await screen.findByRole('alert');
@@ -213,7 +213,7 @@ describe('the entry editor', () => {
     expect(
       within(summary).getByRole('link', { name: /Hero, alt: Describe this image/ }),
     ).toBeInTheDocument();
-    const alt = screen.getByRole('textbox', { name: 'Alt text (required)' });
+    const alt = screen.getByRole('textbox', { name: 'Alt text' });
     expect(alt).toHaveAttribute('aria-invalid', 'true');
     expect(alt).toHaveAccessibleDescription(
       'Describe what this image communicates on this page. Describe this image, or mark it decorative.',
@@ -247,7 +247,7 @@ describe('the entry editor', () => {
 
     it('opens Details as a drawer from the top bar, and returns focus there', async () => {
       const { user } = setup('#/c/blog/e/harbor-at-dawn');
-      await screen.findByRole('textbox', { name: 'Title (required)' });
+      await screen.findByRole('textbox', { name: 'Title' });
       // No section in the column: a button in the bar instead.
       const button = screen.getByRole('button', { name: 'Details' });
       expect(button).not.toHaveAttribute('aria-expanded');
@@ -274,7 +274,7 @@ describe('the entry editor', () => {
         reason: 'invalid',
         issues: [{ path: ['publishedAt'], message: 'Enter a valid date.' }],
       });
-      await screen.findByRole('textbox', { name: 'Title (required)' });
+      await screen.findByRole('textbox', { name: 'Title' });
       await user.click(screen.getByRole('button', { name: 'Save' }));
 
       const summary = await screen.findByRole('alert');
@@ -303,7 +303,7 @@ describe('the entry editor', () => {
       reason: 'conflict',
       message: 'This entry changed since you opened it.',
     });
-    await screen.findByRole('textbox', { name: 'Title (required)' });
+    await screen.findByRole('textbox', { name: 'Title' });
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This entry changed since you opened it.',
@@ -316,7 +316,7 @@ describe('the entry editor', () => {
 
   it('asks before leaving with unsaved changes', async () => {
     const { user } = setup('#/c/blog/e/harbor-at-dawn');
-    await user.type(await screen.findByRole('textbox', { name: 'Title (required)' }), '!');
+    await user.type(await screen.findByRole('textbox', { name: 'Title' }), '!');
     act(() => {
       window.location.hash = '#/';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -324,9 +324,7 @@ describe('the entry editor', () => {
     const dialog = await screen.findByRole('alertdialog', { name: 'Leave without saving?' });
     expect(window.location.hash).toBe('#/c/blog/e/harbor-at-dawn');
     await user.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
-    expect(screen.getByRole('textbox', { name: 'Title (required)' })).toHaveValue(
-      'Harbor at dawn!',
-    );
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Harbor at dawn!');
 
     act(() => {
       window.location.hash = '#/';
@@ -349,7 +347,7 @@ describe('the entry editor', () => {
       version: 'v9',
       reformatted: false,
     });
-    await user.type(await screen.findByRole('textbox', { name: 'Title (required)' }), 'A new post');
+    await user.type(await screen.findByRole('textbox', { name: 'Title' }), 'A new post');
     expect(screen.getAllByRole('status')[0]).toHaveTextContent('Unsaved changes');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
@@ -379,13 +377,75 @@ describe('the entry editor', () => {
     });
     renderStudio('#/c/pages/e/campus-life', { api });
     const user = userEvent.setup();
-    const down = await screen.findByRole('button', { name: 'Move Clubs down' });
-    await user.click(down);
-    expect(screen.getByRole('button', { name: 'Move Clubs up' })).toBeInTheDocument();
+    // A top-level list is a section with its own heading, and each item a row named by its content.
+    expect(await screen.findByRole('heading', { level: 2, name: /^Sections/ })).toBeInTheDocument();
+    const clubs = screen.getByRole('button', { name: 'Clubs' });
+    expect(clubs).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('heading', { level: 3, name: 'Clubs' })).toBeInTheDocument();
+    // Alt+↓ on the row moves the item, and focus stays on it.
+    clubs.focus();
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
     expect(screen.getByText('Moved Clubs to position 2 of 2.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Remove Sports' }));
-    expect(screen.queryByRole('button', { name: /Sports/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^Add / }));
-    expect(screen.getAllByRole('button', { name: /^Remove / })).toHaveLength(2);
+    expect(
+      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent),
+    ).toEqual(['Sports', 'Clubs']);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Clubs' })).toHaveFocus();
+    });
+    // The "…" menu moves it back.
+    await user.click(screen.getByRole('button', { name: 'Actions for Clubs' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Move up' }));
+    expect(screen.getByText('Moved Clubs to position 1 of 2.')).toBeInTheDocument();
+    // Remove, from the menu, moves focus to the next row.
+    await user.click(screen.getByRole('button', { name: 'Actions for Sports' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Remove' }));
+    expect(screen.queryByRole('button', { name: 'Sports' })).not.toBeInTheDocument();
+    expect(screen.getByText('Removed Sports.')).toBeInTheDocument();
+    // A new item opens, with focus in its first field.
+    await user.click(screen.getByRole('button', { name: 'Add section' }));
+    const added = screen.getByRole('button', { name: 'Section 2' });
+    expect(added).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Heading' })).toHaveFocus();
+    });
+    await expectNoViolations();
+  });
+
+  it('opens a closed item to show a refused save’s problem, and names the count on its row', async () => {
+    const api = fakeApi({
+      documents: {
+        'pages/campus-life': {
+          collection: 'pages',
+          id: 'campus-life',
+          path: 'src/content/pages/campus-life.mdx',
+          version: 'v1',
+          format: 'mdx',
+          status: 'editable',
+          data: { title: 'Campus life', sections: [{ heading: 'Clubs' }, { heading: '' }] },
+          body: '\n',
+        },
+      },
+    });
+    api.saveEntry.mockResolvedValueOnce({
+      ok: false,
+      reason: 'invalid',
+      issues: [{ path: ['sections', 1, 'heading'], message: 'Add a heading.' }],
+    });
+    renderStudio('#/c/pages/e/campus-life', { api });
+    const user = userEvent.setup();
+    const second = await screen.findByRole('button', { name: 'Section 2' });
+    expect(second).toHaveAttribute('aria-expanded', 'false');
+    await user.type(screen.getByRole('textbox', { name: 'Title' }), '!');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Section 2/ })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+    });
+    expect(screen.getByRole('button', { name: /^Section 2/ })).toHaveTextContent('1 problem');
+    expect(screen.getByText('Add a heading.')).toBeVisible();
+    // The other item stays as it was.
+    expect(screen.getByRole('button', { name: 'Clubs' })).toHaveAttribute('aria-expanded', 'false');
   });
 });

@@ -75,6 +75,7 @@ export {
   fieldControl,
   FieldLabel,
   FieldHelp,
+  OptionalMark,
   type FieldTextProps,
 } from './components/shared.tsx';
 export { VesperMark, type VesperMarkProps } from './components/Mark.tsx';

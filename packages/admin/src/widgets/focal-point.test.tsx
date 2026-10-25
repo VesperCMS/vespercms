@@ -57,7 +57,7 @@ async function open(hero: Record<string, unknown> = heroValue) {
   });
   renderStudio('#/c/blog/e/harbor-at-dawn', { api });
   const user = userEvent.setup();
-  const group = await screen.findByRole('group', { name: 'Hero' });
+  const group = await screen.findByRole('group', { name: 'Hero (optional)' });
   await user.click(within(group).getByRole('button', { name: 'Focal point & crops' }));
   return { api, user, group, control: within(group).getByRole('button', { name: 'Focal point' }) };
 }
@@ -80,7 +80,7 @@ describe('the focal point control', () => {
   it('sits behind one "Focal point & crops" disclosure, closed at first', async () => {
     const api = fakeApi({ documents: { 'blog/harbor-at-dawn': harbor } });
     renderStudio('#/c/blog/e/harbor-at-dawn', { api });
-    const group = await screen.findByRole('group', { name: 'Hero' });
+    const group = await screen.findByRole('group', { name: 'Hero (optional)' });
     const disclosure = within(group).getByRole('button', { name: 'Focal point & crops' });
     expect(disclosure).toHaveAttribute('aria-expanded', 'false');
     expect(within(group).queryByRole('button', { name: 'Focal point' })).not.toBeInTheDocument();

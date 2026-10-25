@@ -44,6 +44,7 @@ import { Screen } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
+import { focusWhenShown } from '../editor/reveal.ts';
 import { issueTarget } from '../editor/target.ts';
 import {
   fieldId,
@@ -1005,7 +1006,7 @@ function EntryForm({
             <Disclosure title="Details" isExpanded={detailsOpen} onExpandedChange={setDetailsOpen}>
               <div className="flex flex-col gap-6 pt-2 pl-6">
                 {arranged.details.map((field) => (
-                  <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
+                  <Field key={keyOf(field)} field={field} path={[keyOf(field)]} asSection={false} />
                 ))}
               </div>
             </Disclosure>
@@ -1016,7 +1017,7 @@ function EntryForm({
           <Drawer title="Details" isOpen={detailsOpen} onOpenChange={setDetailsOpen}>
             <div className="flex flex-col gap-6 pt-2">
               {arranged.details.map((field) => (
-                <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
+                <Field key={keyOf(field)} field={field} path={[keyOf(field)]} asSection={false} />
               ))}
             </div>
           </Drawer>
@@ -1188,22 +1189,6 @@ function CloudNotices({
 
 const SAVE_ID = 'entry-save';
 
-/**
- * Focuses an element as soon as it's on screen (a field inside Details
- * renders once Details opens), and scrolls it into view.
- */
-function focusWhenShown(id: string, tries = 20): void {
-  const element = document.getElementById(id);
-  if (element) {
-    element.scrollIntoView({ block: 'center' });
-    element.focus();
-  } else if (tries > 0) {
-    setTimeout(() => {
-      focusWhenShown(id, tries - 1);
-    }, 25);
-  }
-}
-
 /** Where a new page will go in the tree: under its parent, named by title. */
 function ParentNote({ collection, parent }: { collection: CollectionManifest; parent: string }) {
   const { api } = useStudio();
@@ -1235,10 +1220,10 @@ function TitleField({ field }: { field: FieldModel }) {
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-small font-semibold text-content-muted">
         {field.label}
-        {field.required && (
+        {!field.required && (
           <>
             {' '}
-            <span className="font-normal">(required)</span>
+            <span className="font-normal">(optional)</span>
           </>
         )}
       </label>
@@ -1253,6 +1238,7 @@ function TitleField({ field }: { field: FieldModel }) {
           );
         }}
         aria-invalid={errors.length > 0 || undefined}
+        aria-required={field.required || undefined}
         aria-describedby={errors.length > 0 ? `${id}-error` : undefined}
         disabled={editor.disabled || field.readOnly === true}
         placeholder={field.placeholder ?? 'Untitled'}
