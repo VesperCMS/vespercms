@@ -26,6 +26,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
 | vespercms.com and the docs | Live (2026-10-21), ahead of Phase 9 at Jeremy's request: `apps/site` on Cloudflare Pages, edited with Vesper, with `/admin` for its cloud project; `vesper agents`. CI green on GitHub (run 39636024765). Decisions in `DECISIONS.md` ("Vesper's own site") |
 | 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. A publish credits every draft's author, on production since 2026-10-22. Left: the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vespercms-cloud's), decisions in `DECISIONS.md` ("The cloud") |
+| Studio layout, panes and tabs | Done (2026-10-25), at Jeremy's request between Phase 4's steps: fields as sections, Appearance and pictures, Markdoc settings, then the studio as full-width panes with tabs in the editor (merged from `studio-panes`). Outcome and open questions in `PLAN.md`, decisions in `DECISIONS.md` |
 | 4.5 Scheduled publish and unpublish | Designed, and its calls confirmed (2026-10-21). Building waits for Phase 4. Design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
@@ -254,9 +255,9 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - At most one primary (accent-filled) button per screen.
 - At most two levels of navigation visible at once.
 - No colored status badges. Status is text.
-- No icon-only buttons except close, overflow ("…"), drag handles, the outline's expand toggle and the body editor's formatting tools (DECISIONS.md, 2026-10-18), all with accessible names; the formatting tools also show a tooltip. Phase 4.5 adds the menu half of the split Publish ▾ button (DECISIONS.md, "Where scheduling lives in the studio"). The `studio-panes` branch adds the panes' collapse button, with a tooltip (DECISIONS.md, "The studio is panes, full width"). Everywhere else an icon sits beside its words, and icons come only from the kit's `Icon` (Lucide).
+- No icon-only buttons except close, overflow ("…"), drag handles, the outline's expand toggle and the body editor's formatting tools (DECISIONS.md, 2026-10-18), all with accessible names; the formatting tools also show a tooltip. Phase 4.5 adds the menu half of the split Publish ▾ button (DECISIONS.md, "Where scheduling lives in the studio"). The panes' collapse button is one too, with a tooltip (DECISIONS.md, "The studio is panes, full width"). Everywhere else an icon sits beside its words, and icons come only from the kit's `Icon` (Lucide).
 - At most five color tokens beyond neutrals on any screen: accent, accent-subtle, danger, focus, plus optional warning.
-- No tabs inside the editor but Content, Details and the collection's own (the `studio-panes` branch; DECISIONS.md, "The entry editor has tabs").
+- No tabs inside the editor but Content, Details and the collection's own (DECISIONS.md, "The entry editor has tabs").
 - Body text 15–16px, line-height ≥ 1.5, two font weights.
 - Spacing only from the token scale. Hairline borders only.
 - Type sizes and radii only from the tokens: `text-title`, `text-heading-1`–`3`, `text-body`, `text-label`, `text-small`, `text-caption`; `rounded-sm`, `-md`, `-lg`, `-full` (DECISIONS.md, "One type scale replaces Tailwind's sizes").

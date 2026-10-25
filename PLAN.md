@@ -660,7 +660,7 @@ Each lands as its own step with an outcome note, as the dogfooding steps do.
   - The `summary` hint is in core. Labels say "(optional)" instead of "(required)".
   - On vespercms.com's home page the form went from 9,628px to 1,840px tall.
 - **Markdoc (4).** The `schema` hint shapes list and object attributes, and `editMarkdocTag` and `editJsxTag` write lists item by item, one item or one key per line. Each of Jazzy's nine FAQs now changes by one line for one changed answer.
-- **The list pane (2).** At 80rem and wider the editor shows its collection's list or outline in a `nav` before `<main>`, with search, the open entry marked, and "New entry" or "New page". It keeps its state across entries, follows saves, and hides with the List button (kept per viewer). It isn't shown for singletons or on narrower screens.
+- **The list pane (2).** At 80rem and wider the editor shows its collection's list or outline in a `nav` before `<main>`, with search, the open entry marked, and "New entry" or "New page". It keeps its state across entries, follows saves, and hides with the List button (kept per viewer). It isn't shown for singletons or on narrower screens. (Replaced the same day by the panes: "Studio panes and tabs", below.)
 - **Docs and rules.** `content/fields.mdoc`, `content/markdoc-and-mdx.mdoc` and `getting-started/first-edit.mdoc` describe the rows, the hints, "(optional)", Appearance and the list. `@vesper/astro`'s README describes the `schema` hint. CLAUDE.md has the narrowed font rule and two new ones (optional marks, `focusWhenShown`). DECISIONS.md's entries say what was built and what changed.
 - **Checks.**
   - Typecheck, lint, the format check, `a11y:contrast` and `vesper agents --check` pass.
@@ -675,14 +675,14 @@ Each lands as its own step with an outcome note, as the dogfooding steps do.
   - **Moving a YAML list item: done the same day.** The list diff now matches items up and emits an `order` patch. The YAML and JSON writers move each item's text as it is, and fall back to comparing by position when they can't (DECISIONS.md, "A moved list item moves its text as it is"). The studio e2e test moves the About page's first section down and checks the file byte for byte: the block scalar moves as written. Vitest: 4,335 passed. The studio, GitHub and cloud e2e projects: 46 passed and 2 skipped.
   - **Screen reader passes.** With the rest, before launch.
 
-## Studio panes and tabs (the `studio-panes` branch, exploration)
+## Studio panes and tabs (outcome)
 
 Started 2026-10-25, the same day as "Studio layout and fields", because Jeremy wanted to see the studio go further toward Sanity:
 - full width;
 - panes beside each other, all the way through, with the site's collections always one click away;
 - tabs at the top of the entry (Content, Details and a site's own, such as SEO) instead of a separate Details.
 
-It's on its own branch so `main` stays as it is until he's seen it. DECISIONS.md has both entries ("The studio is panes, full width" and "The entry editor has tabs"), marked as this branch's, with what each supersedes.
+It was built on its own branch, `studio-panes`, so `main` stayed as it was until he'd seen it. He took it as it stands, and it merged into main on 2026-10-25, with spec §10.2 to §10.4 and CLAUDE.md's budget rewritten for panes and tabs. DECISIONS.md has both entries ("The studio is panes, full width" and "The entry editor has tabs"), with what each supersedes.
 
 **Built (2026-10-25):**
 - **Panes.** At 48rem and wider: the structure pane (collections with counts, Settings, Site), then a collection's list, then the entry, Media or Redirects. Each scrolls on its own, and the top bar spans the width. Earlier panes fold into strips when they don't fit. One component tree serves both widths, so resizing keeps the open entry as it is. This replaced main's list pane and its List button.
@@ -695,10 +695,9 @@ It's on its own branch so `main` stays as it is until he's seen it. DECISIONS.md
 - **Checks.**
   - Typecheck, lint and the format check pass.
   - Vitest passes, with new tests for the panes (landmarks, keys, search kept, the leave dialog, trees, singletons, folding, narrow; then the list pane's tools, collapsing, where focus goes and the outline as a pane) and the tabs (layout, keys, problem counts, the summary choosing a tab, declared tabs in core and in the arrangement).
-  - Every e2e project passes, with this branch's builds of the playground and vespercms.com: studio, GitHub and cloud (46, plus 2 macOS-only skips), static and site (124). They include e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px, the list as a pane with no entry open, and collapsing a pane across a reload. Run again after the second round.
+  - Every e2e project passes, with the branch's builds of the playground and vespercms.com: studio, GitHub and cloud (46, plus 2 macOS-only skips), static and site (124). They include e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px, the list as a pane with no entry open, and collapsing a pane across a reload. Run again after the second round.
 
-**Open, for Jeremy, before it merges:**
-- **Merge or keep exploring.** If it merges, spec §10.2 to §10.4 and CLAUDE.md's budget get rewritten for panes and tabs, not just annotated.
+**Open, for Jeremy:**
 - **The home pane.** With nothing chosen, the pane beside the collections is the old Home screen, which repeats them with counts and last edits. Alternatives: recent edits across the site, or nothing (as Sanity shows).
 - **Where tabs go in a tag's settings dialog.** Not at all, today: a tag's attributes are one form.
 - **Moving between collections.** The list pane remounts when the collection changes, so its scroll and search start again, kept per collection.

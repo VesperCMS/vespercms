@@ -1366,7 +1366,7 @@ The component library isn't the problem. Taproot uses a few Radix primitives wit
 
 ### 10.2 Principles
 
-1. **One primary thing per screen.** On the editor screen it's the document. Everything else is one click away, not permanently visible. The one exception is the entry list beside the editor on wide screens (§10.3, decided October 25, 2026).
+1. **One primary thing per screen.** On the editor screen it's the document. Everything else is one click away, not permanently visible. On wide screens the panes that lead to it, the site's collections and the collection's list, stay beside it as navigation (§10.3, decided October 25, 2026).
 2. **Typography and space do the work, not boxes.** Hierarchy comes from size, weight and spacing. Avoid cards inside cards, stacked borders and shadows (shadows only on overlays).
 3. **One accent color**, used only for the primary action, links, the current-location marker and focus. Everything else is neutral.
 4. **Words over badges and icons.** Status is short text ("Draft · saved just now"), optionally with one small neutral dot. An icon never stands alone without a visible label, except a universal close button that has an accessible name.
@@ -1377,22 +1377,22 @@ The component library isn't the problem. Taproot uses a few Radix primitives wit
 ### 10.3 Layout
 
 **App shell**
-- A top bar holds: site name (site switcher if the user has several), a "Content" menu listing collections, a search/command palette (⌘K), and a user menu. The user menu holds Appearance (System, Light or Dark), in every mode (decided October 25, 2026).
-- No permanent left sidebar. The editor's entry list on wide screens is the one exception (see Editor).
+- A top bar holds: site name (site switcher if the user has several), a search/command palette (⌘K), and a user menu. The user menu holds Appearance (System, Light or Dark), in every mode (decided October 25, 2026). One screen at a time, it also holds a "Content" menu listing collections.
+- At 48rem (768px) and wider, the studio is full width and made of panes side by side, Sanity-style (decided October 25, 2026): the structure pane (every collection with its count, then Settings, then Site), then the open collection's list, then the entry, Media or Redirects. Each pane scrolls on its own. People can collapse any pane but the deepest into a strip, and the studio folds the earliest into strips when they don't fit. Narrower, the deepest pane alone is the screen.
 - The home screen is a plain list of collections and singletons, with entry counts and "last edited."
 
 **Entry list**
 - One row per entry: title, plus muted text showing who edited it and when, plus status as text.
 - Hierarchical collections (`tree: true`) use the outline described in §6.15.2 instead, under the same rules.
 - No thumbnails unless the collection's list config asks for one.
-- Controls are one search box and one status filter. Sort by clicking column headers.
+- Controls are one search box and one status filter. Among panes the list is a pane of its own, entry open or not, with its list fields under each title and its sort in a menu; one screen at a time it's a table, sorted by clicking column headers.
 
 **Editor**
-- A single centered column, about 720px max. On screens 1280px and wider, the collection's entry list sits in a pane to its left, shown until the person hides it (decided October 25, 2026).
+- A single centered column, about 720px max, in the pane beside the collection's list.
 - The title field is styled as the document heading. Body fields flow beneath it in schema order.
 - Top-level objects and lists are sections with their own headings, and a list's items are rows that open in place (decided October 25, 2026).
-- Secondary frontmatter (slug, dates, tags, SEO fields, anything in `vesper.config.ts` marked `placement: 'details'`) goes in one collapsible **Details** section at the bottom, or a toggleable right drawer on wide screens. It is never permanently open.
-- **Top bar contents:** back link, entry title (truncated), status text, Preview toggle, the primary button (Publish or Request review), and a "…" menu. The menu holds everything else: history, duplicate, delete, copy link, view on site.
+- Below the title, tabs: **Content**, then any tabs the collection declares (such as SEO), then **Details**, which holds secondary frontmatter (slug, dates, tags, anything in `vesper.config.ts` marked `placement: 'details'`). With only Content there's no tab list (decided October 25, 2026, replacing a Details section and drawer).
+- **Top bar contents:** back link (one screen at a time; among panes the list beside the entry leads back), entry title (truncated), status text, Preview toggle, the primary button (Publish or Request review), and a "…" menu. The menu holds everything else: history, duplicate, delete, copy link, view on site.
 - **Preview:** toggles a split view (editor and preview side by side), or full-screen on small screens. Its state is remembered per user.
 
 **Dashboard and operator console**
@@ -1406,9 +1406,9 @@ Treat these like lint rules. Breaking one requires a note in `DECISIONS.md`.
 - At most **one** primary (accent-filled) button per screen.
 - At most **two** levels of navigation visible at once.
 - **No colored status badges.** Status is text.
-- **No icon-only buttons** except close, overflow ("…") and drag handles, and all of them have accessible names.
+- **No icon-only buttons** except close, overflow ("…") and drag handles, plus the few `DECISIONS.md` records (among them the outline's expand toggle, the body editor's formatting tools and the panes' collapse button), and all of them have accessible names.
 - No more than **five** color tokens in use on any screen, beyond neutrals: accent, accent-subtle, danger, focus, plus one optional warning.
-- **No tabs inside the editor.** Use sections and the Details drawer. (The `studio-panes` branch, October 25, 2026: tabs for Content, Details and a collection's own replace the drawer; see DECISIONS.md.)
+- **No tabs inside the editor but Content, Details and the collection's own** (decided October 25, 2026). Group everything else with sections.
 - Body text 15–16px, line-height ≥ 1.5. Two font weights (regular and semibold).
 - Spacing comes only from the token scale. Hairline (1px) borders only.
 - Every new feature must state in its PR where it lives in the UI and what it hides behind.

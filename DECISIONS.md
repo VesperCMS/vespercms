@@ -1259,7 +1259,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-18: Details is a drawer on wide screens
 
-(Superseded on the `studio-panes` branch, 2026-10-25: Details is a tab. See "The entry editor has tabs".)
+(Superseded 2026-10-25: Details is a tab. See "The entry editor has tabs".)
 
 **At 1100px and wider (`(min-width: 68.75rem)`, the design system's breakpoint), a quiet "Details" button in the editor's top bar opens the secondary fields in the glass drawer. Narrower, including at 200% zoom on a laptop, Details stays the closing section of the column, as before.** Jeremy approved it at the checkpoint. Spec §10.3 allows either ("or a toggleable right drawer on wide screens"). One open state serves both, so resizing keeps it open or closed. The drawer is modal, so focus goes in and comes back to the button. A failed save doesn't open it, since it would take focus from the error summary. Instead the button counts its problems in words ("Details (1 problem)"), and the summary's links open the drawer before focusing a field in it. Go to field in the notes drawer opens it the same way.
 
@@ -1307,7 +1307,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-25: The entry list sits beside the editor on wide screens (an exception to spec §10.3 and §10.2)
 
-(Superseded on the `studio-panes` branch, the same day: "The studio is panes, full width".)
+(Superseded the same day: "The studio is panes, full width".)
 
 **At 80rem (1280px) and wider, the editor screen shows its collection's list in an 18rem pane on its left:**
 - a search field and the entries;
@@ -1330,7 +1330,7 @@ Rejected:
 
 Built 2026-10-25. Every entry is a screen of its own, remounted, so the pane is too; its list, search, open folders and scroll are kept in module memory for the visit, and a save tells it to read the list again. A flat list uses the kit's `Tree` too, without chevrons, so both kinds are one Tab stop with the same keys. A row's name is its type-ahead text, so it carries the row's status and "open now" after the title.
 
-### 2026-10-25: The studio is panes, full width (on the `studio-panes` branch; an exception to spec §10.3 and §10.2)
+### 2026-10-25: The studio is panes, full width (spec §10.2 and §10.3 rewritten for it)
 
 **At 48rem (768px) and wider, the studio fills the window with panes side by side, Sanity-style:**
 - a structure pane: every collection with its count, then Settings, then Site (Media, Redirects, View site);
@@ -1343,7 +1343,7 @@ A singleton has no list pane: its one entry opens beside the collections.
 
 **People can collapse any pane but the deepest with a button at the end of its header. It folds the pane into the same strip, and it stays collapsed until its strip is pressed. The choice is kept by kind (the collections, a collection's list) in this browser's `localStorage`, so it holds from one entry and one collection to the next.** Focus moves to the strip, since the pressed button goes with the pane, and back to the collapse button when the strip opens it. The collapse button is icon-only (`pane-collapse`), with its name ("Collapse Blog posts") and a tooltip. That's an exception to §10.4's icon-only rule, like the outline's expand toggle: it sits in every pane's header, where words would crowd the title.
 
-Why: Jeremy found the single column stark, and wanted the site's collections one click away from anywhere, Sanity-style, all the way through.
+Why: Jeremy found the single column stark, and wanted the site's collections one click away from anywhere, Sanity-style, all the way through. It was built on its own branch, `studio-panes`, and merged into main the same day once he'd tried it ("this is how I want it to work"). The spec's §10.2 to §10.4 now describe panes and tabs instead of carrying exceptions.
 
 What holds:
 - List items still open in place (Jeremy's call, 2026-10-25).
@@ -1358,10 +1358,10 @@ Notes on how it's built:
 Rejected:
 - Folding by hiding panes entirely, which loses the way back that strips keep.
 - Opening list items as further panes, which would put the rest of the entry out of sight.
-- A collection's whole list screen, a table with columns, as the deepest pane when no entry is open, and a narrower pane only beside an entry. That was built first on this branch. Choosing an entry then swapped the list for another, and Jeremy wanted the list to be one consistent pane (2026-10-25). Among panes the table's columns became the list fields under each title, and its sort headers a Sort menu. One screen at a time, a flat collection's list is still the table.
+- A collection's whole list screen, a table with columns, as the deepest pane when no entry is open, and a narrower pane only beside an entry. That was built first, on the branch where panes were tried. Choosing an entry then swapped the list for another, and Jeremy wanted the list to be one consistent pane (2026-10-25). Among panes the table's columns became the list fields under each title, and its sort headers a Sort menu. One screen at a time, a flat collection's list is still the table.
 - Remembering a collapsed pane per collection, which would make people collapse each list once.
 
-### 2026-10-25: The entry editor has tabs (on the `studio-panes` branch; an exception to spec §10.4)
+### 2026-10-25: The entry editor has tabs (spec §10.3 and §10.4 rewritten for it)
 
 **Below the title, the entry editor has tabs: Content (the main fields and the body), then any tabs the collection declares, then Details. A collection declares tabs in vesper.config.ts (`tabs: { seo: 'SEO' }`), and fields go on them through `placement`, from `.meta()` or vesper.config.ts, which wins. A placement naming an undeclared tab warns and stays on Content. With only Content there's no tab list. A tab with problems from the last save says so in its name ("Details (1 problem)"). Going to a field on another tab, from the error summary or Go to field, chooses that tab first.** Every panel stays mounted while another is chosen, `inert` and `hidden`, so fields keep their state. The chosen tab is underlined in the accent, 2px, with its words in content colour. The others are muted, with a strong-border underline on hover. The first styling, the current item's accent-subtle and halo, read as a button that stayed pressed, and Jeremy asked for another (2026-10-25). The Details drawer and the closing Details section are gone.
 
