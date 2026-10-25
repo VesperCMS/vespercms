@@ -1,6 +1,6 @@
 ---
 title: Vesper, a content editor for Astro sites
-summary: Vesper builds an editor from your Astro site's content collections. Content stays as files in your repository, and the site stays static, on any host.
+summary: Vesper builds an editor from your Astro site's content collections. Content stays as files in your repository, and the site stays static, on any host. did this skip run?
 hero:
   heading: The editor your Astro site already describes
   lead: Vesper reads your content collections and builds the studio from them. People edit in plain forms, every save is a file in your repository, and the site stays static on any host.
