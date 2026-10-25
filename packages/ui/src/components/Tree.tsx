@@ -66,6 +66,8 @@ export function Tree<T extends TreeNode>({
     }
   };
   remember(items);
+  // A flat list (the editor's list pane) needs no room for chevrons.
+  const nested = items.some((item) => item.children.length > 0);
   const onKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!onRowKeyDown) return;
     const row = (event.target as HTMLElement).closest('[role="row"]');
@@ -122,7 +124,7 @@ export function Tree<T extends TreeNode>({
                 <Chevron className={isExpanded ? 'rotate-0' : '-rotate-90'} />
               </RACButton>
             ) : (
-              <span aria-hidden="true" className="inline-block size-8 shrink-0" />
+              nested && <span aria-hidden="true" className="inline-block size-8 shrink-0" />
             )}
             {renderRow(item, { isExpanded, hasChildItems, level })}
           </div>
