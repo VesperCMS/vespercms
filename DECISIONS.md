@@ -78,6 +78,14 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 
 **Every committed photo, PDF or sample upload is CC0, public domain or MIT-compatible, with its source and license recorded next to it.** The repo is MIT and will be public. Hygiene samples (a HEIC with GPS data, an EXIF-rotated JPEG) come from openly licensed test sets, and each download is approved first.
 
+### 2026-10-25: The repositories live in the vespercms organization
+
+**Jeremy chose on 2026-10-25 to call the project vespercms in every URL. This repository moved from `jeremybise/vesper` to `vespercms/vespercms`, and the cloud's from `jeremybise/vesper-cloud` to `vespercms/vespercms-cloud`, in the organization that already owns the VesperCMS GitHub App.** GitHub redirects the old names, so links and clones keep working, and dated entries here and in PLAN.md keep the names they had at the time.
+- `vesper-github-test` stays on Jeremy's own account: it stands in for a customer's repository, and customers aren't in the organization.
+- What moved with it: the cloud's submodule URL, its CI checkouts and its README (vespercms-cloud f4fcbd4), and both local remotes. The submodule's folder stays `vesper/`, and the local checkouts keep their folders.
+- What the move broke until it's reconnected by hand: the cloud's CI token (`VESPER_READ_TOKEN`, scoped to the old owner), the VesperCMS app's access to this repository (installed on Jeremy's account, not the organization), and Cloudflare Pages' access for vespercms.com.
+- The npm scope is still `@vesper`, and unclaimed. Whether it becomes `@vespercms` too is open (spec §13.1).
+
 ## Packages and tooling
 
 ### 2026-10-17: Workspace packages resolve to source through a custom export condition

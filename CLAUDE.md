@@ -25,7 +25,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
 | vespercms.com and the docs | Live (2026-10-21), ahead of Phase 9 at Jeremy's request: `apps/site` on Cloudflare Pages, edited with Vesper, with `/admin` for its cloud project; `vesper agents`. CI green on GitHub (run 39636024765). Decisions in `DECISIONS.md` ("Vesper's own site") |
-| 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. A publish credits every draft's author, on production since 2026-10-22. Left: the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vesper-cloud's), decisions in `DECISIONS.md` ("The cloud") |
+| 4 Cloud foundation | In progress. Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. A publish credits every draft's author, on production since 2026-10-22. Left: the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vespercms-cloud's), decisions in `DECISIONS.md` ("The cloud") |
 | 4.5 Scheduled publish and unpublish | Designed, and its calls confirmed (2026-10-21). Building waits for Phase 4. Design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
@@ -211,7 +211,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 ### The cloud
 
-**The studio's half of the cloud lives here, under MIT; anything that holds a secret, stores customer data or runs at the cloud's domain lives in the private `vesper-cloud` repository, never this one.** Spec §13.3; the API the studio speaks is public by nature (DECISIONS.md, "The split").
+**The studio's half of the cloud lives here, under MIT; anything that holds a secret, stores customer data or runs at the cloud's domain lives in the private `vespercms-cloud` repository, never this one.** Spec §13.3; the API the studio speaks is public by nature (DECISIONS.md, "The split").
 
 **The studio talks to the cloud only through `@vesper/core`'s protocol and `CloudClient`, and is tested against `scripts/cloud-fake.mjs`.** The fake and the real cloud both pass `runCloudContract`; a behaviour the studio needs goes into the contract first.
 
