@@ -672,7 +672,7 @@ Each lands as its own step with an outcome note, as the dogfooding steps do.
   - **Cloud pictures.** The cloud's half (storing pictures from GitHub, the dashboard's upload) is vespercms-cloud's. Until it's built, cloud members get initials.
   - **The caret fix (item 4).** On a Mac, ⇧⌘← with a chip selected still leaves a caret. It can only be checked on macOS, and this was built on Windows.
   - **`aria-required` on selects.** The kit's Select, tag and reference comboboxes don't carry `aria-required` yet (DECISIONS.md, "The studio marks what's optional").
-  - **Moving a YAML list item.** Moving an item in a list in frontmatter rewrites the items it passes by position, keeping each slot's scalar style. A block scalar can then become a quoted string, as the studio e2e test first showed. The page is the same, but the change isn't "lines move as they are". It was so before rows too (Move up and Move down), but rows make moving easier. Worth a step: core's YAML list writer moving items' text, as the attribute lists now do.
+  - **Moving a YAML list item: done the same day.** The list diff now matches items up and emits an `order` patch. The YAML and JSON writers move each item's text as it is, and fall back to comparing by position when they can't (DECISIONS.md, "A moved list item moves its text as it is"). The studio e2e test moves the About page's first section down and checks the file byte for byte: the block scalar moves as written. Vitest: 4,335 passed. The studio, GitHub and cloud e2e projects: 46 passed and 2 skipped.
   - **Screen reader passes.** With the rest, before launch.
 
 ## Calls of 2026-10-19

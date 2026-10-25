@@ -600,11 +600,21 @@ Amended in Phase 2.5: on Windows a rename over a file fails with `EPERM` for a f
 
 ### 2026-10-18: Lists that are edited and resized change item by item
 
-**When a list is reordered, or edited and resized at once, the writer now compares the items both versions share by position, then pushes or deletes at the end. It used to replace the whole list.** Replacing re-renders it, and at a file's root that dropped `_order.yaml`'s comment and turned `vesper.redirects.yaml`'s one-line flow maps into block maps. A new item after one-line flow maps is written as one too (`- { from: /a, to: /b, status: 301 }`), as JSON arrays already shaped new items like their neighbours. The corpus suites pass unchanged: every changed byte still lies within the lines of the values that changed.
+**When a list is reordered, or edited and resized at once, the writer now compares the items both versions share by position, then pushes or deletes at the end. It used to replace the whole list.** (Amended 2026-10-25: items that moved now move their text as it is, and comparing by position is the fallback; "A moved list item moves its text as it is", below.) Replacing re-renders it, and at a file's root that dropped `_order.yaml`'s comment and turned `vesper.redirects.yaml`'s one-line flow maps into block maps. A new item after one-line flow maps is written as one too (`- { from: /a, to: /b, status: 301 }`), as JSON arrays already shaped new items like their neighbours. The corpus suites pass unchanged: every changed byte still lies within the lines of the values that changed.
 
 ### 2026-10-18: A new key beside one-line flow maps is one too
 
 **When a key is added to a block map whose last value is a one-line flow map (or flow list), the new value is written the same way.** Adding a wide crop beside `square: { x: 0.40, y: 0.10, w: 0.45, h: 0.675 }` used to write a five-line block map. It's the map counterpart of Phase 2.6's rule for list items after one-line flow maps. Beside block maps nothing changes, and the corpus suites pass unchanged.
+
+### 2026-10-25: A moved list item moves its text as it is
+
+**In a YAML or JSON data list, an item that moved takes its own text with it. The list diff matches items up: unchanged ones where they are, then unchanged ones wherever they went, then each changed one as an edit of the unused old item it most resembles. Old items left over are deleted, and new ones are pushed. Then a new `order` patch rearranges the list, applied after all the others: each item's text goes into the slot it belongs in, so its quoting, block scalars and inner comments move with it. Comments between items stay where they were, as before. A list that can't be moved that way (a flow list, anchors), or a result that wouldn't read back exactly, falls back to comparing by position, as before.** This amends "Lists that are edited and resized change item by item".
+
+Why: rows made moving an item one key press (Alt+↑/↓). Compared by position, every item a move passed was rewritten with its neighbour's value in its own style. Moving the playground About page's first section down turned the second section's `|-` block scalar into a quoted string. Matching by resemblance also edits the right item when one item is removed and another edited in the same save.
+
+Rejected:
+- Leaving positional diffs for reorders, with their noisy changes.
+- Moving whole line ranges, comments between items included: a comment above an item can as easily be about the list's position as about the item.
 
 ### 2026-10-25: A list attribute written one item per line changes item by item
 
