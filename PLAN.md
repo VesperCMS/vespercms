@@ -685,19 +685,25 @@ Started 2026-10-25, the same day as "Studio layout and fields", because Jeremy w
 It's on its own branch so `main` stays as it is until he's seen it. DECISIONS.md has both entries ("The studio is panes, full width" and "The entry editor has tabs"), marked as this branch's, with what each supersedes.
 
 **Built (2026-10-25):**
-- **Panes.** At 48rem and wider: the structure pane (collections with counts, Settings, Site), then a collection's list (the whole list screen when no entry is open, a narrower pane beside an entry), then the entry, Media or Redirects. Each scrolls on its own, and the top bar spans the width. Earlier panes fold into strips when they don't fit. One component tree serves both widths, so resizing keeps the open entry as it is. This replaced main's list pane and its List button.
+- **Panes.** At 48rem and wider: the structure pane (collections with counts, Settings, Site), then a collection's list, then the entry, Media or Redirects. Each scrolls on its own, and the top bar spans the width. Earlier panes fold into strips when they don't fit. One component tree serves both widths, so resizing keeps the open entry as it is. This replaced main's list pane and its List button.
+- **Jeremy's second round (2026-10-25).**
+  - A collection's list is always one pane, entry open or not, with the list screen's tools: search, Show, Sort, the list fields under each title, and New entry (the outline's New page for a tree). The whole-list screen among panes is gone.
+  - Any pane but the deepest collapses into its strip from a button in its header, and stays collapsed in this browser until its strip opens it.
+  - The chosen tab is an accent underline instead of the current item's fill and halo.
 - **Tabs.** Content, the collection's own tabs (`tabs` and `placement` in vesper.config.ts, or `.meta({ placement })`), then Details. Problem counts are in the tab names, and the error summary and Go to field choose the right tab first. The kit has `Tabs`. The Details drawer and closing section are gone.
 - **Docs.** `getting-started/first-edit.mdoc` (Panes, the editor's tabs), `content/fields.mdoc` (tabs, placement), `reference/integration.mdoc` (`tabs`).
 - **Checks.**
   - Typecheck, lint and the format check pass.
-  - Vitest passes, with new tests for the panes (landmarks, keys, search kept, the leave dialog, trees, singletons, folding, narrow) and the tabs (layout, keys, problem counts, the summary choosing a tab, declared tabs in core and in the arrangement).
-  - Every e2e project passes, with this branch's builds of the playground and vespercms.com: studio, GitHub and cloud (46, plus 2 macOS-only skips), static and site (124). They include e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px.
+  - Vitest passes, with new tests for the panes (landmarks, keys, search kept, the leave dialog, trees, singletons, folding, narrow; then the list pane's tools, collapsing, where focus goes and the outline as a pane) and the tabs (layout, keys, problem counts, the summary choosing a tab, declared tabs in core and in the arrangement).
+  - Every e2e project passes, with this branch's builds of the playground and vespercms.com: studio, GitHub and cloud (46, plus 2 macOS-only skips), static and site (124). They include e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px, the list as a pane with no entry open, and collapsing a pane across a reload. Run again after the second round.
 
 **Open, for Jeremy, before it merges:**
 - **Merge or keep exploring.** If it merges, spec §10.2 to §10.4 and CLAUDE.md's budget get rewritten for panes and tabs, not just annotated.
 - **The home pane.** With nothing chosen, the pane beside the collections is the old Home screen, which repeats them with counts and last edits. Alternatives: recent edits across the site, or nothing (as Sanity shows).
 - **Where tabs go in a tag's settings dialog.** Not at all, today: a tag's attributes are one form.
 - **Moving between collections.** The list pane remounts when the collection changes, so its scroll and search start again, kept per collection.
+- **The collapse button.** It's icon-only, an exception to §10.4 noted in DECISIONS.md. Words ("Hide") would be the alternative.
+- **Search in the outline pane.** A tree collection's pane has the outline's actions but no search, as the outline screen never had. Search would filter to matching pages and the folders above them, as the earlier pane did.
 - **Not done here:** a screen reader pass.
 
 ## Calls of 2026-10-19

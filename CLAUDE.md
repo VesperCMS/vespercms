@@ -254,7 +254,7 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - At most one primary (accent-filled) button per screen.
 - At most two levels of navigation visible at once.
 - No colored status badges. Status is text.
-- No icon-only buttons except close, overflow ("…"), drag handles, the outline's expand toggle and the body editor's formatting tools (DECISIONS.md, 2026-10-18), all with accessible names; the formatting tools also show a tooltip. Phase 4.5 adds the menu half of the split Publish ▾ button (DECISIONS.md, "Where scheduling lives in the studio"). Everywhere else an icon sits beside its words, and icons come only from the kit's `Icon` (Lucide).
+- No icon-only buttons except close, overflow ("…"), drag handles, the outline's expand toggle and the body editor's formatting tools (DECISIONS.md, 2026-10-18), all with accessible names; the formatting tools also show a tooltip. Phase 4.5 adds the menu half of the split Publish ▾ button (DECISIONS.md, "Where scheduling lives in the studio"). The `studio-panes` branch adds the panes' collapse button, with a tooltip (DECISIONS.md, "The studio is panes, full width"). Everywhere else an icon sits beside its words, and icons come only from the kit's `Icon` (Lucide).
 - At most five color tokens beyond neutrals on any screen: accent, accent-subtle, danger, focus, plus optional warning.
 - No tabs inside the editor but Content, Details and the collection's own (the `studio-panes` branch; DECISIONS.md, "The entry editor has tabs").
 - Body text 15–16px, line-height ≥ 1.5, two font weights.
