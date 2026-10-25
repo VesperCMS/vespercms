@@ -24,29 +24,36 @@ import {
 import {
   Button,
   Dialog,
-  Disclosure,
-  Drawer,
   ErrorSummary,
   InlineStatus,
   Link,
   Menu,
+  Tabs,
   TextArea,
   type MenuItem,
 } from '@vesper/ui';
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { ApiError } from '../app/api.ts';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
-import { LIST_PANE, useMediaQuery, WIDE_EDITOR } from '../app/media.ts';
-import { entriesChanged, ListPane } from './ListPane.tsx';
-import { usePaneShown } from '../app/pane.ts';
+import { usePane } from '../app/pane-context.ts';
+import { entriesChanged } from './ListPane.tsx';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
-import { focusWhenShown } from '../editor/reveal.ts';
+import { focusWhenShown, REVEAL_EVENT } from '../editor/reveal.ts';
 import { issueTarget } from '../editor/target.ts';
 import {
   fieldId,
@@ -200,16 +207,10 @@ function EntryForm({
   const [offline, setOffline] = useState(false);
   const [retries, setRetries] = useState(0);
   const [restored, setRestored] = useState(false);
-  /**
-   * Details (spec §10.3): a drawer from the top bar on a wide screen, the
-   * closing section of the column on a narrow one. One state for both, so
-   * resizing keeps it open or closed.
-   */
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const wide = useMediaQuery(WIDE_EDITOR);
-  // The collection's list beside the column, on wide screens (DECISIONS.md).
-  const listWide = useMediaQuery(LIST_PANE);
-  const [paneShown, setPaneShown] = usePaneShown();
+  /** The tab shown: Content (`main`), Details, or one the collection declares. */
+  const [tab, setTab] = useState('main');
+  // Among panes, the list is beside the entry already, so the bar needs no way back to it.
+  const pane = usePane();
   /** Each successful save glows Save once (glow-accent). */
   const [savedPulse, setSavedPulse] = useState(0);
 
@@ -369,11 +370,10 @@ function EntryForm({
         bodyApi.current?.reveal(note);
         return;
       }
-      const place = placeOf(note);
-      if (arranged.details.some((field) => keyOf(field) === place.top)) setDetailsOpen(true);
-      focusWhenShown(place.focusId);
+      // A field on another tab, or in a closed item, is shown first (editor/reveal.ts).
+      focusWhenShown(placeOf(note).focusId);
     },
-    [placeOf, arranged.details],
+    [placeOf],
   );
   // Once the drawer has closed. React Aria gives focus back to the count
   // only if focus fell to the page, so moving it first wins.
@@ -503,11 +503,6 @@ function EntryForm({
           // The dev API checks the body again with the site's real config.
           if (result.bodyIssues) setBodyIssues(result.bodyIssues);
           setRefusals((n) => n + 1);
-          // In the column, Details opens to show its errors. The drawer doesn't:
-          // it would take focus from the summary, whose links open it instead.
-          const detailKeys = new Set(arranged.details.map(keyOf));
-          if (!wide && result.issues.some((issue) => detailKeys.has(String(issue.path[0]))))
-            setDetailsOpen(true);
         } else {
           setNotice({ kind: result.reason, text: result.message });
         }
@@ -550,8 +545,6 @@ function EntryForm({
       bodyPrefix,
       bodyEol,
       api,
-      arranged.details,
-      wide,
       checks,
       parent,
       blockOn,
@@ -772,27 +765,32 @@ function EntryForm({
     : { href: hrefFor({ screen: 'list', collection: collection.name }), label: collection.label };
 
   const statusLine = [draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ');
-  const hasPane = listWide && collection.presentation.singleton !== true;
-  const hasDetails = !sourceOnly && arranged.details.length > 0;
-  const detailKeys = new Set(arranged.details.map(keyOf));
-  const detailProblems = issues.filter((issue) => detailKeys.has(String(issue.path[0]))).length;
+  // Content, the collection's own tabs, then Details; no tab list when Content is all there is.
+  const panels = sourceOnly
+    ? []
+    : [
+        { id: 'main', label: 'Content', fields: arranged.main },
+        ...arranged.tabs,
+        ...(arranged.details.length > 0
+          ? [{ id: 'details', label: 'Details', fields: arranged.details }]
+          : []),
+      ];
+  const tabbed = panels.length > 1;
+  const shownTab = panels.some((panel) => panel.id === tab) ? tab : 'main';
+  /** A tab's name, with its problems in words so they're known before it's chosen. */
+  const tabLabel = (panel: { label: string; fields: FieldModel[] }) => {
+    const keys = new Set(panel.fields.map(keyOf));
+    const count = issues.filter((issue) => keys.has(String(issue.path[0]))).length;
+    return count > 0
+      ? `${panel.label} (${formatCount(count, 'problem', 'problems')})`
+      : panel.label;
+  };
   const bar = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
-      <Link icon="back" href={back.href} className="text-small">
-        {back.label}
-      </Link>
-      {hasPane && (
-        <Button
-          variant="quiet"
-          icon="list-pane"
-          aria-expanded={paneShown}
-          {...(paneShown ? { 'aria-controls': PANE_ID } : {})}
-          onPress={() => {
-            setPaneShown(!paneShown);
-          }}
-        >
-          List
-        </Button>
+      {!pane && (
+        <Link icon="back" href={back.href} className="text-small">
+          {back.label}
+        </Link>
       )}
       {/* On a narrow screen the title field is just below, so the bar leaves it out. */}
       <span className="hidden min-w-0 flex-1 truncate font-semibold text-content sm:block">
@@ -809,20 +807,6 @@ function EntryForm({
             }}
           >
             {notesCount(notes.length, blocking.length)}
-          </Button>
-        )}
-        {hasDetails && wide && (
-          // The problem count is words, so the drawer's errors are known before it opens.
-          <Button
-            variant="quiet"
-            icon="details"
-            onPress={() => {
-              setDetailsOpen(true);
-            }}
-          >
-            {detailProblems > 0
-              ? `Details (${formatCount(detailProblems, 'problem', 'problems')})`
-              : 'Details'}
           </Button>
         )}
         <div className="flex items-center gap-2">
@@ -894,16 +878,31 @@ function EntryForm({
       : []),
   ];
 
-  return (
-    <Screen
-      title={titleText}
-      hideTitle={Boolean(arranged.title) && !sourceOnly}
-      bar={bar}
-      column
-      {...(hasPane && paneShown
-        ? { aside: <ListPane collection={collection} currentId={entryId} id={PANE_ID} /> }
-        : {})}
+  const bodyEditor = isContent ? (
+    <Suspense
+      fallback={
+        <p role="status" className="text-small text-content-muted">
+          Loading the body editor…
+        </p>
+      }
     >
+      <BodyEditor
+        value={body}
+        onChange={setBody}
+        format={format}
+        partials={partials}
+        issues={bodyIssues}
+        notes={bodyNotes}
+        apiRef={bodyApi}
+        disabled={!editable}
+        entryPath={entryPath}
+        imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}
+      />
+    </Suspense>
+  ) : null;
+
+  return (
+    <Screen title={titleText} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar} column>
       <EditorContext.Provider value={editor}>
         <div className="mx-auto flex max-w-editor flex-col gap-6">
           {doc?.message && (
@@ -973,8 +972,7 @@ function EntryForm({
             errors={errors}
             focusKey={refusals}
             onGo={(fieldId) => {
-              // A field in the closed drawer isn't on the page until the drawer opens.
-              if (hasDetails && !document.getElementById(fieldId)) setDetailsOpen(true);
+              // A field on another tab is shown first (editor/reveal.ts).
               focusWhenShown(fieldId);
             }}
           />
@@ -1000,57 +998,40 @@ function EntryForm({
               className="font-mono"
             />
           ) : (
+            arranged.title && <TitleField field={arranged.title} />
+          )}
+
+          {tabbed ? (
+            // Going to a field on another tab (the error summary, Go to field) chooses that tab first.
+            <TabsRevealing onReveal={setTab}>
+              <Tabs
+                label={titleText}
+                selected={shownTab}
+                onSelectedChange={setTab}
+                tabs={panels.map((panel) => ({
+                  id: panel.id,
+                  label: tabLabel(panel),
+                  children: (
+                    <>
+                      {panel.fields.map((field) => (
+                        <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
+                      ))}
+                      {panel.id === 'main' && bodyEditor}
+                    </>
+                  ),
+                }))}
+              />
+            </TabsRevealing>
+          ) : (
             <>
-              {arranged.title && <TitleField field={arranged.title} />}
-              {arranged.main.map((field) => (
-                <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
-              ))}
+              {!sourceOnly &&
+                arranged.main.map((field) => (
+                  <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
+                ))}
+              {bodyEditor}
             </>
           )}
-
-          {isContent && (
-            <Suspense
-              fallback={
-                <p role="status" className="text-small text-content-muted">
-                  Loading the body editor…
-                </p>
-              }
-            >
-              <BodyEditor
-                value={body}
-                onChange={setBody}
-                format={format}
-                partials={partials}
-                issues={bodyIssues}
-                notes={bodyNotes}
-                apiRef={bodyApi}
-                disabled={!editable}
-                entryPath={entryPath}
-                imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}
-              />
-            </Suspense>
-          )}
-
-          {hasDetails && !wide && (
-            <Disclosure title="Details" isExpanded={detailsOpen} onExpandedChange={setDetailsOpen}>
-              <div className="flex flex-col gap-6 pt-2 pl-6">
-                {arranged.details.map((field) => (
-                  <Field key={keyOf(field)} field={field} path={[keyOf(field)]} asSection={false} />
-                ))}
-              </div>
-            </Disclosure>
-          )}
         </div>
-
-        {hasDetails && wide && (
-          <Drawer title="Details" isOpen={detailsOpen} onOpenChange={setDetailsOpen}>
-            <div className="flex flex-col gap-6 pt-2">
-              {arranged.details.map((field) => (
-                <Field key={keyOf(field)} field={field} path={[keyOf(field)]} asSection={false} />
-              ))}
-            </div>
-          </Drawer>
-        )}
       </EditorContext.Provider>
 
       <NotesDrawer
@@ -1217,7 +1198,6 @@ function CloudNotices({
 }
 
 const SAVE_ID = 'entry-save';
-const PANE_ID = 'list-pane';
 
 /** Where a new page will go in the tree: under its parent, named by title. */
 function ParentNote({ collection, parent }: { collection: CollectionManifest; parent: string }) {
@@ -1367,4 +1347,28 @@ function takeKept(collection: string, id: string | null): Kept | null {
   } catch {
     return null;
   }
+}
+
+/** Chooses the tab that holds a field going to be focused (editor/reveal.ts). */
+function TabsRevealing({
+  onReveal,
+  children,
+}: {
+  onReveal: (tab: string) => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const reveal = (event: Event) => {
+      const tab = (event.target as Element).closest('[data-tab]')?.getAttribute('data-tab');
+      if (tab) onReveal(tab);
+    };
+    element.addEventListener(REVEAL_EVENT, reveal);
+    return () => {
+      element.removeEventListener(REVEAL_EVENT, reveal);
+    };
+  }, [onReveal]);
+  return <div ref={ref}>{children}</div>;
 }

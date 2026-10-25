@@ -9,11 +9,11 @@ import { entryShownTo, mayCreateIn } from '../cloud/access.ts';
 import { statusText } from './EntryList.tsx';
 
 /*
- * The collection's list beside the editor on wide screens (DECISIONS.md,
- * "The entry list sits beside the editor on wide screens"). Each entry is a
- * screen of its own, so the pane is drawn afresh with each one; what it
- * holds, what was searched and where it was scrolled are kept here for the
- * visit, so moving between entries leaves the list as it was.
+ * A collection's list as a pane beside the open entry (DECISIONS.md, "The
+ * studio is panes, full width"). Its heading links to the whole list, with
+ * its columns, filters and the outline's moves. What it holds, what was
+ * searched and where it was scrolled are kept here for the visit, so the
+ * list stays as it was when it's drawn again.
  */
 
 type Memory = { query: string; scrollTop: number; expanded: Set<Key> };
@@ -54,6 +54,8 @@ type Row = TreeNode & {
   title: string;
   entryId: string | undefined;
   meta: string;
+  /** The entry open beside the list. */
+  current?: boolean;
   children: Row[];
 };
 
@@ -105,12 +107,10 @@ function pathTo(rows: Row[], entryId: string): Key[] | null {
 export function ListPane({
   collection,
   currentId,
-  id,
 }: {
   collection: CollectionManifest;
   /** The entry open in the editor, or null for a new one. */
   currentId: string | null;
-  id: string;
 }) {
   const { api, cloud } = useStudio();
   const memory = memoryOf(collection.name);
@@ -159,7 +159,11 @@ export function ListPane({
     // In the cloud, only what the member may edit, as the list screen shows (spec §7.5).
     return flatRows(listed.entries.filter((entry) => entryShownTo(cloud, entry.path)));
   }, [listed, cloud]);
-  const shown = useMemo(() => matching(rows, query.trim().toLowerCase()), [rows, query]);
+  // Fresh rows when the open entry changes: the tree reuses a row whose item is the same object.
+  const shown = useMemo(
+    () => withCurrent(matching(rows, query.trim().toLowerCase()), currentId),
+    [rows, query, currentId],
+  );
   const currentRow = currentId === null ? null : (findRow(rows, currentId)?.id ?? null);
 
   // The open entry's folders are open, so it's in view.
@@ -178,30 +182,33 @@ export function ListPane({
     remember(collection.name, { query, expanded });
   }, [collection.name, query, expanded]);
 
+  const headingId = `pane-${collection.name}`;
   const newEntry =
     collection.editable && mayCreateIn(cloud, collection)
       ? hrefFor({ screen: 'new', collection: collection.name })
       : null;
 
   return (
-    <nav
-      id={id}
-      aria-label={collection.label}
-      className="sticky top-14 flex max-h-[calc(100dvh_-_var(--spacing)*14)] flex-col gap-3 self-start pt-8 pb-6"
-    >
-      <Link
-        href={hrefFor({ screen: 'list', collection: collection.name })}
-        className="text-label text-content"
-      >
-        {collection.label}
-      </Link>
-      <TextField label="Search" type="search" icon="search" value={query} onChange={setQuery} />
+    <nav aria-labelledby={headingId} className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-14 items-center border-b border-border px-4">
+        <h2 id={headingId} className="min-w-0 truncate text-label">
+          <Link
+            href={hrefFor({ screen: 'list', collection: collection.name })}
+            className="text-content"
+          >
+            {collection.label}
+          </Link>
+        </h2>
+      </div>
+      <div className="px-4 pt-3 pb-2">
+        <TextField label="Search" type="search" icon="search" value={query} onChange={setQuery} />
+      </div>
       <div
         ref={scroller}
         onScroll={(event) => {
           remember(collection.name, { scrollTop: event.currentTarget.scrollTop });
         }}
-        className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1"
+        className="min-h-0 flex-1 overflow-y-auto px-3"
       >
         {failed && !listed ? (
           <p role="alert" className="text-small text-danger">
@@ -215,13 +222,7 @@ export function ListPane({
             items={shown}
             // A row's name is this text, so it carries what the row shows: the title first, for type-ahead.
             textValue={(row) =>
-              [
-                row.title,
-                row.meta,
-                row.entryId !== undefined && row.entryId === currentId ? 'open now' : '',
-              ]
-                .filter(Boolean)
-                .join(', ')
+              [row.title, row.meta, row.current ? 'open now' : ''].filter(Boolean).join(', ')
             }
             expandedKeys={query ? allKeys(shown) : expanded}
             onExpandedChange={(keys) => {
@@ -252,7 +253,7 @@ export function ListPane({
         )}
       </div>
       {newEntry && (
-        <div>
+        <div className="border-t border-border px-3 py-2">
           <ButtonLink variant="quiet" icon="add" href={newEntry}>
             {tree ? 'New page' : 'New entry'}
           </ButtonLink>
@@ -281,4 +282,13 @@ function findRow(rows: Row[], entryId: string): Row | undefined {
     if (below) return below;
   }
   return undefined;
+}
+
+/** Copies of the rows, so each is drawn again with the entry that's open now. */
+function withCurrent(rows: Row[], currentId: string | null): Row[] {
+  return rows.map((row) => ({
+    ...row,
+    current: row.entryId !== undefined && row.entryId === currentId,
+    children: withCurrent(row.children, currentId),
+  }));
 }

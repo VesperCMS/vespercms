@@ -127,7 +127,7 @@ describe('the link picker (spec §6.15.6)', () => {
     renderStudio('#/c/events/e/summer-orientation', { api });
     const user = userEvent.setup();
     await screen.findByRole('textbox', { name: 'Body' });
-    await user.click(screen.getByRole('button', { name: 'Details' }));
+    // The redirect is on Content; Details holds the dates.
     await user.click(
       await screen.findByRole('button', { name: 'Choose a page for Unpublish redirect' }),
     );

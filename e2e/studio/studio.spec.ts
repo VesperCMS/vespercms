@@ -63,7 +63,7 @@ test('Appearance in the user menu: Dark is kept across a reload, and passes axe'
   await page.goto('/admin/');
   await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
   // Local mode's menu is named by git's user on this computer, or "You".
-  const menu = page.getByRole('navigation', { name: 'Studio' }).getByRole('button').last();
+  const menu = page.getByRole('banner').getByRole('button').last();
   await menu.click();
   await expect(page.getByRole('menuitemradio', { name: 'System' })).toHaveAttribute(
     'aria-checked',
@@ -123,50 +123,48 @@ test('every screen passes axe in the dark theme too', async ({ page }) => {
   }
 });
 
-test('by keyboard: Details is a drawer on a wide screen and the closing section on a narrow one', async ({
-  page,
-}) => {
+test('by keyboard: the entry’s tabs, Content and Details, at any width', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
   await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Harbor at dawn');
-  // Wide: a button in the top bar opens the drawer, focus goes in and comes back.
-  const button = page.getByRole('banner').getByRole('button', { name: 'Details', exact: true });
-  await button.focus();
-  await page.keyboard.press('Enter');
-  const drawer = page.getByRole('dialog', { name: 'Details' });
-  await expect(drawer).toBeVisible();
-  await expect(drawer.getByLabel('Published at')).toBeVisible();
-  await page.keyboard.press('Tab');
-  await expect(drawer.locator(':focus')).toHaveCount(1);
-  await expectAccessible(page);
-  await page.keyboard.press('Escape');
-  await expect(drawer).toBeHidden();
-  await expect(button).toBeFocused();
-
-  // Narrow (and at 200% zoom on a laptop): the same fields in a disclosure at the end.
-  await page.setViewportSize({ width: 800, height: 900 });
-  await expect(page.getByRole('banner').getByRole('button', { name: 'Details' })).toHaveCount(0);
-  const section = page.getByRole('main').getByRole('button', { name: 'Details', exact: true });
-  await expect(section).toHaveAttribute('aria-expanded', 'false');
-  await section.focus();
-  await page.keyboard.press('Enter');
-  await expect(section).toHaveAttribute('aria-expanded', 'true');
+  const content = page.getByRole('tab', { name: 'Content' });
+  const details = page.getByRole('tab', { name: 'Details' });
+  await expect(content).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('Published at')).toBeHidden();
+  // Arrow keys move between tabs, and the chosen one shows its fields.
+  await content.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(details).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByLabel('Published at')).toBeVisible();
+  await expectAccessible(page);
+
+  // Narrow (and at 200% zoom on a laptop): the same tabs, and the same one chosen.
+  await page.setViewportSize({ width: 600, height: 900 });
+  await expect(details).toHaveAttribute('aria-selected', 'true');
+  await details.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(content).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('textbox', { name: 'Summary' })).toBeVisible();
   await expectAccessible(page);
 });
 
-test('by keyboard: the list beside the editor opens another entry, asks before leaving changes, and follows a save', async ({
+test('by keyboard: panes, full width: the collections, the list and the entry, folding when they don’t fit', async ({
   page,
 }) => {
   touches('src/content/blog/welcome.md');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
-  const pane = page.getByRole('navigation', { name: 'Blog posts' });
-  await expect(pane.getByRole('row', { name: /^Harbor at dawn.*open now$/ })).toBeVisible();
+  const structure = page.getByRole('navigation', { name: 'Content' });
+  const list = page.getByRole('navigation', { name: 'Blog posts' });
+  await expect(structure.getByRole('link', { name: /Blog posts/ })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(list.getByRole('row', { name: /^Harbor at dawn.*open now$/ })).toBeVisible();
   await expectAccessible(page);
 
-  // Enter on a row opens it, and focus lands on the new screen's heading.
-  await pane.getByRole('row', { name: /^Welcome to the playground/ }).focus();
+  // Enter on a row opens it beside the list, and focus lands on its heading.
+  await list.getByRole('row', { name: /^Welcome to the playground/ }).focus();
   await page.keyboard.press('Enter');
   const title = page.getByRole('textbox', { name: 'Title' });
   await expect(title).toHaveValue('Welcome to the playground');
@@ -176,19 +174,37 @@ test('by keyboard: the list beside the editor opens another entry, asks before l
   await title.focus();
   await page.keyboard.press(keys.lineEnd);
   await page.keyboard.type(', again');
-  await pane.getByRole('row', { name: /^Harbor at dawn/ }).focus();
+  await list.getByRole('row', { name: /^Harbor at dawn/ }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('alertdialog', { name: 'Leave without saving?' })).toBeVisible();
   await page.getByRole('button', { name: 'Keep editing' }).click();
   await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
   // The list follows the save.
-  await expect(pane.getByRole('row', { name: /^Welcome to the playground, again/ })).toBeVisible();
+  await expect(list.getByRole('row', { name: /^Welcome to the playground, again/ })).toBeVisible();
 
-  // Narrower, the editor is the single column again.
-  await page.setViewportSize({ width: 1024, height: 900 });
-  await expect(pane).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'List' })).toHaveCount(0);
+  // The collections are one click away: Pages opens beside them.
+  await structure.getByRole('link', { name: /Pages/ }).click();
+  await expect(
+    page.getByRole('main').getByRole('heading', { level: 1, name: 'Pages' }),
+  ).toBeVisible();
+  await expectAccessible(page);
+
+  // Too narrow for every pane: the collections fold into a strip, which opens again.
+  await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+  await page.setViewportSize({ width: 1000, height: 800 });
+  const strip = page.getByRole('button', { name: 'Show Content' });
+  await expect(strip).toBeVisible();
+  await expect(structure).toHaveCount(0);
+  await strip.click();
+  await expect(structure).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show Blog posts' })).toBeVisible();
+  await expectAccessible(page);
+
+  // Narrower still: one screen at a time, with the top bar's menus.
+  await page.setViewportSize({ width: 700, height: 900 });
+  await expect(structure).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Blog posts' })).toBeVisible();
 });
 
 test('a deep link survives a reload', async ({ page }) => {
@@ -243,7 +259,7 @@ test('by keyboard: list items are rows that move with Alt+arrows and open in pla
   await page.keyboard.press('Alt+ArrowDown');
   await expect(page.getByText('Moved Our mission to position 2 of 2.')).toBeAttached();
   await expect(mission).toBeFocused();
-  await expect(page.getByRole('heading', { level: 3 })).toHaveText([
+  await expect(page.getByRole('main').getByRole('heading', { level: 3 })).toHaveText([
     /^Accreditation/,
     /^Our mission/,
   ]);
