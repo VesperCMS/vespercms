@@ -691,17 +691,14 @@ It's on its own branch so `main` stays as it is until he's seen it. DECISIONS.md
 - **Checks.**
   - Typecheck, lint and the format check pass.
   - Vitest passes, with new tests for the panes (landmarks, keys, search kept, the leave dialog, trees, singletons, folding, narrow) and the tabs (layout, keys, problem counts, the summary choosing a tab, declared tabs in core and in the arrangement).
-  - The studio, GitHub and cloud e2e projects pass, with e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px.
+  - Every e2e project passes, with this branch's builds of the playground and vespercms.com: studio, GitHub and cloud (46, plus 2 macOS-only skips), static and site (124). They include e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px.
 
 **Open, for Jeremy, before it merges:**
 - **Merge or keep exploring.** If it merges, spec §10.2 to §10.4 and CLAUDE.md's budget get rewritten for panes and tabs, not just annotated.
 - **The home pane.** With nothing chosen, the pane beside the collections is the old Home screen, which repeats them with counts and last edits. Alternatives: recent edits across the site, or nothing (as Sanity shows).
 - **Where tabs go in a tag's settings dialog.** Not at all, today: a tag's attributes are one form.
 - **Moving between collections.** The list pane remounts when the collection changes, so its scroll and search start again, kept per collection.
-- **Not done here.**
-  - A screen reader pass.
-  - The static and vespercms.com e2e projects with this branch's build.
-  - The dark theme's axe pass at pane widths. The studio e2e project runs axe in both themes at 1280px, which is now panes.
+- **Not done here:** a screen reader pass.
 
 ## Calls of 2026-10-19
 
