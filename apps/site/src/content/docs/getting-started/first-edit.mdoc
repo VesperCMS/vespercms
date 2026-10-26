@@ -23,7 +23,14 @@ New entry starts one. Its file is named after its title the first time you save 
 
 The title field is the page's heading. Below it are tabs: **Content** holds the main fields, in your schema's order, then the body, and **Details** the secondary fields: slugs, dates, tags, `draft`, ordering and SEO. The arrow keys move between tabs. A field's `.meta({ placement: 'details' })` or `'main'` overrides the rule, and a collection can add tabs of its own, such as SEO (see [Fields](/docs/content/fields/)).
 
-The top bar also has the entry's status ("Unsaved changes", "Saved just now"), Save, and a "…" menu with Delete and, for a collection with a `url`, View on site.
+The top bar also has the entry's status ("Unsaved changes", "Saved just now"), Save, and a "…" menu:
+
+- **View on site** and **Copy page address**, for a collection with a `url`. The address is the page's full address, on Astro's `site` when your config sets one, so one copied while working locally is the live page's.
+- **Copy editing link**, the studio's address for this entry, to send to a colleague. It opens the entry after a reload, and after signing in.
+- **Duplicate**, which opens a new entry with everything copied, " (copy)" after its title and a new address. Nothing is saved until you save it; the new file then starts as the original's own text, comments and all, with your changes. In a collection of pages, the copy goes right after the original, without its subpages.
+- **Delete**.
+
+After a copy, the status says "Link copied" for a few seconds. Where the browser doesn't allow copying (a site on plain `http`), the link is shown selected, ready for Ctrl+C (⌘C on a Mac).
 
 ## Panes
 
@@ -66,7 +73,7 @@ New images go to `src/assets/<collection>/`, or beside the image they replace, a
 
 ## Pages in a tree
 
-A collection with `tree: true` opens as an outline: pages as they nest on the site, each with its address. Each page's "…" menu has Add child page, Move to…, Move up, Move down and Delete. From a page, the right arrow or Shift+F10 reaches its menu, and Alt+↑ and Alt+↓ move it. You can drag pages too. The search field above the outline narrows it to the pages that match.
+A collection with `tree: true` opens as an outline: pages as they nest on the site, each with its address. Each page's "…" menu has Add child page, Duplicate, Move to…, Move up, Move down and Delete. From a page, the right arrow or Shift+F10 reaches its menu, and Alt+↑ and Alt+↓ move it. You can drag pages too. The search field above the outline narrows it to the pages that match.
 
 - **Move up** and **Move down** rewrite the folder's `_order.yaml`.
 - **Add child page** opens a new page under that one. Saving it adds it to the folder's `_order.yaml`, if there is one. A parent that's a single file becomes a folder's section page, so `about.md` moves to `about/index.md`, at the same address.
