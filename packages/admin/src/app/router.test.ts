@@ -5,6 +5,7 @@ describe('parseRoute and hrefFor', () => {
   const routes: Exclude<Route, { screen: 'not-found' }>[] = [
     { screen: 'home' },
     { screen: 'media' },
+    { screen: 'scheduled' },
     { screen: 'list', collection: 'blog' },
     { screen: 'new', collection: 'blog' },
     { screen: 'edit', collection: 'blog', id: 'harbor-at-dawn' },

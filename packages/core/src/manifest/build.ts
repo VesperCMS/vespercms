@@ -93,6 +93,8 @@ export type ManifestInput = {
     collections?: Record<string, CollectionConfig>;
     widgets?: Record<string, WidgetDefinition>;
     timeZone?: string;
+    /** How often the scheduled rebuild runs, in minutes (spec §6.17). */
+    rebuildEvery?: number;
     /** Native redirect rules (spec §6.15.5). */
     redirects?: { native?: NativeTarget[] };
     /** UI hints for Markdoc tags (spec §6.5.1). */
@@ -175,6 +177,9 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
       srcDir: input.site.srcDir,
       ...(input.site.contentConfig ? { contentConfig: input.site.contentConfig } : {}),
       ...(input.config?.timeZone ? { timeZone: input.config.timeZone } : {}),
+      ...(input.config?.rebuildEvery !== undefined
+        ? { rebuildEvery: input.config.rebuildEvery }
+        : {}),
       ...(input.site.urls ? { urls: urlSettingsOf(input.site.urls, input.config?.timeZone) } : {}),
       ...(input.config?.redirects?.native?.length
         ? { redirects: { native: [...input.config.redirects.native] } }

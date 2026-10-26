@@ -6,6 +6,7 @@ import type {
   MoveRequest,
   MoveResult,
   PageLink,
+  ScheduledChange,
   PageTree,
   RedirectsDocument,
   ReorderRequest,
@@ -50,6 +51,8 @@ export interface StudioApi {
   fileUrl(path: string): Promise<string>;
   /** Every page with a URL, in every collection, for the link picker (spec §6.15.6). */
   listPages(): Promise<PageLink[]>;
+  /** Every change still to come in the site's scheduled collections, soonest first (spec §6.17). */
+  listScheduled(): Promise<ScheduledChange[]>;
   /** A tree collection's outline (spec §6.15.2). */
   pageTree(collection: string): Promise<PageTree>;
   /** Moves a page and everything under it; `dryRun` only describes what would happen. */
@@ -150,6 +153,7 @@ export function createLocalApi(base: string, fetcher: typeof fetch = fetch): Stu
     listPartials: () => call('/partials'),
     fileUrl: (path) => Promise.resolve(`${root}/file${query({ path })}`),
     listPages: () => call('/pages'),
+    listScheduled: () => call('/scheduled'),
     pageTree: (collection) => call(`/tree${query({ collection })}`),
     movePage: (request, options = {}) =>
       call(`/move${options.dryRun ? query({ dryRun: '1' }) : ''}`, {

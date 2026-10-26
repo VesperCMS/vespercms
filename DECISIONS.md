@@ -1222,6 +1222,18 @@ Rejected:
 - the view inside the Changes drawer, which is cloud only, while scheduling is free;
 - the marker in the toolbar alone.
 
+Built 2026-10-26 (Phase 4.5's step 3), with these details and differences:
+- **The line to the view.** Among panes, Home is the collections pane itself, so "3 scheduled changes" sits at its top, a sentence with a link, absent when nothing is scheduled; on one screen at a time it's on Home. It's no list item, so it isn't the sidebar item call 11 rejected.
+- **Publish ▾'s menu** holds Schedule… (for an entry not live yet, or one whose collection unpublishes), "Publish now" (only while a publish time waits; "Make it live now" in local mode, where nothing is published), and "Cancel schedule" (only for a live entry's time to come down, as call 9 leaves a publish time to be rescheduled). Its items carry the kit's new `schedule`, `publish-now` and `unschedule` icons (Lucide's CalendarClock, Send and CalendarX).
+- **One dialog, two purposes.** Schedule… from Publish ▾ sets the times and saves (publishes in GitHub mode and the cloud); Change schedule… from Details only sets them, for the next save, and contributors reach it there. The dialog puts focus in its first time field, names the zone once at its top, and its line on accuracy names the day with the time ("Goes live the next time the site is built after Sat, Oct 31, 8:00 AM."), referenced by the time fields rather than a live region, so typing a date isn't read out.
+- **`rebuildEvery`** is a `vesper.config.ts` key now (call 5), since the dialog's line reads it; `vesper deploy init` will print the value (step 4).
+- **The public-repository line** shows in GitHub mode when there's a time to go live: the gate reads the repository's `private` flag from the call that already checks push access. Connected to the cloud it waits for step 5's `GET /schedule`.
+- **Details** puts the redirect field with the times, and the schedule's summary takes the place of all three fields, where the first of them would be.
+- **The Scheduled view** reschedules and cancels by saving the entry, and in the cloud publishes the draft where the member may; otherwise it says it's a draft. Rows are hidden by the member's grants, as the lists are.
+- **In the cloud,** Publish ▾ shows beside Publish, which shows when there's something to publish. Held drafts, the cloud's states and cancelling a publish come with step 5.
+- **The words change on their own** once a time passes: the editor, the summary, the dialog and the view read the time once a minute (`useNow`), which also keeps their renders pure.
+- **The dev marker:** the dev `vesper:content` adds each scheduled entry's words, and whether it's outside its window, to what it notes for the page; the middleware puts the note at the top of the page when the page's own entry is outside, and the toolbar app lists the words and turns on its dot.
+
 ## GitHub mode
 
 ### 2026-10-19: GitHub mode runs core's services in the browser

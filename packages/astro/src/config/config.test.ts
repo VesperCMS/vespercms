@@ -45,6 +45,19 @@ describe('checkConfig', () => {
   });
 });
 
+describe('rebuildEvery', () => {
+  it('takes whole minutes, at least 5, and explains anything else', () => {
+    expect(checkConfig({ rebuildEvery: 60 })).toEqual([]);
+    for (const value of [2, 7.5, '60'])
+      expect(checkConfig({ rebuildEvery: value })).toEqual([
+        {
+          level: 'error',
+          message: `rebuildEvery is how often the scheduled rebuild runs, in whole minutes, at least 5 (GitHub Actions' shortest schedule), not ${JSON.stringify(value)}.`,
+        },
+      ]);
+  });
+});
+
 describe('timeZone', () => {
   it('accepts IANA names and explains anything else', () => {
     expect(checkConfig({ timeZone: 'America/New_York' })).toEqual([]);

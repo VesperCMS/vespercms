@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGitHubFake, type GitHubFake } from '../../../../scripts/github-fake.mjs';
 import { expectNoViolations, playgroundManifest } from '../test/helpers.tsx';
 import { GitHubGate } from './GitHubGate.tsx';
@@ -134,6 +134,29 @@ describe('GitHub mode in the studio', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out of GitHub' }));
     expect(await screen.findByRole('button', { name: 'Sign in with GitHub' })).toBeInTheDocument();
     expect(sessionStorage.getItem('vesper.github.session')).toBeNull();
+  });
+
+  it('says, when scheduling a publish, that a public repository shows it early', async () => {
+    // Before harvest-concert goes live, on 31 October 2026. Only Date is faked.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-26T16:00:00Z') });
+    try {
+      fake.state.private = false;
+      signedIn();
+      window.history.replaceState(null, '', '/admin/#/c/events/e/harvest-concert');
+      render(<GitHubGate settings={settings} options={options} fetcher={fetcher} />);
+      const user = userEvent.setup();
+      await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
+      await user.click(screen.getByRole('button', { name: 'More ways to publish' }));
+      await user.click(await screen.findByRole('menuitem', { name: 'Schedule…' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Schedule' });
+      expect(
+        within(dialog).getByText(
+          'This site’s repository is public, so anyone can read this there before it goes live.',
+        ),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('publishes an edit as one commit by the editor, and says when it will be live', async () => {

@@ -156,6 +156,7 @@ export function createBrowserApi(options: BrowserApiOptions): StudioApi {
         return url;
       }),
     listPages: () => call(async () => (await services()).pages.pages()),
+    listScheduled: () => call(async () => (await services()).content.scheduledChanges(new Date())),
     pageTree: (collection) => call(async () => (await services()).pages.tree(collection)),
     movePage: (request, moveOptions) =>
       call(async () => {

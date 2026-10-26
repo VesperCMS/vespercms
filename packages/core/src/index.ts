@@ -209,6 +209,7 @@ export {
   type EntryStatus,
   type EntryFormat,
   type EntrySummary,
+  type ScheduledChange,
   type CollectionSummary,
   type EntryDocument,
   type SaveRequest,

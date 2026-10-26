@@ -8,7 +8,16 @@ import { adminUrl } from 'virtual:vesper/page';
  * from the page itself (see page-entries.ts).
  */
 
-type PageEntry = { collection: string; id: string; kind: 'shown' | 'listed'; title?: string };
+type PageEntry = {
+  collection: string;
+  id: string;
+  kind: 'shown' | 'listed';
+  title?: string;
+  /** A scheduled entry's status words (spec §6.17). */
+  status?: string;
+  /** Outside its publish window now: visitors wouldn't see it. */
+  outside?: true;
+};
 
 function readEntries(): PageEntry[] {
   const script = document.getElementById('vesper-page-entries');
@@ -47,7 +56,7 @@ function entryList(entries: PageEntry[]): HTMLUListElement {
     link.textContent = entry.title ?? entry.id;
     const where = document.createElement('span');
     where.className = 'collection';
-    where.textContent = ` (${entry.collection})`;
+    where.textContent = ` (${entry.collection})${entry.status ? ` · ${entry.status}` : ''}`;
     item.append(link, where);
     list.append(item);
   }
@@ -60,7 +69,7 @@ function entryList(entries: PageEntry[]): HTMLUListElement {
 }
 
 export default defineToolbarApp({
-  init(canvas) {
+  init(canvas, app) {
     const panel = document.createElement('astro-dev-toolbar-window');
     const style = document.createElement('style');
     style.textContent = STYLE;
@@ -98,6 +107,8 @@ export default defineToolbarApp({
       studio.href = adminUrl;
       studio.textContent = 'Open the studio';
       content.append(studio);
+      // The toolbar's dot: something on this page isn't live for visitors.
+      app.toggleNotification({ state: entries.some((e) => e.outside), level: 'warning' });
     };
 
     render();

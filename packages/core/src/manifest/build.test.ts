@@ -161,10 +161,12 @@ describe('buildManifest: URLs and trees (spec §6.15)', () => {
       collections: [pages('**/[^_]*.md')],
       config: {
         timeZone: 'America/New_York',
+        rebuildEvery: 60,
         redirects: { native: ['apache'] },
         collections: { pages: { url: '/:path', tree: true, maxDepth: 4 } },
       },
     });
+    expect(manifest.site.rebuildEvery).toBe(60);
     expect(manifest.site.urls).toEqual({
       base: '/college/',
       trailingSlash: 'always',

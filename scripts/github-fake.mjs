@@ -37,6 +37,7 @@ const CORS = {
  *   token?: string,
  *   login?: string,
  *   push?: boolean,
+ *   private?: boolean,
  * }} options
  */
 export function createGitHubFake(options) {
@@ -47,6 +48,7 @@ export function createGitHubFake(options) {
   const state = {
     token: options.token ?? 'gho_test-token',
     push: options.push ?? true,
+    private: options.private !== false,
     protected: false,
     rateLimited: false,
     truncate: false,
@@ -303,6 +305,7 @@ export function createGitHubFake(options) {
       return json(200, {
         full_name: `${owner}/${repo}`,
         default_branch: branch,
+        private: state.private,
         permissions: { admin: false, push: state.push, pull: true },
       });
     }

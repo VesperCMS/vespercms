@@ -1,5 +1,5 @@
 import type { SchedulePresentation } from '@vesper/core';
-import { isPublished } from '@vesper/core/schedule';
+import { isPublished, scheduleStatus } from '@vesper/core/schedule';
 
 /*
  * `vesper:content`'s loaders in a build (spec §6.17, D18): an entry of a
@@ -22,6 +22,26 @@ type Content = {
   getEntry: (...args: never[]) => Promise<Entry | undefined>;
   getEntries: (refs: never[]) => Promise<Entry[]>;
 };
+
+/**
+ * In dev, what an entry's schedule says now (spec §6.17's dev marker): its
+ * status words, and whether visitors would see it in a build now. Nothing
+ * for an entry of an unscheduled collection, or one live with no end.
+ */
+export function scheduleNote(
+  entry: Entry,
+  data: { schedules: Record<string, SchedulePresentation>; zone: string },
+): { status?: string; outside?: true } {
+  if (typeof entry.collection !== 'string') return {};
+  const schedule = data.schedules[entry.collection];
+  if (!schedule) return {};
+  const now = new Date();
+  const status = scheduleStatus(schedule, entry.data as never, now, data.zone);
+  return {
+    ...(status ? { status } : {}),
+    ...(isPublished(schedule, entry.data as never, now) ? {} : { outside: true as const }),
+  };
+}
 
 export function scheduledLoaders(content: Content, data: ScheduleData) {
   const at = new Date(data.instant);

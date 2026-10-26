@@ -127,15 +127,20 @@ describe('the link picker (spec §6.15.6)', () => {
     renderStudio('#/c/events/e/summer-orientation', { api });
     const user = userEvent.setup();
     await screen.findByRole('textbox', { name: 'Body' });
-    // The redirect is on Content; Details holds the dates.
+    // The redirect is set with the schedule's times, from Details.
+    await user.click(screen.getByRole('tab', { name: 'Details' }));
+    await user.click(await screen.findByRole('button', { name: 'Change schedule…' }));
+    const schedule = await screen.findByRole('dialog', { name: 'Change schedule' });
     await user.click(
-      await screen.findByRole('button', { name: 'Choose a page for Unpublish redirect' }),
+      within(schedule).getByRole('button', { name: 'Choose a page for Then send visitors to' }),
     );
     const dialog = await screen.findByRole('dialog', { name: 'Choose a page' });
     await user.click(within(dialog).getByRole('combobox', { name: 'Page' }));
     await user.click(await screen.findByRole('option', { name: 'About the college (/about/)' }));
     await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: /Unpublish redirect/ })).toHaveValue('/about/');
+      expect(within(schedule).getByRole('textbox', { name: /Then send visitors to/ })).toHaveValue(
+        '/about/',
+      );
     });
   });
 });

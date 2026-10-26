@@ -56,7 +56,16 @@ export function arrangeFields(collection: CollectionManifest): ArrangedFields {
       field.kind === 'string' && TITLE_KEYS.includes(keyOf(field)) && field.placement !== 'details',
   );
   const schedule = collection.presentation.schedule;
-  const scheduled = new Set(schedule ? [schedule.publishAt, schedule.unpublishAt] : []);
+  // Where visitors go once it comes down belongs with the times.
+  const scheduled = new Set(
+    schedule
+      ? [
+          schedule.publishAt,
+          schedule.unpublishAt,
+          schedule.unpublishRedirect ?? 'unpublishRedirect',
+        ]
+      : [],
+  );
 
   const main: FieldModel[] = [];
   const details: FieldModel[] = [];

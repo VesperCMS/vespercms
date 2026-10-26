@@ -185,7 +185,9 @@ The collection's schema needs the fields (`publishAt: fields.datetime().optional
 - **Unpublished pages** answer 404, or redirect where their `unpublishRedirect` says: a temporary redirect, through the same host rules as `vesper.redirects.yaml`, and never written into it. A redirect in the file for the same address wins.
 - **`dist/_vesper/schedule.json`** says when the site next changes, never what: `{ "version": 1, "builtAt": "…", "next": "…" }`, with `next` null when nothing is scheduled.
 
-The site's content changes only when it's built, so a post goes live at the first build after its time.
+The site's content changes only when it's built, so a post goes live at the first build after its time. `rebuildEvery` (minutes, at least 5) in `vesper.config.ts` says how often the site's scheduled rebuild runs, so the studio can say "This site rebuilds every hour".
+
+In the studio, a scheduled collection's editor has **Publish ▾** (Save ▾ in local mode), whose menu holds **Schedule…**: when the entry goes live, when it comes down and where visitors go then, in the site's time zone. Details shows the schedule in words with **Change schedule…**, the lists say each entry's schedule ("Scheduled · Sat, Oct 31, 8:00 AM") and filter to what's scheduled, and the **Scheduled** view (`#/scheduled`) lists every change still to come. In `astro dev` a scheduled entry's own page carries a note saying when visitors will see it, and the dev toolbar's Vesper app lists each entry's schedule.
 
 ### Images (spec §6.6.3)
 

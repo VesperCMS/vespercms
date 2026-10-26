@@ -120,6 +120,8 @@ export function createDevApi(options: DevApiOptions): Handler {
       send(res, 200, await service.listPartials());
     } else if (route === 'pages' && method === 'GET') {
       send(res, 200, await pages.pages());
+    } else if (route === 'scheduled' && method === 'GET') {
+      send(res, 200, await service.scheduledChanges(new Date()));
     } else if (route === 'tree' && method === 'GET') {
       if (!known) send(res, 404, { message: `There's no collection called "${collection}".` });
       else send(res, 200, await pages.tree(collection));

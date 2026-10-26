@@ -19,6 +19,7 @@ import { MediaBrowser } from '../screens/MediaBrowser.tsx';
 import { NotFound } from '../screens/NotFound.tsx';
 import { PageTree } from '../screens/PageTree.tsx';
 import { Redirects } from '../screens/Redirects.tsx';
+import { ScheduledLine, ScheduledView } from '../schedule/ScheduledView.tsx';
 import { collectionIcon } from './collection-icon.ts';
 import type { Studio } from './context.tsx';
 import { useLoad } from './load.ts';
@@ -321,6 +322,9 @@ function panesFor(route: Route, studio: Studio, wide: boolean): PaneSpec[] {
   if (route.screen === 'redirects') {
     return [structure, flex('redirects', 'Redirects', <Redirects />)];
   }
+  if (route.screen === 'scheduled') {
+    return [structure, flex('scheduled', 'Scheduled', <ScheduledView />)];
+  }
   if (
     route.screen === 'list' ||
     route.screen === 'edit' ||
@@ -461,6 +465,7 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
   return (
     <PaneFrame title="Content" headingRef={heading}>
       <div className="py-3">
+        <ScheduledLine className="mb-3 px-4" />
         <ul className="flex flex-col gap-0.5">{collections.map(collectionItem)}</ul>
         {singletons.length > 0 && (
           <>

@@ -34,7 +34,10 @@ import {
   type FieldIssue,
   type SaveRequest,
   type SaveResponse,
+  type ScheduledChange,
 } from './protocol.ts';
+import { scheduledEvents } from '../schedule/events.ts';
+import { publishWindow } from '../schedule/window.ts';
 
 /*
  * The studio's content operations over any storage adapter: list, read,
@@ -663,6 +666,7 @@ export class ContentService {
     for (const key of collection.presentation.listFields ?? []) {
       if (data[key] !== undefined) fields[key] = encodeValue(data[key]);
     }
+    const { publishAt, unpublishAt } = publishWindow(collection.presentation.schedule, data);
     return {
       id: entry.id,
       path: entry.path,
@@ -671,7 +675,42 @@ export class ContentService {
       fields,
       ...(entry.modifiedAt !== undefined ? { updatedAt: entry.modifiedAt } : {}),
       ...(data.draft === true ? { draft: true } : {}),
+      ...(publishAt || unpublishAt
+        ? {
+            schedule: {
+              ...(publishAt ? { publishAt: publishAt.toISOString() } : {}),
+              ...(unpublishAt ? { unpublishAt: unpublishAt.toISOString() } : {}),
+            },
+          }
+        : {}),
     };
+  }
+
+  /**
+   * Every change still to come after `now` in the site's scheduled
+   * collections, soonest first, with each entry's title (spec §6.17): the
+   * studio's Scheduled view, read from the files in every mode.
+   */
+  async scheduledChanges(now: Date): Promise<ScheduledChange[]> {
+    const titles = new Map<string, string>();
+    const entries = [];
+    for (const collection of this.collections.values()) {
+      if (!collection.presentation.schedule) continue;
+      for (const entry of await this.locateAll(collection)) {
+        titles.set(`${collection.name}/${entry.id}`, titleOf(collection, entry.data, entry.id));
+        entries.push({
+          collection: collection.name,
+          id: entry.id,
+          path: entry.path,
+          data: entry.data,
+        });
+      }
+    }
+    return scheduledEvents([...this.collections.values()], entries, now).map((event) => ({
+      ...event,
+      at: event.at.toISOString(),
+      title: titles.get(`${event.collection}/${event.id}`) ?? event.id,
+    }));
   }
 }
 

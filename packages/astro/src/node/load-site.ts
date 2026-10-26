@@ -212,6 +212,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
               ...(config.collections ? { collections: config.collections } : {}),
               ...(config.widgets ? { widgets: config.widgets } : {}),
               ...(config.timeZone ? { timeZone: config.timeZone } : {}),
+              ...(config.rebuildEvery !== undefined ? { rebuildEvery: config.rebuildEvery } : {}),
               ...(config.markdoc ? { markdoc: config.markdoc } : {}),
               ...(config.mdx ? { mdx: config.mdx } : {}),
               ...(config.redirects ? { redirects: config.redirects } : {}),
