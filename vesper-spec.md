@@ -1379,7 +1379,7 @@ The component library isn't the problem. Taproot uses a few Radix primitives wit
 **App shell**
 - A top bar holds: site name (site switcher if the user has several), a search/command palette (⌘K), and a user menu. The user menu holds Appearance (System, Light or Dark), in every mode (decided October 25, 2026). One screen at a time, it also holds a "Content" menu listing collections.
 - At 48rem (768px) and wider, the studio is full width and made of panes side by side, Sanity-style (decided October 25, 2026): the structure pane (every collection with its count, then Settings, then Site), then the open collection's list, then the entry, Media or Redirects. Each pane scrolls on its own. People can collapse any pane but the deepest into a strip, and the studio folds the earliest into strips when they don't fit. Narrower, the deepest pane alone is the screen.
-- The home screen is a plain list of collections and singletons, with entry counts and "last edited."
+- The home screen is a plain list of collections and singletons, with entry counts and "last edited." Among panes it's the structure pane alone, with nothing beside it except, in the cloud, the drafts waiting to be published, while there are any (decided October 26, 2026).
 
 **Entry list**
 - One row per entry: title, plus muted text showing who edited it and when, plus status as text.

@@ -1339,6 +1339,10 @@ Built 2026-10-25. Every entry is a screen of its own, remounted, so the pane is 
 
 A singleton has no list pane: its one entry opens beside the collections.
 
+**With nothing chosen (`#/`, and `#/changes` under its drawer), the structure pane is the only pane, so it's the deepest: `<main>`, with "Content" as the page's `h1` and focus target, and no collapse button. The rest of the row is empty, as beside a list. In the cloud, while drafts wait to be published, a pane beside the collections holds the line that opens Changes ("2 drafts are waiting to be published", See changes). It's a region with an `h2`, "Changes", and absent when none wait (spec §6.9). Narrower than 48rem, Home stays as it was: the one place there that lists the collections with their counts and last edits.** Recommended on 2026-10-25 and queued by Jeremy; built 2026-10-26. Why: Home beside the collections repeated them one pane over. Rejected:
+- Recent edits across the site, which only local mode could show: GitHub storage sets no `modifiedAt`, and the cloud reads through it.
+- The waiting drafts as the deepest pane, with the page's `h1`. Drafts arrive in the background, once a minute and whenever the tab comes back into view, so the `h1`, the page title and the focus target would move with them, and focus on the collections' heading would drop to the page as it became an `h2`.
+
 **Each pane scrolls on its own, and the top bar spans the width, with Changes and the user menu. When the panes don't fit, the earlier ones fold into strips, the structure pane first; a strip opens with a click, folding the next one instead, until the next navigation. Narrower than 48rem, the deepest pane alone is the screen, with the top bar's menus, as before.** This supersedes "The entry list sits beside the editor on wide screens" on this branch.
 
 **People can collapse any pane but the deepest with a button at the end of its header. It folds the pane into the same strip, and it stays collapsed until its strip is pressed. The choice is kept by kind (the collections, a collection's list) in this browser's `localStorage`, so it holds from one entry and one collection to the next.** Focus moves to the strip, since the pressed button goes with the pane, and back to the collapse button when the strip opens it. The collapse button is icon-only (`pane-collapse`), with its name ("Collapse Blog posts") and a tooltip. That's an exception to §10.4's icon-only rule, like the outline's expand toggle: it sits in every pane's header, where words would crowd the title.
@@ -1349,7 +1353,7 @@ What holds:
 - List items still open in place (Jeremy's call, 2026-10-25).
 - The entry's writing column is still 720px, centred in its pane.
 - Two levels of navigation (collections, then entries), so §10.4 holds.
-- Landmarks follow the panes: the structure and list panes are `nav`s, and the deepest pane is `<main>`, whose heading is the page's only `h1`. It takes focus after a navigation and names the browser tab.
+- Landmarks follow the panes: the structure and list panes are `nav`s, and the deepest pane is `<main>`, whose heading is the page's only `h1`. It takes focus after a navigation and names the browser tab. The waiting drafts beside the collections are a region, with an `h2`.
 
 Notes on how it's built:
 - One component tree serves both widths, so crossing 48rem keeps the open entry, its tab and its unsaved changes.

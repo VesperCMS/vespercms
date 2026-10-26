@@ -23,16 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Queued by Jeremy on 2026-10-26, to pick up later that day from another computer. Everything before it is on `main` and pushed (CI green on GitHub, run 40239525686).
-
-- [ ] **The pane beside the collections when nothing is chosen** (the recommendation in "Studio panes and tabs (outcome)", open items).
-  - **Wide, local and GitHub mode:** no Home pane. On the `home` and `changes` routes the structure pane is the only pane, so it's the deepest: `<main>`, its "Content" heading the page's `h1` and the focus target after a navigation, and no collapse button. The rest of the row is the sunken filler, as beside a list with no entry open.
-  - **Wide, the cloud:** the same, unless drafts are waiting. Then a pane beside the collections holds `DraftsWaiting` (`packages/admin/src/cloud/changes.tsx`), the line with its button to the Changes drawer. Absent, not empty, when there's none (spec §6.9). The `changes` route keeps opening the Changes drawer (`ChangesProvider linked`, `App.tsx`).
-  - **Narrow:** Home stays as it is. It's the one place there that shows the collections with their counts.
-  - **Why not the alternatives:** Home beside the collections repeats them one pane over. Recent edits across the site would work in local mode only, since GitHub storage sets no `modifiedAt` and the cloud reads through it.
-  - **Where:** the `home` and `changes` branch of `panesFor` in `packages/admin/src/app/panes.tsx`; `StructurePane`'s heading becomes the page's `h1` there through `PaneInfo`, as it already does for the deepest pane.
-  - **Tests:** `panes.test.tsx` (the home route's landmarks, `h1`, filler, no collapse button; the cloud's waiting pane), and e2e: `studio.spec.ts`'s "every screen passes axe" home step looks for Home's "4 entries" text, so it needs another wait; the cloud project for the waiting drafts beside the collections.
-  - **Records:** DECISIONS.md ("The studio is panes, full width": what's beside the collections), this file's open item, and the docs' first screen (`getting-started/first-edit.mdoc`, the opening paragraph and "Panes").
+Nothing is queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
 ## vespercms.com and the docs
 
@@ -704,6 +695,15 @@ It was built on its own branch, `studio-panes`, so `main` stayed as it was until
   - Any pane but the deepest collapses into its strip from a button in its header, and stays collapsed in this browser until its strip opens it.
   - The chosen tab is an accent underline instead of the current item's fill and halo.
 - **After the merge (2026-10-25).** The outline pane has search, and the page no longer scrolls past the panes.
+- **The pane beside the collections (2026-10-26),** as recommended under "Open, for Jeremy" and queued by him (DECISIONS.md, "The studio is panes, full width").
+  - Wide, with nothing chosen (`#/`, and `#/changes` under its drawer), the structure pane is the only pane and the page's `<main>`: "Content" is its `h1` and the focus target, it has no collapse button, and the rest of the row is the sunken filler. Its Settings and Site headings follow its level (`h2` as `main`, `h3` as `nav`).
+  - In the cloud, while drafts wait, a pane beside the collections holds `DraftsWaiting` under an `h2`, "Changes": a `region` (a third `PaneInfo` landmark), and the filler when none wait.
+  - The waiting pane is beside the page, not the deepest pane. The design left that open, and drafts arrive in the background, so as the deepest it would have moved the `h1`, the page title and the focus target with them.
+  - Narrow, Home is unchanged.
+  - Docs: `getting-started/first-edit.mdoc` (Home and Panes), `getting-started/publishing.mdoc` (the waiting line). Spec §10.3's home-screen line says what it is among panes.
+  - Tests: `panes.test.tsx` (the home route's landmarks, `h1`, subheadings, filler and no collapse button, even with the collections collapsed by choice; focus on going back to it; narrow Home kept), `cloud.test.tsx` (the waiting pane wide, with axe, See changes, and absent once published), the studio e2e's home step (waits on the pane's counts instead of Home's "4 entries"), and the cloud e2e's two-author publish (from the waiting pane, with axe, instead of `#/changes`).
+  - Checked by hand in the app's browser pane: the landmarks and headings at 1024px, focus on Content after going home from an entry, narrow Home at 375px, and both themes.
+  - Checks: typecheck, lint and the format check pass. Vitest: 4,342 passed, 3 skipped. `npm run e2e` on macOS, after building the playground and the site: 172 passed, 1 failed. The failure is `pages.spec.ts`'s axe check on Redirects (`color-contrast`), which fails intermittently on `main` without this change too.
 - **Tabs.** Content, the collection's own tabs (`tabs` and `placement` in vesper.config.ts, or `.meta({ placement })`), then Details. Problem counts are in the tab names, and the error summary and Go to field choose the right tab first. The kit has `Tabs`. The Details drawer and closing section are gone.
 - **Docs.** `getting-started/first-edit.mdoc` (Panes, the editor's tabs), `content/fields.mdoc` (tabs, placement), `reference/integration.mdoc` (`tabs`).
 - **Checks.**
@@ -712,7 +712,7 @@ It was built on its own branch, `studio-panes`, so `main` stayed as it was until
   - Every e2e project passes, with the branch's builds of the playground and vespercms.com: studio, GitHub and cloud (46, plus 2 macOS-only skips), static and site (124). They include e2e tests for the tabs at two widths and for the panes by keyboard at 1440, 1000 and 700px, the list as a pane with no entry open, and collapsing a pane across a reload. Run again after the second round.
 
 **Open, for Jeremy:**
-- **The home pane.** With nothing chosen, the pane beside the collections is the old Home screen, which repeats them with counts and last edits. Alternatives: recent edits across the site, or nothing (as Sanity shows). Recommended (2026-10-25): nothing, and the cloud's waiting drafts when there are any; Jeremy queued it in "To do next" on 2026-10-26.
+- **The home pane: done 2026-10-26.** With nothing chosen, nothing is beside the collections but the cloud's waiting drafts, when there are any (above).
 - **Where tabs go in a tag's settings dialog.** Not at all, today: a tag's attributes are one form.
 - **Moving between collections.** The list pane remounts when the collection changes, so its scroll and search start again, kept per collection.
 - **The collapse button.** It's icon-only, an exception to §10.4 noted in DECISIONS.md. Words ("Hide") would be the alternative.
