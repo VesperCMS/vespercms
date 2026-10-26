@@ -338,7 +338,8 @@ test('the site helpers return the same in astro dev as in the static build', asy
   expect(built.status()).toBe(200);
   const dev = await request.get('/site-tree.json');
   expect(dev.status()).toBe(200);
-  const tree = (await built.json()) as { tree: { title: string }[] };
+  type SiteTree = { tree: { title: string }[]; urls: Record<string, string> };
+  const tree = (await built.json()) as SiteTree;
   expect(tree.tree.map((n) => n.title)).toEqual([
     'Vesper playground',
     'About the college',
@@ -347,7 +348,22 @@ test('the site helpers return the same in astro dev as in the static build', asy
     'Campus life',
     'Thanks for getting in touch',
   ]);
-  expect(await dev.json()).toEqual(tree);
+  // Events are scheduled: the build, as of 26 October 2026, leaves out the
+  // ones that aren't live, and dev keeps them all to be edited.
+  const split = (urls: Record<string, string>) => [
+    Object.fromEntries(Object.entries(urls).filter(([key]) => !key.startsWith('events/'))),
+    Object.fromEntries(Object.entries(urls).filter(([key]) => key.startsWith('events/'))),
+  ];
+  const fromDev = (await dev.json()) as SiteTree;
+  const [devUrls, devEvents] = split(fromDev.urls);
+  const [builtUrls, builtEvents] = split(tree.urls);
+  expect({ ...fromDev, urls: devUrls }).toEqual({ ...tree, urls: builtUrls });
+  expect(Object.keys(builtEvents ?? {}).sort()).toEqual([
+    'events/nursing-info-session',
+    'events/spring-commencement',
+  ]);
+  expect(devEvents).toMatchObject(builtEvents ?? {});
+  expect(Object.keys(devEvents ?? {})).toHaveLength(6);
 });
 
 test('drag and drop is offered on top, with React Aria’s keyboard mode', async ({ page }) => {
