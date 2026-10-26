@@ -67,11 +67,15 @@ const ALIGN_CLASS: Record<string, string> = {
 function chipLabel(ui: Pick<BodyUi, 'catalog'>, source: string): string {
   const info = chipInfo(source);
   const kind = info.name ? ui.catalog.find(info.syntax, info.name) : undefined;
-  if (kind) return kind.label;
-  if (info.name && (info.kind === 'tag' || info.kind === 'component')) {
-    return fallbackLabel(info.syntax, info.name);
-  }
-  return source.length > 40 ? `${source.slice(0, 37)}…` : source;
+  const label =
+    kind?.label ??
+    (info.name && (info.kind === 'tag' || info.kind === 'component')
+      ? fallbackLabel(info.syntax, info.name)
+      : null);
+  if (label === null) return source.length > 40 ? `${source.slice(0, 37)}…` : source;
+  // Its text too, when that's plain words, as the chip in the text shows it.
+  const inner = info.inner ?? '';
+  return inner && !/[{<*_`[\]\\]/.test(inner) ? `${label} · ${inner}` : label;
 }
 
 /** A cell's text without its formatting: for column names. */
@@ -231,8 +235,14 @@ function CellEditor({
           bridge.changed = true;
         },
         onBlur() {
-          // The link dialog takes focus for a moment; that isn't leaving.
-          if (!bridge.linkOpen) bridge.finish(this.editor, 'leave');
+          // Leaving is judged a moment later: StrictMode takes the editor
+          // down and puts it back as it first shows, and the link dialog takes
+          // focus for a while. Neither is leaving the cell.
+          const editor = this.editor;
+          setTimeout(() => {
+            if (editor.isDestroyed || editor.view.hasFocus() || bridge.linkOpen) return;
+            bridge.finish(editor, 'leave');
+          }, 0);
         },
       }),
     ];
@@ -253,9 +263,24 @@ function CellEditor({
     },
   });
   useEffect(() => {
-    // With the caret at the end, as F2 does in a spreadsheet.
-    editor.commands.focus('end');
-  }, [editor]);
+    // With the caret at the end, as F2 does in a spreadsheet. At once, not in
+    // the next frame as Tiptap's focus command does, so keys typed straight
+    // after Enter land in the cell.
+    const toEnd = () => {
+      editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+      editor.view.focus();
+    };
+    toEnd();
+    // And again in the next frame if the text took focus back meanwhile: the
+    // Insert menu focuses the text in one, as Tiptap does, before a new table's
+    // first cell opens.
+    const frame = requestAnimationFrame(() => {
+      if (!editor.isDestroyed && !bridge.done && !editor.view.hasFocus()) toEnd();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [editor, bridge]);
   return (
     <>
       <EditorContent editor={editor} />
@@ -318,10 +343,11 @@ export function TableView({ node, getPos, selected, editor }: ReactNodeViewProps
     }, 0);
   };
 
-  const goTo = (row: number, col: number) => {
+  /** Moves to a cell, kept inside the table: the one shown, or the one a change just made. */
+  const goTo = (row: number, col: number, table: TableValue = value) => {
     const next = {
-      row: Math.max(0, Math.min(rowCount - 1, row)),
-      col: Math.max(0, Math.min(colCount - 1, col)),
+      row: Math.max(0, Math.min(table.rows.length - 1, row)),
+      col: Math.max(0, Math.min(table.columns.length - 1, col)),
     };
     latest.current = { ...latest.current, at: next };
     setActive(next);
@@ -372,44 +398,54 @@ export function TableView({ node, getPos, selected, editor }: ReactNodeViewProps
 
   const rowName = (row: number) => (row === 0 ? 'the header row' : `row ${String(row + 1)}`);
 
-  const act = (id: string) => {
-    const { row, col } = at;
+  /** What an action changes, what it says, and the cell focus goes to after it. */
+  const changeFor = (id: string, { row, col }: Cell): [TableValue, string, Cell] | null => {
     const name = columnName(col);
+    const number = String(row + 1);
     if (id === 'row-above' && row > 0) {
-      if (apply(insertRow(value, row), `Row added above ${rowName(row)}.`)) goTo(row, col);
-    } else if (id === 'row-below') {
-      if (apply(insertRow(value, row + 1), `Row added below ${rowName(row)}.`)) goTo(row + 1, col);
-    } else if (id === 'column-left') {
-      if (apply(insertColumn(value, col), `Column added left of ${name}.`)) goTo(row, col);
-    } else if (id === 'column-right') {
-      if (apply(insertColumn(value, col + 1), `Column added right of ${name}.`)) {
-        goTo(row, col + 1);
-      }
-    } else if (id === 'row-up' && row > 1) {
-      if (apply(moveRow(value, row, row - 1), `Row ${String(row + 1)} moved up.`)) {
-        goTo(row - 1, col);
-      }
-    } else if (id === 'row-down' && row > 0 && row < rowCount - 1) {
-      if (apply(moveRow(value, row, row + 1), `Row ${String(row + 1)} moved down.`)) {
-        goTo(row + 1, col);
-      }
-    } else if (id === 'column-move-left' && col > 0) {
-      if (apply(moveColumn(value, col, col - 1), `Column ${name} moved left.`)) goTo(row, col - 1);
-    } else if (id === 'column-move-right' && col < colCount - 1) {
-      if (apply(moveColumn(value, col, col + 1), `Column ${name} moved right.`)) {
-        goTo(row, col + 1);
-      }
-    } else if (id === 'row-delete' && row > 0) {
-      if (apply(deleteRow(value, row), `Row ${String(row + 1)} deleted.`)) {
-        goTo(Math.min(row, rowCount - 2), col);
-      }
-    } else if (id === 'column-delete' && colCount > 1) {
-      if (apply(deleteColumn(value, col), `Column ${name} deleted.`)) {
-        goTo(row, Math.min(col, colCount - 2));
-      }
-    } else {
-      goTo(row, col);
+      return [insertRow(value, row), `Row added above ${rowName(row)}.`, { row, col }];
     }
+    if (id === 'row-below') {
+      return [insertRow(value, row + 1), `Row added below ${rowName(row)}.`, { row: row + 1, col }];
+    }
+    if (id === 'column-left') {
+      return [insertColumn(value, col), `Column added left of ${name}.`, { row, col }];
+    }
+    if (id === 'column-right') {
+      return [
+        insertColumn(value, col + 1),
+        `Column added right of ${name}.`,
+        { row, col: col + 1 },
+      ];
+    }
+    if (id === 'row-up' && row > 1) {
+      return [moveRow(value, row, row - 1), `Row ${number} moved up.`, { row: row - 1, col }];
+    }
+    if (id === 'row-down' && row > 0 && row < rowCount - 1) {
+      return [moveRow(value, row, row + 1), `Row ${number} moved down.`, { row: row + 1, col }];
+    }
+    if (id === 'column-move-left' && col > 0) {
+      return [moveColumn(value, col, col - 1), `Column ${name} moved left.`, { row, col: col - 1 }];
+    }
+    if (id === 'column-move-right' && col < colCount - 1) {
+      return [
+        moveColumn(value, col, col + 1),
+        `Column ${name} moved right.`,
+        { row, col: col + 1 },
+      ];
+    }
+    if (id === 'row-delete' && row > 0)
+      return [deleteRow(value, row), `Row ${number} deleted.`, { row, col }];
+    if (id === 'column-delete' && colCount > 1) {
+      return [deleteColumn(value, col), `Column ${name} deleted.`, { row, col }];
+    }
+    return null;
+  };
+
+  const act = (id: string) => {
+    const change = changeFor(id, at);
+    if (change && apply(change[0], change[1])) goTo(change[2].row, change[2].col, change[0]);
+    else goTo(at.row, at.col);
   };
 
   const align = (id: string) => {
@@ -602,8 +638,19 @@ export function TableView({ node, getPos, selected, editor }: ReactNodeViewProps
                         aria-colindex={c + 1}
                         tabIndex={isActive && inside && !isEditing ? 0 : -1}
                         data-vesper-active={isActive ? '' : undefined}
-                        onFocus={() => {
-                          if (!isEditing) setActive({ row: r, col: c });
+                        onFocus={(event) => {
+                          if (isEditing) return;
+                          setActive({ row: r, col: c });
+                          // The text's caret stays in the page's selection while a cell has
+                          // focus, and text inserted without keys (dictation, an input
+                          // method) would land there, unseen. With none, it lands nowhere.
+                          const selection = window.getSelection();
+                          if (
+                            selection?.anchorNode &&
+                            !event.currentTarget.contains(selection.anchorNode)
+                          ) {
+                            selection.removeAllRanges();
+                          }
                         }}
                         onDoubleClick={() => {
                           if (!ui.disabled) edit({ row: r, col: c });
@@ -613,6 +660,8 @@ export function TableView({ node, getPos, selected, editor }: ReactNodeViewProps
                           r === 0 ? 'bg-surface-sunken text-label text-content' : 'text-content',
                           ALIGN_CLASS[value.align[c] ?? ''] ?? 'text-left',
                           'focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-focus',
+                          // The cell being edited keeps the ring while its editor has focus.
+                          isEditing && 'outline-2 outline-solid -outline-offset-2 outline-focus',
                         )}
                       >
                         {isEditing ? (

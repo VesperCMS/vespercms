@@ -715,9 +715,9 @@ function WritingView({
          * Apart from the selection's: a change made in a table's grid also
          * changes what the text's selection says, and neither may hide the other.
          */}
-        <p className="sr-only" role="status">
+        <div className="sr-only" role="status">
           {said}
-        </p>
+        </div>
         <p id="entry-body-help" className="text-small text-content-muted">
           Ctrl+B bold, Ctrl+I italic, Ctrl+K link.
           {hasBlocks

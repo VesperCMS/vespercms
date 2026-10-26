@@ -324,6 +324,28 @@ describe('tables in the writing view', () => {
     );
   });
 
+  it('a row below the last, or a column right of the last, takes focus into what it adds', async () => {
+    const { user } = setup();
+    const editor = await editorOf();
+    selectTable(editor);
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(cell('Item')).toHaveFocus();
+    });
+    await user.keyboard('{Control>}{End}{/Control}{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Insert row below' }));
+    await waitFor(() => {
+      expect(document.activeElement?.closest('tr')).toHaveAttribute('aria-rowindex', '4');
+    });
+    expect(document.activeElement).toHaveAttribute('aria-colindex', '2');
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Insert column right' }));
+    await waitFor(() => {
+      expect(document.activeElement).toHaveAttribute('aria-colindex', '3');
+    });
+    expect(document.activeElement?.closest('tr')).toHaveAttribute('aria-rowindex', '4');
+  });
+
   it('inserts a new table from the toolbar, in a Markdown body, with its first cell being edited', async () => {
     const { api, user } = setup('One.\n');
     const editor = await editorOf();
