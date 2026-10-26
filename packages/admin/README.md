@@ -93,7 +93,7 @@ Custom widgets receive `WidgetProps` (spec §6.3.3): `{ value, onChange, field, 
 - `body/insert.tsx` is the "/" list (the text becomes a combobox while it's open) and the toolbar's Insert menu, both limited to what fits at the cursor.
 - `body/BodyEditor.tsx` is the toolbar, the writing view, the source view, the keys, and the link and image dialogs.
 
-Keys in the writing view: arrow onto a block to select it, Enter opens its settings, Alt+↑ and Alt+↓ move it, Delete removes it; Escape inside a frame selects the frame, and Escape again moves to the toolbar.
+Keys in the writing view: arrow onto a block to select it, Enter opens its settings, Alt+↑ and Alt+↓ move it, Delete removes it; Escape inside a frame selects the frame, and Escape again moves to the toolbar. Ctrl+Home and Ctrl+End (⌘↑ and ⌘↓ on a Mac) go to the text's ends, selecting a block that starts or ends the body. The body opens with the caret in its first text.
 
 ## Media
 
