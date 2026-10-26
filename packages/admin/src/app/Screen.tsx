@@ -8,7 +8,17 @@ import {
   type IconName,
   type IconNode,
 } from '@vesper/ui';
-import { useContext, useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
+import {
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+  type UIEvent,
+} from 'react';
 import { shownTo } from '../cloud/access.ts';
 import { ChangesButton } from '../cloud/changes.tsx';
 import { useStudio, VESPER_NAME } from './context.tsx';
@@ -41,7 +51,8 @@ export type ScreenProps = {
  * they asked for instead of at the top of the page.
  *
  * Inside the pane shell (app/panes.tsx) a screen is the deepest pane
- * instead: its heading and bar head the pane, and it scrolls on its own.
+ * instead: its heading and bar head the pane, and it scrolls on its own,
+ * beneath them.
  */
 export function Screen({
   title,
@@ -66,12 +77,7 @@ export function Screen({
         actions={bar}
         className={cx(afterglow && 'afterglow')}
       >
-        <div
-          className={cx(
-            'min-h-0 flex-1 overflow-y-auto',
-            pane.width === 'flex' ? 'px-6 pt-8 pb-16' : 'px-3 pt-3 pb-6',
-          )}
-        >
+        <div className={pane.width === 'flex' ? 'px-6 pt-8 pb-16' : 'px-3 pt-3 pb-6'}>
           {children}
         </div>
       </PaneFrame>
@@ -127,13 +133,36 @@ export function useLeadHeading(title: string, heading: RefObject<HTMLElement | n
   }, [navigation.count, leads, heading]);
 }
 
+/** An element's height in pixels, kept current as it wraps or the window changes. */
+export function useHeight(ref: RefObject<HTMLElement | null>, fallback: number): number {
+  const [height, setHeight] = useState(fallback);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      setHeight(element.offsetHeight);
+    });
+    observer.observe(element);
+    setHeight(element.offsetHeight);
+    return () => {
+      observer.disconnect();
+    };
+  }, [ref]);
+  return height;
+}
+
 /**
  * A pane's frame: a landmark named by its heading, a header with the heading,
- * the pane's actions and its collapse button, then the pane's body. The
- * deepest pane is the page's `main`, with its `h1`; the others are
- * navigation, or a region, with `h2`s. The element stays the same as a
- * pane's role changes, so what's in it isn't drawn afresh when an entry
- * opens beside it.
+ * the pane's actions and its collapse button (and the list's tools, as
+ * `toolbar`), then the pane's body. The deepest pane is the page's `main`,
+ * with its `h1`; the others are navigation, or a region, with `h2`s. The
+ * element stays the same as a pane's role changes, so what's in it isn't
+ * drawn afresh when an entry opens beside it.
+ *
+ * The frame is the pane's scroller, and it starts at the window's top: its
+ * body scrolls beneath its own header and the top bar, which are glass, so
+ * the content stays present beneath what floats (DECISIONS.md, "Panes scroll
+ * beneath glass"). Its scroll padding keeps a focused control clear of both.
  */
 export function PaneFrame({
   title,
@@ -141,6 +170,9 @@ export function PaneFrame({
   hideTitle = false,
   icon,
   actions,
+  toolbar,
+  scrollRef,
+  onScroll,
   className,
   children,
 }: {
@@ -149,6 +181,10 @@ export function PaneFrame({
   hideTitle?: boolean;
   icon?: { node: IconNode } | { name: IconName } | undefined;
   actions?: ReactNode;
+  /** Below the heading, in the header that stays put: the list's search, Sort and Show. */
+  toolbar?: ReactNode;
+  scrollRef?: RefObject<HTMLDivElement | null>;
+  onScroll?: (event: UIEvent<HTMLDivElement>) => void;
   className?: string | false | undefined;
   children: ReactNode;
 }) {
@@ -157,49 +193,61 @@ export function PaneFrame({
   const landmark = pane?.landmark ?? 'main';
   const main = landmark === 'main';
   const Heading = pane?.level === 2 ? 'h2' : 'h1';
+  const header = useRef<HTMLDivElement>(null);
+  const headerHeight = useHeight(header, 56);
   return (
     <div
+      ref={scrollRef}
       role={main ? 'main' : landmark === 'nav' ? 'navigation' : 'region'}
       aria-labelledby={id}
       {...(main ? { id: 'main', tabIndex: -1 } : {})}
-      className={cx('flex min-h-0 flex-1 flex-col outline-none', className)}
+      onScroll={onScroll}
+      className={cx('min-h-0 flex-1 overflow-y-auto outline-none', className)}
+      style={{
+        paddingTop: 'var(--studio-bar, 0px)',
+        scrollPaddingTop: `calc(var(--studio-bar, 0px) + ${String(headerHeight)}px)`,
+      }}
     >
-      <div
-        className={cx(
-          'flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border py-2',
-          pane?.width === 'flex' ? 'px-6' : 'px-4',
-        )}
-      >
-        <Heading
-          id={id}
-          ref={headingRef}
-          tabIndex={-1}
-          className={
-            hideTitle
-              ? 'sr-only'
-              : cx(
-                  'min-w-0 flex-1 truncate outline-none',
-                  pane?.width === 'flex' ? 'text-heading-3' : 'text-label',
-                  'text-content',
-                  icon && 'flex items-center gap-2',
-                )
-          }
+      {/* A sticky offset counts from inside the scroller's padding, so top-0 holds it just below the bar. */}
+      <div ref={header} className="glass-bar sticky top-0 z-10 border-b border-border">
+        <div
+          className={cx(
+            'flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 py-2',
+            pane?.width === 'flex' ? 'px-6' : 'px-4',
+          )}
         >
-          {icon && !hideTitle && <Icon {...icon} size={18} className="text-content-muted" />}
-          {title}
-        </Heading>
-        {actions}
-        {pane?.onCollapse && (
-          <Tooltip text={`Collapse ${title}`}>
-            <IconButton
-              data-collapse=""
-              icon="pane-collapse"
-              label={`Collapse ${title}`}
-              onPress={pane.onCollapse}
-              className="-mr-2"
-            />
-          </Tooltip>
-        )}
+          <Heading
+            id={id}
+            ref={headingRef}
+            tabIndex={-1}
+            className={
+              hideTitle
+                ? 'sr-only'
+                : cx(
+                    'min-w-0 flex-1 truncate outline-none',
+                    pane?.width === 'flex' ? 'text-heading-3' : 'text-label',
+                    'text-content',
+                    icon && 'flex items-center gap-2',
+                  )
+            }
+          >
+            {icon && !hideTitle && <Icon {...icon} size={18} className="text-content-muted" />}
+            {title}
+          </Heading>
+          {actions}
+          {pane?.onCollapse && (
+            <Tooltip text={`Collapse ${title}`}>
+              <IconButton
+                data-collapse=""
+                icon="pane-collapse"
+                label={`Collapse ${title}`}
+                onPress={pane.onCollapse}
+                className="-mr-2"
+              />
+            </Tooltip>
+          )}
+        </div>
+        {toolbar}
       </div>
       {children}
     </div>

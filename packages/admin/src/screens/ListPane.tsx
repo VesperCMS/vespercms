@@ -208,47 +208,48 @@ export function ListPane({
           </ButtonLink>
         )
       }
-    >
-      <div className="flex flex-col gap-2 px-4 pt-3 pb-2">
-        <TextField label="Search" type="search" icon="search" value={query} onChange={setQuery} />
-        <div className="-ml-3 flex flex-wrap items-center gap-1">
-          <Menu
-            label="Sort"
-            triggerText={`Sort: ${options.find((o) => o.id === sort)?.label ?? 'Title'}`}
-            choice={{
-              title: 'Sort by',
-              options,
-              selected: sort,
-              onChange: setSort,
-            }}
-            items={[]}
-            onAction={() => undefined}
-          />
-          {filters.length > 1 && (
+      scrollRef={scroller}
+      onScroll={(event) => {
+        remember(api, collection.name, { scrollTop: event.currentTarget.scrollTop });
+      }}
+      // The list's tools stay in the header as the list scrolls beneath it.
+      toolbar={
+        <div className="flex flex-col gap-2 px-4 pt-1 pb-2">
+          <TextField label="Search" type="search" icon="search" value={query} onChange={setQuery} />
+          <div className="-ml-3 flex flex-wrap items-center gap-1">
             <Menu
-              label="Show"
-              triggerText={`Show: ${filters.find((f) => f.id === filter)?.label ?? 'All entries'}`}
+              label="Sort"
+              triggerText={`Sort: ${options.find((o) => o.id === sort)?.label ?? 'Title'}`}
               choice={{
-                title: 'Show',
-                options: filters,
-                selected: filter,
-                onChange: (id) => {
-                  setFilter(id as Filter);
-                },
+                title: 'Sort by',
+                options,
+                selected: sort,
+                onChange: setSort,
               }}
               items={[]}
               onAction={() => undefined}
             />
-          )}
+            {filters.length > 1 && (
+              <Menu
+                label="Show"
+                triggerText={`Show: ${filters.find((f) => f.id === filter)?.label ?? 'All entries'}`}
+                choice={{
+                  title: 'Show',
+                  options: filters,
+                  selected: filter,
+                  onChange: (id) => {
+                    setFilter(id as Filter);
+                  },
+                }}
+                items={[]}
+                onAction={() => undefined}
+              />
+            )}
+          </div>
         </div>
-      </div>
-      <div
-        ref={scroller}
-        onScroll={(event) => {
-          remember(api, collection.name, { scrollTop: event.currentTarget.scrollTop });
-        }}
-        className="min-h-0 flex-1 overflow-y-auto pb-3"
-      >
+      }
+    >
+      <div className="pt-2 pb-3">
         {failed && !entries ? (
           <p role="alert" className="px-4 text-small text-danger">
             Couldn’t load {collection.label.toLowerCase()}.

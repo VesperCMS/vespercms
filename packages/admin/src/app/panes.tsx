@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type ReactNode,
 } from 'react';
 import { shownTo } from '../cloud/access.ts';
@@ -23,7 +24,7 @@ import type { Studio } from './context.tsx';
 import { useLoad } from './load.ts';
 import { hrefFor, type Route } from './router.ts';
 import { PaneContext, usePane, type PaneInfo } from './pane-context.ts';
-import { PaneFrame, Screen, StudioHeader, useLeadHeading } from './Screen.tsx';
+import { PaneFrame, Screen, StudioHeader, useHeight, useLeadHeading } from './Screen.tsx';
 
 /*
  * The studio on wide screens, full width: panes side by side, Sanity-style
@@ -174,12 +175,24 @@ export function PaneShell({
     row.current?.querySelector<HTMLElement>(selector)?.focus();
   });
 
+  // The top bar floats over the panes, which scroll from the window's top beneath it, so its
+  // glass has something to frost. Each pane starts its content below it (PaneFrame).
+  const bar = useRef<HTMLDivElement>(null);
+  const barHeight = useHeight(bar, 56);
+
   return (
-    <div className={wide ? 'flex h-dvh flex-col' : undefined}>
-      {wide && <StudioHeader />}
+    <div
+      className={wide ? 'relative h-dvh overflow-hidden' : undefined}
+      style={wide ? ({ '--studio-bar': `${String(barHeight)}px` } as CSSProperties) : undefined}
+    >
+      {wide && (
+        <div ref={bar} className="absolute inset-x-0 top-0 z-40">
+          <StudioHeader />
+        </div>
+      )}
       {/* Positioned and clipped: screen-reader-only text deep in a pane's scrolling content is
           positioned absolutely, and with no positioned ancestor it lengthened the page itself. */}
-      <div ref={row} className={wide ? 'relative flex min-h-0 flex-1 overflow-hidden' : undefined}>
+      <div ref={row} className={wide ? 'relative flex h-full overflow-hidden' : undefined}>
         {panes.map((pane) => {
           const deepest = pane === last;
           const kind = pane.kind;
@@ -270,9 +283,11 @@ function PaneStrip({ id, title, onOpen }: { id: string; title: string; onOpen: (
       aria-label={`Show ${title}`}
       title={`Show ${title}`}
       className={cx(
-        'flex w-11 shrink-0 flex-col items-center gap-3 border-r border-border pt-4 text-small text-content-muted hover:bg-surface-sunken hover:text-content',
+        'flex w-11 shrink-0 flex-col items-center gap-3 border-r border-border text-small text-content-muted hover:bg-surface-sunken hover:text-content',
         focusRing,
       )}
+      // Below the floating top bar, as a pane's content is.
+      style={{ paddingTop: 'calc(var(--studio-bar, 0px) + var(--spacing) * 4)' }}
     >
       <Icon name="pane-expand" size={18} />
       <span aria-hidden="true" className="[writing-mode:vertical-rl]">
@@ -439,7 +454,7 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
 
   return (
     <PaneFrame title="Content" headingRef={heading}>
-      <div className="min-h-0 flex-1 overflow-y-auto py-3">
+      <div className="py-3">
         <ul className="flex flex-col gap-0.5">{collections.map(collectionItem)}</ul>
         {singletons.length > 0 && (
           <>

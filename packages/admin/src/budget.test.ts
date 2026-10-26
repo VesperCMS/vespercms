@@ -42,7 +42,7 @@ const PLACES: [string, RegExp, string[]][] = [
     ['packages/ui/src/components/choices.tsx', 'packages/ui/src/components/overlays.tsx'],
   ],
   [
-    'glass-edge and glass-bar: the top bar',
+    'glass-edge and glass-bar: the top bar and pane headers',
     /\b(shadow-glass-edge|glass-bar)\b/,
     ['packages/admin/src/app/Screen.tsx'],
   ],

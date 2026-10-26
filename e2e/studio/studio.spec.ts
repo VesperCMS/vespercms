@@ -170,6 +170,29 @@ test('by keyboard: panes, full width: the collections, the list and the entry, f
   expect(
     await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
   ).toBe(0);
+  // Each pane scrolls beneath the top bar and its own header, which stay put as glass over
+  // it, and a control focused from the bottom lands clear of both.
+  const places = await page.getByRole('main').evaluate((pane) => {
+    const header = pane.firstElementChild as HTMLElement;
+    const bar = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+    const before = header.getBoundingClientRect().top;
+    pane.scrollTop = pane.scrollHeight;
+    return {
+      bar,
+      before,
+      after: header.getBoundingClientRect().top,
+      bottom: header.getBoundingClientRect().bottom,
+      content: (header.nextElementSibling as HTMLElement).getBoundingClientRect().top,
+      glass: getComputedStyle(header).backdropFilter,
+    };
+  });
+  expect(places.before).toBe(places.bar);
+  expect(places.after).toBe(places.bar);
+  expect(places.content).toBeLessThan(places.bar);
+  expect(places.glass).toMatch(/blur/);
+  await page.getByRole('textbox', { name: 'Title' }).focus();
+  const focused = await page.getByRole('textbox', { name: 'Title' }).boundingBox();
+  expect(focused?.y ?? 0).toBeGreaterThanOrEqual(places.bottom);
 
   // Enter on a row opens it beside the list, and focus lands on its heading.
   await list.getByRole('row', { name: /^Welcome to the playground/ }).focus();
