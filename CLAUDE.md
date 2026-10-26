@@ -27,7 +27,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | vespercms.com and the docs | Live (2026-10-21), ahead of Phase 9 at Jeremy's request: `apps/site` on Cloudflare Pages, edited with Vesper, with `/admin` for its cloud project; `vesper agents`. CI green on GitHub (run 39636024765). Decisions in `DECISIONS.md` ("Vesper's own site") |
 | 4 Cloud foundation | Done (2026-10-26). Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. A publish credits every draft's author, on production since 2026-10-22. The studio against the real API under `wrangler dev` passed e2e in vespercms-cloud (2026-10-26, CI green, run 40358823912). Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vespercms-cloud's), decisions in `DECISIONS.md` ("The cloud") |
 | Studio layout, panes and tabs | Done (2026-10-25), at Jeremy's request between Phase 4's steps: fields as sections, Appearance and pictures, Markdoc settings, then the studio as full-width panes with tabs in the editor (merged from `studio-panes`). With nothing chosen, the collections are the page (2026-10-26). Outcome and open questions in `PLAN.md`, decisions in `DECISIONS.md` |
-| 4.5 Scheduled publish and unpublish | In progress (started 2026-10-26, its calls confirmed 2026-10-21). Built: core's `scheduledEvents`, the status words and times in the site's zone, with DST tests. Next: the build's instant, filtering in `vesper:content`, unpublish redirects and `schedule.json`. Progress and design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
+| 4.5 Scheduled publish and unpublish | In progress (started 2026-10-26, its calls confirmed 2026-10-21). Built: core's `scheduledEvents`, the status words and times in the site's zone, with DST tests; the build's one instant, filtering in `vesper:content`, unpublish redirects, `schedule.json` and the build's warnings (2026-10-26). Next: the studio (step 3). Progress and design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -158,9 +158,15 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **A rule joins `BUILD_RULES` only once its result in jsdom has been checked against Chromium.** jsdom has no layout, so visual rules give wrong answers there; a snapshot pins the list (DECISIONS.md, "The build checks with axe-core in jsdom").
 
-**A built page is traced to its entry only through the collection's `url`, never by recording reads at build.** Production `vesper:content` stays a plain re-export (spec §6.10, §6.11).
+**A built page is traced to its entry only through the collection's `url`, never by recording reads at build.** Production `vesper:content` re-exports `astro:content`, filters only scheduled collections, and never records reads (spec §6.10, §6.11, §6.17).
 
 **Notes are text beside their field: no badges, no panel, and the count stays outside the live status.** Spec §10.4; an announcement on every keystroke would drown the editor.
+
+### Scheduling
+
+**Every check in a build that depends on the time takes the build's one instant (`buildInstant`, set by `VESPER_BUILD_TIME`), never a `new Date()` of its own.** One build can't then show an entry on one page and leave it out of another, or search, redirects and `schedule.json` (DECISIONS.md, "Scheduled collections are filtered in `vesper:content`, by one instant per build").
+
+**The playground builds as of noon on 26 October 2026 (`VESPER_BUILD_TIME` in its `astro.config.mjs`); a test that needs another time builds a copy with its own.** Its events are fixtures with fixed dates, which would otherwise pass and change what every build of it holds.
 
 ### Site search
 
