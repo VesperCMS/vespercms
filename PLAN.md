@@ -16,9 +16,9 @@ The working plan: where each phase stands, the design of the next phase, and the
 | Studio design pass | Done (2026-10-18), ahead of 2.9. CI green on GitHub (run 39169607328). See "Studio design pass: outcome" below. |
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); Jeremy's screen reader pass is open. See "Phase 2.9: outcome" below. |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
-| 4 Cloud foundation | In progress. Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. A publish credits every draft's author (Jeremy's call b), both halves on production since 2026-10-22. Left: the studio against the real API under `wrangler dev`. Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
+| 4 Cloud foundation | Done (2026-10-26). Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. A publish credits every draft's author (Jeremy's call b), both halves on production since 2026-10-22. The studio against the real API under `wrangler dev`, step 12's last piece, passed 2026-10-26 in `vesper-cloud` (CI green on GitHub, run 40358823912). Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
-| 4.5 Scheduled publish and unpublish | Designed 2026-10-21, and Jeremy confirmed its calls that day. Building waits for Phase 4's acceptance criteria. See "Phase 4.5: Scheduled publish and unpublish (design)" below. |
+| 4.5 Scheduled publish and unpublish | Designed 2026-10-21, and Jeremy confirmed its calls that day. Phase 4 met its acceptance criteria on 2026-10-26, so building can start. See "Phase 4.5: Scheduled publish and unpublish (design)" below. |
 | 5 onward | Roadmap below |
 
 ## To do next
@@ -39,7 +39,7 @@ Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing
 
 **Next, for Jeremy:**
 - Done 2026-10-21: live at vespercms.com on Cloudflare Pages, with `/admin` built for its cloud project (`vesper({ cloud: { project } })`).
-- Connect its repository in the dashboard with "Choose a repository VesperCMS can reach" (`jeremybise/vesper`, folder `apps/site`): vesper-cloud's fix for an account that already has the app is on production (2026-10-21, 3606146). Then vespercms.com/admin is edited through the cloud: a second real-world use beside `vesper-github-test`.
+- Done 2026-10-21: its repository connected in the dashboard through "Choose a repository VesperCMS can reach" (folder `apps/site`), so vespercms.com/admin is edited through the cloud, a second real-world use beside `vesper-github-test` ("Phase 4: progress").
 - Done 2026-10-21, from the docs writers' findings: site search leaves out the index and `/search` when no page of the site uses `<Search>` (DECISIONS.md), and `@vesper/astro`'s README matches the code, with typed `url` functions and the `upload` widget kept to forms.
 - The repository link in the footer (`settings.repository`) once this repository is public.
 - Pricing stays off the site until Phase 5 sets the numbers (§13.4).
@@ -1251,7 +1251,7 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 | Criterion (spec §11) | Where it stands |
 |---|---|
 | ThoseGeeks can onboard one real client site | Passed 2026-10-21, on two sites: `vesper-github-test` (a contributor's draft, a review, the approver's publish) and vespercms.com itself (connected through an installation the account already had, then a docs change published as one commit by `vespercms[bot]` with its trailers, and rebuilt by Pages). |
-| An editor with no GitHub account drafts, requests review and is published by an approver | Here, against the fake cloud: `packages/admin/src/cloud/cloud.test.tsx` (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server). A contributor's review is published by an approver from Changes, as one commit by the app's bot. The real API: the cloud's repository runs `runCloudContract`. |
+| An editor with no GitHub account drafts, requests review and is published by an approver | Here, against the fake cloud: `packages/admin/src/cloud/cloud.test.tsx` (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server). A contributor's review is published by an approver from Changes, as one commit by the app's bot. The real API: the cloud's repository runs `runCloudContract`, and since 2026-10-26 its `studio` e2e project drives the built playground's studio against the API under `wrangler dev` and the app, where an invited contributor's review is published from the review email's link. |
 | A folder grant is enforced in the API and the UI | Core's `changeAccess` (unit tests), the fake API (the contract suite's grant tests), and the studio, which hides collections, entries and page-tree branches outside it (tests). The real API runs the same contract. |
 | The site works from an FTP-style host: sign-in, drafts, publishing, deploy status | The `cloud` e2e project serves the build from `scripts/static-server.mjs` (no rewrites, headers or functions): sign-in, a reload staying signed in, drafting, publishing and deploy status. The real-world sites ran on Cloudflare Pages, whose rewrites Vesper doesn't use; no real FTP host was tried. |
 | With the cloud unreachable, unsaved work is kept; signed out, no cloud UI | Unit and e2e: the cloud goes down mid-edit, the page reloads, and once it's back the changes return and are saved. The signed-out screen shows nothing of the cloud's features. |
@@ -1287,7 +1287,14 @@ The copy, the app, the relay and the Pages site are still up. Delete them when t
 
 With the cloud deployed, the docs' publishing page says every author is named. In each site's Durable Object the authors are schema 2, which a site upgrades itself the next time it starts; drafts open at the deploy credit only whoever saved them last.
 
-**Left before Phase 4 is done:** in the cloud's repository, the studio against the real API under `wrangler dev`, step 12's last piece. The Phase 4.5 design is written (below, 2026-10-21); building it waits for this.
+**Phase 4 is done (2026-10-26).** Step 12's last piece, the studio against the real API under `wrangler dev`, is the `studio` e2e project in the cloud's repository (CI green on GitHub, run 40358823912; its DECISIONS.md, "The studio's end-to-end tests build vesper's playground against the real API"):
+- the playground built with `vesper({ cloud })` and served by the plain static server, the API under `wrangler dev` and the app under `astro dev` over one fresh database, and the fake GitHub holding the playground;
+- the owner signs in by email from the studio, saves a draft, publishes it as one commit by the app's bot and sees the host's check run reported as live;
+- an invited contributor, with no GitHub account, requests review, and the owner publishes it from the review email's link, as one commit crediting both;
+- under a folder grant the studio shows only that branch, and the API takes a draft inside it through the manifest it read from the built site;
+- with the API unreachable, unsaved work is kept through a reload and saved once it's back.
+
+It found nothing to fix in either half; the cloud's repository now pins this one at `7e5d917`. Phase 4.5 can start; its design is below (2026-10-21).
 
 ## Phase 4: Cloud foundation (design)
 
@@ -1507,7 +1514,7 @@ Jeremy confirmed every recommendation on 2026-10-20: 1a to 9a, and the smaller d
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 
-Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-correct at build. Any rebuild at or after the time gives the right site, on any host, with or without the cloud, and the cloud's only job is to trigger a rebuild at the exact time. The free half lives here, under MIT: build-time filtering, the studio's Schedule dialog and Scheduled view, unpublish redirects, and the deploy templates' scheduled rebuild. The paid half lives in `vesper-cloud`: exact times through Durable Object alarms, `holdScheduledDrafts`, and each scheduled event's result. This section describes that half at the boundary; its detailed design goes in that repository's PLAN.md. Written 2026-10-21, ahead of time, and Jeremy confirmed its calls that day. Building waits for Phase 4's acceptance criteria (CLAUDE.md, "Build in the phase order").
+Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-correct at build. Any rebuild at or after the time gives the right site, on any host, with or without the cloud, and the cloud's only job is to trigger a rebuild at the exact time. The free half lives here, under MIT: build-time filtering, the studio's Schedule dialog and Scheduled view, unpublish redirects, and the deploy templates' scheduled rebuild. The paid half lives in `vesper-cloud`: exact times through Durable Object alarms, `holdScheduledDrafts`, and each scheduled event's result. This section describes that half at the boundary; its detailed design goes in that repository's PLAN.md. Written 2026-10-21, ahead of time, and Jeremy confirmed its calls that day. Building waited for Phase 4's acceptance criteria (CLAUDE.md, "Build in the phase order"), which it met on 2026-10-26.
 
 **Done when** (§11):
 1. A post scheduled for a time 5 minutes ahead goes live on a Netlify site and on an SFTP-template site within 2 minutes of that time (cloud).
