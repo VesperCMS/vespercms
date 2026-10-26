@@ -152,6 +152,33 @@ test('a duplicate publishes as one commit that adds the copy, from the originalâ
   );
 });
 
+test('scheduling when an event comes down publishes one commit of just its times', async ({
+  page,
+}) => {
+  const path = 'src/content/events/spring-commencement.md';
+  const before = new TextDecoder().decode(github.files()[path]);
+  const commits = github.log().length;
+  await signIn(page, '#/c/events/e/spring-commencement');
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Spring commencement');
+  await page.getByRole('button', { name: 'More ways to publish' }).click();
+  await page.getByRole('menuitem', { name: 'Scheduleâ€¦' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Schedule' });
+  await dialog.getByLabel('Comes down (optional)').fill('2099-06-01T17:00');
+  await dialog.getByRole('button', { name: 'Schedule' }).click();
+  await expect(
+    page.getByText('Published. It will be live after the site is next built.'),
+  ).toBeVisible();
+  const log = github.log();
+  expect(log).toHaveLength(commits + 1);
+  expect(log[0]?.changed).toEqual([`M\t${path}`]);
+  expect(new TextDecoder().decode(github.files()[path])).toBe(
+    before.replace(
+      'location: main-campus\n',
+      'location: main-campus\nunpublishAt: 2099-06-01T17:00:00-04:00\n',
+    ),
+  );
+});
+
 test('reports a change published elsewhere as a conflict, and offers to reload', async ({
   page,
 }) => {
