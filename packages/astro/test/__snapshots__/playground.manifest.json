@@ -1580,7 +1580,8 @@
         "schedule": {
           "unpublish": true,
           "publishAt": "publishAt",
-          "unpublishAt": "unpublishAt"
+          "unpublishAt": "unpublishAt",
+          "unpublishRedirect": "unpublishRedirect"
         },
         "icon": {
           "name": "calendar-days",
@@ -2124,5 +2125,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "3e3937a6f6caa37c17ff5a219cde5e0996fdc59580ed8a480bb44bb6941a5279"
+  "hash": "1c5e1c4850c3aff4f479c92bcbd89aefa36bc8ac08cc2ad7d14101727bb18a64"
 }

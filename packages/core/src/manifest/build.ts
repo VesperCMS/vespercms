@@ -47,6 +47,14 @@ export type CollectionInput = {
   error?: string;
 };
 
+/** A collection's scheduling (spec §6.17): on with its field names, or `true` for the defaults. */
+export type ScheduleConfig = {
+  unpublish?: boolean;
+  publishAt?: string;
+  unpublishAt?: string;
+  unpublishRedirect?: string;
+};
+
 /** The presentation part of `vesper.config.ts` for one collection. Never field definitions (D2). */
 export type CollectionConfig = {
   label?: string;
@@ -56,7 +64,7 @@ export type CollectionConfig = {
   url?: string | ((entry: UrlEntry) => string);
   listFields?: string[];
   newEntryPath?: string;
-  schedule?: boolean | { unpublish?: boolean; publishAt?: string; unpublishAt?: string };
+  schedule?: boolean | ScheduleConfig;
   search?: boolean;
   /**
    * Editor tab per top-level field key, overriding `.meta({ placement })`:
@@ -384,6 +392,7 @@ function buildCollection(
 
   diagnostics.push(...urlDiagnostics(input.name, source, config));
   const presentation = presentationOf(config, icons);
+  diagnostics.push(...scheduleDiagnostics(input.name, presentation.schedule, fields));
   // A page that isn't searched, or an entry with no page, has nothing to hide.
   const searchHidden =
     presentation.url !== undefined && presentation.search !== false
@@ -537,15 +546,43 @@ function presentationOf(
   return presentation;
 }
 
-function scheduleOf(
-  schedule: true | { unpublish?: boolean; publishAt?: string; unpublishAt?: string },
-): SchedulePresentation {
+function scheduleOf(schedule: true | ScheduleConfig): SchedulePresentation {
   const options = schedule === true ? {} : schedule;
   return {
     unpublish: options.unpublish ?? true,
     publishAt: options.publishAt ?? 'publishAt',
     unpublishAt: options.unpublishAt ?? 'unpublishAt',
+    unpublishRedirect: options.unpublishRedirect ?? 'unpublishRedirect',
   };
+}
+
+/**
+ * A scheduled collection whose schema lacks a time field it names (spec
+ * §6.17). Astro drops values the schema doesn't list before the site sees
+ * them, so the build could never read that time. One warning, with the line
+ * to add.
+ */
+function scheduleDiagnostics(
+  collection: string,
+  schedule: SchedulePresentation | undefined,
+  fields: FieldModel[] | null,
+): Diagnostic[] {
+  if (!schedule || fields === null) return [];
+  const keys = new Set(fields.map((field) => String(field.path[0])));
+  const missing = [
+    schedule.publishAt,
+    ...(schedule.unpublish ? [schedule.unpublishAt] : []),
+  ].filter((key) => !keys.has(key));
+  if (missing.length === 0) return [];
+  const lines = missing.map((key) => `\`${key}: fields.datetime().optional(),\``).join(' and ');
+  return [
+    {
+      level: 'warning',
+      code: 'schedule-fields-missing',
+      message: `This collection is scheduled, but its schema has no ${missing.join(' or ')} field. Astro drops values the schema doesn't list, so the build can't read ${missing.length === 1 ? 'that time' : 'those times'}. Add ${lines} to its schema.`,
+      collection,
+    },
+  ];
 }
 
 const toPosix = (path: string) => path.replaceAll('\\', '/').replace(/^\.\//, '');

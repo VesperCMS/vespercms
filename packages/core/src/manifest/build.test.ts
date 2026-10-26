@@ -91,9 +91,23 @@ describe('buildManifest', () => {
     expect(codes).toEqual([
       'config-error',
       'custom-loader',
+      'schedule-fields-missing',
       'unknown-collection',
       'unknown-widget',
     ]);
+  });
+
+  it('warns when a scheduled collection’s schema lacks its times, with the lines to add', async () => {
+    const found = (await buildManifest(input)).diagnostics.find(
+      (d) => d.code === 'schedule-fields-missing',
+    );
+    expect(found).toEqual({
+      level: 'warning',
+      code: 'schedule-fields-missing',
+      collection: 'blog',
+      message:
+        "This collection is scheduled, but its schema has no publishAt or unpublishAt field. Astro drops values the schema doesn't list, so the build can't read those times. Add `publishAt: fields.datetime().optional(),` and `unpublishAt: fields.datetime().optional(),` to its schema.",
+    });
   });
 
   it('includes forms with plain-data options only', async () => {

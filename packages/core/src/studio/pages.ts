@@ -44,6 +44,7 @@ import {
   type Redirect,
   type RedirectWarning,
 } from '../urls/redirects.ts';
+import { isPublished, publishWindow } from '../schedule/window.ts';
 import { buildTree, findNode, folderTitle, pathDepth, type PageNode } from '../urls/tree.ts';
 import { rewriteBody, rewriteValues, type FilePlace, type LinkContext } from './links.ts';
 import { encodeValue, decodeValue, type EntryStatus, type SaveResponse } from './protocol.ts';
@@ -710,6 +711,32 @@ export class PageService {
 
   // --- Redirects ---------------------------------------------------------------
 
+  /**
+   * The redirects unpublished pages leave behind at `at` (spec §6.17): from
+   * the page of each entry past its `unpublishAt`, to the page its
+   * `unpublishRedirect` field names. Temporary (302), since an entry can
+   * come back, and never written into the redirects file, so there's
+   * nothing to undo when it does. The build cleans them with the file's.
+   */
+  async unpublishRedirects(at: Date): Promise<Redirect[]> {
+    const found: Redirect[] = [];
+    for (const collection of this.manifest.collections) {
+      const schedule = collection.presentation.schedule;
+      if (!schedule?.unpublish || this.patternOf(collection) === undefined) continue;
+      const field = schedule.unpublishRedirect ?? 'unpublishRedirect';
+      for (const entry of await this.content.entriesOf(collection.name)) {
+        const { unpublishAt } = publishWindow(schedule, entry.data);
+        if (!unpublishAt || unpublishAt.getTime() > at.getTime()) continue;
+        const to = isPlainObject(entry.data) ? entry.data[field] : undefined;
+        if (typeof to !== 'string' || to.trim() === '') continue;
+        const key = this.keyOf(collection, entry.id, entry.data);
+        if (key !== null)
+          found.push({ from: key, to: to.trim(), status: 302, reason: 'unpublish' });
+      }
+    }
+    return found;
+  }
+
   /** The redirects file, cleaned as the build will clean it, with what needs a look. */
   async redirects(): Promise<RedirectsDocument> {
     const file = await this.storage.read(REDIRECTS_FILE);
@@ -854,11 +881,14 @@ export class PageService {
   }
 
   /** Every page's key on the site (content and static routes), with its title. */
-  async pageKeys(): Promise<Map<string, string>> {
+  async pageKeys(options: { at?: Date } = {}): Promise<Map<string, string>> {
     const keys = new Map<string, string>();
     for (const collection of this.manifest.collections) {
       if (this.patternOf(collection) === undefined) continue;
       for (const entry of await this.content.entriesOf(collection.name)) {
+        // The build's pages: an entry outside its publish window isn't built.
+        const { at } = options;
+        if (at && !isPublished(collection.presentation.schedule, entry.data, at)) continue;
         const key = this.keyOf(collection, entry.id, entry.data);
         if (key !== null) keys.set(key, titleOf(collection, entry.data, entry.id));
       }

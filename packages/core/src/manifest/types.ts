@@ -82,7 +82,17 @@ export type ReadOnlyCollectionReason =
   /** The config couldn't be evaluated (for example, it imports a runtime-only module). */
   | 'config-error';
 
-export type SchedulePresentation = { unpublish: boolean; publishAt: string; unpublishAt: string };
+export type SchedulePresentation = {
+  unpublish: boolean;
+  publishAt: string;
+  unpublishAt: string;
+  /**
+   * The field holding where visitors go once the entry is unpublished (spec
+   * §6.17). Absent in manifests from before Phase 4.5, where it's
+   * `unpublishRedirect`.
+   */
+  unpublishRedirect?: string;
+};
 
 /** One icon's drawing: Lucide's `[tag, attributes][]` on a 24-unit grid. */
 export type IconNode = [tag: string, attributes: Record<string, string | number>][];
