@@ -25,7 +25,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 Nothing is queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
-Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. Not committed yet.
+Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
 ## vespercms.com and the docs
 
@@ -822,7 +822,7 @@ Proposed 2026-10-26, from a review of what moving thosegeeks.com off EmDash woul
 
 **The calls (decided 2026-10-26):** B1 to B6, each (a), as recommended.
 
-**Outcome (2026-10-26).** Built as designed, with these differences and details:
+**Outcome (2026-10-26).** Built as designed, and CI green on GitHub (run 40334882211), with these differences and details:
 - **Core.** `FieldKind` gains `union`, with `discriminator` and `variants` on the model (`packages/core/src/schema/walk.ts`). `childrenFor`, `variantFor` and `fieldChildren` (`schema/variants.ts`) serve widget resolution, the manifest's ratio and contrast checks, the field accessibility rules, the field checks, link rewriting, the issue target and `vesper agents`. Search's field lookups stay as they were: they only reach top-level fields and objects. A discriminated union that can't be kinds, and a plain union of objects with a shared literal key, get a warning in the terminal. A key that matches no kind reads "Choose one of the kinds the site has."
 - **The single choice doesn't confirm.** Its radio buttons change as the arrow keys move, so a dialog would fire on each step; changing back brings the fields back instead. "Change to" in a list confirms, as designed.
 - **The kit.** `Menu` takes a description per item, submenus (React Aria's `SubmenuTrigger`, whose own item takes its id from the collection) and a caller's trigger. `change-kind` (Lucide's Replace) is a new icon beside words.
