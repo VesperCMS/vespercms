@@ -1237,7 +1237,7 @@ What GitHub's documentation and changelog said on 2026-10-19 (checked then; see 
 
 **Spec §10.2 allows shadows only on overlays. The studio also uses exactly four named effects, each only in its named place:**
 - `glow-accent`: the primary button on hover and focus, and one pulse after a successful save, dropped under `prefers-reduced-motion`. Never at rest, never on two elements at once.
-- `glow-selected`: the current item in the outline, a menu or a list, on top of `accent-subtle`.
+- `glow-selected`: the current item in the outline, a menu or a list, on top of `accent-subtle`. Since 2026-10-26 only in menus and choice lists: a pane's current row is a flat fill ("A pane's current row is a flat fill").
 - `glow-focus`: a halo outside the solid 2px focus ring, never in its place. The ring carries the 3:1 contrast; the halo only adds warmth.
 - `glass-edge`: the lit edge of the sticky top bar, and the rim of glass overlays beside `shadow-overlay`.
 
@@ -1368,6 +1368,16 @@ Rejected:
 - Opening list items as further panes, which would put the rest of the entry out of sight.
 - A collection's whole list screen, a table with columns, as the deepest pane when no entry is open, and a narrower pane only beside an entry. That was built first, on the branch where panes were tried. Choosing an entry then swapped the list for another, and Jeremy wanted the list to be one consistent pane (2026-10-25). Among panes the table's columns became the list fields under each title, and its sort headers a Sort menu. One screen at a time, a flat collection's list is still the table.
 - Remembering a collapsed pane per collection, which would make people collapse each list once.
+
+### 2026-10-26: A pane's current row is a flat fill
+
+**In every pane (the collections, a collection's list, the outline), the current row is square and flat: `accent-subtle`, with no `glow-selected` and no rounding, and rows run edge to edge with the pane's padding inside them. Hovered, the current row takes `accent-subtle-hover`, a step toward the accent (darker in light, brighter in dark). Other rows hover to `surface-sunken`, as before. Where a dragged page would land in the outline is the same flat fill.** The kit's `Tree` takes an `inset`, the room inside each row at either end, which is 4 in a pane, so every row's text stays where it was. The collections pane's links draw their focus outline with `focus-visible`, inside the row, where the pane's scrolling can't clip it: plain links get no `data-focus-visible`, which the kit's `focusRing` reads.
+
+Why: Jeremy found the rounded, glowing current row didn't feel professional, and hovering it went dark: `surface-sunken` replaced the fill. He chose the flat full-width tint over the same tint with a 2px accent bar at the row's start.
+
+`accent-subtle-hover` is a hover state of `accent-subtle`, as `accent-hover` is of the accent, so the five colour roles of §10.4 hold. `npm run a11y:contrast` checks it under content (13.03:1 light, 9.50:1 dark), content-muted (5.34:1, 5.11:1) and the focus ring (4.47:1, 4.97:1).
+
+What holds: `glow-accent` on the primary button; `glow-selected` in menus and choice lists (the Content menu's open collection, a select's chosen option), which this didn't change.
 
 ### 2026-10-25: The entry editor has tabs (spec §10.3 and §10.4 rewritten for it)
 
