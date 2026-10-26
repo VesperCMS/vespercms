@@ -109,6 +109,42 @@ export const VesperCard = Node.create({
 });
 
 /**
+ * A pipe table the writing view edits cell by cell (DECISIONS.md, "Tables
+ * are edited as a grid, and a save splices cells"). One atom, whose view is
+ * a grid that owns its own focus; `value` is the table as `table.ts` holds it.
+ */
+export const VesperTable = Node.create({
+  name: 'vesperTable',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: false,
+  addAttributes() {
+    return {
+      vesperBlock: blockPath,
+      value: { default: null, rendered: false },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'div[data-vesper-table]',
+        getAttrs: (element) => {
+          try {
+            return { value: JSON.parse(element.getAttribute('data-value') ?? 'null') as unknown };
+          } catch {
+            return false;
+          }
+        },
+      },
+    ];
+  },
+  renderHTML({ node }) {
+    return ['div', { 'data-vesper-table': '', 'data-value': JSON.stringify(node.attrs.value) }];
+  },
+});
+
+/**
  * An inline chip: an inline tag, a variable, an annotation, inline JSX or an
  * expression. Its text is `source`. To the Markdown parser and serializer it
  * is one placeholder (see chips.ts).
@@ -157,6 +193,7 @@ const CHILD_TYPES: Record<string, string[]> = {
   fence: ['codeBlock'],
   hr: ['horizontalRule'],
   image: ['paragraph'],
+  table: ['vesperTable'],
   tag: ['vesperTag'],
 };
 

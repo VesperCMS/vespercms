@@ -4,6 +4,7 @@ import { NodeSelection, TextSelection, type EditorState } from '@tiptap/pm/state
 import type { BlockKind, BlockShape } from './catalog.ts';
 import { newTagText } from './catalog.ts';
 import type { ContainerTypes } from './nodes.ts';
+import { newTableValue } from './table.ts';
 
 /*
  * Keyboard-reachable block operations (spec §6.5.1, "Accessibility of
@@ -16,6 +17,7 @@ export function isManaged(type: string, containers: ContainerTypes): boolean {
   return (
     type === 'vesperCard' ||
     type === 'vesperInline' ||
+    type === 'vesperTable' ||
     type === 'sourceBlock' ||
     containers.kindOf(type) !== undefined
   );
@@ -97,6 +99,9 @@ export function newNode(
   attributes: Readonly<Record<string, unknown>> = {},
   inner = '',
 ): JSONContent {
+  if (kind.builtin === 'table') {
+    return { type: 'vesperTable', attrs: { value: newTableValue() } };
+  }
   const text = newTagText(kind, attributes, shape, inner);
   if (shape === 'inline') return { type: 'vesperInline', attrs: { source: text.whole } };
   const container = shape === 'container' ? containers.typeOf(kind) : undefined;

@@ -37,8 +37,8 @@ export type BlockKind = {
   fields: FieldModel[];
   /** Attribute order, for placing new attributes and writing new tags. */
   order: string[];
-  /** Built-in constructs the studio handles itself: partials and conditions. */
-  builtin?: 'partial' | 'if' | 'else';
+  /** Built-in constructs the studio handles itself: partials, conditions and pipe tables. */
+  builtin?: 'partial' | 'if' | 'else' | 'table';
 };
 
 export type Catalog = {
@@ -147,10 +147,30 @@ export function catalogOf(manifest: Manifest, format: BodyFormat): Catalog {
 }
 
 /** Kinds a person can insert (built-in conditions are protected, so they aren't offered). */
+/**
+ * A pipe table, insertable in every format (PLAN.md, call T4). It isn't one
+ * of the catalog's kinds, so Markdoc's own `{% table %}` is never taken for it.
+ */
+export const TABLE_KIND: BlockKind = {
+  key: 'table',
+  syntax: 'markdoc',
+  name: 'table',
+  label: 'Table',
+  block: 'card',
+  inline: false,
+  selfClosing: true,
+  fields: [],
+  order: [],
+  builtin: 'table',
+};
+
 export function insertable(catalog: Catalog): BlockKind[] {
-  return [...catalog.kinds.values()].filter(
-    (kind) => kind.builtin !== 'if' && kind.builtin !== 'else',
-  );
+  return [
+    ...[...catalog.kinds.values()].filter(
+      (kind) => kind.builtin !== 'if' && kind.builtin !== 'else',
+    ),
+    TABLE_KIND,
+  ];
 }
 
 /** A new tag's text in house style: attributes in schema order, empty and default values left out. */

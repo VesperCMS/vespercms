@@ -1,16 +1,20 @@
 import type { JSONContent } from '@tiptap/core';
 import type { MarkdownManager } from '@tiptap/markdown';
 import {
+  editTable,
   parseBody,
   type BodyBlock,
   type BodyFormat,
   type BodyItem,
   type MarkdocParseOptions,
   type ParsedBody,
+  type TableEdit,
+  type TableValue,
 } from '@vesper/core';
 import type { Catalog } from './catalog.ts';
 import { hasPlaceholderCharacters, restoreChips, withPlaceholders } from './chips.ts';
 import { WRITABLE_NODES, type ContainerTypes } from './nodes.ts';
+import { cellFits, editorValue, savedValue } from './table.ts';
 
 /*
  * The body as editor nodes, and back (DECISIONS.md: "The body editor splices
@@ -92,6 +96,17 @@ function nodeOf(
     const source = dedent(withPlaceholders(raw, chips), indent);
     const node = source === null ? null : writableNode(context.markdown, source);
     if (node) return { ...node, attrs: { ...node.attrs, vesperBlock: path } };
+    return sourceNode(text, block, path);
+  }
+  if (block.kind === 'table' && block.table) {
+    const value = editorValue(text, block.table);
+    // Every cell must be one the writing view writes back, or the whole table is kept as written.
+    const fits = value.rows.every((row) =>
+      row.cells.every(
+        (cell) => !hasPlaceholderCharacters(restoreChips(cell)) && cellFits(context.markdown, cell),
+      ),
+    );
+    if (fits) return { type: 'vesperTable', attrs: { vesperBlock: path, value } };
     return sourceNode(text, block, path);
   }
   const tag = block.tag;
@@ -187,7 +202,12 @@ function childIndex(path: unknown, parent: string | null): number | null {
   return Number(path.slice(dot + 1));
 }
 
-type ItemsContext = Pick<BodyContext, 'markdown' | 'containers'> & { parsed?: ParsedBody };
+type ItemsContext = Pick<BodyContext, 'markdown' | 'containers'> & {
+  parsed?: ParsedBody;
+  /** How the body parses, for checking a changed table reads back. */
+  format?: BodyFormat;
+  markdoc?: MarkdocParseOptions;
+};
 
 /** The edited body as items: unchanged blocks keep their bytes, changed ones are written. */
 export function bodyItems(
@@ -292,6 +312,17 @@ function itemsOf(
       items.push({ keep: index });
       continue;
     }
+    if (node.type === 'vesperTable') {
+      // The table view checked this change when it was made, so it can't be refused here.
+      const edit = tableEdit(
+        typeof path === 'string' ? path : null,
+        node.attrs?.value as TableValue,
+        context,
+      );
+      if (!edit.ok) throw new Error(edit.reason);
+      items.push(index === null ? { text: edit.text } : { text: edit.text, replaces: index });
+      continue;
+    }
     const spliced =
       index !== null && typeof path === 'string'
         ? chipSplice(node, path, initial, context.parsed)
@@ -302,6 +333,30 @@ function itemsOf(
     items.push(index === null ? { text } : { text, replaces: index });
   }
   return items;
+}
+
+/**
+ * A table's text as it will be saved: spliced into the table it was loaded
+ * from (`path`), or written new. Refused when it wouldn't read back as this
+ * table.
+ */
+export function tableEdit(
+  path: string | null,
+  value: TableValue,
+  context: ItemsContext,
+): TableEdit {
+  if (!context.format) throw new Error('Saving a table needs the body’s format.');
+  const options = {
+    format: context.format,
+    ...(context.markdoc ? { markdoc: context.markdoc } : {}),
+  };
+  const found = path !== null && context.parsed ? blockAt(context.parsed, path) : null;
+  const table = found?.block.table;
+  const source =
+    found && table && context.parsed
+      ? { text: context.parsed.text, table, indent: found.indent }
+      : null;
+  return editTable(source, savedValue(value), options);
 }
 
 /** A node's text as it will be saved. */

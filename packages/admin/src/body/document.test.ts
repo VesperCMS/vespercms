@@ -8,7 +8,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { playgroundManifest } from '../test/helpers.tsx';
 import { catalogOf } from './catalog.ts';
 import { bodyItems, buildDocument, snapshot } from './document.ts';
-import { BlockIndex, SourceBlock, VesperCard, VesperInline, containerTypes } from './nodes.ts';
+import {
+  BlockIndex,
+  SourceBlock,
+  VesperCard,
+  VesperInline,
+  VesperTable,
+  containerTypes,
+} from './nodes.ts';
 
 const BODY =
   [
@@ -40,6 +47,7 @@ export function open(body: string, format: BodyFormat = 'md') {
       SourceBlock,
       VesperCard,
       VesperInline,
+      VesperTable,
       ...containers.extensions,
     ],
   });
@@ -56,7 +64,13 @@ export function open(body: string, format: BodyFormat = 'md') {
   const save = () =>
     assembleBody(
       built.parsed,
-      bodyItems(editor?.getJSON() ?? {}, initial, { markdown, containers, parsed: built.parsed }),
+      bodyItems(editor?.getJSON() ?? {}, initial, {
+        markdown,
+        containers,
+        parsed: built.parsed,
+        format,
+        ...(playgroundManifest.markdoc ? { markdoc: playgroundManifest.markdoc.options } : {}),
+      }),
     );
   return { built, save, editor, containers };
 }
@@ -85,7 +99,7 @@ describe('the body document', () => {
       'bulletList',
       'heading',
       'sourceBlock',
-      'sourceBlock',
+      'vesperTable',
       'codeBlock',
       'paragraph',
     ]);

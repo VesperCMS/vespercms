@@ -1,4 +1,4 @@
-import type { BodyIssue } from '@vesper/core';
+import type { BodyIssue, TableEdit, TableValue } from '@vesper/core';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { BlockKind, Catalog } from './catalog.ts';
 import type { BodyChecks } from './checks.ts';
@@ -24,6 +24,12 @@ export type BodyUi = BodyActions & {
   /** Site-relative paths of the files a partial can point at, once loaded. */
   partials: readonly string[] | null;
   entryPath: string;
+  /** Says something in the body's polite status ("Row added below row 3."). */
+  announce: (message: string) => void;
+  /** Whether a table's change would save, through core's writer, against the table it was loaded from. */
+  checkTable: (path: string | null, value: TableValue) => TableEdit;
+  /** True once, for the table just inserted, so it starts with its first cell being edited. */
+  takeNewTable: () => boolean;
 };
 
 export const BodyUiContext = createContext<BodyUi | null>(null);

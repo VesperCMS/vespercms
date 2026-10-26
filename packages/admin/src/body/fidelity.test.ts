@@ -11,13 +11,22 @@ import {
   type BodyBlock,
   type Manifest,
   type ParsedBody,
+  type TableValue,
 } from '@vesper/core';
 import { afterAll, describe, expect, it } from 'vitest';
 import { JAZZY_MARKDOC } from '../../../core/test/helpers/jazzy-markdoc.ts';
 import { playgroundManifest } from '../test/helpers.tsx';
 import { catalogOf } from './catalog.ts';
 import { bodyItems, buildDocument, snapshot } from './document.ts';
-import { BlockIndex, SourceBlock, VesperCard, VesperInline, containerTypes } from './nodes.ts';
+import {
+  BlockIndex,
+  SourceBlock,
+  VesperCard,
+  VesperInline,
+  VesperTable,
+  containerTypes,
+} from './nodes.ts';
+import { setCell } from './table.ts';
 
 /*
  * Phase 2.5's "variables, conditionals, functions and annotations survive
@@ -72,6 +81,7 @@ function open(body: string, manifest: Manifest) {
       SourceBlock,
       VesperCard,
       VesperInline,
+      VesperTable,
       ...containers.extensions,
     ],
   });
@@ -92,7 +102,13 @@ function open(body: string, manifest: Manifest) {
   const save = () =>
     assembleBody(
       built.parsed,
-      bodyItems(e.getJSON(), initial, { markdown, containers, parsed: built.parsed }),
+      bodyItems(e.getJSON(), initial, {
+        markdown,
+        containers,
+        parsed: built.parsed,
+        format: 'mdoc',
+        ...(manifest.markdoc ? { markdoc: manifest.markdoc.options } : {}),
+      }),
     );
   return { e, built, reset, save };
 }
@@ -111,6 +127,21 @@ function blockAt(parsed: ParsedBody, path: string): BodyBlock | undefined {
 const EDITABLE = new Set(['paragraph', 'heading', 'bulletList', 'orderedList', 'blockquote']);
 
 describe('Markdoc bodies keep every protected byte through any edit', () => {
+  it('has tables to type into: every one in the jazzy corpus opens as a grid', () => {
+    let grids = 0;
+    let tables = 0;
+    for (const { path, manifest } of sources) {
+      const { e, built } = open(splitFrontmatter(readFileSync(path, 'utf8')).body, manifest);
+      e.state.doc.descendants((node) => {
+        if (node.type.name === 'vesperTable') grids++;
+        return true;
+      });
+      tables += built.parsed.blocks.filter((block) => block.type === 'table').length;
+    }
+    expect(tables).toBeGreaterThan(8);
+    expect(grids).toBe(tables);
+  });
+
   for (const { path, manifest } of sources) {
     const name = path.slice(repo.length + 1).replaceAll('\\', '/');
     const body = splitFrontmatter(readFileSync(path, 'utf8')).body;
@@ -160,6 +191,45 @@ describe('Markdoc bodies keep every protected byte through any edit', () => {
           at = found + source.length;
         }
         expect(rewritten).toContain('Typed.');
+      }
+    });
+
+    it(`${name}: typing in any table cell changes only that cell’s line, and keeps its chips`, () => {
+      const { e, built, reset, save } = open(body, manifest);
+      const tables: { pos: number; path: string; value: TableValue }[] = [];
+      e.state.doc.descendants((node, pos) => {
+        if (node.type.name !== 'vesperTable') return true;
+        const value = node.attrs.value as TableValue;
+        tables.push({ pos, path: String(node.attrs.vesperBlock), value });
+        return false;
+      });
+      for (const { pos, path, value } of tables) {
+        const table = blockAt(built.parsed, path)?.table;
+        if (!table) throw new Error(`no table ${path}`);
+        value.rows.forEach((row, r) => {
+          row.cells.forEach((cell, c) => {
+            reset();
+            const attrs = e.state.doc.nodeAt(pos)?.attrs;
+            const typed = setCell(value, r, c, cell === '' ? 'Typed.' : `${cell} Typed.`);
+            e.view.dispatch(e.state.tr.setNodeMarkup(pos, undefined, { ...attrs, value: typed }));
+            const saved = save();
+            const line = r === 0 ? table.header : table.rows[r - 1];
+            if (!line) throw new Error(`no row ${String(r)}`);
+            const delta = saved.length - body.length;
+            const where = `${path}, row ${String(r)}, cell ${String(c)}`;
+            expect(saved.slice(0, line.start), `${where}: before`).toBe(body.slice(0, line.start));
+            expect(saved.slice(line.end + delta), `${where}: after`).toBe(body.slice(line.end));
+            const rewritten = saved.slice(line.start, line.end + delta);
+            expect(rewritten, where).toContain('Typed.');
+            let at = 0;
+            for (const chip of line.cells.flatMap((one) => one.chips ?? [])) {
+              const source = body.slice(chip.start, chip.end);
+              const found = rewritten.indexOf(source, at);
+              expect(found, `${where}: chip ${source}`).toBeGreaterThanOrEqual(0);
+              at = found + source.length;
+            }
+          });
+        });
       }
     });
   }

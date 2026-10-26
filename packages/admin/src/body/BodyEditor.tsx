@@ -11,6 +11,7 @@ import {
   type A11yNote,
   type BodyFormat,
   type BodyIssue,
+  type TableValue,
 } from '@vesper/core';
 import {
   Button,
@@ -42,7 +43,14 @@ import {
   selectBlock,
   selectedNode,
 } from './commands.ts';
-import { bodyItems, buildDocument, snapshot, sourceLabel, type BodyDocument } from './document.ts';
+import {
+  bodyItems,
+  buildDocument,
+  snapshot,
+  sourceLabel,
+  tableEdit,
+  type BodyDocument,
+} from './document.ts';
 import {
   InsertMenu,
   SlashCommands,
@@ -58,6 +66,7 @@ import {
   SourceBlock,
   VesperCard,
   VesperInline,
+  VesperTable,
   containerTypes,
   type ContainerTypes,
 } from './nodes.ts';
@@ -67,6 +76,7 @@ import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
 import { useFileUrl } from '../app/file-url.tsx';
 import { bodyChecks } from './checks.ts';
 import { BodyUiContext, type BodyUi } from './ui.ts';
+import { TableView } from './TableView.tsx';
 import { CardView, ContainerView, InlineView, SourceView } from './views.tsx';
 
 export type BodyEditorProps = {
@@ -267,6 +277,16 @@ const ReactInline = VesperInline.extend({
     return ReactNodeViewRenderer(InlineView, { as: 'span' });
   },
 });
+const ReactTable = VesperTable.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(TableView, {
+      // The grid and its actions own their events: a click on a cell focuses
+      // the cell, rather than selecting the whole table in the text.
+      stopEvent: ({ event }) =>
+        event.target instanceof Element && event.target.closest('[data-vesper-table-ui]') !== null,
+    });
+  },
+});
 
 /**
  * Holds what the editor's extensions need from the latest render (they are
@@ -378,6 +398,14 @@ function selectsLineOverLeaf(view: EditorView, event: KeyboardEvent): boolean {
   return node !== null && !node.isText && node.isLeaf;
 }
 
+/** Moves focus into a table's grid, onto the cell last used. */
+function focusGrid(dom: HTMLElement): void {
+  const cell =
+    dom.querySelector<HTMLElement>('[data-vesper-active]') ??
+    dom.querySelector<HTMLElement>('[role="grid"] [aria-colindex]');
+  cell?.focus();
+}
+
 /** A name for the selected block, read out when the arrow keys land on it. */
 function selectionAnnouncement(editor: Editor, ui: Pick<BodyUi, 'catalog' | 'containers'>): string {
   // Only for someone in the text: the editor opens with its last block selected.
@@ -386,6 +414,12 @@ function selectionAnnouncement(editor: Editor, ui: Pick<BodyUi, 'catalog' | 'con
   if (!selected) return '';
   const node = editor.state.doc.nodeAt(selected.pos);
   if (!node) return '';
+  if (node.type.name === 'vesperTable') {
+    const value = node.attrs.value as TableValue;
+    const columns = value.columns.length;
+    const rows = value.rows.length;
+    return `Table, ${String(columns)} ${columns === 1 ? 'column' : 'columns'} and ${String(rows)} ${rows === 1 ? 'row' : 'rows'}, selected. Press Enter to edit its cells.`;
+  }
   let label: string;
   if (node.type.name === 'sourceBlock') label = sourceLabel(String(node.attrs.blockType ?? ''));
   else if (node.type.name === 'vesperInline') {
@@ -424,6 +458,9 @@ function WritingView({
   const previewUrl = useFileUrl(imagePath);
   const [settingsAt, setSettingsAt] = useState<number | null>(null);
   const slashIds = useSlashIds();
+  // What a table says about its changes ("Row added below row 3.").
+  const [said, setSaid] = useState('');
+  const newTable = useRef(false);
 
   // The schema is made once per editor: the catalog decides its node types.
   const [setup] = useState(() => {
@@ -450,6 +487,7 @@ function WritingView({
       ReactSourceBlock,
       ReactCard,
       ReactInline,
+      ReactTable,
       ...containers.extensions.map((extension) =>
         (extension as ReturnType<typeof VesperCard.extend>).extend({
           addNodeView() {
@@ -511,12 +549,16 @@ function WritingView({
         markdown: updated.markdown as MarkdownManager,
         containers,
         parsed: model.current.built.parsed,
+        format,
+        ...(manifest.markdoc ? { markdoc: manifest.markdoc.options } : {}),
       });
       onChangeRef.current(assembleBody(model.current.built.parsed, items));
     },
   });
 
   function insertChoice(choice: InsertChoice, range?: { from: number; to: number }) {
+    // A new table opens with its first cell being edited.
+    newTable.current = choice.kind.builtin === 'table';
     const pos = insertBlock(
       editor,
       choice.kind,
@@ -540,6 +582,12 @@ function WritingView({
   useEffect(() => {
     bridge.update({
       open: (pos) => {
+        // A table has no settings: Enter moves into its cells, onto the one last used.
+        if (editor.state.doc.nodeAt(pos)?.type.name === 'vesperTable') {
+          const dom = editor.view.nodeDOM(pos);
+          if (dom instanceof HTMLElement) focusGrid(dom);
+          return;
+        }
         setSettingsAt(pos);
       },
       insert: insertChoice,
@@ -569,8 +617,25 @@ function WritingView({
       remove: (pos) => {
         removeBlock(editor, pos);
       },
+      announce: (message) => {
+        // A different string each time, so the same words are said again.
+        setSaid((previous) => (previous === message ? `${message}\u00a0` : message));
+      },
+      checkTable: (path, value) =>
+        tableEdit(path, value, {
+          markdown: editor.markdown as MarkdownManager,
+          containers,
+          format,
+          ...(model.current ? { parsed: model.current.built.parsed } : {}),
+          ...(manifest.markdoc ? { markdoc: manifest.markdoc.options } : {}),
+        }),
+      takeNewTable: () => {
+        const fresh = newTable.current;
+        newTable.current = false;
+        return fresh;
+      },
     }),
-    [catalog, containers, disabled, checks, partials, entryPath, editor],
+    [catalog, containers, disabled, checks, partials, entryPath, editor, format, manifest.markdoc],
   );
 
   // How a note's Show finds its block: by the current text, parsed again.
@@ -622,16 +687,14 @@ function WritingView({
                 setPicking(true);
               }}
               insert={
-                hasBlocks ? (
-                  <InsertMenu
-                    editor={editor}
-                    choices={(state) => choicesAt(state, catalog, containers)}
-                    onChoose={(choice) => {
-                      insertChoice(choice);
-                    }}
-                    disabled={disabled}
-                  />
-                ) : null
+                <InsertMenu
+                  editor={editor}
+                  choices={(state) => choicesAt(state, catalog, containers)}
+                  onChoose={(choice) => {
+                    insertChoice(choice);
+                  }}
+                  disabled={disabled}
+                />
               }
             />
           </div>
@@ -648,10 +711,18 @@ function WritingView({
         <p className="sr-only" role="status">
           {announcement}
         </p>
+        {/*
+         * Apart from the selection's: a change made in a table's grid also
+         * changes what the text's selection says, and neither may hide the other.
+         */}
+        <p className="sr-only" role="status">
+          {said}
+        </p>
         <p id="entry-body-help" className="text-small text-content-muted">
           Ctrl+B bold, Ctrl+I italic, Ctrl+K link.
-          {hasBlocks &&
-            ' Type / to insert a block. Arrow onto a block and press Enter for its settings; Alt+↑ and Alt+↓ move it.'}{' '}
+          {hasBlocks
+            ? ' Type / to insert a block or a table. Arrow onto a block and press Enter for its settings, or onto a table for its cells; Alt+↑ and Alt+↓ move it.'
+            : ' Type / to insert a table. Arrow onto a table and press Enter for its cells; Alt+↑ and Alt+↓ move it.'}{' '}
           Escape leaves a block, then the text. Dashed boxes are kept exactly as written.
         </p>
 

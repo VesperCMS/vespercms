@@ -390,7 +390,7 @@ describe('Markdoc tags in the writing view', () => {
       within(listbox)
         .getAllByRole('option')
         .map((o) => o.textContent),
-    ).toEqual(['Abbreviation (in this line)', 'Callout', 'Partial', 'YouTube video']);
+    ).toEqual(['Abbreviation (in this line)', 'Callout', 'Partial', 'Table', 'YouTube video']);
     expect(combobox).toHaveAttribute(
       'aria-activedescendant',
       within(listbox).getAllByRole('option')[0]?.id,
