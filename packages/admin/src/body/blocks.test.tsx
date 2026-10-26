@@ -330,6 +330,20 @@ describe('Markdoc tags in the writing view', () => {
     expect(document.querySelector('.ProseMirror-selectednode')).toBeNull();
   });
 
+  it('Ctrl+End reaches the block that ends the body, and Ctrl+Home the text’s start', async () => {
+    const { user } = setup();
+    const editor = await editorOf();
+    cursorAt(editor, 5);
+    // The browser's own move can't land on a block, and left the caret where it was.
+    await user.keyboard('{Control>}{End}{/Control}');
+    expect(
+      await screen.findByText('Partial selected. Press Enter for its settings.'),
+    ).toBeInTheDocument();
+    await user.keyboard('{Control>}{Home}{/Control}');
+    expect(editor.state.selection).toBeInstanceOf(TextSelection);
+    expect(editor.state.selection.from).toBe(1);
+  });
+
   it('inserts a tag from the toolbar and opens its settings; a missing required attribute blocks saving', async () => {
     const { api, user } = setup();
     const editor = await editorOf();

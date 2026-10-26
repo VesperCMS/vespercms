@@ -315,8 +315,9 @@ type EditorActions = {
  * The body's keys: Escape inside a frame selects the frame, and on a
  * selected block (or in plain text) moves to the toolbar, so leaving the
  * editor never depends on Tab, which indents list items. Enter on a
- * selected block opens its settings; Alt+↑ and Alt+↓ move it. On a Mac,
- * ⇧⌘← and ⇧⌘→ beside a chip are left to the browser.
+ * selected block opens its settings; Alt+↑ and Alt+↓ move it. Ctrl+Home
+ * and Ctrl+End (⌘↑ and ⌘↓) go to the text's ends. On a Mac, ⇧⌘← and ⇧⌘→
+ * beside a chip are left to the browser.
  */
 function bodyShortcuts(options: {
   containers: ContainerTypes;
@@ -367,6 +368,10 @@ function bodyShortcuts(options: {
         },
         'Alt-ArrowUp': () => move(editor, -1),
         'Alt-ArrowDown': () => move(editor, 1),
+        // The text's ends, a block there included: the browser's own move can't land on a
+        // table or a card that starts or ends the body, and leaves the caret where it was.
+        [isMac ? 'Mod-ArrowUp' : 'Mod-Home']: () => toEdge(editor, 'start'),
+        [isMac ? 'Mod-ArrowDown' : 'Mod-End']: () => toEdge(editor, 'end'),
       };
     },
     addProseMirrorPlugins() {
@@ -383,6 +388,14 @@ function bodyShortcuts(options: {
       ];
     },
   });
+}
+
+/** The text's start or end: a text position, or the block there, as the arrow keys select it. */
+function toEdge(editor: Editor, edge: 'start' | 'end'): boolean {
+  const { doc } = editor.state;
+  const selection = edge === 'start' ? Selection.atStart(doc) : Selection.atEnd(doc);
+  editor.view.dispatch(editor.state.tr.setSelection(selection).scrollIntoView());
+  return true;
 }
 
 /**
