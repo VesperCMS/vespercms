@@ -13,6 +13,11 @@
 
 ## src/content/docs/guides/conditional-content.mdoc
 
+## src/content/docs/guides/opening-hours.mdoc
+
+- {% table %}
++ {% table title="Added" %}
+
 ## src/content/docs/guides/writing-callouts.mdoc
 
 - {% callout %}

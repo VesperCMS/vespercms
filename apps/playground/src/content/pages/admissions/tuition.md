@@ -18,3 +18,9 @@ blocks:
 ---
 
 In-state tuition is charged per credit hour. Most students pay less after grants.
+
+| Charge               | Per credit hour |
+|:---------------------|----------------:|
+| In-state tuition     |            $285 |
+| Out-of-state tuition |            $610 |
+| Student services     |             $24 |

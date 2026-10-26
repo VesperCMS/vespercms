@@ -1,0 +1,37 @@
+---
+title: Opening hours
+summary: When the welcome center and the library are open.
+order: 3
+---
+
+The welcome center is open all year, except on public holidays.
+
+| Day | Hours |
+|---|---|
+| Monday to Friday | 9 am to 5 pm |
+| Saturday | 10 am to 2 pm |
+| Sunday | Closed |
+
+Holidays are listed as a Markdoc table.
+
+{% table %}
+* Holiday
+* Hours
+---
+* New Year's Day
+* Closed
+{% /table %}
+
+{% if $product.beta %}
+| Service | Where |
+|---|---|
+| Campus tours | The {% abbr title="welcome center" %}WC{% /abbr %} |
+{% /if %}
+
+The library keeps longer hours.
+
+| Building | Hours |
+|---|---|
+| Library | 8 am to 10 pm<br>Weekends 10 am to 6 pm |
+
+Ask at the welcome desk about anything else.
