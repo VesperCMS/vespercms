@@ -152,6 +152,66 @@ test('by keyboard: the entry’s tabs, Content and Details, at any width', async
   await expectAccessible(page);
 });
 
+/** How many colours a screenshot holds, counted in the page, which can decode a PNG. */
+async function colours(page: Page, png: Buffer): Promise<number> {
+  return page.evaluate(
+    async (bytes) => {
+      const image = await createImageBitmap(
+        new Blob([new Uint8Array(bytes)], { type: 'image/png' }),
+      );
+      const canvas = new OffscreenCanvas(image.width, image.height);
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('no 2d context');
+      context.drawImage(image, 0, 0);
+      const { data } = context.getImageData(0, 0, image.width, image.height);
+      const seen = new Set<number>();
+      for (let i = 0; i < data.length; i += 4) {
+        seen.add(((data[i] ?? 0) << 16) | ((data[i + 1] ?? 0) << 8) | (data[i + 2] ?? 0));
+      }
+      return seen.size;
+    },
+    [...png],
+  );
+}
+
+test('the top bar’s glass is clear above the lines between panes and strips, in both themes', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto('/admin/#/c/blog/e/harbor-at-dawn');
+    await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Harbor at dawn');
+    for (const folded of [false, true]) {
+      if (folded) {
+        await page.getByRole('button', { name: 'Collapse Content' }).click();
+        await expect(page.getByRole('button', { name: 'Show Content' })).toBeFocused();
+        await page.evaluate(() => {
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        });
+      }
+      await page.mouse.move(0, 0);
+      const bar = await page.getByRole('banner').boundingBox();
+      if (!bar) throw new Error('no top bar');
+      // Every pane and strip but the last, whose edge is the window's.
+      const edges = await page
+        .locator('[data-pane], [data-strip]')
+        .evaluateAll((panes) => panes.slice(0, -1).map((p) => p.getBoundingClientRect().right));
+      expect(edges).toHaveLength(2);
+      for (const x of edges) {
+        // The bar's own edges are left out: its lit top and its rim.
+        const clip = { x: x - 16, y: bar.y + 4, width: 32, height: bar.height - 8 };
+        expect(
+          await colours(page, await page.screenshot({ clip })),
+          `${colorScheme}, at ${String(x)}`,
+        ).toBe(1);
+      }
+    }
+    // Shown again for the next theme.
+    await page.getByRole('button', { name: 'Show Content' }).click();
+  }
+});
+
 test('by keyboard: panes, full width: the collections, the list and the entry, folding when they don’t fit', async ({
   page,
 }) => {

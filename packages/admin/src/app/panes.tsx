@@ -229,9 +229,7 @@ export function PaneShell({
               key={pane.id}
               data-pane={pane.id}
               className={
-                wide
-                  ? cx('flex min-h-0 flex-col border-r border-border', widthClass[pane.width])
-                  : undefined
+                wide ? cx('flex min-h-0 flex-col', paneEdge, widthClass[pane.width]) : undefined
               }
             >
               <PaneContext.Provider value={info}>{pane.content}</PaneContext.Provider>
@@ -243,6 +241,18 @@ export function PaneShell({
     </div>
   );
 }
+
+/**
+ * The hairline between panes, from the top bar's bottom edge down. The panes run up
+ * beneath the bar, and a line there showed through its glass as a smudge. In forced
+ * colours the bar is solid, and the plain border takes the system's colour.
+ */
+const paneEdge = cx(
+  'border-r border-border',
+  // Sliced only at the right, so the line's top lands exactly on the bar's height.
+  '[border-image:linear-gradient(transparent_var(--studio-bar),var(--color-border)_var(--studio-bar))_0_1_0_0]',
+  'forced-colors:[border-image:none]',
+);
 
 /** Room for the entry a list opens: empty until one is chosen. */
 function Filler() {
@@ -261,10 +271,7 @@ const WAITING: PaneInfo = { landmark: 'region', level: 2, focusTarget: false, wi
 function WaitingPane() {
   if (useDraftsWaiting() === 0) return <Filler />;
   return (
-    <div
-      data-pane="changes"
-      className={cx('flex min-h-0 flex-col border-r border-border', widthClass.flex)}
-    >
+    <div data-pane="changes" className={cx('flex min-h-0 flex-col', paneEdge, widthClass.flex)}>
       <PaneContext.Provider value={WAITING}>
         <Screen title="Changes" afterglow>
           <DraftsWaiting />
@@ -284,7 +291,8 @@ function PaneStrip({ id, title, onOpen }: { id: string; title: string; onOpen: (
       aria-label={`Show ${title}`}
       title={`Show ${title}`}
       className={cx(
-        'flex w-11 shrink-0 flex-col items-center gap-3 border-r border-border text-small text-content-muted hover:bg-surface-sunken hover:text-content',
+        'flex w-11 shrink-0 flex-col items-center gap-3 text-small text-content-muted hover:bg-surface-sunken hover:text-content',
+        paneEdge,
         focusRing,
       )}
       // Below the floating top bar, as a pane's content is.
