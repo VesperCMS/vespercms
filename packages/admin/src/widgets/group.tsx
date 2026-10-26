@@ -1,14 +1,6 @@
 import { isPlainObject, resolveMediaPath, type DataValue, type FieldModel } from '@vesper/core';
 import { Button, Chevron, cx, focusRing, Icon, Menu, type MenuItem } from '@vesper/ui';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type DragEvent,
-  type KeyboardEvent,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useEffect, useRef, useState, type DragEvent, type ReactNode, type RefObject } from 'react';
 import {
   Button as RACButton,
   Disclosure,
@@ -16,6 +8,7 @@ import {
   Heading,
   useDrag,
   useDrop,
+  type KeyboardEvent,
 } from 'react-aria-components';
 import { useFileUrl } from '../app/file-url.tsx';
 import { formatCount } from '../app/format.ts';
@@ -444,6 +437,9 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
                   ) {
                     event.preventDefault();
                     setMenuFor(itemId);
+                  } else {
+                    // React Aria stops a button's keys unless told otherwise, and ⌘S listens on the window.
+                    event.continuePropagation();
                   }
                 }}
                 menu={itemMenu(index, itemId, name)}

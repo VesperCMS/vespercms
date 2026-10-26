@@ -71,6 +71,21 @@ describe('list items as rows', () => {
     expect(screen.queryByRole('button', { name: 'Open all' })).toBeNull();
   });
 
+  it('saves with Ctrl+S while a row has focus, after Alt+↓ moved it', async () => {
+    const { api } = open(three);
+    const user = userEvent.setup();
+    const clubs = await screen.findByRole('button', { name: /^Clubs/ });
+    clubs.focus();
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    await waitFor(() => {
+      expect(clubs).toHaveFocus();
+    });
+    await user.keyboard('{Control>}s{/Control}');
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+  });
+
   it('opens a row’s menu with Shift+F10, and duplicates an item after itself', async () => {
     open(three);
     const user = userEvent.setup();
