@@ -160,9 +160,9 @@ test('a YouTube video: inserted from the toolbar, configured by Enter, moved and
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menuitem', { name: 'YouTube video' })).toBeVisible();
   await expectAccessible(page);
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
+  // Past Abbreviation, Callout, Partial and Table, in the menu's order.
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'YouTube video' })).toBeFocused();
   await page.keyboard.press('Enter');
 
   const dialog = page.getByRole('dialog', { name: 'YouTube video settings' });
