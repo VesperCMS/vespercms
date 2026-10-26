@@ -23,7 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5, step 3, the studio: see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it.
+Phase 4.5, step 4, `vesper deploy init`: see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it.
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
@@ -1543,7 +1543,16 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 - **Docs:** `@vesper/astro`'s README has a Scheduling section. The docs site's page waits for step 7, as the design says, once the studio and the templates are built.
 - **Tests:** the build's module (the instant, `schedule.json`, the warning) and the loaders; unpublish redirects, the file winning, and Apache's and Netlify's rules carrying them; the manifest warning; an integration test that builds the playground as of four instants (a minute either side of `harvest-concert`, then inside and at the end of `night-owl-study-hall`'s repeated hour), checking pages, the events list, search and `next`; and the static e2e on the plain server: the two not-yet-live events answer 404, `fall-open-house` lands on `/events/` in one hop, and `schedule.json` is served. Existing tests now count the two unpublished events' redirect pages, and the manifest snapshot has `unpublishRedirect`. The helpers' parity test (`/site-tree.json`, dev against the build) lists every event's URL too, which the design missed; it now compares all but the events, and checks the build has only the live ones. Vitest: 4,418 passed, 3 skipped; every e2e project passes locally. CI green on GitHub (run 40376509571), Windows included.
 
-**Next: step 3, the studio.** Publish ▾ with Schedule…, the dialog, the schedule in Details, the status words in the bar and the list, the Scheduled filter and view, and the dev marker. The platform facts the design marks "to check" (Actions' `schedule`, `repository_dispatch`, hosts' build hooks) are checked when step 4's templates start, which is where they're used.
+**Step 3, the studio (2026-10-26),** as designed; DECISIONS.md's "Where scheduling lives in the studio" says how, and where it differs:
+- **Core and the API:** each list row carries its entry's schedule (`EntrySummary.schedule`), `ContentService.scheduledChanges` lists what's to come with titles, and every back end has `listScheduled` (the dev API's `scheduled` route; the browser's services in GitHub mode and the cloud). `rebuildEvery` joins `vesper.config.ts` and the manifest.
+- **The studio** (`packages/admin/src/schedule/`): the status words in the editor's bar and both lists; the lists' Scheduled filter, linking to the view; Publish ▾ (Schedule…, Publish now, Cancel schedule); the Schedule dialog, with the zone, the checks (a time passed, coming down before going live), the skipped and repeated hours' notes, the line on accuracy and, in GitHub mode, the public-repository line; the schedule in Details with Change schedule…; and the Scheduled view at `#/scheduled`, with Reschedule… and Cancel, reached from "N scheduled changes" on Home and at the top of the collections pane.
+- **The dev marker:** a fixed note on a scheduled entry's own page, and its words and the dot in the toolbar app.
+- **A changed test:** the link picker's test used the events' redirect field, which now lives in the Schedule dialog, so it goes through Change schedule….
+- **Not built here:** the cloud's held drafts, states and cancelling a publish (step 5), and the docs page (step 7).
+- **Tests:** core (rows' schedules, the changes to come, `rebuildEvery` and its check); the studio in jsdom with only Date faked (words in the list and the bar, the Scheduled filter, the line and the view, Cancel and Reschedule… from it, Publish ▾'s items per entry, the dialog's checks, notes and accuracy line, with and without `rebuildEvery`, a live entry's dialog, Details and Change schedule… without saving, the public-repository line in GitHub mode); the `studio` e2e on Tokyo time (by keyboard, schedules an event's time to come down through Publish ▾ in the skipped hour of 8 March 2099, checks the file byte for byte, then reschedules and cancels it from the Scheduled view until the file is as it was, with axe in both themes on the dialog and the view, and focus back on the row's menu button), the dev marker on a page of a 2099 event, and the `github` e2e (one commit of just the time). Vitest: 4,433 passed, 3 skipped; every e2e project passes locally, 180 tests.
+- **A keyboard pass** is in the e2e test above, in Chromium. The 4402 preview was another session's (the Tables worktree) while this was built, so there was no pass in the app's browser pane; a screen reader pass waits with the rest.
+
+**Next: step 4, `vesper deploy init`** and its workflows, with the due step's tests. The platform facts the design marks "to check" (Actions' `schedule`, `repository_dispatch`, hosts' build hooks) are checked when step 4's templates start, which is where they're used.
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 
