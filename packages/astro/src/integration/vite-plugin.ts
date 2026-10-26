@@ -6,6 +6,7 @@ import { createDevApi } from './dev-api.ts';
 import type { CloudStudioSettings, StaticRoutes } from '@vesper/core';
 import type { SiteModel } from '../node/manifest.ts';
 import type { HelperData } from '../runtime/helpers.ts';
+import type { ScheduleData } from '../runtime/schedule.ts';
 import type { GitHubSettings } from '../node/github.ts';
 import type { SiteModelCache } from './site-model.ts';
 
@@ -47,6 +48,10 @@ export type StudioPluginOptions = {
   routes?: () => StaticRoutes;
   /** The `vesper:content` helpers' runtime (runtime/helpers): TypeScript here, JavaScript once built. */
   helpersEntry: string;
+  /** The scheduled loaders' runtime (runtime/schedule), likewise. */
+  scheduleEntry: string;
+  /** The build's one instant (spec §6.17), which filters scheduled collections. */
+  instant: Date;
 };
 
 /** @vesper/core's runtime packages, which the browser loads through the studio. */
@@ -124,10 +129,22 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     async load(id) {
       if (id === `\0${CONTENT}`) {
         const model = await options.cache.get();
+        const schedules = Object.fromEntries(
+          model.manifest.collections.flatMap((c) =>
+            c.presentation.schedule ? [[c.name, c.presentation.schedule]] : [],
+          ),
+        );
         return contentModule({
           dev: options.command === 'dev',
           helpers: toPosix(options.helpersEntry),
           data: helperData(model, options.root),
+          schedule:
+            Object.keys(schedules).length > 0
+              ? {
+                  entry: toPosix(options.scheduleEntry),
+                  data: { instant: options.instant.toISOString(), schedules },
+                }
+              : undefined,
           vesperConfig:
             options.vesperConfig && Object.keys(model.urlFunctions ?? {}).length > 0
               ? toPosix(options.vesperConfig)
@@ -275,12 +292,15 @@ function reloadStudio(server: ViteDevServer): void {
  * In dev, the loaders also note each entry a page reads, for the toolbar's
  * "Edit this page": `shown` for `render()` and `getEntry()`, `listed` for
  * `getCollection()` and `getEntries()` (which `getStaticPaths` calls for
- * every page of a route). In builds it's a plain re-export: zero cost.
+ * every page of a route). In builds nothing is recorded: the loaders leave
+ * out scheduled entries outside their window at the build's instant (spec
+ * §6.17), and a site with no scheduled collection gets a plain re-export.
  */
 function contentModule(options: {
   dev: boolean;
   helpers: string;
   data: HelperData;
+  schedule: { entry: string; data: ScheduleData } | undefined;
   vesperConfig: string | undefined;
 }): string {
   const helpers = [
@@ -297,6 +317,18 @@ function contentModule(options: {
     'export const getBreadcrumbs = helpers.getBreadcrumbs;',
     'export const getUrl = helpers.getUrl;',
   ];
+  if (!options.dev && options.schedule) {
+    return [
+      "import * as content from 'astro:content';",
+      "export * from 'astro:content';",
+      `import { scheduledLoaders } from ${JSON.stringify(options.schedule.entry)};`,
+      `const loaders = scheduledLoaders(content, ${JSON.stringify(options.schedule.data)});`,
+      'export const getCollection = loaders.getCollection;',
+      'export const getEntry = loaders.getEntry;',
+      'export const getEntries = loaders.getEntries;',
+      ...helpers,
+    ].join('\n');
+  }
   if (!options.dev) {
     return [
       "import { getCollection } from 'astro:content';",

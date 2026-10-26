@@ -32,6 +32,8 @@ const manifest: Manifest = {
   diagnostics: [],
 };
 const model: SiteModel = { manifest, schemas: new Map(), mdxProps: new Map(), widgetNames: [] };
+/** The build's instant. */
+const NOW = new Date('2026-10-26T16:00:00Z');
 
 let root: string;
 beforeAll(() => {
@@ -65,6 +67,7 @@ describe('buildRedirects', () => {
       routes,
       env: {},
       existing: { '/mine': '/x' },
+      at: NOW,
     });
     expect(built.targets).toEqual([]);
     expect(built.astro).toEqual({
@@ -84,6 +87,7 @@ describe('buildRedirects', () => {
       routes,
       env: { NETLIFY: 'true' },
       existing: {},
+      at: NOW,
     });
     expect(built.targets).toEqual(['netlify']);
     expect(built.astro).toEqual({});
@@ -93,6 +97,138 @@ describe('buildRedirects', () => {
       '/contact-us',
       '/mine',
     ]);
+  });
+});
+
+describe('buildRedirects with scheduled entries', () => {
+  const events = {
+    ...manifest.collections[0],
+    name: 'events',
+    label: 'Events',
+    source: {
+      loader: 'glob' as const,
+      base: 'src/content/events',
+      pattern: '*.md',
+      generateId: 'default' as const,
+      formats: ['md'],
+    },
+    presentation: {
+      url: '/events/:id',
+      schedule: {
+        unpublish: true,
+        publishAt: 'publishAt',
+        unpublishAt: 'unpublishAt',
+        unpublishRedirect: 'unpublishRedirect',
+      },
+    },
+  };
+  const scheduled: SiteModel = {
+    ...model,
+    manifest: { ...manifest, collections: [manifest.collections[0], events] as never },
+  };
+  let site: string;
+  beforeAll(() => {
+    site = mkdtempSync(join(tmpdir(), 'vesper-unpublish-'));
+    mkdirSync(join(site, 'src/content/events'), { recursive: true });
+    mkdirSync(join(site, 'src/content/pages'), { recursive: true });
+    writeFileSync(join(site, 'src/content/pages/calendar.md'), '---\ntitle: Calendar\n---\n');
+    writeFileSync(join(site, 'src/content/pages/index.md'), '---\ntitle: Home\n---\n');
+    const event = (name: string, lines: string[]) => {
+      writeFileSync(
+        join(site, `src/content/events/${name}.md`),
+        ['---', `title: ${name}`, ...lines, '---', ''].join('\n'),
+      );
+    };
+    event('open-house', [
+      'unpublishAt: 2026-10-25T00:00:00-04:00',
+      'unpublishRedirect: /calendar/',
+    ]);
+    event('orientation', [
+      'unpublishAt: 2026-07-16T00:00:00-04:00',
+      'unpublishRedirect: /calendar/',
+    ]);
+    event('lecture', ['unpublishAt: 2026-11-13T00:00:00-05:00', 'unpublishRedirect: /calendar/']);
+    event('concert', ['publishAt: 2026-10-31T08:00:00-04:00']);
+    // The file's own redirect for an address an unpublished entry also redirects.
+    writeFileSync(
+      join(site, 'vesper.redirects.yaml'),
+      '- { from: /events/orientation, to: /, status: 301 }\n- { from: /concert, to: /events/concert, status: 302 }\n',
+    );
+  });
+  afterAll(() => {
+    rmSync(site, { recursive: true, force: true });
+  });
+
+  it('adds a temporary redirect for each unpublished entry, and lets the file win', async () => {
+    const built = await buildRedirects({
+      root: site,
+      model: scheduled,
+      routes: new Map(),
+      env: {},
+      existing: {},
+      at: NOW,
+    });
+    expect(built.astro).toEqual({
+      '/events/open-house': { status: 302, destination: '/calendar/' },
+      '/events/orientation': { status: 301, destination: '/' },
+      '/concert': { status: 302, destination: '/events/concert/' },
+    });
+    expect(built.redirects[0]).toMatchObject({ from: '/events/open-house', reason: 'unpublish' });
+    expect(built.warnings.map((w) => w.message)).toEqual([
+      '/events/orientation/ is unpublished and asks to send visitors to /calendar/, but vesper.redirects.yaml has a redirect from it too, which is used instead.',
+      // A page that isn't live yet isn't one of the build's pages.
+      '/concert redirects to /events/concert, which isn’t a page on this site.',
+    ]);
+  });
+
+  it('writes an unpublished entry’s redirect into each host’s rules, temporarily', async () => {
+    const dist = mkdtempSync(join(tmpdir(), 'vesper-dist-'));
+    try {
+      const built = await buildRedirects({
+        root: site,
+        model: scheduled,
+        routes: new Map(),
+        env: { NETLIFY: 'true' },
+        existing: {},
+        at: NOW,
+      });
+      // Netlify's rule carries it, so Astro writes no page for it.
+      expect(built.astro).toEqual({});
+      writeHostRules(
+        dist,
+        { ...built, targets: ['apache', 'netlify'] },
+        { base: '/', trailingSlash: 'ignore', buildFormat: 'directory' },
+      );
+      expect(readFileSync(join(dist, '.htaccess'), 'utf8')).toContain(
+        'RedirectMatch 302 ^/events/open-house/?$ /calendar/',
+      );
+      expect(readFileSync(join(dist, '_redirects'), 'utf8')).toContain(
+        '/events/open-house /calendar/ 302!',
+      );
+    } finally {
+      rmSync(dist, { recursive: true, force: true });
+    }
+  });
+
+  it('adds nothing for an entry that’s still live, and redirects it once it isn’t', async () => {
+    const later = await buildRedirects({
+      root: site,
+      model: scheduled,
+      routes: new Map(),
+      env: {},
+      existing: {},
+      at: new Date('2026-11-13T05:00:00Z'),
+    });
+    expect(Object.keys(later.astro)).toContain('/events/lecture');
+    const earlier = await buildRedirects({
+      root: site,
+      model: scheduled,
+      routes: new Map(),
+      env: {},
+      existing: {},
+      at: new Date('2026-07-01T00:00:00Z'),
+    });
+    expect(Object.keys(earlier.astro)).toEqual(['/concert']);
   });
 });
 
@@ -109,7 +245,7 @@ describe('writeHostRules', () => {
     const dist = mkdtempSync(join(tmpdir(), 'vesper-dist-'));
     try {
       writeFileSync(join(dist, '.htaccess'), 'ErrorDocument 404 /404.html\n');
-      const built = await buildRedirects({ root, model, routes, env: {}, existing: {} });
+      const built = await buildRedirects({ root, model, routes, env: {}, existing: {}, at: NOW });
       const written = writeHostRules(
         dist,
         { ...built, targets: ['apache', 'netlify', 'nginx'] },
