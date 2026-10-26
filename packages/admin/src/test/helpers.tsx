@@ -7,6 +7,7 @@ import type {
   PageLink,
   PageTree,
   RedirectsDocument,
+  ScheduledChange,
 } from '@vesper/core';
 import { act, render, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
@@ -41,6 +42,7 @@ export type FakeData = {
   media?: MediaItem[];
   partials?: string[];
   pages?: PageLink[];
+  scheduled?: ScheduledChange[];
   trees?: Record<string, PageTree>;
   redirects?: RedirectsDocument;
   /** Local mode's git user, for the user menu. */
@@ -83,6 +85,7 @@ export function fakeApi(data: FakeData = {}): {
       Promise.resolve(`/_vesper/api/file?path=${encodeURIComponent(path)}`),
     ),
     listPages: vi.fn(() => Promise.resolve(data.pages ?? [])),
+    listScheduled: vi.fn(() => Promise.resolve(data.scheduled ?? [])),
     pageTree: vi.fn((collection: string) =>
       Promise.resolve(data.trees?.[collection] ?? { collection, nodes: [] }),
     ),
