@@ -10,6 +10,8 @@ test-results/
 blob-report/
 # The studio e2e tests' throwaway copy of the playground (scripts/studio-site.mjs).
 e2e/.studio-site/
+# The home page's screenshots' own copy of it (npm run screens).
+e2e/.screens-site/
 # The redirects integration test's copy of the playground, moved and built.
 e2e/.move-site/
 # The images integration test's copy of the playground, built without the crop step.

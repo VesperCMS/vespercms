@@ -3,8 +3,11 @@
 // the repo (e2e/.studio-site), so its relative imports and the workspace's
 // node_modules resolve the same way, and it's gitignored.
 //
-// Usage: node scripts/studio-site.mjs [--serve <port>]
+// Usage: node scripts/studio-site.mjs [--serve <port>] [--site <folder>]
 //   --serve runs `astro dev` on the copy after making it.
+//   --site names the copy's folder in e2e/ (default .studio-site). The home
+//   page's screenshots (`npm run screens`) use their own, so they never wipe
+//   the copy a running `npm run e2e` is saving into.
 import { spawn } from 'node:child_process';
 import { cpSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,7 +15,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const source = join(root, 'apps', 'playground');
-const target = join(root, 'e2e', '.studio-site');
+const siteFlag = process.argv.indexOf('--site');
+const folder = siteFlag === -1 ? '.studio-site' : (process.argv[siteFlag + 1] ?? '');
+// A dot folder directly in e2e/, listed in .gitignore, .prettierignore,
+// eslint.config.js and e2e/tsconfig.json like every copy of the playground.
+if (!/^\.[a-z][a-z-]*$/.test(folder)) throw new Error(`studio-site: bad --site "${folder}"`);
+const target = join(root, 'e2e', folder);
 const SKIP = new Set(['node_modules', 'dist', '.astro', '.vesper']);
 
 rmSync(target, { recursive: true, force: true });

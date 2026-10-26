@@ -84,6 +84,8 @@ export default defineConfig(
       'test-results/**',
       // The studio e2e tests' throwaway copy of the playground.
       'e2e/.studio-site/**',
+      // The home page's screenshots' own copy (npm run screens).
+      'e2e/.screens-site/**',
       // The redirects integration test's copy of the playground.
       'e2e/.move-site/**',
       'e2e/.images-site/**',

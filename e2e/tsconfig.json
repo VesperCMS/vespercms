@@ -11,6 +11,7 @@
   "include": ["**/*.ts"],
   "exclude": [
     ".studio-site",
+    ".screens-site",
     ".move-site",
     ".images-site",
     ".a11y-site",
