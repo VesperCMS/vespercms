@@ -122,6 +122,8 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Change a tag through `editMarkdocTag` or `editJsxTag`, and never run `Markdoc.format()` over content.** They change one attribute's bytes and keep the rest of the tag, and a list written one item (or one key) per line changes item by item; `format` normalizes everything it touches.
 
+**Change a table through `editTable`, never by writing pipe text yourself.** It splices cells, rows and columns into the table as loaded and refuses a result that doesn't read back as the table intended; the studio's grid checks each change with it before making it (DECISIONS.md, "Tables are edited as a grid, and a save splices cells").
+
 ### URLs, hierarchy and redirects
 
 **Compute an entry's URL with `entryUrlKey` and `formatUrl` from `@vesper/core/urls`, never by replacing tokens in a pattern yourself.** The studio, the dev API, the build and `vesper:content` must agree on every address (spec §6.15.1).

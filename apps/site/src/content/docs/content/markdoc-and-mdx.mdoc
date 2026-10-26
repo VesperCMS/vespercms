@@ -119,12 +119,30 @@ This feature is ready to use.
 
 The "/" list doesn't offer conditionals. Write a new one in the source view.
 
+## Tables
+
+A pipe table is a grid in the writing view, in Markdown, Markdoc and MDX alike. Arrow onto it and press Enter to move into its cells, onto the one you last used.
+
+- The arrow keys move between cells. Home and End go to the ends of the row, and Ctrl+Home and Ctrl+End to the first and last cells.
+- Enter or F2 edits a cell in place, with bold, italic, code and links on their usual shortcuts. Enter or Escape keeps the change, and Tab and Shift+Tab go on to the next or previous cell. Tab in the last cell adds a row.
+- Table actions, the "…" above the table or Shift+F10 on a cell, insert, move and delete rows and columns, and align a column left, centre or right. Alt and the arrow keys move a row or a column too. The header row stays first.
+- Ctrl+Z undoes one change at a time, and Escape returns to the text with the table selected.
+
+A save changes only what you changed: one cell's text, one row's line, or one cell in each line for a column. Rows without outer pipes keep that shape. In a table padded so its pipes line up, a changed cell is padded to its column when it fits, so no other row changes. A `|` typed in a cell is saved as `\|`. A new table from "/" or the Insert menu is written compactly, as `| a | b |` over `|---|---|`.
+
+Some tables stay kept as written, edited as text:
+
+- Markdoc's own `{% table %}` tag;
+- a cell with HTML (such as `<br>` for a line break), a character reference such as `&nbsp;`, a footnote, a reference-style link, a link with a title, or a Markdoc annotation;
+- a row with more or fewer cells than the header;
+- a table inside a list or a quote, which is kept with it.
+
 ## Kept as written
 
 Some things aren't safe to retype in a writing view, so the studio protects them. It never reformats them.
 
 - **Variables, functions and annotations** are chips in the text. Their settings are a small text field, edited as written.
-- **Everything else the writing view can't show faithfully** is a block named in words, such as "Table, kept as written": tags `markdoc.config.mjs` doesn't define, HTML, comments, tables, footnotes and reference-style links. You edit it as raw text, in its own dialog or in the source view.
+- **Everything else the writing view can't show faithfully** is a block named in words, such as "HTML, kept as written": tags `markdoc.config.mjs` doesn't define, HTML, comments, the tables above, footnotes and reference-style links. You edit it as raw text, in its own dialog or in the source view.
 
 ## What stops a save
 

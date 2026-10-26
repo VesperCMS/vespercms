@@ -55,11 +55,13 @@ Markdown, Markdoc and MDX bodies open in a writing view, with a toolbar for bold
 
 Markdoc tags from `markdoc.config.mjs`, and MDX components you declare in `vesper.config.ts`, are blocks: a frame with a Settings button, whose form comes from the tag's attributes.
 
-- Type `/` at the start of a line or after a space to insert a block, or use the toolbar's Insert menu. Both offer only what fits at the cursor.
+- Type `/` at the start of a line or after a space to insert a block or a table, or use the toolbar's Insert menu. Both offer only what fits at the cursor.
 - Arrow onto a block to select it. Enter opens its settings, and Alt+↑ and Alt+↓ move it.
 - Escape leaves a block, then moves from the text to the toolbar.
 
-Anything the writing view can't save back exactly is a source block, a dashed box such as "Table, kept as written": tables, HTML, comments, footnotes, imports and undeclared MDX components. They're kept byte for byte, and Edit as text changes one as plain text. Edit as Markdoc (or Markdown, or MDX) shows the whole body as text, exactly as it's saved.
+Tables are grids. Arrow onto one and press Enter to move into its cells: the arrow keys move between cells, Enter or F2 edits one, and Tab goes on to the next, adding a row after the last. Table actions, the "…" above the table or Shift+F10 on a cell, insert, move and delete rows and columns, and align a column. More in [Markdoc and MDX](/docs/content/markdoc-and-mdx/#tables).
+
+Anything the writing view can't save back exactly is a source block, a dashed box such as "HTML, kept as written": HTML, comments, footnotes, imports, undeclared MDX components, and tables it can't show as a grid. They're kept byte for byte, and Edit as text changes one as plain text. Edit as Markdoc (or Markdown, or MDX) shows the whole body as text, exactly as it's saved.
 
 A body your site's build would fail on, such as a tag without a required attribute, can't be saved; the problem shows on its block. More in [Markdoc and MDX](/docs/content/markdoc-and-mdx/).
 
