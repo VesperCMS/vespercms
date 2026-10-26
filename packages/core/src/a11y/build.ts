@@ -4,7 +4,7 @@ import { A11Y_RULES } from './rules.ts';
  * The structure rules the build checks with axe-core (spec §6.18, layer 2),
  * each with a message in the studio's style: plain words about what's wrong
  * and one sentence on why it matters. Only rules that need no layout or
- * colour: contrast and other visual rules are for rendered scans (layer 3).
+ * colour: contrast and other visual rules need a rendered page.
  * The list is pinned by a test, so a new axe rule never joins unreviewed.
  */
 

@@ -75,7 +75,7 @@ A paid cloud service adds what static sites can't do on their own:
 | D19 | **Vesper reports accessibility; it never claims compliance and never ships an overlay.** Checks find many problems, not all. The UI and docs say so plainly. Vesper never injects any front-end "accessibility widget" or overlay script into sites. | Decided |
 | D20 | **Confirmation emails can't be turned into a spam cannon.** Forms with confirmation emails require Turnstile. Each recipient address is rate-limited. The confirmation template is fixed by the site owner, and by default it never repeats the submitter's free-text fields back to them. | Decided |
 | D21 | **Uploaded files are private.** They are stored in R2 under per-site keys and never publicly reachable. Site members download them only through short-lived signed links from the dashboard. Retention follows the form's submission retention. | Decided |
-| D22 | Integrations are **one event-and-delivery system** shared by forms, comments, publishing and accessibility reports. Each integration has: an event it reacts to, a destination, a field mapping, and a delivery log. Deliveries are queued, retried and visible. Nothing fails silently. | Decided |
+| D22 | Integrations are **one event-and-delivery system** shared by forms, comments and publishing. Each integration has: an event it reacts to, a destination, a field mapping, and a delivery log. Deliveries are queued, retried and visible. Nothing fails silently. | Decided |
 | D23 | **Site search is built into the open-source integration and is free.** The integration builds a Pagefind index at build time, so search is plain static files that work on any host (D16), with no service to pay for or keep running. The cloud adds nothing required for search. | Decided |
 
 ---
@@ -953,7 +953,7 @@ collections: {
 
 ### 6.18 Accessibility checks
 
-Three layers, from free to paid. All share one rule set and message style: plain language, one sentence on why it matters, and a link to a short explanation in the docs.
+Two layers, both free. Both share one rule set and message style: plain language, one sentence on why it matters, and a link to a short explanation in the docs.
 
 **Layer 1: In the studio, while editing** (free, every mode). These are content checks that run as the editor types (debounced):
 
@@ -987,21 +987,12 @@ Three layers, from free to paid. All share one rule set and message style: plain
   - heading order and image `alt`
   - form labels and accessible names on links and buttons
   - duplicate IDs and basic ARIA misuse
-- Color contrast and visual rules are **not** checked here (that's layer 3).
+- Color contrast and visual rules are **not** checked here: they need a rendered page.
 - Output goes to `.vesper/a11y-report.json`, **outside `dist/`**, so it is never deployed.
 - `vesper({ a11y: { failBuildOn: 'error' } })` can fail the build. The default is off.
 - Each issue is mapped back to the content entry that produced the page where possible (page-to-entry mapping, §6.10), so reports can link to "fix in studio."
 
-**Layer 3: Cloud history and full scans** (paid)
-- **Build reports.** When the build environment has `VESPER_BUILD_TOKEN` (a per-site upload token), the integration uploads the layer-2 report after each build. The dashboard keeps the history:
-  - issue counts over time
-  - issues by page and by rule
-  - "new since last build"
-- **Full rendered scans.** On a schedule (monthly by default, weekly on Institution), the cloud scans the live site in a real headless browser, using the sitemap for the page list. These scans add the rules layer 2 can't do: color contrast as rendered, plus rendered landmarks and names. The number of pages scanned is capped per plan.
-- **Export.** CSV for working lists, and a plain, accessible PDF/HTML summary for documentation, such as a Title II progress record. The summary states what was checked and that manual testing is still needed (D19).
-- **Agency view.** A cross-site table of every client site's issue counts and trend.
-
-**Decide during Phase 8.5.** Pick the rendering mechanism for full scans (for example Cloudflare Browser Rendering). Check current pricing and limits, and set the per-plan page caps from real costs.
+**Not adopted: cloud history and full scans** (decided October 26, 2026). A paid third layer was planned as Phase 8.5: build reports uploaded with `VESPER_BUILD_TOKEN` for history and trends, scheduled rendered scans of the live site (contrast as rendered), CSV and summary exports, and an agency cross-site view. It's on the "Considered, not adopted" list (§13), so it isn't built unless Jeremy asks.
 
 ### 6.19 Site search
 
@@ -1258,7 +1249,6 @@ Stripe fees (2.9% + 30¢ per charge, plus 0.7% for Stripe Billing) will exceed i
 - `comment.submitted`, `comment.approved`
 - `entry.published`, `entry.unpublished`, `entry.scheduled`
 - `deploy.failed`
-- `a11y.report.ready`
 
 **Destinations (v1)**
 
@@ -1585,12 +1575,6 @@ Confirm D13 and D15 before starting.
   - A disallowed file type is rejected with a clear, linked error.
   - Automated tests confirm that confirmation emails can't echo non-safe fields and are rate-limited per recipient.
 
-### Phase 6.5: Integrations
-- Event system, Queues delivery with retries and the DLQ, the delivery log, and all five v1 destinations with field mapping.
-- **Done when:**
-  - One playground form submission reaches a webhook (signature verified), a Google Sheet row, Slack and Mailchimp.
-  - A failing webhook retries, lands in the log with a retry button, and triggers the failure email.
-
 ### Phase 7: Instant previews and click-to-edit
 - `vesper:content` live switching, the cloud draft read API, the side-by-side preview with `postMessage` refresh, and the overlay.
 - Optional real component rendering inside Markdoc and MDX blocks (§6.5.1, v2), through the dev server and the preview deployment.
@@ -1599,16 +1583,16 @@ Confirm D13 and D15 before starting.
   - Production builds contain zero preview code (checked in CI).
   - The §6.15.7 site helpers return the same tree, breadcrumbs and URLs on the live preview as in a production build.
 
+### Phase 7.5: Integrations
+Moved after instant previews on October 26, 2026 (it was Phase 6.5).
+- Event system, Queues delivery with retries and the DLQ, the delivery log, and all five v1 destinations with field mapping.
+- **Done when:**
+  - One playground form submission reaches a webhook (signature verified), a Google Sheet row, Slack and Mailchimp.
+  - A failing webhook retries, lands in the log with a retry button, and triggers the failure email.
+
 ### Phase 8: Comments
 - `<Comments>`, auto-registered comments collection, moderation queue, batched commits.
 - **Done when:** a comment goes from submitted to approved to visible after the next build, and rejected comments never reach git.
-
-### Phase 8.5: Accessibility history and scans (cloud)
-- Report uploads with `VESPER_BUILD_TOKEN`, history and trends, scheduled rendered scans with plan caps, CSV and summary export, and the agency cross-site view.
-- **Done when:**
-  - Two builds' reports show a correct "new since last build" diff.
-  - A rendered scan finds a contrast failure that layer 2 cannot.
-  - The exported summary is itself accessible: tagged headings, real tables, and text alternatives.
 
 ### Phase 9: Polish and expansion
 - White-label: branding (name, logo, accent) for the studio and the dashboard.
@@ -1655,14 +1639,13 @@ Confirm D13 and D15 before starting.
      - instant previews, exact scheduling and comments
      - forms with routing, uploads and confirmation emails
      - integrations
-     - accessibility history with monthly scans of a capped number of pages
      - starting limits: about 1,000 submissions/month, 1 GB of form uploads, 5 GB of media
-   - **Agency:** everything in Site, plus the multi-site dashboard, white-labeling, the cross-site accessibility view, pooled limits and priority support.
-   - **Institution:** everything in Agency, plus SSO, weekly scans with higher page caps, longer retention, invoices and purchase orders, and the later CRM integrations.
+   - **Agency:** everything in Site, plus the multi-site dashboard, white-labeling, pooled limits and priority support.
+   - **Institution:** everything in Agency, plus SSO, longer retention, invoices and purchase orders, and the later CRM integrations.
 
    **Pricing principles to keep, even if the numbers change**
    - Price per site, never per editor.
-   - Usage limits only on things that cost money or invite abuse: submissions, uploads, media, emails, scanned pages.
+   - Usage limits only on things that cost money or invite abuse: submissions, uploads, media, emails.
    - Overages warn and give a grace period. They never silently drop data.
    - Annual billing is the default, because Stripe's fixed fee makes small monthly charges expensive.
    - A 30-day trial instead of a free cloud plan at launch.
@@ -1675,7 +1658,7 @@ Confirm D13 and D15 before starting.
    - CloudCannon: Standard about $49–55/month (3 users); agency-only Lite about $10/site.
    - Formspree paid plans: start about $10–15/month for 200 submissions.
 
-   Entitlement keys to implement (§7.9): `sites`, `submissionsPerMonth`, `uploadStorageGB`, `mediaStorageGB`, `emailsPerMonth`, `a11yScanPages`, `a11yScanFrequency`, `whiteLabel`, `sso`, `retentionMonths`.
+   Entitlement keys to implement (§7.9): `sites`, `submissionsPerMonth`, `uploadStorageGB`, `mediaStorageGB`, `emailsPerMonth`, `whiteLabel`, `sso`, `retentionMonths`.
 
 5. **Pull-request mode** for teams that want GitHub review: decided October 19, 2026: **Phase 9, unless a paying agency asks for it sooner.** Cloud drafts and review (D13) cover most teams.
 6. **MDX props without declarations**: decided October 17, 2026: **always require a declared Zod schema**. Undeclared components stay protected source chips (§6.5.2).
@@ -1685,7 +1668,7 @@ Confirm D13 and D15 before starting.
 10. **Alt text suggestions**: decided October 19, 2026: **not for now; alt text stays human-written.** Machine suggestions sit close to "AI writing" on the list below. Revisit after launch. The original question: should the cloud ever offer machine-suggested alt text (clearly marked, never auto-applied, always human-confirmed)?
 11. **Cloud-rendered previews for static-only hosts**: decided October 19, 2026: **deferred until after launch (D17)**; revisit if customers ask. If built, it would be a paid add-on and the one exception to D9.
 12. **Conditional form fields**: decided October 19, 2026: **forms stay static, and routing covers the cases** (Phase 6). Show/hide fields move to "Considered, not adopted" below.
-13. **Scan engine and caps**: decided October 19, 2026, as direction: **measure Cloudflare Browser Rendering first**, and set each plan's page caps from measured cost in Phase 8.5.
+13. **Scan engine and caps**: decided October 19, 2026, as direction: measure Cloudflare Browser Rendering first, and set each plan's page caps from measured cost in Phase 8.5. **Withdrawn October 26, 2026:** cloud scans aren't adopted (§6.18), so there's no engine to choose.
 14. **Custom sending domains** for confirmation emails: decided October 19, 2026: **Agency and Institution.** The Site plan sends from Vesper's domain with reply-to set to the site owner.
 
 ### Considered, not adopted (do not build)
@@ -1701,4 +1684,5 @@ These came up in planning. Jeremy hasn't chosen them, so **don't build them** un
 | Free open-source conveniences: sitemap, RSS, social share images | Not adopted yet; likely free if adopted |
 | Cloud "search insights" (top searches and searches with no results, from an anonymous count of queries) | Not adopted yet; a natural paid extra to site search |
 | Conditional show/hide fields inside forms (as opposed to conditional routing) | Not adopted (October 19, 2026): forms stay static, and routing covers it (§13.12) |
+| Accessibility history and full scans in the cloud: build report uploads, trends, scheduled rendered scans, exports, the agency cross-site view (once Phase 8.5) | Not adopted (October 26, 2026): the studio and build checks stay, free (§6.18) |
 | Newsletter sending, payments, full analytics, machine translation, AI writing | Rejected for now: costly or support-heavy |

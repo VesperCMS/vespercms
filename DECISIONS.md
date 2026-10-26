@@ -16,7 +16,7 @@ The spec's D1–D17 are recorded in `vesper-spec.md` §3 and aren't repeated her
 
 ### 2026-10-17: D19, report accessibility, never claim compliance, never ship an overlay
 
-**Vesper's checks (studio, build, cloud scans) report problems in plain language, with one sentence on why each matters.** Automated checks find a fraction of real issues, so the UI and docs say manual testing is still needed. Vesper never injects a front-end accessibility widget or overlay: they don't fix underlying problems and often add new ones.
+**Vesper's checks (studio and build; cloud scans were dropped on 2026-10-26) report problems in plain language, with one sentence on why each matters.** Automated checks find a fraction of real issues, so the UI and docs say manual testing is still needed. Vesper never injects a front-end accessibility widget or overlay: they don't fix underlying problems and often add new ones.
 
 ### 2026-10-17: D20, confirmation emails can't become a spam cannon
 
@@ -28,7 +28,7 @@ The spec's D1–D17 are recorded in `vesper-spec.md` §3 and aren't repeated her
 
 ### 2026-10-17: D22, one event-and-delivery system for integrations
 
-**Forms, comments, publishing and accessibility reports all emit events into one queued, retried, logged delivery system.** Each integration is an event, a destination, a field mapping and a delivery log. One system means one place to see failures, and nothing fails silently.
+**Forms, comments and publishing all emit events into one queued, retried, logged delivery system.** (Accessibility reports did too, until cloud history was dropped on 2026-10-26.) Each integration is an event, a destination, a field mapping and a delivery log. One system means one place to see failures, and nothing fails silently.
 
 ### 2026-10-17: D23, site search is free and static
 
@@ -54,7 +54,7 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 - **§13.10, machine-suggested alt text: not for now.** It sits close to "AI writing" on the not-adopted list, and D19's posture favours human judgement. Revisit after launch.
 - **§13.11, cloud-rendered previews: after launch,** as D17 already says.
 - **§13.12, conditional form fields: not adopted.** Forms stay static and routing covers the cases. Show/hide logic would need its own accessibility work (announcing fields that appear) for little gain.
-- **§13.13, the scan engine: measure Cloudflare Browser Rendering first** (it fits D7), and set page caps from that cost in Phase 8.5.
+- **§13.13, the scan engine: measure Cloudflare Browser Rendering first** (it fits D7), and set page caps from that cost in Phase 8.5. Withdrawn on 2026-10-26 with cloud scans ("No accessibility history or cloud scans", below).
 - **§13.14, custom sending domains: Agency and Institution.** The Site plan sends from Vesper's domain, with reply-to set to the site owner. A sending domain means DNS records (SPF, DKIM) per customer, which is support work.
 - **Still Jeremy's to do (§13.1):** claim the `@vesper` org on npmjs.com. On October 19, 2026 no package was published under `@vesper`; whether the scope itself is held couldn't be checked from here. The cloud's domain, vespercms.com, was registered at Cloudflare on 2026-10-20.
 
@@ -63,6 +63,13 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 **Jeremy confirmed both on October 19, 2026, ahead of Phase 3.**
 - **The cloud runs a free OAuth relay for GitHub mode (spec §6.8), and `templates/oauth-relay` stays for sites that want their own.** The relay turns GitHub mode's setup into minutes instead of deploying a Worker first, and a token exchange costs next to nothing on Workers. It needs the §13.1 domain.
 - **In GitHub mode, the site's build is the last check for Markdoc's custom attribute types and `validate` functions.** They're code, so only the dev API can run them (2026-10-17, "The browser checks Markdoc with the manifest"). A save that fails them fails the deploy, and the live site stays as it was.
+
+### 2026-10-26: No accessibility history or cloud scans, and integrations follow previews
+
+**Jeremy's call on October 26, 2026: layer 3 of spec §6.18 (Phase 8.5) is dropped, and Integrations move after Instant previews, as Phase 7.5.**
+- **What goes:** build report uploads with `VESPER_BUILD_TOKEN`, history and trends, scheduled rendered scans, CSV and summary exports, and the agency cross-site view. With them go the `a11y.report.ready` event (§7.13), the `a11yScanPages` and `a11yScanFrequency` entitlements, scanned pages as a usage limit, and §13.13's scan engine. The spec lists it under "Considered, not adopted", so it isn't built unless Jeremy asks.
+- **What stays:** layers 1 and 2, free and unchanged, and D19: Vesper reports problems and never claims compliance. Contrast and the other visual rules stay unchecked at build, since only a rendered page can answer them (2026-10-18, "The build checks with axe-core in jsdom").
+- **The order after Phase 4.5:** 5 Billing and the operator console, 6 Forms, 7 Instant previews and click-to-edit, 7.5 Integrations, 8 Comments, 9 Polish. Comments already came after previews and stay there. Integrations take 7.5 rather than a renumbering, so the numbers still read in build order and the other phases keep theirs.
 
 ## Process
 
@@ -906,7 +913,7 @@ Rejected: running axe in the studio over a rendered preview. Local and GitHub mo
 | linkedom 0.18 | Can't run axe (no `screen`, no `getComputedStyle`) | | | 1.8 MB |
 
 Without the shim, jsdom's page-level rules (`landmark-one-main`, `page-has-heading-one`) error out into "incomplete" and miss real problems. jsdom won over happy-dom because it never runs the page's scripts while still letting axe in, it's axe's documented environment, and it's already the repo's test DOM; happy-dom needs JavaScript evaluation on to load axe, which runs the page's inline scripts too.
-- The rule list is pinned by a snapshot test: a rule joins only once its result without layout is checked. Contrast, `link-in-text-block`, `target-size` and `scrollable-region-focusable` need a rendered page (layer 3).
+- The rule list is pinned by a snapshot test: a rule joins only once its result without layout is checked. Contrast, `link-in-text-block`, `target-size` and `scrollable-region-focusable` need a rendered page (once layer 3's, which was dropped on 2026-10-26).
 - axe's impact maps to `error` (critical, serious) or `warning` (moderate, minor), which is what `failBuildOn` compares against.
 - Astro's redirect pages fail four landmark and language rules by their template, and `/admin` fails landmark rules before its script runs; both are skipped and counted, as the e2e gate skips them.
 - The check runs at every build, as the spec has it; only failing is off by default. It adds about a tenth of a second a page plus loading jsdom, and `vesper({ a11y: false })` turns it off.

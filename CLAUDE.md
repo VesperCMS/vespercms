@@ -37,7 +37,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 
 **Items in spec §13 are open: propose options, never pick silently.** They are product calls.
 
-**Never build anything on the spec's "Considered, not adopted" list (addendum §9) unless Jeremy asks for it.** That covers instant site notices, client reports, broken-link checks, uptime alerts, sitemap/RSS/OG images, search insights, conditional form fields, newsletters, payments, analytics, machine translation and AI writing.
+**Never build anything on the spec's "Considered, not adopted" list (addendum §9) unless Jeremy asks for it.** That covers instant site notices, client reports, accessibility history and cloud scans, broken-link checks, uptime alerts, sitemap/RSS/OG images, search insights, conditional form fields, newsletters, payments, analytics, machine translation and AI writing.
 
 **When unsure whether something belongs in the free or the paid tier, ask.** Tiering is a business decision.
 

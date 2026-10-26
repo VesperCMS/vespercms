@@ -1151,7 +1151,7 @@ The spec's four "Done when" criteria, with evidence:
 - Headings inside the body editor's text are part of the studio page's heading outline (the fixture's body puts an `h1` and an `h4` there). It's been so since Phase 2; worth a look in the studio design pass.
 - A collection with no `url` can't be traced to its pages in the report (`entry: null`); the docs should say so.
 - Notes can't be dismissed; there's nowhere to keep that in local mode. Cloud drafts (Phase 4) could hold it.
-- Layer 3 (report uploads, history, rendered scans with contrast, exports) is Phase 8.5.
+- Layer 3 (report uploads, history, rendered scans with contrast, exports) was Phase 8.5, which Jeremy dropped on 2026-10-26 (DECISIONS.md, "No accessibility history or cloud scans").
 
 ## Studio design pass: outcome
 
@@ -1844,7 +1844,7 @@ Jeremy confirmed every recommendation on 2026-10-21: 1a to 11a, and the smaller 
 - **Failures:**
   - a scheduled rebuild that fails sends no email; the Scheduled view and the dashboard say so;
   - a held draft that can't be published at its time emails whoever scheduled it.
-- **The `entry.scheduled` integration event** (§7.13) waits for Phase 6.5.
+- **The `entry.scheduled` integration event** (§7.13) waits for Phase 7.5 (Integrations, once 6.5).
 - **Tier:**
   - free (§13.4, "scheduling via scheduled rebuilds"): the studio's scheduling, filtering, `schedule.json` and the templates;
   - paid ("exact scheduling"): exact times, held drafts and results.
@@ -1864,7 +1864,7 @@ Jeremy confirmed every recommendation on 2026-10-21: 1a to 11a, and the smaller 
 - CLAUDE.md's rule that production `vesper:content` stays a plain re-export;
 - DECISIONS.md's "The index leaves out entries outside their publish window", which says "until Phase 4.5".
 
-**Not in this phase:** scheduled changes to live pages (call 8b); schedules in instant previews (Phase 7, with live collections); `entry.scheduled` events (6.5); the S3 and GitHub Pages templates (Phase 9, unless call 3b); sitemaps and feeds (not adopted); a calendar view.
+**Not in this phase:** scheduled changes to live pages (call 8b); schedules in instant previews (Phase 7, with live collections); `entry.scheduled` events (7.5); the S3 and GitHub Pages templates (Phase 9, unless call 3b); sitemaps and feeds (not adopted); a calendar view.
 
 ## Phase 3: GitHub mode (design)
 
@@ -2360,7 +2360,7 @@ Jeremy moved this pass ahead of 2.9 on 2026-10-18 and made the direction himself
 
 ## Phase 2.8: Accessibility checks (design)
 
-Scope is spec §6.18 layers 1 and 2 and the §11 Phase 2.8 entry. Layer 3 (cloud history, full rendered scans, exports, the agency view) is paid and belongs to Phase 8.5: nothing of it is built here. Both layers report problems; neither claims compliance, and nothing is injected into the site (D19).
+Scope is spec §6.18 layers 1 and 2 and the §11 Phase 2.8 entry. Layer 3 (cloud history, full rendered scans, exports, the agency view) is paid and belongs to Phase 8.5 (dropped 2026-10-26): nothing of it is built here. Both layers report problems; neither claims compliance, and nothing is injected into the site (D19).
 
 **What was found first** (measured on the playground's static build, 38 HTML files, before writing any code):
 - axe-core 4.14 runs in **jsdom** 30 and **happy-dom** 21. Over the same 60 structure rules (below), both gave exactly the violations real Chromium gives on every one of the 38 pages. jsdom needs one shim: it has no `document.elementFromPoint`, and without it the page-level rules (`landmark-one-main`, `page-has-heading-one`) error out and land in "incomplete". **linkedom** 0.18 can't run axe at all (no `screen`, no `getComputedStyle`), not without shimming half a browser.
@@ -2462,10 +2462,10 @@ Scope is spec §6.18 layers 1 and 2 and the §11 Phase 2.8 entry. Layer 3 (cloud
 - **Which colours are text, and where backgrounds are declared.** (a) `fields.color({ contrast })` per field and `a11y.backgrounds` in vesper.config.ts (built); (b) check every colour field at 3:1; (c) read the backgrounds from the site's CSS custom properties (fragile: values can be computed, themed or `light-dark()`).
 - **Layer 2 runs by default.** The spec has the check run at every build, with only failing off by default. That adds jsdom (25 MB installed) and about 0.1 s a page (100 s for a thousand pages); `vesper({ a11y: false })` turns it off. Alternatives: off by default, or jsdom as an optional peer that the build asks for.
 - **Docs links.** Each rule carries a docs slug, but no link is shown until the docs site exists (Phase 9) and has a domain (§13.1).
-- Tier: none unclear. Spec §13.4 lists studio accessibility checks and build checks as free; layer 3 stays paid (Phase 8.5). Spec §13.10 (machine-suggested alt text) and §13.13 (scan engine) stay open and untouched.
+- Tier: none unclear. Spec §13.4 lists studio accessibility checks and build checks as free; layer 3 stays paid (Phase 8.5, dropped 2026-10-26). Spec §13.10 (machine-suggested alt text) and §13.13 (scan engine) stay open and untouched.
 
 **Not in this phase:**
-- Layer 3: report uploads with `VESPER_BUILD_TOKEN`, history, full rendered scans, exports, the agency view (Phase 8.5).
+- Layer 3: report uploads with `VESPER_BUILD_TOKEN`, history, full rendered scans, exports, the agency view (Phase 8.5, dropped 2026-10-26).
 - Dismissing a note: there's nowhere to store it in local mode yet. Notes go away when the content changes.
 - Running the gate in the dev API, and layer 2 in `astro dev`.
 - Broken-link checks of any kind (do-not-build list).
@@ -2925,9 +2925,9 @@ Scope is spec §6.5.1, §6.5.2 and the §11 Phase 2.5 entry. §13.6 is decided: 
 | **4.5 Scheduling** (new) | Calls confirmed 2026-10-21 (design above) | build-time filtering, scheduled-rebuild templates, DO alarms with deploy hooks or `repository_dispatch`, Schedule dialog |
 | 5 Billing + ops | §13.4: final numbers from measured cost (the addendum's are placeholders); §13.7 decided 2026-10-19 (no Git Gateway API) | Stripe, entitlement keys from addendum §8, operator console |
 | 6 Forms (expanded) | — | routing rules, private R2 uploads (D21), confirmation emails with the D20 protections |
-| **6.5 Integrations** (new) | — | event and delivery system, Queues with DLQ, five destinations |
-| 7 Previews · 8 Comments | accounts on at least two SSR hosts | per spec |
-| **8.5 A11y history** (new) | §13.13: measure Cloudflare Browser Rendering first, then set caps | report uploads, scans, exports |
+| 7 Previews | accounts on at least two SSR hosts | per spec |
+| **7.5 Integrations** (new; moved after previews 2026-10-26, was 6.5) | — | event and delivery system, Queues with DLQ, five destinations |
+| 8 Comments | — | per spec |
 | 9 Polish | §13.5 decided 2026-10-19 (pull-request mode here, unless a paying agency asks sooner) | per spec |
 
 ## Risks and early spikes
