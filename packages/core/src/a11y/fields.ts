@@ -1,4 +1,5 @@
 import type { FieldModel } from '../field-model.ts';
+import { childrenFor } from '../schema/variants.ts';
 import { altProblems, checkBody, isSitePdf } from './body.ts';
 import { CONTRAST_MINIMUM, contrastRatio, formatRatio, isContrastUse } from './contrast.ts';
 import { A11Y_RULES, type A11yRuleId } from './rules.ts';
@@ -82,8 +83,8 @@ export function checkFields(
       default:
         break;
     }
-    if (field.kind === 'object' && isObject(value)) {
-      for (const child of field.children ?? []) {
+    if ((field.kind === 'object' || field.kind === 'union') && isObject(value)) {
+      for (const child of childrenFor(field, value)) {
         const key = child.path.at(-1);
         if (key !== undefined) visit(child, value[key], [...path, key]);
       }

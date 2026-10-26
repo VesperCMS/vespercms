@@ -64,4 +64,34 @@ describe('checks from the field model alone', () => {
       }),
     ).toEqual([]);
   });
+
+  it('checks each item against its own kind, and asks for a kind the site has', () => {
+    const blocks = field('blocks', {
+      kind: 'array',
+      children: [
+        field('[]', {
+          path: ['blocks', '[]'],
+          kind: 'union',
+          discriminator: 'type',
+          variants: [
+            {
+              value: 'faq',
+              label: 'FAQ',
+              children: [field('heading', { path: ['blocks', '[]', 'heading'] })],
+            },
+            { value: 'stats', label: 'Stats', children: [] },
+          ],
+        }),
+      ],
+    });
+    expect(
+      fieldModelIssues([blocks], {
+        blocks: [{ type: 'faq' }, { type: 'stats' }, { type: 'hero' }, {}],
+      }),
+    ).toEqual([
+      { path: ['blocks', 0, 'heading'], message: 'This is required.' },
+      { path: ['blocks', 2, 'type'], message: 'Choose one of the kinds the site has.' },
+      { path: ['blocks', 3, 'type'], message: 'Choose one of the kinds the site has.' },
+    ]);
+  });
 });

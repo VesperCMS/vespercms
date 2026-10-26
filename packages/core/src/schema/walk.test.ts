@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import type { FieldModel } from '../field-model.ts';
+import { childrenFor, fieldChildren, variantFor } from './variants.ts';
 import { IMAGE_MARKER, VESPER_META_KEY, walkSchema } from './walk.ts';
 
 /** Astro's `reference()` as written in astro/dist/content/runtime.js (Astro 7). */
@@ -237,8 +238,11 @@ describe('walkSchema: unmappable parts fall back to the raw field (Phase 1 crite
   it.each([
     ['union', z.union([z.string(), z.number()]), 'union'],
     [
-      'discriminated union',
-      z.discriminatedUnion('k', [z.object({ k: z.literal('a') }), z.object({ k: z.literal('b') })]),
+      'discriminated union with a key of several values',
+      z.discriminatedUnion('k', [
+        z.object({ k: z.enum(['a', 'b']) }),
+        z.object({ k: z.literal('c') }),
+      ]),
       'union',
     ],
     ['transform', z.string().transform((s) => s.length), 'transform'],
@@ -286,5 +290,117 @@ describe('walkSchema: unmappable parts fall back to the raw field (Phase 1 crite
     );
     expect(walk.fields?.[0]?.widgetOptions).toBeUndefined();
     expect(walk.diagnostics[0]?.code).toBe('meta-not-serializable');
+  });
+});
+
+describe('walkSchema: a discriminated union of objects is kinds', () => {
+  const cardGrid = z
+    .object({
+      type: z.literal('card_grid'),
+      heading: z.string(),
+      layout: z.enum(['grid', 'list']).default('grid'),
+      cards: z.array(z.object({ title: z.string() })),
+    })
+    .meta({ label: 'Card grid', description: 'Feature cards.', summary: 'heading' });
+  const faq = z.object({
+    type: z.literal('faq'),
+    heading: z.string().optional(),
+    items: z.array(z.object({ question: z.string(), answer: z.string() })),
+  });
+  const sections = z
+    .array(z.discriminatedUnion('type', [cardGrid, faq]))
+    .max(20)
+    .default([]);
+
+  it('reads each option as a kind, without its key, at the item’s paths', () => {
+    const list = field(sections);
+    expect(list).toMatchObject({ kind: 'array', default: [], constraints: { max: 20 } });
+    const item = list.children?.[0];
+    expect(item).toMatchObject({ kind: 'union', discriminator: 'type', path: ['x', '[]'] });
+    expect(item?.children).toBeUndefined();
+    expect(item?.variants?.map((v) => [v.value, v.label, v.description, v.summary])).toEqual([
+      ['card_grid', 'Card grid', 'Feature cards.', 'heading'],
+      ['faq', 'FAQ', undefined, undefined],
+    ]);
+    const [grid] = item?.variants ?? [];
+    expect(grid?.children.map((c) => c.path)).toEqual([
+      ['x', '[]', 'heading'],
+      ['x', '[]', 'layout'],
+      ['x', '[]', 'cards'],
+    ]);
+    expect(grid?.children[1]).toMatchObject({ kind: 'enum', default: 'grid' });
+  });
+
+  it('reads a single union field, optional or not', () => {
+    const ticket = z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('free') }),
+      z.object({ kind: z.literal('paid'), price: z.number() }),
+    ]);
+    expect(field(ticket)).toMatchObject({ kind: 'union', required: true });
+    const optional = field(ticket.optional());
+    expect(optional).toMatchObject({ kind: 'union', required: false, discriminator: 'kind' });
+    expect(optional.variants?.map((v) => v.children.length)).toEqual([0, 1]);
+  });
+
+  it('reads kinds inside kinds', () => {
+    const columns = z.object({
+      type: z.literal('columns'),
+      blocks: z.array(z.discriminatedUnion('type', [cardGrid, faq])),
+    });
+    const item = field(z.array(z.discriminatedUnion('type', [columns, faq]))).children?.[0];
+    const inner = item?.variants?.[0]?.children[0]?.children?.[0];
+    expect(inner).toMatchObject({ kind: 'union', path: ['x', '[]', 'blocks', '[]'] });
+    expect(inner?.variants?.map((v) => v.value)).toEqual(['card_grid', 'faq']);
+  });
+
+  it('says why a discriminated union stays raw', () => {
+    const walk = walkSchema(
+      z.object({
+        x: z.discriminatedUnion('k', [
+          z.object({ k: z.enum(['a', 'b']) }),
+          z.object({ k: z.literal('c') }),
+        ]),
+      }),
+    );
+    expect(walk.fields?.[0]).toMatchObject({ kind: 'unknown', unknownReason: 'union' });
+    expect(walk.diagnostics[0]).toMatchObject({ level: 'warning', code: 'union-raw', path: ['x'] });
+    expect(walk.diagnostics[0]?.message).toContain('"k" that isn’t one string');
+  });
+
+  it('points a plain union of objects with a shared literal key to z.discriminatedUnion', () => {
+    const walk = walkSchema(
+      z.object({
+        x: z.union([
+          z.object({ kind: z.literal('a'), a: z.string() }),
+          z.object({ kind: z.literal('b'), b: z.number() }),
+        ]),
+      }),
+    );
+    expect(walk.fields?.[0]).toMatchObject({ kind: 'unknown', unknownReason: 'union' });
+    expect(walk.diagnostics[0]?.message).toContain("z.discriminatedUnion('kind', [...])");
+    // A plain union with no such key is raw without a hint, as before.
+    expect(walkSchema(z.object({ x: z.union([z.string(), z.number()]) })).diagnostics).toEqual([]);
+  });
+
+  it('picks a value’s kind for walks over an entry, and every kind’s fields for walks over a schema', () => {
+    const item = field(sections).children?.[0] as FieldModel;
+    expect(variantFor(item, { type: 'faq' })?.label).toBe('FAQ');
+    expect(variantFor(item, { type: 'hero' })).toBeUndefined();
+    expect(variantFor(item, 'faq')).toBeUndefined();
+    expect(childrenFor(item, { type: 'faq' }).map((c) => c.path.at(-1))).toEqual([
+      'heading',
+      'items',
+    ]);
+    expect(childrenFor(item, { type: 'hero' })).toEqual([]);
+    expect(fieldChildren(item).map((c) => c.path.at(-1))).toEqual([
+      'heading',
+      'layout',
+      'cards',
+      'heading',
+      'items',
+    ]);
+    const object = field(z.object({ a: z.string() }));
+    expect(childrenFor(object, {})).toBe(object.children);
+    expect(fieldChildren(object)).toBe(object.children);
   });
 });

@@ -86,6 +86,49 @@ describe('checkFields', () => {
     expect(checkFields(fields, { hero: { src: '', alt: '' } }).notes).toEqual([]);
   });
 
+  it('checks the fields of each item’s own kind', () => {
+    const blocks: FieldModel[] = [
+      field(['blocks'], 'array', 'repeater', {
+        children: [
+          field(['blocks', '[]'], 'union', 'union', {
+            discriminator: 'type',
+            variants: [
+              {
+                value: 'showcase',
+                label: 'Showcase',
+                children: [
+                  field(['blocks', '[]', 'image'], 'object', 'image', {
+                    children: [
+                      field(['blocks', '[]', 'image', 'src'], 'image', 'image'),
+                      field(['blocks', '[]', 'image', 'alt'], 'string', 'text'),
+                    ],
+                  }),
+                ],
+              },
+              {
+                value: 'text',
+                label: 'Text',
+                children: [field(['blocks', '[]', 'image'], 'string', 'markdown')],
+              },
+            ],
+          }),
+        ],
+      }),
+    ];
+    const { notes } = checkFields(blocks, {
+      blocks: [
+        { type: 'showcase', image: { src: './a.png', alt: '' } },
+        // The same key in another kind is that kind's field: here, Markdown.
+        { type: 'text', image: '[Click here](/x/)' },
+        { type: 'unknown', image: { src: './b.png', alt: '' } },
+      ],
+    });
+    expect(notes.map((n) => [n.rule, n.target])).toEqual([
+      ['missing-alt', { kind: 'field', path: ['blocks', 0, 'image', 'alt'] }],
+      ['link-vague', { kind: 'field', path: ['blocks', 1, 'image'] }],
+    ]);
+  });
+
   it('checks contrast only for colours marked as text, and only against declared backgrounds', () => {
     expect(checkFields(fields, { textColor: '#a3abbd' }).notes).toEqual([]);
     expect(checkFields(fields, { textColor: '#1d2433' }, { backgrounds: [light] }).notes).toEqual(

@@ -21,6 +21,9 @@ type ZodIssueLike = {
   inclusive?: boolean;
   format?: string;
   values?: unknown[];
+  /** `invalid_union` from a discriminated union: "No matching discriminator". */
+  note?: string;
+  discriminator?: string;
 };
 
 /** Zod 4's built-in messages all start like this. Anything else came from the schema's author. */
@@ -94,6 +97,8 @@ function messageFor(issue: ZodIssueLike): string {
     case 'unrecognized_keys':
       return 'This has settings the site doesn’t expect.';
     case 'invalid_union':
+      // A discriminated union names the key it couldn't match; the kind is what to fix.
+      if (issue.discriminator !== undefined) return 'Choose one of the kinds the site has.';
       return 'This value doesn’t match any of the allowed shapes.';
     default:
       return message || 'This value isn’t valid.';

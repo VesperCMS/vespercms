@@ -1,9 +1,10 @@
-import type {
-  CollectionManifest,
-  FieldModel,
-  Manifest,
-  MarkdocAttributeManifest,
-  MarkdocTagManifest,
+import {
+  fieldChildren,
+  type CollectionManifest,
+  type FieldModel,
+  type Manifest,
+  type MarkdocAttributeManifest,
+  type MarkdocTagManifest,
 } from '@vesper/core';
 
 /*
@@ -284,13 +285,37 @@ function fieldLines(field: FieldModel, indent: string): string[] {
   if (isImage(field) || field.widget === 'geo') return lines;
   if (field.kind === 'object') {
     for (const child of field.children ?? []) lines.push(...fieldLines(child, `${indent}  `));
+  } else if (field.kind === 'union') {
+    lines.push(...kindLines(field, `${indent}  `));
   } else if (field.kind === 'array') {
     const item = field.children?.[0];
     if (item?.kind === 'object' && !isImage(item) && item.widget !== 'geo') {
       for (const child of item.children ?? []) lines.push(...fieldLines(child, `${indent}  `));
+    } else if (item?.kind === 'union') {
+      lines.push(...kindLines(item, `${indent}  `));
     }
   }
   return lines;
+}
+
+/** A union's kinds: each one's discriminator value, its name and help, then its own fields. */
+function kindLines(field: FieldModel, indent: string): string[] {
+  const key = field.discriminator ?? '';
+  return (field.variants ?? []).flatMap((variant) => {
+    const label = humanEqual(variant.label, variant.value) ? '' : ` (${variant.label})`;
+    const about = clean(variant.description);
+    const text = about
+      ? about.endsWith('.')
+        ? about
+        : `${about}.`
+      : variant.children.length === 0
+        ? 'No other fields.'
+        : 'Its fields:';
+    return [
+      `${indent}- ${code(`${key}: ${variant.value}`)}${label}: ${text}`,
+      ...variant.children.flatMap((child) => fieldLines(child, `${indent}  `)),
+    ];
+  });
 }
 
 function describe(field: FieldModel): string {
@@ -355,10 +380,15 @@ function describe(field: FieldModel): string {
       if (item.kind === 'object' && !isImage(item) && item.widget !== 'geo') {
         return `a list of objects${count} with the fields below`;
       }
+      if (item.kind === 'union') {
+        return `a list${count} of objects of the kinds below, each named by its ${code(item.discriminator ?? '')}`;
+      }
       return `a list of ${items(item)}${count}`;
     }
     case 'object':
       return 'an object with the fields below';
+    case 'union':
+      return `an object of one of the kinds below, named by its ${code(field.discriminator ?? '')}`;
     case 'image':
       return 'an image path, relative to the entry’s file';
     case 'unknown':
@@ -461,7 +491,7 @@ function leafPaths(tree: Record<string, unknown>, prefix = ''): string[] {
 }
 
 function hasImage(field: FieldModel): boolean {
-  return isImage(field) || (field.children ?? []).some(hasImage);
+  return isImage(field) || fieldChildren(field).some(hasImage);
 }
 
 function isImage(field: FieldModel): boolean {
@@ -505,6 +535,7 @@ function items(item: FieldModel): string {
     case 'image':
       return 'image paths';
     case 'object':
+    case 'union':
       return 'objects';
     case 'unknown':
       return 'values the schema accepts, edited as raw YAML in the studio';

@@ -1,4 +1,4 @@
-import type { Diagnostic, FieldConstraints, FieldModel } from '../field-model.ts';
+import type { Diagnostic, FieldConstraints, FieldModel, FieldVariant } from '../field-model.ts';
 import { humanize } from './humanize.ts';
 
 /*
@@ -300,7 +300,7 @@ function buildField(
     case 'literal':
       return enumField(field, Array.isArray(def.values) ? def.values : [], meta);
     case 'union':
-      return unionField(field, def, meta);
+      return unionField(field, def, meta, path, childContext);
     case 'array':
       return arrayField(field, def, path, childContext);
     case 'object':
@@ -425,8 +425,18 @@ function enumField(
   return field;
 }
 
-/** A union of string literals is an enum. Anything else is shown raw. */
-function unionField(field: FieldModel, def: ZodDef, meta: Record<string, unknown>): FieldModel {
+/**
+ * A union of string literals is an enum. A discriminated union of objects is
+ * a union field with one variant per kind (DECISIONS.md, "Blocks are a
+ * discriminated union of objects"). Anything else is shown raw.
+ */
+function unionField(
+  field: FieldModel,
+  def: ZodDef,
+  meta: Record<string, unknown>,
+  path: string[],
+  context: WalkContext,
+): FieldModel {
   const options = Array.isArray(def.options) ? (def.options as unknown[]).filter(isZodLike) : [];
   const literals = options.every((option) => option._zod.def.type === 'literal');
   if (literals && options.length > 0) {
@@ -436,7 +446,103 @@ function unionField(field: FieldModel, def: ZodDef, meta: Record<string, unknown
     });
     return enumField(field, values, meta);
   }
+  const where = path.join('.') || 'The schema';
+  const hint = (message: string) => {
+    context.diagnostics.push({
+      level: 'warning',
+      code: 'union-raw',
+      message,
+      path,
+      ...(context.collection ? { collection: context.collection } : {}),
+    });
+  };
+  const discriminator = def.discriminator;
+  if (typeof discriminator === 'string' && options.length === (def.options as unknown[]).length) {
+    const variants =
+      def.unionFallback === true
+        ? 'it falls back to a plain union (unionFallback)'
+        : variantsOf(options, discriminator, path, context);
+    if (typeof variants !== 'string') {
+      field.kind = 'union';
+      field.discriminator = discriminator;
+      field.variants = variants;
+      return field;
+    }
+    hint(
+      `${where} is a discriminated union the studio can't show as kinds: ${variants}. It is edited as raw YAML.`,
+    );
+    return { ...field, kind: 'unknown', unknownReason: 'union' };
+  }
+  const shared = sharedLiteralKey(options, context);
+  if (shared !== null) {
+    hint(
+      `${where} is a union of objects told apart by "${shared}". Write it as z.discriminatedUnion('${shared}', [...]) to edit it as kinds in the studio; as it is, it's edited as raw YAML.`,
+    );
+  }
   return { ...field, kind: 'unknown', unknownReason: 'union' };
+}
+
+/** An object schema's shape, or null when the (peeled) schema isn't an object. */
+function shapeOf(peeled: Peeled): Record<string, unknown> | null {
+  const def = peeled.core._zod.def;
+  if (def.type !== 'object' || peeled.optional || peeled.nullable) return null;
+  return typeof def.shape === 'object' && def.shape !== null
+    ? (def.shape as Record<string, unknown>)
+    : {};
+}
+
+/** The one string a discriminator allows, or null: optional, several values, or not a string. */
+function literalOf(schema: unknown, context: WalkContext): string | null {
+  if (!isZodLike(schema)) return null;
+  const peeled = peel(schema, context.seen);
+  const def = peeled.core._zod.def;
+  if (def.type !== 'literal' || peeled.optional || peeled.nullable || peeled.hasDefault)
+    return null;
+  const values = Array.isArray(def.values) ? (def.values as unknown[]) : [];
+  return values.length === 1 && typeof values[0] === 'string' ? values[0] : null;
+}
+
+/** Each option as a kind, or why the union can't be shown as kinds. */
+function variantsOf(
+  options: ZodLike[],
+  discriminator: string,
+  path: string[],
+  context: WalkContext,
+): FieldVariant[] | string {
+  const variants: FieldVariant[] = [];
+  for (const option of options) {
+    const peeled = peel(option, context.seen);
+    const shape = shapeOf(peeled);
+    if (shape === null) return 'one of its options isn’t an object';
+    const value = literalOf(shape[discriminator], context);
+    if (value === null) return `one of its options has a "${discriminator}" that isn’t one string`;
+    if (variants.some((variant) => variant.value === value))
+      return `two of its options have "${discriminator}" ${JSON.stringify(value)}`;
+    // The kind's fields sit where the union does: an item's fields are the item's, whichever kind.
+    const model = walkField(option, path, context);
+    const { label, description, summary } = peeled.meta;
+    variants.push({
+      value,
+      label: typeof label === 'string' ? label : humanize(value),
+      ...(typeof description === 'string' ? { description } : {}),
+      ...(typeof summary === 'string' ? { summary } : {}),
+      children: (model.children ?? []).filter((child) => child.path.at(-1) !== discriminator),
+    });
+  }
+  return variants;
+}
+
+/** A key every option holds as a different string literal: the discriminator a plain union left unsaid. */
+function sharedLiteralKey(options: ZodLike[], context: WalkContext): string | null {
+  const shapes = options.map((option) => shapeOf(peel(option, context.seen)));
+  const [first] = shapes;
+  if (!first || shapes.length < 2 || shapes.some((shape) => shape === null)) return null;
+  for (const key of Object.keys(first)) {
+    const values = shapes.map((shape) => literalOf(shape?.[key], context));
+    if (values.every((value) => value !== null) && new Set(values).size === values.length)
+      return key;
+  }
+  return null;
 }
 
 function arrayField(

@@ -46,6 +46,7 @@ export const BUILTIN_WIDGETS: Record<string, WidgetCheck> = {
   multiselect: (f) => f.kind === 'array' && childKinds(f)[0] === 'enum',
   tags: (f) => f.kind === 'array' && childKinds(f)[0] === 'string',
   group: (f) => f.kind === 'object',
+  union: (f) => f.kind === 'union',
   repeater: (f) => f.kind === 'array',
   reference: (f) => f.kind === 'reference',
   references: (f) => f.kind === 'array' && childKinds(f)[0] === 'reference',
@@ -91,6 +92,8 @@ export function inferWidget(field: FieldModel): string {
     }
     case 'object':
       return 'group';
+    case 'union':
+      return 'union';
     case 'image':
       return 'image';
     case 'reference':
@@ -134,7 +137,15 @@ function resolveField(
   const children = field.children
     ? resolveWidgets(field.children, diagnostics, options)
     : undefined;
-  const resolved: FieldModel = { ...field, ...(children ? { children } : {}) };
+  const variants = field.variants?.map((variant) => ({
+    ...variant,
+    children: resolveWidgets(variant.children, diagnostics, options),
+  }));
+  const resolved: FieldModel = {
+    ...field,
+    ...(children ? { children } : {}),
+    ...(variants ? { variants } : {}),
+  };
   const inferred = inferWidget(resolved);
   resolved.inferredWidget = inferred;
   const custom = options.custom ?? {};
