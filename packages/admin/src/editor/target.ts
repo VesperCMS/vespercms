@@ -1,4 +1,4 @@
-import type { FieldIssue, FieldModel } from '@vesper/core';
+import { fieldChildren, type FieldIssue, type FieldModel } from '@vesper/core';
 import { builtinWidget } from '../widgets/registry.ts';
 import { fieldId, keyOf, type ValuePath } from './values.ts';
 
@@ -19,12 +19,13 @@ export function issueTarget(
       const item = model?.kind === 'array' ? model.children?.[0] : undefined;
       if (!item || !usesChildren(model)) break;
       model = item;
-      models = item.children ?? [];
+      models = fieldChildren(item);
     } else {
+      // A kind's fields are found by key among every kind's: their ids come from the value's path.
       const next = models.find((candidate) => keyOf(candidate) === segment);
       if (!next || (model && !usesChildren(model))) break;
       model = next;
-      models = next.children ?? [];
+      models = fieldChildren(next);
     }
     matched.push(segment);
   }

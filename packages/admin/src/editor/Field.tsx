@@ -62,14 +62,15 @@ export function Field({ field, path, label, item, asSection = true }: FieldProps
     path,
   };
 
+  const own = item === 'row' ? { ...props, inRow: true } : props;
   const control = Custom ? (
-    <WidgetBoundary fallback={<builtin.component {...props} />} name={field.widget ?? ''}>
+    <WidgetBoundary fallback={<builtin.component {...own} />} name={field.widget ?? ''}>
       <Suspense fallback={<p className="text-small text-content-muted">Loading…</p>}>
         <Custom {...props} />
       </Suspense>
     </WidgetBoundary>
   ) : (
-    <builtin.component {...props} />
+    <builtin.component {...own} />
   );
 
   const text = label ?? field.label;
@@ -94,7 +95,11 @@ export function Field({ field, path, label, item, asSection = true }: FieldProps
   if (!Custom && builtin.group) {
     const section = builtin.section && path.length === 1 && asSection && !editor.idPrefix && !item;
     // Objects inside the form are set off by an indent guide, never a frame (spec §10.2).
-    const guided = builtin.section && field.kind === 'object' && !section && item !== 'row';
+    const guided =
+      builtin.section &&
+      (field.kind === 'object' || field.kind === 'union') &&
+      !section &&
+      item !== 'row';
     const fieldset = (
       <fieldset
         aria-describedby={describedBy}
