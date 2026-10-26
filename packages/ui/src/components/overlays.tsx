@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import {
   Button as RACButton,
   Collection,
@@ -292,34 +292,57 @@ export function Menu({
   onOpenChange,
 }: MenuProps) {
   const choiceIds = new Set(choice?.options.map((option) => option.id));
+  const anchor = useRef<HTMLSpanElement>(null);
+  // An action runs once the menu has closed, with focus back on the menu's
+  // button, so a dialog it opens gives focus back there when it closes.
+  // Run at once, the dialog took the chosen item, gone with the menu, as the
+  // place to return to; React Aria puts focus back only a frame later, and
+  // the page outside an open menu can't take it.
+  const [shown, setShown] = useState(false);
+  const chosen = useRef<string | null>(null);
+  const act = (id: string) => {
+    chosen.current = id;
+  };
+  useEffect(() => {
+    const id = chosen.current;
+    if (shown || id === null) return;
+    chosen.current = null;
+    anchor.current?.querySelector<HTMLElement>('button')?.focus();
+    onAction(id);
+  }, [shown, onAction]);
   const groups: MenuGroup[] = choice
     ? [{ id: 'choice', choice }, ...(items.length > 0 ? [{ id: 'items' as const, items }] : [])]
     : [];
   return (
     <MenuTrigger
       {...(isOpen !== undefined ? { isOpen } : {})}
-      {...(onOpenChange ? { onOpenChange } : {})}
+      onOpenChange={(open) => {
+        setShown(open);
+        onOpenChange?.(open);
+      }}
     >
-      {trigger ??
-        (triggerText ? (
-          <RACButton
-            className={cx(
-              'inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
-              colorTransition,
-              focusRing,
-            )}
-          >
-            {triggerPicture ? (
-              <span className="mr-1 flex">{triggerPicture}</span>
-            ) : (
-              triggerIcon && <Icon name={triggerIcon} size={18} />
-            )}
-            <span className="min-w-0 truncate">{triggerText}</span>
-            <Chevron />
-          </RACButton>
-        ) : (
-          <IconButton icon="more" label={label} />
-        ))}
+      <span ref={anchor} className="contents">
+        {trigger ??
+          (triggerText ? (
+            <RACButton
+              className={cx(
+                'inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
+                colorTransition,
+                focusRing,
+              )}
+            >
+              {triggerPicture ? (
+                <span className="mr-1 flex">{triggerPicture}</span>
+              ) : (
+                triggerIcon && <Icon name={triggerIcon} size={18} />
+              )}
+              <span className="min-w-0 truncate">{triggerText}</span>
+              <Chevron />
+            </RACButton>
+          ) : (
+            <IconButton icon="more" label={label} />
+          ))}
+      </span>
       {/* A caller's button sits at the start of its row ("Add section"); the "…" at the end. */}
       <Popover
         placement={trigger ? 'bottom start' : 'bottom end'}
@@ -335,7 +358,7 @@ export function Menu({
             aria-label={label}
             onAction={(key: Key) => {
               // Choosing an option is a selection, not an action.
-              if (!choiceIds.has(String(key))) onAction(String(key));
+              if (!choiceIds.has(String(key))) act(String(key));
             }}
             items={groups}
             disabledKeys={items.filter((item) => item.isDisabled).map((item) => item.id)}
@@ -380,7 +403,7 @@ export function Menu({
                 </MenuSection>
               ) : (
                 <MenuSection id="items" aria-label={label} items={group.items}>
-                  {(item) => renderItem(group.items, item, true, onAction)}
+                  {(item) => renderItem(group.items, item, true, act)}
                 </MenuSection>
               )
             }
@@ -389,7 +412,7 @@ export function Menu({
           <RACMenu
             aria-label={label}
             onAction={(key: Key) => {
-              onAction(String(key));
+              act(String(key));
             }}
             items={items}
             disabledKeys={items.filter((item) => item.isDisabled).map((item) => item.id)}
@@ -399,7 +422,7 @@ export function Menu({
              * Rendered from `items`, not as static children: opened from the
              * keyboard, React Aria then focuses the first item itself.
              */}
-            {(item) => renderItem(items, item, false, onAction)}
+            {(item) => renderItem(items, item, false, act)}
           </RACMenu>
         )}
       </Popover>
