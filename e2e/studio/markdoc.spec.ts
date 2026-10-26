@@ -110,6 +110,31 @@ async function moveCaret(page: Page, key: string) {
 const aboveLastLine = (before: string, block: string) =>
   before.replace('\nLast line.\n', `\n${block}\n\nLast line.\n`);
 
+test('a selected block is outlined only while the text has focus; Insert is there from the start', async ({
+  page,
+}) => {
+  await page.goto('/admin/#/c/docs/e/guides%2Fwriting-callouts');
+  page.on('load', () => reloaded.add(page));
+  const body = page.getByRole('textbox', { name: 'Body' });
+  const partial = body.getByRole('group', { name: /^Partial/ });
+  const outline = () => partial.evaluate((block) => getComputedStyle(block).outlineStyle);
+  // As the entry opens nothing has focus, and the caret waits in the first text.
+  await expect(
+    page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: /Insert/ }),
+  ).toBeVisible();
+  await expect.poll(outline).toBe('none');
+
+  // From the last line, up onto the partial: selected, and outlined.
+  await body.focus();
+  await moveCaret(page, keys.textEnd);
+  await page.keyboard.press('ArrowUp');
+  await selected(page, 'Partial');
+  await expect.poll(outline).toBe('solid');
+  // Still selected once focus moves on, but no longer drawn so.
+  await page.getByRole('textbox', { name: 'Title' }).focus();
+  await expect.poll(outline).toBe('none');
+});
+
 test('a callout: inserted with "/", configured, moved and removed by keyboard alone', async ({
   page,
 }) => {
