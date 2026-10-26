@@ -1605,8 +1605,11 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 - **Tests:**
   - **Contract:** the fake passes all 20 cases, and its own tests pass.
   - **jsdom, against the fake:** holding from the editor, with axe on the dialog, then cancelling; back to a draft from "…"; the view's states, a failed hold and Cancel, with axe; Changes leaving a held draft out, with axe.
-  - **The `cloud` e2e project:** an unpublish time set in the studio is rebuilt once by dispatch when the clock passes it; a held draft is published as one commit at its time, with no dispatch beside it. All 10 of the project's tests pass.
-  - Typecheck, lint and the format check pass; Vitest's unit project passes (1,523, 4 skipped).
+  - **The `cloud` e2e project:** an unpublish time set in the studio is rebuilt once by dispatch when the clock passes it; a held draft is published as one commit at its time, with no dispatch beside it.
+  - **Every e2e project passes** after rebuilding the playground and vespercms.com: 183, with 2 macOS-only skips.
+  - **Vitest passes:** 4,613, with 4 skipped (unit 1,523, integration 78, corpus 3,012).
+  - Typecheck, lint and the format check pass.
+  - Not yet on GitHub's CI.
 - **Not built here:** the cloud's own half (step 6), and holding a draft that's published from Changes or approved from a review (DECISIONS.md, "Not held").
 - **Found while testing, from Phase 4:** in the cloud, Publish (or Schedule…) pressed while the draft is saving does nothing, with no word. `save` returns early while a save is in flight, and `publishDraft` stops there. The cloud's e2e tests wait for "Draft saved" before publishing, which hid it. A person meets it only by publishing within about a second of typing. The fix is to have Publish wait for the save in flight, then save what's left; it isn't made here.
 
