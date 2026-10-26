@@ -42,7 +42,7 @@ The studio comes precompiled from `@vesper/admin`. React and React DOM are peer 
 import { getCollection, getEntry, render } from 'vesper:content';
 ```
 
-A drop-in for `astro:content` (spec §6.11). In builds it re-exports Astro's module. In `astro dev` it also notes which entries each page shows (`render`, `getEntry`) or lists (`getCollection`, `getEntries`), and the dev toolbar's **Vesper** app links each one straight to its editor ("Edit this page"). Types are injected, so no setup is needed.
+A drop-in for `astro:content` (spec §6.11). In builds it re-exports Astro's module, and for scheduled collections its `getCollection`, `getEntry` and `getEntries` leave out entries outside their publish window (below). In `astro dev` it also notes which entries each page shows (`render`, `getEntry`) or lists (`getCollection`, `getEntries`), and the dev toolbar's **Vesper** app links each one straight to its editor ("Edit this page"). Types are injected, so no setup is needed.
 
 It adds the site helpers (spec §6.15.7), which use the same URL and tree code as the studio:
 
@@ -171,6 +171,21 @@ At build, the cleaned redirects go to Astro's `redirects`, so static output gets
 | nginx | `native: ['nginx']` | `dist/_vesper/nginx-redirects.conf`, for the server admin to include |
 
 URLs a native rule covers get no HTML page. `dist/_vesper/redirects.json` lists the cleaned redirects (the S3 deploy template's input, Phase 9). Redirects aren't served by `astro dev`.
+
+### Scheduling (spec §6.17)
+
+```ts
+events: { url: '/events/:id', schedule: true },
+// or: schedule: { unpublish: false, publishAt: 'goesLive', unpublishAt: 'expires', unpublishRedirect: 'thenGoTo' }
+```
+
+The collection's schema needs the fields (`publishAt: fields.datetime().optional(),` and `unpublishAt`, plus an optional `unpublishRedirect` string); Astro drops values a schema doesn't list, and Vesper warns when they're missing. A build then leaves out, through `vesper:content`, every entry whose `publishAt` is still to come or whose `unpublishAt` has passed: its page isn't built, and no list or tree shows it. Pages that read `astro:content` directly aren't filtered, and the build warns about any it finds. `astro dev` keeps every entry, so it can be edited.
+
+- **One instant per build.** Every check in a build uses the time the build started, or `VESPER_BUILD_TIME` (an ISO time) when it's set, to build the site as it will be.
+- **Unpublished pages** answer 404, or redirect where their `unpublishRedirect` says: a temporary redirect, through the same host rules as `vesper.redirects.yaml`, and never written into it. A redirect in the file for the same address wins.
+- **`dist/_vesper/schedule.json`** says when the site next changes, never what: `{ "version": 1, "builtAt": "…", "next": "…" }`, with `next` null when nothing is scheduled.
+
+The site's content changes only when it's built, so a post goes live at the first build after its time.
 
 ### Images (spec §6.6.3)
 

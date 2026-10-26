@@ -130,11 +130,16 @@ describe('moving a section, then building', () => {
       expect(landing.url).toBe(target);
     }
 
-    // Every redirect the build wrote is one of these, and the moved page's links point at it.
+    // Every redirect the build wrote is one of these, or an unpublished event's
+    // (the playground builds as of 26 October 2026), and the moved page's links point at it.
     const written = JSON.parse(
       readFileSync(join(site, 'dist', '_vesper', 'redirects.json'), 'utf8'),
     ) as { key: string; to: string }[];
-    expect(Object.fromEntries(written.map((r) => [r.key, r.to]))).toEqual(expected);
+    expect(Object.fromEntries(written.map((r) => [r.key, r.to]))).toEqual({
+      ...expected,
+      '/events/fall-open-house': '/events/',
+      '/events/summer-orientation': '/admissions/apply/',
+    });
     const academics = await visit('/academics/');
     expect(academics.html).toContain('href="/nursing/"');
     expect(academics.html).not.toContain('href="/academics/nursing/"');

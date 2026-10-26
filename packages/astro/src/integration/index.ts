@@ -19,6 +19,7 @@ import { reactProblem, reactVersionFrom } from './react-check.ts';
 import { indexSearch, openSearchXml, type SearchOptions } from './search.ts';
 import { searchPlugin } from './search-plugin.ts';
 import { buildRedirects, urlSettings, writeHostRules, type BuildRedirects } from './redirects.ts';
+import { SCHEDULE_PATH, buildInstant, unfilteredPages, writeSchedule } from './schedule.ts';
 import { staticRoutesFromFiles, staticRoutesOf, type ResolvedRoute } from './routes.ts';
 import { checkSite, withRoutes } from './site-check.ts';
 import { formatUrl } from '@vesper/core';
@@ -124,6 +125,8 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
   /** The cloud's settings for built sites, or null. */
   let cloud: CloudStudioSettings | null = null;
   let contentConfig: string | undefined;
+  /** The build's one instant (spec §6.17): every scheduled check in the build uses it. */
+  let instant = new Date();
   const staticRoutes = () =>
     resolved ? staticRoutesOf(resolved, root) : staticRoutesFromFiles(root, srcDir);
 
@@ -143,6 +146,10 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         root = fileURLToPath(config.root);
         srcDir = relative(root, fileURLToPath(config.srcDir)).split(sep).join('/') || 'src';
         command = astroCommand;
+        instant = buildInstant(process.env.VESPER_BUILD_TIME);
+        if (command === 'build' && process.env.VESPER_BUILD_TIME) {
+          logger.info(`Building the site as of ${instant.toISOString()} (VESPER_BUILD_TIME).`);
+        }
         const files = siteConfigFiles(root, srcDir);
         contentConfig = files.contentConfig;
         if (options.github && command === 'build') {
@@ -227,6 +234,8 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             apiBase: `${base}_vesper/api/`,
             routes: staticRoutes,
             helpersEntry: fileURLToPath(runtimeFile('helpers')),
+            scheduleEntry: fileURLToPath(runtimeFile('schedule')),
+            instant,
             siteName,
             siteUrl: base,
             command,
@@ -267,6 +276,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             routes: staticRoutesFromFiles(root, srcDir),
             env: process.env,
             existing: config.redirects,
+            at: instant,
           });
           for (const warning of redirects.warnings) logger.warn(warning.message);
           if (Object.keys(redirects.astro).length > 0) updateConfig({ redirects: redirects.astro });
@@ -320,6 +330,25 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         const model = await cache.get();
         writeManifest(model.manifest, fileURLToPath(new URL('_vesper/manifest.json', dir)));
         logger.info('Wrote _vesper/manifest.json');
+        // When the site next changes, for the scheduled rebuild and the cloud (spec §6.17).
+        const schedule = await writeSchedule({
+          root,
+          dist: fileURLToPath(dir),
+          model,
+          at: instant,
+        });
+        logger.info(
+          `Wrote ${SCHEDULE_PATH}${schedule.next ? `: the site next changes at ${schedule.next.toISOString()}` : ''}`,
+        );
+        for (const warning of await unfilteredPages({
+          root,
+          dist: fileURLToPath(dir),
+          model,
+          settings: urlSettings(model),
+          routes: staticRoutes,
+          at: instant,
+        }))
+          logger.warn(warning);
         if (redirects && redirects.redirects.length > 0) {
           const written = writeHostRules(fileURLToPath(dir), redirects, urlSettings(model));
           logger.info(`Wrote ${written.join(', ')}`);
@@ -337,6 +366,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             routes: staticRoutes,
             search: options.search ?? {},
             injectedPage: searchInjected,
+            now: instant,
           });
           for (const line of result.info) logger.info(line);
           for (const line of result.warnings) logger.warn(line);

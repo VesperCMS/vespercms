@@ -27,6 +27,11 @@
       "types": "./dist/urls/index.d.ts",
       "default": "./dist/urls/index.js"
     },
+    "./schedule": {
+      "@vesper/source": "./src/schedule/index.ts",
+      "types": "./dist/schedule/index.d.ts",
+      "default": "./dist/schedule/index.js"
+    },
     "./images": {
       "@vesper/source": "./src/images/index.ts",
       "types": "./dist/images/index.d.ts",

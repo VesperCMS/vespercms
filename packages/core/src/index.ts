@@ -118,6 +118,7 @@ export {
   type ManifestInput,
   type CollectionInput,
   type CollectionConfig,
+  type ScheduleConfig,
   type LoaderInfo,
 } from './manifest/build.ts';
 export { canonicalJson, manifestHash } from './manifest/hash.ts';

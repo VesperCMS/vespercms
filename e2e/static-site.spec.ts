@@ -159,7 +159,8 @@ test('the build publishes the manifest for the cloud', async ({ request }) => {
 /*
  * Redirects on a plain host (spec §6.15.5, §6.16): Astro's HTML redirect
  * pages, written from vesper.redirects.yaml after the build collapsed its
- * chain. Each old URL must land on a real page in one hop.
+ * chain, and from unpublished events' own fields (spec §6.17). Each old URL
+ * must land on a real page in one hop.
  */
 type BuiltRedirect = { key: string; from: string; to: string; status: number };
 const redirects = JSON.parse(
@@ -171,6 +172,9 @@ const refreshTarget = (html: string) => META_REFRESH.exec(html)?.[1] ?? null;
 
 test('the build lists the cleaned redirects, with the chain collapsed', () => {
   expect(redirects.map((r) => [r.key, r.to])).toEqual([
+    // Unpublished events, temporarily: the playground builds as of 26 October 2026.
+    ['/events/fall-open-house', '/events/'],
+    ['/events/summer-orientation', '/admissions/apply/'],
     ['/programs/nursing', '/academics/nursing/'],
     ['/academics/nursing-old', '/academics/nursing/'],
     ['/apply-now', '/admissions/apply/'],
@@ -192,6 +196,38 @@ for (const redirect of redirects) {
     await expect(page.locator('h1')).toHaveCount(1);
   });
 }
+
+/*
+ * Scheduled events on a plain host (spec §6.17, D18): the playground builds
+ * as of noon on 26 October 2026 (its astro.config.mjs), so harvest-concert
+ * (31 October) and night-owl-study-hall (1 November) aren't live yet, and
+ * fall-open-house came down on 25 October with a redirect to /events/.
+ */
+test('an event that isn’t live yet is a 404, and the list shows only live ones', async ({
+  page,
+  request,
+}) => {
+  for (const url of ['/events/harvest-concert/', '/events/night-owl-study-hall/']) {
+    expect((await request.get(url)).status(), url).toBe(404);
+  }
+  await page.goto('/events/fall-open-house/');
+  await page.waitForURL((url) => url.pathname === '/events/');
+  const list = page.getByRole('main');
+  await expect(list.getByRole('link', { name: 'Nursing information session' })).toBeVisible();
+  await expect(list.getByRole('link', { name: 'Spring commencement' })).toBeVisible();
+  for (const title of ['Harvest concert', 'Night-owl study hall', 'Fall open house'])
+    await expect(list.getByRole('link', { name: title })).toHaveCount(0);
+});
+
+test('the build says when the site next changes, and nothing about what', async ({ request }) => {
+  const response = await request.get('/_vesper/schedule.json');
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({
+    version: 1,
+    builtAt: '2026-10-26T16:00:00.000Z',
+    next: '2026-10-31T12:00:00.000Z',
+  });
+});
 
 test('breadcrumbs and section lists come from the site helpers, in _order.yaml order', async ({
   page,

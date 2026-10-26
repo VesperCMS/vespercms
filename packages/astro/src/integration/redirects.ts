@@ -10,6 +10,7 @@ import {
   hostRedirects,
   htaccessRules,
   isExternal,
+  isRedirect,
   mergeMarkedBlock,
   nginxRules,
   readDataFile,
@@ -26,7 +27,8 @@ import type { SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 
 /*
- * How `vesper.redirects.yaml` reaches the built site (spec §6.15.5).
+ * How `vesper.redirects.yaml` reaches the built site (spec §6.15.5), with
+ * the redirects unpublished pages leave behind (spec §6.17).
  *
  * The file is cleaned against every page the build will have, then each
  * redirect goes to Astro's `redirects`, so a static build writes an HTML
@@ -60,7 +62,9 @@ export function nativeTargets(
 
 /**
  * The redirects a build serves. `existing` is the site's own Astro
- * `redirects`, which win over the file's.
+ * `redirects`, which win over the file's. `at` is the build's instant:
+ * entries past their `unpublishAt` then leave their redirects, and a
+ * redirect gives way only to a page the build will have.
  */
 export async function buildRedirects(options: {
   root: string;
@@ -68,28 +72,26 @@ export async function buildRedirects(options: {
   routes: StaticRoutes;
   env: Readonly<Record<string, string | undefined>>;
   existing: Readonly<Record<string, unknown>>;
+  at: Date;
 }): Promise<BuildRedirects> {
   const { root, model } = options;
   const settings = urlSettings(model);
   const targets = nativeTargets(options.env, model.manifest.site.redirects?.native);
+  const warnings: RedirectWarning[] = [];
+  let file: unknown[] = [];
   const path = join(root, REDIRECTS_FILE);
-  if (!existsSync(path)) return { redirects: [], warnings: [], targets, astro: {} };
-
-  const read = readDataFile(new Uint8Array(readFileSync(path)), 'yaml');
-  if (read.status !== 'editable' || !(Array.isArray(read.value) || read.value === null)) {
-    return {
-      redirects: [],
-      warnings: [
-        {
-          kind: 'invalid',
-          from: '',
-          message:
-            `${REDIRECTS_FILE} isn't a list of redirects, so none were added. ${read.status === 'editable' ? '' : read.message}`.trim(),
-        },
-      ],
-      targets,
-      astro: {},
-    };
+  if (existsSync(path)) {
+    const read = readDataFile(new Uint8Array(readFileSync(path)), 'yaml');
+    if (read.status === 'editable' && (Array.isArray(read.value) || read.value === null)) {
+      file = read.value ?? [];
+    } else {
+      warnings.push({
+        kind: 'invalid',
+        from: '',
+        message:
+          `${REDIRECTS_FILE} isn't a list of redirects, so none were added. ${read.status === 'editable' ? '' : read.message}`.trim(),
+      });
+    }
   }
 
   const storage = new LocalStorage(root);
@@ -98,8 +100,26 @@ export async function buildRedirects(options: {
     routes: () => options.routes,
     urlFunctions: model.urlFunctions,
   });
-  const keys = await pages.pageKeys();
-  const cleaned = cleanRedirects(read.value ?? [], { isPage: (key) => keys.has(key) });
+  // The file wins over an unpublished entry's own redirect, so a developer can override one.
+  const inFile = new Set(file.filter(isRedirect).map((r) => redirectKey(r.from)));
+  const unpublished: Redirect[] = [];
+  for (const redirect of await pages.unpublishRedirects(options.at)) {
+    if (!inFile.has(redirectKey(redirect.from))) unpublished.push(redirect);
+    else
+      warnings.push({
+        kind: 'duplicate',
+        from: redirect.from,
+        to: redirect.to,
+        message: `${formatUrl(redirect.from, settings)} is unpublished and asks to send visitors to ${redirect.to}, but ${REDIRECTS_FILE} has a redirect from it too, which is used instead.`,
+      });
+  }
+  if (file.length === 0 && unpublished.length === 0) {
+    return { redirects: [], warnings, targets, astro: {} };
+  }
+  // Only pages this build has win over a redirect, so an unpublished one's isn't dropped.
+  const keys = await pages.pageKeys({ at: options.at });
+  const cleaned = cleanRedirects([...unpublished, ...file], { isPage: (key) => keys.has(key) });
+  warnings.push(...cleaned.warnings);
   const redirects = activeRedirects(cleaned.redirects);
 
   const covered = new Set<string>();
@@ -119,7 +139,7 @@ export async function buildRedirects(options: {
       destination: isExternal(redirect.to) ? redirect.to : formatUrl(redirect.to, settings),
     };
   }
-  return { redirects, warnings: cleaned.warnings, targets, astro };
+  return { redirects, warnings, targets, astro };
 }
 
 /**
@@ -153,7 +173,7 @@ export function writeHostRules(
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(
         path,
-        `# Written by Vesper from vesper.redirects.yaml. Include it in the site's server block.\n${nginxRules(host)}\n`,
+        `# Written by Vesper from vesper.redirects.yaml and unpublished pages. Include it in the site's server block.\n${nginxRules(host)}\n`,
       );
       written.push('_vesper/nginx-redirects.conf');
     }

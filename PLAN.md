@@ -23,7 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5, step 2's build half: see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
+Phase 4.5, step 3, the studio: see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
@@ -1542,7 +1542,17 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 - **Times in the site's zone** moved from the studio into core (`schedule/time.ts`), since the words, the build and the cloud need them. The DST tests found that a time the clocks skip was saved an hour early (2:30 AM on 14 March 2027 as 1:30 AM EST), and that east of Greenwich a repeated time took the second; both are fixed (DECISIONS.md, "Times are entered in the site's time zone").
 - **Tests:** America/New_York across 1 November 2026 and 14 March 2027 (a time chosen in October for November keeps `-05:00`, the repeated 1:30s read EDT and EST, a skipped 2:30 becomes 3:30), Europe/Paris's repeated and skipped hours, the words, and the events. Vitest: 4,403 passed, 3 skipped. CI green on GitHub (run 40370987523), Windows included.
 
-**Next: step 2, the build's half.** The build's one instant (`VESPER_BUILD_TIME`), filtering scheduled collections in `vesper:content` (`getCollection`, `getEntry`, `getEntries`), unpublish redirects through `cleanRedirects`, `dist/_vesper/schedule.json`, and the warnings (missing schedule fields, pages that read `astro:content`). Then the studio (step 3). The platform facts the design marks "to check" (Actions' `schedule`, `repository_dispatch`, hosts' build hooks) are checked when step 4's templates start, which is where they're used.
+**Step 2, the build's half (2026-10-26),** as designed; DECISIONS.md's "Scheduling" entries say how:
+- **One instant per build:** `buildInstant` reads `VESPER_BUILD_TIME` once at config setup, refuses a value that isn't a time, and says in the log when a build is pinned. Redirects, search, `schedule.json` and the warnings take it.
+- **Filtering:** in builds, `vesper:content`'s `getCollection`, `getEntry` and `getEntries` leave out a scheduled collection's entries outside their window (`runtime/schedule.ts`, on a new entry point, `@vesper/core/schedule`). The helpers follow. Dev keeps every entry.
+- **Unpublish redirects:** `PageService.unpublishRedirects(at)`, cleaned with the file's against the pages the build will have (`pageKeys({ at })`), temporary, through the same host rules; the file wins, with a warning. The schedule names the field (`unpublishRedirect` by default), now in the manifest.
+- **`dist/_vesper/schedule.json`** on every build: `{ version: 1, builtAt, next }`.
+- **Warnings:** a built page whose entry is outside its window (the page read `astro:content`), and a scheduled collection whose schema lacks its time fields.
+- **The playground** builds as of noon on 26 October 2026, from its `astro.config.mjs`, so its events stay fixtures: `harvest-concert` and `night-owl-study-hall` aren't built, `fall-open-house` and `summer-orientation` redirect, and `next` is `harvest-concert`'s time.
+- **Docs:** `@vesper/astro`'s README has a Scheduling section. The docs site's page waits for step 7, as the design says, once the studio and the templates are built.
+- **Tests:** the build's module (the instant, `schedule.json`, the warning) and the loaders; unpublish redirects, the file winning, and Apache's and Netlify's rules carrying them; the manifest warning; an integration test that builds the playground as of four instants (a minute either side of `harvest-concert`, then inside and at the end of `night-owl-study-hall`'s repeated hour), checking pages, the events list, search and `next`; and the static e2e on the plain server: the two not-yet-live events answer 404, `fall-open-house` lands on `/events/` in one hop, and `schedule.json` is served. Existing tests now count the two unpublished events' redirect pages, and the manifest snapshot has `unpublishRedirect`. The helpers' parity test (`/site-tree.json`, dev against the build) lists every event's URL too, which the design missed; it now compares all but the events, and checks the build has only the live ones. Vitest: 4,418 passed, 3 skipped; every e2e project passes locally. CI green on GitHub (run 40376509571), Windows included.
+
+**Next: step 3, the studio.** Publish ▾ with Schedule…, the dialog, the schedule in Details, the status words in the bar and the list, the Scheduled filter and view, and the dev marker. The platform facts the design marks "to check" (Actions' `schedule`, `repository_dispatch`, hosts' build hooks) are checked when step 4's templates start, which is where they're used.
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 

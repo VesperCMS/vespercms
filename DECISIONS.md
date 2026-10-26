@@ -949,6 +949,8 @@ What the script does instead: a native `<dialog>` opened with `showModal()`, who
 
 **Until Phase 4.5 filters the build itself (D18), the indexer leaves out entries whose `publishAt` is in the future or whose `unpublishAt` has passed, with `isPublished` from `@vesper/core`. Phase 4.5's filtering will use the same function. Jeremy chose this on 2026-10-19 (call 5).** The playground's builds still produce `harvest-concert` before 31 October 2026, and search must never offer it. Because the playground's own dates go by, the integration test adds an event scheduled for 2099, and the e2e tests check only what stays true.
 
+Since 2026-10-26 the build leaves those entries out itself (D18; "Scheduled collections are filtered in `vesper:content`, by one instant per build", below), and the indexer takes the build's instant instead of its own. Its check stays, for sites whose pages read `astro:content`, which isn't filtered.
+
 ### 2026-10-19: What the index knows about a page
 
 **The build hands Pagefind an annotated copy of each page; the file in `dist/` is never written.** Pagefind's Node API takes the HTML as a string (`addHTMLFile`), so the copy never touches disk.
@@ -1115,7 +1117,7 @@ Hosts that check authors: Netlify holds a private repository's deploys from auth
 
 ## Scheduling
 
-Phase 4.5's design is in PLAN.md. Jeremy took every recommendation on 2026-10-21: calls 1 to 11, and the smaller defaults. None of it is built yet; building waits for Phase 4. The platform facts the design marks "to check" are checked at the start of the phase and added here with their sources.
+Phase 4.5's design is in PLAN.md. Jeremy took every recommendation on 2026-10-21: calls 1 to 11, and the smaller defaults. Building started on 2026-10-26, once Phase 4 was done; PLAN.md's "Phase 4.5: progress" says what's built. The platform facts the design marks "to check" are checked when the deploy templates are built, where they're used, and added here with their sources.
 
 ### 2026-10-21: Scheduled collections are filtered in `vesper:content`, by one instant per build
 
@@ -1126,6 +1128,13 @@ Phase 4.5's design is in PLAN.md. Jeremy took every recommendation on 2026-10-21
 
 Rejected: removing entries in the content loader. That would reach `astro:content` as well, but it means wrapping the site's own loaders, and dev must keep the entries.
 
+Built 2026-10-26, as above. How:
+- **The instant** is `buildInstant(process.env.VESPER_BUILD_TIME)`, read once in `astro:config:setup`. A value that isn't a time stops the build and says how to write one, since a silently ignored one would publish the wrong site. A pinned build says so in its log.
+- **The loaders** come from `runtime/schedule.ts`, on a new narrow entry point, `@vesper/core/schedule`, so the site's pages don't import the rest of the core, as `@vesper/core/urls` keeps the helpers light. A site with no scheduled collection still gets the plain re-export.
+- **The warning about `astro:content`** compares each built page's URL key with the keys of entries outside their window ("/events/harvest-concert/ was built, but it's scheduled for Sat, Oct 31, 8:00 AM…"), skipping Astro's redirect pages, which an unpublished entry with a redirect is meant to have.
+- **A scheduled collection whose schema lacks its time fields** gets one manifest warning naming the lines to add, shown in dev and at build like the manifest's other diagnostics.
+- **The playground builds as of noon on 26 October 2026** (`VESPER_BUILD_TIME`, set in its `astro.config.mjs` unless the environment sets it). Its events are fixtures whose dates would pass, and the e2e and integration tests build copies of it; an integration test builds a copy as of four other instants instead (a minute either side of `harvest-concert`, and inside and at the end of `night-owl-study-hall`'s repeated hour).
+
 ### 2026-10-21: An unpublish redirect comes from the entry's own field
 
 **Once an entry is past its `unpublishAt`, the build adds a temporary (302) redirect from its URL to its `unpublishRedirect` field. It goes through the same cleaning and host rules as `vesper.redirects.yaml`, and nothing is written into that file (call 1; spec §6.17 changed).**
@@ -1135,11 +1144,15 @@ Rejected: removing entries in the content loader. That would reach `astro:conten
 
 Rejected: writing it into the redirects file at publish, with the time it starts (§6.17's first version). The file would hold redirects that aren't active yet. Its "the page wins" cleanup would have to skip them while the page is live. And `vercel.json` can't hold a redirect that starts later.
 
+Built 2026-10-26. `PageService.unpublishRedirects(at)` lists them in core; the build puts them before the file's in one `cleanRedirects` pass, against `pageKeys({ at })`, the pages that build will have. A redirect in the file from the same address wins, with a warning that names both, so a developer can override an entry's choice without editing it. The field's name is `unpublishRedirect` unless the collection's `schedule` names another (`SchedulePresentation.unpublishRedirect`, absent in older manifests). A site with no redirects file now gets them too.
+
 ### 2026-10-21: A free site rebuilds on a schedule only when something is due
 
 **Every build writes `dist/_vesper/schedule.json` with the next time the site changes, never what changes. The workflows' scheduled run fetches it from the live site and rebuilds only once that time has passed, or when the file can't be read. `rebuildEvery` (minutes) in `vesper.config.ts` tells the studio how often the run comes, so its line can say "This site rebuilds every hour" (calls 2 and 5; spec §6.17 changed).**
 - An hourly rebuild regardless is about 720 builds a month: free plans' build counts and Actions minutes, spent mostly on builds that change nothing.
 - The cloud reads the same file's `builtAt` to tell when a scheduled change is live, on any host.
+
+`schedule.json` is built (2026-10-26): every build writes it, from core's `scheduledEvents` over the site's files at the build's instant, and logs the next change. `builtAt` is that instant, so a pinned build says the time it was built as of.
 
 Rejected:
 - rebuilding on every run (§6.17's example);

@@ -91,8 +91,8 @@ describe('accessibility checks at build', () => {
       /Accessibility: checked \d+ pages, 4 issues on 2 pages \(2 errors\)\. Report: \.vesper\/a11y-report\.json/,
     );
     expect(report.checked.engine).toMatch(/^axe-core 4\.\d+\.\d+ in jsdom \d+/);
-    // Astro's redirect pages (the playground has three) and the studio's shell.
-    expect(report.checked.skipped).toEqual({ redirects: 3, studio: 1 });
+    // Astro's redirect pages (the playground's three, and two unpublished events) and the studio's shell.
+    expect(report.checked.skipped).toEqual({ redirects: 5, studio: 1 });
     expect(report.checked.rules).not.toContain('color-contrast');
   });
 
