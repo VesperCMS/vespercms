@@ -1,6 +1,12 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { DEFAULT_URL_SETTINGS, folderKey, readDataFile, siteRatios } from '@vesper/core';
+import {
+  DEFAULT_URL_SETTINGS,
+  folderKey,
+  readDataFile,
+  resolveTimeZone,
+  siteRatios,
+} from '@vesper/core';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createDevApi } from './dev-api.ts';
 import type { CloudStudioSettings, StaticRoutes } from '@vesper/core';
@@ -143,6 +149,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               ? {
                   entry: toPosix(options.scheduleEntry),
                   data: { instant: options.instant.toISOString(), schedules },
+                  zone: resolveTimeZone(model.manifest.site.timeZone).zone,
                 }
               : undefined,
           vesperConfig:
@@ -300,7 +307,7 @@ function contentModule(options: {
   dev: boolean;
   helpers: string;
   data: HelperData;
-  schedule: { entry: string; data: ScheduleData } | undefined;
+  schedule: { entry: string; data: ScheduleData; zone: string } | undefined;
   vesperConfig: string | undefined;
 }): string {
   const helpers = [
@@ -336,9 +343,17 @@ function contentModule(options: {
       ...helpers,
     ].join('\n');
   }
+  // Scheduled entries stay in dev, marked with what their schedule says now (spec §6.17).
+  const schedule = options.schedule
+    ? [
+        `import { scheduleNote } from ${JSON.stringify(options.schedule.entry)};`,
+        `const schedules = ${JSON.stringify({ schedules: options.schedule.data.schedules, zone: options.schedule.zone })};`,
+      ]
+    : ['const scheduleNote = () => ({});', 'const schedules = null;'];
   return [
     "import * as content from 'astro:content';",
     "export * from 'astro:content';",
+    ...schedule,
     "const store = () => globalThis[Symbol.for('vesper.pageEntries')]?.getStore();",
     'function note(entry, kind) {',
     '  const entries = store();',
@@ -347,7 +362,7 @@ function contentModule(options: {
     "  const title = [data.title, data.name, data.label].find((t) => typeof t === 'string' && t.trim() !== '');",
     "  const key = entry.collection + '/' + entry.id;",
     "  const shown = kind === 'shown' || entries.get(key)?.kind === 'shown';",
-    "  entries.set(key, { collection: entry.collection, id: entry.id, kind: shown ? 'shown' : 'listed', ...(title ? { title } : {}) });",
+    "  entries.set(key, { collection: entry.collection, id: entry.id, kind: shown ? 'shown' : 'listed', ...(title ? { title } : {}), ...scheduleNote(entry, schedules) });",
     '  return entry;',
     '}',
     "export async function getEntry(...args) { return note(await content.getEntry(...args), 'shown'); }",

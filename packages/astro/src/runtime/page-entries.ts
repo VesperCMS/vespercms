@@ -15,7 +15,26 @@ export type PageEntry = {
   id: string;
   kind: 'shown' | 'listed';
   title?: string;
+  /** A scheduled entry's status words now ("Scheduled · Sat, Oct 31, 8:00 AM"). */
+  status?: string;
+  /** Visitors wouldn't see it in a build now: before its time, or after it came down. */
+  outside?: true;
 };
+
+/**
+ * The note on a page whose own entry is outside its window (spec §6.17):
+ * fixed at the top, dev only, so an editor looking at the page knows what
+ * visitors won't see.
+ */
+function scheduleNote(entries: PageEntry[]): string {
+  const entry = entries.find((e) => e.kind === 'shown' && e.outside && e.status);
+  if (!entry?.status) return '';
+  const after = entry.status.startsWith('Unpublished')
+    ? 'Visitors no longer see this page.'
+    : 'Visitors won’t see this page until then.';
+  const text = `${entry.status}. ${after}`.replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'));
+  return `<div id="vesper-schedule-note" role="note" style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;max-width:calc(100% - 32px);padding:8px 16px;border-radius:8px;background:#181b28;color:#fff;font:15px/1.5 system-ui,sans-serif">${text}</div>`;
+}
 
 const KEY = Symbol.for('vesper.pageEntries');
 const registry = globalThis as typeof globalThis & {
@@ -36,7 +55,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (result.html === null) return result.response;
 
   const list = JSON.stringify([...entries.values()]).replaceAll('<', '\\u003c');
-  const tag = `<script type="application/json" id="vesper-page-entries">${list}</script>`;
+  const tag = `${scheduleNote([...entries.values()])}<script type="application/json" id="vesper-page-entries">${list}</script>`;
   const html = result.html.includes('</body>')
     ? result.html.replace('</body>', `${tag}</body>`)
     : result.html + tag;
