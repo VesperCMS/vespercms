@@ -90,7 +90,11 @@ test('Appearance in the user menu: Dark is kept across a reload, and passes axe'
 test('every screen passes axe: home, list, editor, media', async ({ page }) => {
   await page.goto('/admin/');
   await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
-  await expect(page.getByText(/^4 entries/)).toBeVisible();
+  // Among panes, the collections are the page, with their counts.
+  const blog = page
+    .getByRole('main', { name: 'Content' })
+    .getByRole('link', { name: /^Blog posts/ });
+  await expect(blog).toContainText('4');
   await expectAccessible(page);
 
   await page.goto('/admin/#/c/blog');

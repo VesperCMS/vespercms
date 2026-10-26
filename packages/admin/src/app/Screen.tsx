@@ -131,8 +131,9 @@ export function useLeadHeading(title: string, heading: RefObject<HTMLElement | n
  * A pane's frame: a landmark named by its heading, a header with the heading,
  * the pane's actions and its collapse button, then the pane's body. The
  * deepest pane is the page's `main`, with its `h1`; the others are
- * navigation, with `h2`s. The element stays the same as a pane's role
- * changes, so what's in it isn't drawn afresh when an entry opens beside it.
+ * navigation, or a region, with `h2`s. The element stays the same as a
+ * pane's role changes, so what's in it isn't drawn afresh when an entry
+ * opens beside it.
  */
 export function PaneFrame({
   title,
@@ -153,11 +154,12 @@ export function PaneFrame({
 }) {
   const pane = usePane();
   const id = useId();
-  const main = pane?.landmark !== 'nav';
+  const landmark = pane?.landmark ?? 'main';
+  const main = landmark === 'main';
   const Heading = pane?.level === 2 ? 'h2' : 'h1';
   return (
     <div
-      role={main ? 'main' : 'navigation'}
+      role={main ? 'main' : landmark === 'nav' ? 'navigation' : 'region'}
       aria-labelledby={id}
       {...(main ? { id: 'main', tabIndex: -1 } : {})}
       className={cx('flex min-h-0 flex-1 flex-col outline-none', className)}

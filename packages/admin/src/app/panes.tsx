@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { shownTo } from '../cloud/access.ts';
+import { DraftsWaiting, useDraftsWaiting } from '../cloud/changes.tsx';
 import { EntryEditor } from '../screens/EntryEditor.tsx';
 import { EntryList } from '../screens/EntryList.tsx';
 import { Home } from '../screens/Home.tsx';
@@ -21,8 +22,8 @@ import { collectionIcon } from './collection-icon.ts';
 import type { Studio } from './context.tsx';
 import { useLoad } from './load.ts';
 import { hrefFor, type Route } from './router.ts';
-import { PaneContext, type PaneInfo } from './pane-context.ts';
-import { PaneFrame, StudioHeader, useLeadHeading } from './Screen.tsx';
+import { PaneContext, usePane, type PaneInfo } from './pane-context.ts';
+import { PaneFrame, Screen, StudioHeader, useLeadHeading } from './Screen.tsx';
 
 /*
  * The studio on wide screens, full width: panes side by side, Sanity-style
@@ -32,8 +33,9 @@ import { PaneFrame, StudioHeader, useLeadHeading } from './Screen.tsx';
  * the list's tools, and an entry opens beside it. Each pane scrolls on its
  * own. People can collapse any pane but the deepest into a strip, and the
  * studio folds the earlier ones itself when they don't all fit; a strip
- * opens again with a click. Narrower than 48rem the studio is one screen at
- * a time, as before.
+ * opens again with a click. With nothing chosen, the structure pane is the
+ * page itself. Narrower than 48rem the studio is one screen at a time, as
+ * before.
  */
 
 /** Wide enough for panes: below it, one screen at a time. */
@@ -159,6 +161,7 @@ export function PaneShell({
   const keep = opened?.key === routeKey ? opened.pane : null;
   const fold = wide ? folded(panes, room, collapsed, keep) : new Set<string>();
   const last = panes.at(-1);
+  const home = route.screen === 'home' || route.screen === 'changes';
 
   // Collapsing removes the button that was pressed, so focus goes to the strip in its place,
   // and back to the collapse button when the strip opens the pane again.
@@ -221,11 +224,38 @@ export function PaneShell({
             </div>
           );
         })}
-        {/* Room for the entry a list opens: empty until one is chosen. */}
-        {wide && last && last.width !== 'flex' && (
-          <div aria-hidden="true" className="min-w-0 flex-1 bg-surface-sunken" />
-        )}
+        {wide && last && last.width !== 'flex' && (home ? <WaitingPane /> : <Filler />)}
       </div>
+    </div>
+  );
+}
+
+/** Room for the entry a list opens: empty until one is chosen. */
+function Filler() {
+  return <div aria-hidden="true" data-filler="" className="min-w-0 flex-1 bg-surface-sunken" />;
+}
+
+const WAITING: PaneInfo = { landmark: 'region', level: 2, focusTarget: false, width: 'flex' };
+
+/**
+ * Beside the collections on Home, the cloud's drafts waiting to be
+ * published, and the filler when there are none: absent, not empty (spec
+ * §6.9). A region beside the page's `main`, never the deepest pane itself:
+ * drafts arrive in the background, and a pane that took the lead would move
+ * the `h1` and focus with them.
+ */
+function WaitingPane() {
+  if (useDraftsWaiting() === 0) return <Filler />;
+  return (
+    <div
+      data-pane="changes"
+      className={cx('flex min-h-0 flex-col border-r border-border', widthClass.flex)}
+    >
+      <PaneContext.Provider value={WAITING}>
+        <Screen title="Changes" afterglow>
+          <DraftsWaiting />
+        </Screen>
+      </PaneContext.Provider>
     </div>
   );
 }
@@ -268,7 +298,9 @@ function panesFor(route: Route, studio: Studio, wide: boolean): PaneSpec[] {
     content,
   });
   if (route.screen === 'home' || route.screen === 'changes') {
-    return [structure, flex('home', 'Content', <Home />)];
+    // Wide, Home beside the collections only repeated them, so they're the page.
+    // Narrow, Home is the one place that lists them with their counts.
+    return wide ? [structure] : [structure, flex('home', 'Content', <Home />)];
   }
   if (route.screen === 'media') return [structure, flex('media', 'Media', <MediaBrowser />)];
   if (route.screen === 'redirects') {
@@ -336,13 +368,15 @@ function hereOf(route: Route): string | null {
 
 /**
  * The structure pane: every collection, then settings, then the site's own
- * places. Always on screen, so the site's content is one click away.
+ * places. Always on screen, so the site's content is one click away. With
+ * nothing chosen it's the deepest pane, so its heading is the page's `h1`.
  */
 function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
   const { manifest, api, cloud, siteUrl } = studio;
   const [summary] = useLoad(() => api.summary(), 'structure');
   const heading = useRef<HTMLHeadingElement>(null);
   useLeadHeading('Content', heading);
+  const Subheading = usePane()?.level === 1 ? 'h2' : 'h3';
   const counts = new Map(
     summary.state === 'ready' ? summary.value.map((s) => [s.collection, s.count]) : [],
   );
@@ -397,11 +431,13 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
         <ul className="flex flex-col gap-0.5">{collections.map(collectionItem)}</ul>
         {singletons.length > 0 && (
           <>
-            <h3 className="mt-6 mb-1 px-2 text-small text-content-muted">Settings</h3>
+            <Subheading className="mt-6 mb-1 px-2 text-small text-content-muted">
+              Settings
+            </Subheading>
             <ul className="flex flex-col gap-0.5">{singletons.map(collectionItem)}</ul>
           </>
         )}
-        <h3 className="mt-6 mb-1 px-2 text-small text-content-muted">Site</h3>
+        <Subheading className="mt-6 mb-1 px-2 text-small text-content-muted">Site</Subheading>
         <ul className="flex flex-col gap-0.5">
           {item('media', hrefFor({ screen: 'media' }), 'Media', <Icon name="media" size={18} />)}
           {/* Redirects belong to the whole site (spec §7.5): a folder grant doesn't reach them. */}

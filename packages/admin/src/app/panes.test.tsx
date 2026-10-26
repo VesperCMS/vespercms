@@ -219,6 +219,35 @@ describe('the studio as panes', () => {
     expect(await screen.findByRole('navigation', { name: 'Blog posts' })).toBeInTheDocument();
   });
 
+  it('makes the collections the page when nothing is chosen, with nothing beside them', async () => {
+    // Collapsed by choice elsewhere, but here it's the deepest pane, which never folds.
+    localStorage.setItem('vesper:collapsed-panes', 'structure');
+    const { user } = open('#/');
+    const main = await screen.findByRole('main', { name: 'Content' });
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(within(main).getByRole('heading', { level: 1, name: 'Content' })).toBeInTheDocument();
+    expect(within(main).getByRole('heading', { level: 2, name: 'Site' })).toBeInTheDocument();
+    expect(within(main).queryByRole('button', { name: /^Collapse/ })).toBeNull();
+    expect(screen.queryByRole('navigation')).toBeNull();
+    // Home isn't beside them repeating them: the rest of the row is empty.
+    expect(screen.queryByRole('heading', { name: 'Collections' })).toBeNull();
+    expect(document.querySelector('[data-filler]')).not.toBeNull();
+    expect(document.title).toBe('Content · Playground');
+    await expectNoViolations();
+
+    // Going back to them from an entry, focus lands on their heading.
+    await user.click(within(main).getByRole('link', { name: /Blog posts/ }));
+    await user.click(
+      await within(screen.getByRole('main')).findByRole('row', { name: /Harbor at dawn/ }),
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Harbor at dawn' });
+    await user.click(screen.getByRole('link', { name: 'Playground' }));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Content' })).toHaveFocus();
+    });
+    expect(screen.getByRole('main', { name: 'Content' })).toBeInTheDocument();
+  });
+
   it('opens a singleton beside the collections, with no list', async () => {
     renderStudio('#/c/settings/e/site', {
       api: fakeApi({
@@ -267,5 +296,13 @@ describe('on a narrow screen', () => {
     await screen.findByRole('textbox', { name: 'Title' });
     expect(screen.queryByRole('navigation', { name: 'Content' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Blog posts' })).toBeInTheDocument();
+  });
+
+  it('keeps Home, the one place there with the collections and their counts', async () => {
+    media(false);
+    open('#/');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Content' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Collections' })).toBeInTheDocument();
+    expect(await screen.findByText(/^2 entries/)).toBeInTheDocument();
   });
 });

@@ -5,10 +5,11 @@ import { join } from 'node:path';
 import { CloudClient, authorizeUrl, createDpopKey, createPkce, encodeChange } from '@vesper/core';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCloudFake, type CloudFake } from '../../../../scripts/cloud-fake.mjs';
 import { createGitHubFake, type GitHubFake } from '../../../../scripts/github-fake.mjs';
 import { keyValueStore, type KeyValueStore } from '../app/idb.ts';
+import { PANES } from '../app/panes.tsx';
 import { expectNoViolations, playgroundManifest } from '../test/helpers.tsx';
 import { CloudGate } from './CloudGate.tsx';
 import type { CloudSettings, StoredSession } from './session.ts';
@@ -84,6 +85,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => {
@@ -476,6 +478,49 @@ describe('the studio and the cloud', () => {
       'M\tsrc/content/pages/about.md',
     ]);
     expect(within(drawer).getByText('Nothing is waiting to be published.')).toBeInTheDocument();
+  });
+
+  it('shows drafts waiting beside the collections on a wide screen, and nothing there once none are', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+      matches: query === PANES,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+    const admin = await clientAs('u_admin');
+    await draftOf(
+      admin,
+      'src/content/blog/harbor-at-dawn.md',
+      (t) => t.replace('title: Harbor at dawn', 'title: Harbor at noon'),
+      'Update “Harbor at noon” in Blog posts',
+    );
+    await returnFromSignIn('u_admin');
+    render(gate());
+    const waiting = await screen.findByRole('region', { name: 'Changes' }, { timeout: 10_000 });
+    expect(within(waiting).getByText('1 draft is waiting to be published.')).toBeInTheDocument();
+    // Beside the page, never the page: the collections keep the one h1.
+    expect(screen.getByRole('main', { name: 'Content' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    await expectNoViolations();
+
+    const user = userEvent.setup();
+    await user.click(within(waiting).getByRole('button', { name: 'See changes' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Changes' });
+    await user.click(within(drawer).getByRole('button', { name: 'Publish 1 change' }));
+    expect(
+      await within(drawer).findByText('Published 1 change.', undefined, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button', { name: 'Close' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Changes' })).not.toBeInTheDocument();
+    });
+    // Absent, not empty (spec §6.9).
+    expect(screen.queryByRole('region', { name: 'Changes' })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-filler]')).not.toBeNull();
   });
 
   it('lets an approver ask for changes on a review from Changes', async () => {

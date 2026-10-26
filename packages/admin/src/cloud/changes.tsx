@@ -86,17 +86,27 @@ export function ChangesButton() {
   );
 }
 
-/** Home's line about drafts waiting to be published, which opens Changes. */
+/** How many drafts wait to be published: none when the studio isn't connected. */
+export function useDraftsWaiting(): number {
+  const changes = useChanges();
+  const { drafts } = useDrafts();
+  return changes ? drafts.length : 0;
+}
+
+/**
+ * The line about drafts waiting to be published, which opens Changes: on
+ * Home, or among panes beside the collections.
+ */
 export function DraftsWaiting() {
   const changes = useChanges();
-  const { drafts } = useWaiting();
-  if (!changes || drafts.length === 0) return null;
+  const count = useDraftsWaiting();
+  if (!changes || count === 0) return null;
   return (
     <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1">
       <span>
-        {drafts.length === 1
+        {count === 1
           ? '1 draft is waiting to be published.'
-          : `${String(drafts.length)} drafts are waiting to be published.`}
+          : `${String(count)} drafts are waiting to be published.`}
       </span>
       <Button
         variant="quiet"

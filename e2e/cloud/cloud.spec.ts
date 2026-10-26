@@ -210,7 +210,13 @@ test('publishes two people’s drafts as one commit that credits each of them', 
   await title.fill('Harbor at dawn, by Ada');
   await expect(page.getByText(/^Draft saved/)).toBeVisible();
   const commits = github.log().length;
-  await page.goto('/admin/#/changes');
+  // Home, among panes: the drafts waiting are beside the collections, which stay the page.
+  await page.goto('/admin/#/');
+  const waiting = page.getByRole('region', { name: 'Changes' });
+  await expect(waiting.getByText('2 drafts are waiting to be published.')).toBeVisible();
+  await expect(page.getByRole('main', { name: 'Content' })).toBeVisible();
+  await axe(page);
+  await waiting.getByRole('button', { name: 'See changes' }).click();
   const drawer = page.getByRole('dialog', { name: 'Changes' });
   await drawer.getByRole('button', { name: 'Publish 2 changes' }).click();
   await expect(drawer.getByText('Published 2 changes.')).toBeVisible();

@@ -11,7 +11,8 @@ import { DraftsWaiting } from '../cloud/changes.tsx';
 
 /**
  * The home screen (spec §10.3): a plain list of collections and singletons,
- * with entry counts and when each was last edited. Nothing else.
+ * with entry counts and when each was last edited. Nothing else. One screen
+ * at a time only: among panes, the structure pane lists them (app/panes.tsx).
  */
 export function Home() {
   const { manifest, api, cloud } = useStudio();
