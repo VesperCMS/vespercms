@@ -2,16 +2,21 @@ import {
   CloudError,
   changeAccess,
   editsAnything,
+  encodeChange,
   fileAccess,
+  fromBase64,
   wholeSite,
   type CloudClient,
   type CloudUser,
+  type CommitTrailers,
   type DeployStatus,
   type Draft,
+  type HoldResponse,
   type Manifest,
   type Member,
   type PublishResponse,
   type Review,
+  type ScheduleResponse,
 } from '@vesper/core';
 import { ApiError, type StudioApi } from '../app/api.ts';
 import { createBrowserApi } from '../app/browser-api.ts';
@@ -48,6 +53,11 @@ export type DraftsSnapshot = {
   drafts: readonly Draft[];
   reviews: readonly Review[];
   version: string;
+  /**
+   * How the site publishes on schedule, and where each change stands (spec
+   * §6.17). Absent on a site with no scheduled collection, or until read.
+   */
+  schedule?: ScheduleResponse;
 };
 
 /** Drafts and reviews as screens see them, kept current after every change. */
@@ -56,10 +66,13 @@ export class DraftsStore {
   private readonly listeners = new Set<() => void>();
   private readonly client: CloudClient;
   private readonly storage: CloudStorage;
+  private readonly scheduled: boolean;
 
-  constructor(client: CloudClient, storage: CloudStorage) {
+  /** `scheduled`: the site has a scheduled collection, so the schedule is read with the drafts. */
+  constructor(client: CloudClient, storage: CloudStorage, scheduled = false) {
     this.client = client;
     this.storage = storage;
+    this.scheduled = scheduled;
   }
 
   subscribe = (listener: () => void): (() => void) => {
@@ -79,14 +92,18 @@ export class DraftsStore {
     for (const listener of this.listeners) listener();
   }
 
-  /** Asks the cloud for the drafts and reviews again. */
+  /** Asks the cloud for the drafts and reviews again, and the schedule where the site has one. */
   async refresh(): Promise<void> {
     this.storage.invalidate();
-    const [{ drafts, version }, { reviews }] = await Promise.all([
+    const [{ drafts, version }, { reviews }, schedule] = await Promise.all([
       this.storage.drafts(),
       this.client.reviews(),
+      // The schedule only adds words; without it, scheduling works as in GitHub mode.
+      this.scheduled
+        ? this.client.schedule().catch(() => this.snapshot.schedule)
+        : Promise.resolve(undefined),
     ]);
-    this.snapshot = { drafts, reviews, version };
+    this.snapshot = { drafts, reviews, version, ...(schedule ? { schedule } : {}) };
     this.emit();
   }
 
@@ -126,6 +143,62 @@ export class DraftsStore {
   status(commit: string): Promise<DeployStatus> {
     return this.client.status(commit);
   }
+
+  /** Holds drafts in the cloud until `at`, to be published then (`holdScheduledDrafts`). */
+  async hold(ids: readonly string[], at: Date): Promise<HoldResponse> {
+    const result = await this.client.hold(ids, at.toISOString());
+    await this.refresh();
+    return result;
+  }
+
+  /** A held draft stops waiting, and stays a draft. */
+  async release(event: string): Promise<void> {
+    await this.client.release(event);
+    await this.refresh();
+  }
+
+  /**
+   * Cancels a published entry's time to go live (call 9): one publish takes
+   * its file out of the site, and its content comes back as a draft. The
+   * file isn't live yet, so visitors see no change.
+   */
+  async backToDraft(
+    path: string,
+    message: { summary: string; trailers?: CommitTrailers },
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    const words = (result: { ok: false; reason: string; message?: string }) =>
+      result.message ?? 'Someone changed it since you opened it. Reload to see the new version.';
+    const version = (await this.client.tree()).entries.find((e) => e.path === path)?.version;
+    if (!version)
+      return { ok: false, message: 'It isn’t published, so there’s nothing to cancel.' };
+    const text = (await this.client.blobs([version])).blobs[version];
+    if (text === undefined) return { ok: false, message: 'Its text couldn’t be read. Try again.' };
+    const removal = await this.client.saveDraft({
+      changes: [{ op: 'delete', path, expectedVersion: version }],
+      message,
+    });
+    if (!removal.ok) {
+      await this.refresh();
+      return { ok: false, message: words(removal) };
+    }
+    const published = removal.draft ? await this.client.publish([removal.draft.id]) : null;
+    if (!published?.ok) {
+      if (removal.draft) await this.client.discardDraft(removal.draft.id);
+      await this.refresh();
+      return { ok: false, message: published ? words(published) : 'Nothing changed.' };
+    }
+    const kept = await this.client.saveDraft({
+      changes: [encodeChange({ op: 'put', path, bytes: fromBase64(text), expectedVersion: null })],
+      message,
+    });
+    await this.refresh();
+    return kept.ok
+      ? { ok: true }
+      : {
+          ok: false,
+          message: `It’s off the site, but its draft couldn’t be saved: ${words(kept)} It’s in the site’s history.`,
+        };
+  }
 }
 
 /** The cloud's errors in the studio's terms: plain words, and a status the screens understand. */
@@ -164,7 +237,11 @@ export function connect(options: ConnectOptions): { api: StudioApi; connection: 
     cache: keyValueStore<Uint8Array>('vesper-cloud-blobs', 'blobs'),
     onDrafts: (drafts, version) => store?.setDrafts(drafts, version),
   });
-  store = new DraftsStore(options.client, storage);
+  store = new DraftsStore(
+    options.client,
+    storage,
+    options.manifest.collections.some((c) => c.presentation.schedule),
+  );
   const api = createBrowserApi({
     storage,
     manifest: options.manifest,

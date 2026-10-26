@@ -10,8 +10,10 @@ import {
 import { Button, Dialog, TextField, cx } from '@vesper/ui';
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
+import { useDrafts } from '../cloud/editor.tsx';
 import { ChoosePageButton } from '../editor/PagePicker.tsx';
 import { inputClass } from '../widgets/basic.tsx';
+import { cloudKeepsTime } from './cloud.ts';
 import { useNow } from './now.ts';
 import { everyText, redirectField, siteZone, type ScheduleTimes } from './times.ts';
 
@@ -65,7 +67,8 @@ function ScheduleForm({
   onNow,
   onClose,
 }: ScheduleDialogProps & { onClose: () => void }) {
-  const { manifest, account } = useStudio();
+  const { manifest, account, cloud } = useStudio();
+  const cloudSchedule = useDrafts().schedule;
   const { zone, isSite } = siteZone(manifest);
   const schedule = collection.presentation.schedule;
   const redirect = redirectField(collection);
@@ -114,16 +117,27 @@ function ScheduleForm({
     onClose();
   };
 
-  // How exact the first time is: the site changes only when it's built.
+  // How exact the first time is: the site changes only when it's built,
+  // unless the cloud rebuilds at the time or publishes held drafts then.
   const first = publishAt ?? unpublishAt;
   const verb = publishAt ? 'Goes live' : 'Comes down';
   const rebuild = manifest.site.rebuildEvery;
   const accuracy = first
-    ? rebuild
-      ? `${verb} at the first rebuild after ${scheduleTime(first, zone, now)}. This site rebuilds ${everyText(rebuild)}.`
-      : `${verb} the next time the site is built after ${scheduleTime(first, zone, now)}.`
+    ? cloudKeepsTime(cloudSchedule, publishAt ? 'publish' : 'unpublish')
+      ? `${verb} at ${scheduleTime(first, zone, now)}.`
+      : rebuild
+        ? `${verb} at the first rebuild after ${scheduleTime(first, zone, now)}. This site rebuilds ${everyText(rebuild)}.`
+        : `${verb} the next time the site is built after ${scheduleTime(first, zone, now)}.`
     : null;
   const name = zoneName(zone, first ?? now);
+  // Who can read it before then: the cloud says when it holds drafts, GitHub when the repository is public.
+  const early = !publishAt
+    ? null
+    : cloudSchedule?.holdScheduledDrafts
+      ? 'Vesper keeps it as a draft until then, and publishes it at that time.'
+      : (cloudSchedule?.publicRepository ?? (!cloud && account?.publicRepository))
+        ? `This site’s repository is public, so anyone can read this there before it goes live.${cloudSchedule ? ' A site admin can have Vesper keep scheduled changes until their time.' : ''}`
+        : null;
 
   return (
     <form ref={form} onSubmit={submit} noValidate className="flex flex-col gap-6">
@@ -186,11 +200,7 @@ function ScheduleForm({
           {accuracy}
         </p>
       )}
-      {publishAt && account?.publicRepository && (
-        <p className="m-0 text-small">
-          This site’s repository is public, so anyone can read this there before it goes live.
-        </p>
-      )}
+      {early && <p className="m-0 text-small">{early}</p>}
       <div className="flex flex-wrap justify-end gap-3">
         <Button onPress={onClose}>Cancel</Button>
         <Button variant="primary" type="submit">

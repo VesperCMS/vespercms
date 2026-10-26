@@ -603,3 +603,180 @@ describe('the studio and the cloud', () => {
     ).toBeInTheDocument();
   });
 });
+
+// Scheduled publishing in the cloud (spec §6.17): held drafts, each change's
+// state, and cancelling a publish. Times are from now, whole minutes, as the
+// Schedule dialog keeps them, so the playground's own dated events don't matter.
+describe('scheduling in the cloud', () => {
+  const DAY = 24 * 3600 * 1000;
+  const minute = (ms: number) => new Date(Math.ceil(ms / 60_000) * 60_000);
+  const eventPath = (id: string) => `src/content/events/${id}.md`;
+  const eventText = (title: string, at: Date) =>
+    `---\ntitle: ${title}\nsummary: ${title}.\nstartsAt: 2027-05-15T10:00:00-04:00\nlocation: main-campus\npublishAt: ${at.toISOString()}\n---\n\n${title}.\n`;
+  const draftEvent = (client: CloudClient, id: string, title: string, at: Date) =>
+    client.saveDraft({
+      changes: [
+        encodeChange({
+          op: 'put',
+          path: eventPath(id),
+          bytes: new TextEncoder().encode(eventText(title, at)),
+        }),
+      ],
+      message: { summary: `Add “${title}” in Events`, trailers: { 'Vesper-Collection': 'events' } },
+    });
+
+  it('holds a scheduled draft in Vesper where the site holds, and lets it stop waiting', async () => {
+    cloud.setSchedule({ trigger: 'dispatch', holdScheduledDrafts: true, publicRepository: true });
+    const at = minute(Date.now() + 2 * DAY);
+    await draftEvent(await clientAs('u_admin'), 'book-sale', 'Book sale', at);
+    await returnFromSignIn('u_admin', '#/c/events/e/book-sale');
+    render(gate());
+    const user = userEvent.setup();
+    await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
+
+    await user.click(screen.getByRole('button', { name: 'More ways to publish' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Schedule…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Schedule' });
+    expect(within(dialog).getByText(/^Goes live at \w{3}, \w{3} \d+, /)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'Vesper keeps it as a draft until then, and publishes it at that time.',
+      ),
+    ).toBeInTheDocument();
+    await expectNoViolations(dialog);
+    await user.click(within(dialog).getByRole('button', { name: 'Schedule' }));
+    expect(
+      await screen.findByText(
+        /^Scheduled\. Vesper keeps it as a draft until .+, then publishes it\.$/,
+        undefined,
+        { timeout: 10_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(cloud.state.schedule.holds).toMatchObject([
+      { state: 'held', path: eventPath('book-sale'), at: at.toISOString() },
+    ]);
+    expect(github.files()[eventPath('book-sale')]).toBeUndefined();
+
+    await user.click(screen.getByRole('button', { name: 'More ways to publish' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Cancel schedule' }));
+    expect(
+      await screen.findByText('It’s no longer scheduled, and stays a draft.', undefined, {
+        timeout: 10_000,
+      }),
+    ).toBeInTheDocument();
+    expect(cloud.state.schedule.holds).toEqual([]);
+    expect(cloud.state.drafts.drafts.map((d) => d.files.map((f) => f.path))).toEqual([
+      [eventPath('book-sale')],
+    ]);
+  });
+
+  it('takes a published entry whose time is still to come off the site, back to a draft', async () => {
+    const admin = await clientAs('u_admin');
+    await draftEvent(admin, 'book-sale', 'Book sale', minute(Date.now() + 2 * DAY));
+    await admin.publish((await admin.drafts()).drafts.map((d) => d.id));
+    const published = github.files()[eventPath('book-sale')];
+    expect(published).toBeDefined();
+    await returnFromSignIn('u_admin', '#/c/events/e/book-sale');
+    render(gate());
+    const user = userEvent.setup();
+    await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Book sale' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Cancel schedule' }));
+    expect(
+      await screen.findByText('It’s off the schedule, and back to a draft.', undefined, {
+        timeout: 10_000,
+      }),
+    ).toBeInTheDocument();
+    expect(github.files()[eventPath('book-sale')]).toBeUndefined();
+    expect(github.log()[0]?.message).toMatch(/^Take “Book sale” off the schedule in Events\n/);
+    const [draft] = cloud.state.drafts.drafts;
+    const file = draft?.files[0];
+    expect(file).toMatchObject({ op: 'put', path: eventPath('book-sale'), base: null });
+    const kept = file?.op === 'put' ? draft?.bytes[file.version] : undefined;
+    expect(new TextDecoder().decode(kept)).toBe(new TextDecoder().decode(published));
+  });
+
+  it('says where each change stands in the Scheduled view, and which held change failed', async () => {
+    cloud.setSchedule({ trigger: 'dispatch', holdScheduledDrafts: true });
+    const admin = await clientAs('u_admin');
+    await draftEvent(admin, 'book-sale', 'Book sale', minute(Date.now() + 2 * DAY));
+    await admin.publish((await admin.drafts()).drafts.map((d) => d.id));
+    const galaAt = minute(Date.now() + 3 * DAY);
+    await draftEvent(admin, 'gala', 'Gala', galaAt);
+    const gala = (await admin.drafts()).drafts[0];
+    await admin.hold([gala?.id ?? ''], galaAt.toISOString());
+    // Held for ten minutes from now, then published elsewhere first: it fails at its time.
+    const commencement = eventPath('spring-commencement');
+    await draftOf(
+      admin,
+      commencement,
+      (t) => t.replace('Graduation', 'The graduation'),
+      'Update “Spring commencement” in Events',
+    );
+    const changed = (await admin.drafts()).drafts.find((d) => d.files[0]?.path === commencement);
+    await admin.hold([changed?.id ?? ''], minute(Date.now() + 10 * 60_000).toISOString());
+    github.commitFiles(
+      {
+        [commencement]: new TextDecoder().decode(github.files()[commencement]).concat('\nMoved.\n'),
+      },
+      'Elsewhere',
+    );
+    await cloud.advance(20 * 60_000);
+
+    await returnFromSignIn('u_admin', '#/scheduled');
+    render(gate());
+    const user = userEvent.setup();
+    const table = await screen.findByRole(
+      'grid',
+      { name: 'Scheduled changes' },
+      { timeout: 10_000 },
+    );
+    await waitFor(() => {
+      expect(within(table).getByRole('columnheader', { name: 'State' })).toBeInTheDocument();
+    });
+    const row = (name: string) => within(table).getByRole('row', { name: new RegExp(name) });
+    expect(row('Book sale').textContent).toMatch(/Goes liveRebuild at \d+:\d\d [AP]M/);
+    expect(row('Gala').textContent).toMatch(/Goes liveWaiting in Vesper until \d+:\d\d [AP]M/);
+    expect(
+      screen.getByText(
+        /^“Update “Spring commencement” in Events”, scheduled for .+, wasn’t published\. The page changed on the site after it was scheduled/,
+      ),
+    ).toBeInTheDocument();
+    await expectNoViolations();
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Gala, going live' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Cancel' }));
+    expect(
+      await screen.findByText('“Gala” is no longer scheduled. It’s a draft.', undefined, {
+        timeout: 10_000,
+      }),
+    ).toBeInTheDocument();
+    expect(cloud.state.schedule.holds.filter((h) => h.state === 'held')).toEqual([]);
+  });
+
+  it('leaves a held draft out of Changes’ Publish, and says when it goes out', async () => {
+    cloud.setSchedule({ holdScheduledDrafts: true });
+    const admin = await clientAs('u_admin');
+    await draftEvent(admin, 'gala', 'Gala', minute(Date.now() + 3 * DAY));
+    const gala = (await admin.drafts()).drafts[0];
+    await admin.hold([gala?.id ?? ''], minute(Date.now() + 3 * DAY).toISOString());
+    await draftOf(
+      admin,
+      'src/content/pages/about.md',
+      (t) => `${t}\nOne more line.\n`,
+      'Update “About the college” in Pages',
+    );
+    await returnFromSignIn('u_admin');
+    render(gate());
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '2 changes' }, { timeout: 10_000 }));
+    const drawer = await screen.findByRole('dialog', { name: 'Changes' });
+    expect(
+      within(drawer).queryByRole('checkbox', { name: 'Add “Gala” in Events' }),
+    ).not.toBeInTheDocument();
+    expect(within(drawer).getByText(/scheduled for \w{3}, \w{3} \d+, /)).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Publish 1 change' })).toBeInTheDocument();
+    await expectNoViolations(drawer);
+  });
+});

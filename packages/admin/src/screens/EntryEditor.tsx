@@ -8,6 +8,7 @@ import {
   entryUrlKey,
   formatUrl,
   lineEndings,
+  scheduleTime,
   type BodyFormat,
   type BodyIssue,
   type CollectionManifest,
@@ -75,6 +76,7 @@ import { isMac } from '../body/shortcuts.ts';
 import { useNow } from '../schedule/now.ts';
 import { ScheduleDialog } from '../schedule/ScheduleDialog.tsx';
 import { ScheduleSummary } from '../schedule/ScheduleSummary.tsx';
+import { holdUntil } from '../schedule/cloud.ts';
 import { scheduleKeys, scheduleWords, siteZone, timesOf, withTimes } from '../schedule/times.ts';
 import { useEntryNotes } from '../a11y/useNotes.ts';
 import {
@@ -169,7 +171,7 @@ type Notice =
 type CloudNotice =
   | { kind: 'published'; commit: string }
   | { kind: 'conflict'; path: string; published: string | null }
-  | { kind: 'refused' | 'kept' | 'nothing' | 'review-requested'; text: string }
+  | { kind: 'refused' | 'kept' | 'nothing' | 'review-requested' | 'held'; text: string }
   | null;
 
 function EntryForm({
@@ -704,6 +706,23 @@ function EntryForm({
         setCloudNotice({ kind: 'nothing', text: 'There’s nothing new to publish.' });
         return;
       }
+      // A site that holds scheduled drafts keeps this one until its time (spec §6.17).
+      const until = holdUntil(
+        cloud.drafts.get().schedule,
+        timesOf(collection, override ?? values).publishAt,
+      );
+      if (until) {
+        const held = await cloud.drafts.hold([draft.id], until);
+        setCloudNotice(
+          held.ok
+            ? {
+                kind: 'held',
+                text: `Scheduled. Vesper keeps it as a draft until ${scheduleTime(until, siteZone(manifest).zone, new Date())}, then publishes it.`,
+              }
+            : { kind: 'refused', text: held.message },
+        );
+        return;
+      }
       const result = await cloud.drafts.publish([draft.id]);
       if (result.ok) setCloudNotice({ kind: 'published', commit: result.commit });
       else if (result.reason === 'conflict') {
@@ -811,7 +830,21 @@ function EntryForm({
       setCopyByHand({ label, text });
     }
   };
+  const now = useNow();
+  // A published entry whose time to go live is still to come: in the cloud it
+  // can go back to a draft (call 9). With no draft there's no Publish ▾, so it's here.
+  const publishPending =
+    Boolean(cloud) &&
+    !isNew &&
+    !entryDraft &&
+    editable &&
+    access?.publish === true &&
+    collection.presentation.schedule !== undefined &&
+    (timesOf(collection, saved.values).publishAt?.getTime() ?? 0) > now.getTime();
   const menuItems: MenuItem[] = [
+    ...(publishPending
+      ? [{ id: 'cancel-publish', label: 'Cancel schedule', icon: 'unschedule' as const }]
+      : []),
     ...(viewUrl
       ? [
           { id: 'view', label: 'View on site', icon: 'view-on-site' as const },
@@ -862,7 +895,6 @@ function EntryForm({
 
   // Scheduling (spec §6.17): the schedule's words in the bar, Publish ▾ and the schedule in Details.
   const schedule = collection.presentation.schedule;
-  const now = useNow();
   const { zone } = siteZone(manifest);
   const savedTimes = schedule ? timesOf(collection, saved.values) : {};
   const later = (date: Date | undefined) => date !== undefined && date.getTime() > now.getTime();
@@ -890,12 +922,41 @@ function EntryForm({
           ...(later(savedTimes.publishAt)
             ? [{ id: 'now', label: nowLabel, icon: 'publish-now' as const }]
             : []),
-          // A publish time stays until it's rescheduled: there's no draft to go back to (call 9).
+          // Without the cloud, a publish time stays until it's rescheduled: there's no draft to go back to (call 9).
           ...(live && later(savedTimes.unpublishAt)
             ? [{ id: 'cancel', label: 'Cancel schedule', icon: 'unschedule' as const }]
             : []),
+          // In the cloud, a held draft stops waiting; a published entry's is in the "…" menu.
+          ...(cloud && !isNew && !live && entryDraft?.held
+            ? [{ id: 'cancel-publish', label: 'Cancel schedule', icon: 'unschedule' as const }]
+            : []),
         ]
       : [];
+  const cancelPublish = async () => {
+    if (!cloud) return;
+    setCloudNotice(null);
+    try {
+      if (entryDraft?.held) {
+        await cloud.drafts.release(entryDraft.held.event);
+        setCloudNotice({ kind: 'kept', text: 'It’s no longer scheduled, and stays a draft.' });
+        return;
+      }
+      const result = await cloud.drafts.backToDraft(pathRef.current ?? filePath, {
+        summary: `Take “${titleText}” off the schedule in ${collection.label}`,
+        trailers: { 'Vesper-Collection': collection.name },
+      });
+      setCloudNotice(
+        result.ok
+          ? { kind: 'kept', text: 'It’s off the schedule, and back to a draft.' }
+          : { kind: 'refused', text: result.message },
+      );
+    } catch (error) {
+      setCloudNotice({
+        kind: 'refused',
+        text: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
   const [scheduling, setScheduling] = useState<'publish' | 'set' | null>(null);
   const scheduleMenu =
     scheduleItems.length > 0 ? (
@@ -910,6 +971,7 @@ function EntryForm({
             const { publishAt } = timesOf(collection, values);
             void saveWith(withTimes(collection, values, publishAt ? { publishAt } : {}));
           }
+          if (action === 'cancel-publish') void cancelPublish();
         }}
       />
     ) : null;
@@ -1033,6 +1095,7 @@ function EntryForm({
                 }
                 if (action === 'delete') setConfirmDelete(true);
                 if (action === 'discard') setConfirmDiscard(true);
+                if (action === 'cancel-publish') void cancelPublish();
               }}
             />
           )}
@@ -1440,9 +1503,8 @@ function CloudNotices({
       )}
       {(notice?.kind === 'kept' ||
         notice?.kind === 'nothing' ||
-        notice?.kind === 'review-requested') && (
-        <p className="text-small text-content-muted">{notice.text}</p>
-      )}
+        notice?.kind === 'review-requested' ||
+        notice?.kind === 'held') && <p className="text-small text-content-muted">{notice.text}</p>}
     </>
   );
 }

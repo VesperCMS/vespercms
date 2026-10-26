@@ -1,9 +1,10 @@
-import { collectionOf, defaultEntryId, type Draft, type Review } from '@vesper/core';
+import { collectionOf, defaultEntryId, scheduleTime, type Draft, type Review } from '@vesper/core';
 import { Button, Checkbox, Dialog, Drawer, Link, TextArea } from '@vesper/ui';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { hrefFor, navigate, parseRoute } from '../app/router.ts';
+import { siteZone } from '../schedule/times.ts';
 import { DeployLine, useDrafts } from './editor.tsx';
 
 /*
@@ -147,10 +148,12 @@ function ChangesDrawer() {
   if (!cloud || !changes) return null;
 
   const publishes = cloud.member.role === 'admin' || cloud.member.role === 'editor';
+  // A held draft waits for its time (spec §6.17); it's cancelled or rescheduled from its entry.
   const actionable = drafts.filter((d) => {
     const access = cloud.draftAccess(d);
-    return publishes ? access.publish : access.edit && !d.review;
+    return !d.held && (publishes ? access.publish : access.edit && !d.review);
   });
+  const zone = siteZone(manifest).zone;
   // Everything actionable starts chosen, until the member changes that.
   const selected = chosen ?? new Set(actionable.map((d) => d.id));
   const picked = actionable.filter((d) => selected.has(d.id));
@@ -247,6 +250,9 @@ function ChangesDrawer() {
                     ? review.state === 'open'
                       ? 'waiting for review'
                       : 'changes requested'
+                    : '',
+                  draft.held
+                    ? `scheduled for ${scheduleTime(new Date(draft.held.at), zone, new Date())}`
                     : '',
                 ]
                   .filter(Boolean)
