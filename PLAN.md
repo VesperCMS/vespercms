@@ -23,7 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5, step 5: the protocol's schedule types, the fake cloud and the studio's held drafts. Step 4, `vesper deploy init`, was built 2026-10-26, with one call open for Jeremy (what an unreadable `schedule.json` does): see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
+Phase 4.5, step 6: the cloud's own half, in `vesper-cloud`. Steps 4 (`vesper deploy init`) and 5 (the schedule in the protocol, the fake and the studio) were built 2026-10-26, with one call open for Jeremy (what an unreadable `schedule.json` does): see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
@@ -1586,7 +1586,38 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 **Open, for Jeremy:**
 - **An unreadable `schedule.json` rebuilds every run,** as the design says, so a scheduled change is never missed. Netlify's free plan has about 20 production deploys a month (300 credits at 15 each). A wrong address, or a site that has never deployed with Vesper, would spend the month's deploys in under a day of hourly runs. The alternative is to fail the scheduled run instead. GitHub then emails whoever last changed its schedule, and a site whose file is briefly unreadable just waits for the next run. Recommended: fail it, with the address it tried in the message.
 
-**Next: step 5,** the protocol's schedule types, the fake cloud's schedule and clock, and `runCloudContract`'s cases. Then the studio's held drafts, states and cancelling when connected.
+**Step 5, the cloud's half here (2026-10-26),** as designed; DECISIONS.md's "The cloud's schedule in the protocol, the contract and the studio" says how, and where it differs:
+- **The protocol** (`@vesper/core`): `GET /schedule`, `POST /schedule` and `DELETE /schedule/{id}`, with `CloudClient.schedule()`, `hold()` and `release()`, and `Draft.held`.
+- **`runCloudContract`:** an `events` collection and `fair.md` join the fixture, which gains `setSchedule`, `advance` and `rebuilds`. Six new cases:
+  - what `GET /schedule` says, with and without a trigger;
+  - one rebuild for two changes at one instant, and only once;
+  - holding, then one commit at the time crediting whoever held it, with no rebuild beside it;
+  - who may hold (not a contributor, not outside a grant, not a time passed, not on a site that doesn't hold);
+  - releasing a hold;
+  - a held draft whose file changed since: not published, failed in words, the draft kept.
+- **The fake cloud** keeps a scheduling clock of its own (`advance`, `/__test/advance`) and runs what falls due as the alarm would. It publishes held drafts as their scheduler, asks for one rebuild per instant, and sends `repository_dispatch` to the fake GitHub's new `POST /dispatches`. Its own tests add the dispatch and a scheduler who lost the right to publish (failed, emailed).
+- **The studio, connected:**
+  - Publish (and Schedule…, and Reschedule…) holds on a site that holds;
+  - the dialog's lines say the time is exact, or that Vesper keeps it, or what a public repository means;
+  - Cancel schedule releases a held draft, or takes a published entry still to come back to a draft;
+  - the Scheduled view has a State column and says which held change failed;
+  - Changes leaves held drafts out of Publish.
+- **Tests:**
+  - **Contract:** the fake passes all 20 cases, and its own tests pass.
+  - **jsdom, against the fake:** holding from the editor, with axe on the dialog, then cancelling; back to a draft from "…"; the view's states, a failed hold and Cancel, with axe; Changes leaving a held draft out, with axe.
+  - **The `cloud` e2e project:** an unpublish time set in the studio is rebuilt once by dispatch when the clock passes it; a held draft is published as one commit at its time, with no dispatch beside it. All 10 of the project's tests pass.
+  - Typecheck, lint and the format check pass; Vitest's unit project passes (1,523, 4 skipped).
+- **Not built here:** the cloud's own half (step 6), and holding a draft that's published from Changes or approved from a review (DECISIONS.md, "Not held").
+- **Found while testing, from Phase 4:** in the cloud, Publish (or Schedule…) pressed while the draft is saving does nothing, with no word. `save` returns early while a save is in flight, and `publishDraft` stops there. The cloud's e2e tests wait for "Draft saved" before publishing, which hid it. A person meets it only by publishing within about a second of typing. The fix is to have Publish wait for the save in flight, then save what's left; it isn't made here.
+
+**Next: step 6, in `vesper-cloud`:**
+- move its `vesper` submodule to this work;
+- the SiteDO's schedule, alarm, triggers and results;
+- the push webhook;
+- the dashboard's scheduled-publishing settings and recent results;
+- the six new contract cases against the real API, with a fixture that has `events` and `fair.md`.
+
+Then step 7: the real-world check and the docs page.
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 

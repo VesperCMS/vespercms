@@ -49,6 +49,7 @@ With `api: null` and `github` set (a built site in GitHub mode), the studio sign
 - `cloud/editor.tsx`, in the editor: a draft saves itself a moment after typing stops, after the same checks as a save; Publish (or Request review, for those who don't publish) sends it on, with the publish gate applying there; a conflict shows both versions side by side; deploy status follows a publish; unsaved changes are kept in IndexedDB until the cloud has them.
 - `cloud/changes.tsx`: Changes, a top-bar button with its count in words, opening a drawer with the site's drafts, "Publish 3 changes" and the reviews waiting for an approver. Home says how many drafts wait.
 - `cloud/access.ts`: what a member sees: the collections and entries they can edit (viewers see all), a folder grant's branches in a page tree, and Redirects only with the whole site.
+- `schedule/cloud.ts`, with the drafts store's `hold`, `release` and `backToDraft`: scheduling connected (spec §6.17). On a site that holds scheduled drafts, Publish holds a draft whose time is still to come. Cancel schedule releases a held draft, or takes a published entry still to come back to a draft. The Scheduled view says where each change stands, and Changes leaves held drafts out of its Publish.
 
 None of it shows unless the studio is connected (spec §6.9). The tests run against `scripts/cloud-fake.mjs`, never the cloud's own code.
 

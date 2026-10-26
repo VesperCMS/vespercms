@@ -290,3 +290,88 @@ test('keeps unsaved changes on this device while the cloud is down, through a re
   const state = (await control('state')) as { drafts: { files: string[] }[] };
   expect(state.drafts.flatMap((d) => d.files)).toContain(HARBOR);
 });
+
+// Scheduled publishing in the cloud (spec §6.17, Phase 4.5's criterion 1 here):
+// the fake cloud's scheduling clock is moved on, and what fell due runs.
+const COMMENCEMENT = 'src/content/events/spring-commencement.md';
+const BOOK_SALE = 'src/content/events/book-sale.md';
+type ScheduleState = {
+  holds: { at: string; state: string }[];
+  rebuilds: { at: string; via: string }[];
+  dispatches: { event_type: string; client_payload: { at?: string } }[];
+};
+/** A time to the minute, as the Schedule dialog keeps it. */
+const minute = (ms: number) => new Date(Math.ceil(ms / 60_000) * 60_000);
+/** That time as the dialog takes it: wall time in the site's zone. */
+const siteWall = (at: Date) =>
+  new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+    .format(at)
+    .replace(' ', 'T');
+
+test('rebuilds at a scheduled time through the workflow’s dispatch, once', async ({ page }) => {
+  await control('schedule', { trigger: 'dispatch', holdScheduledDrafts: false });
+  const at = minute(Date.now() + 5 * 60_000);
+  await signIn(page, 'u_admin', '#/c/events/e/spring-commencement');
+  await page.getByRole('textbox', { name: 'Title' }).fill('Spring commencement, 2027');
+  // Publishing waits for the draft: pressed while it saves, it does nothing (PLAN.md).
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText(/Draft saved/);
+  await page.getByRole('button', { name: 'More ways to publish' }).click();
+  await page.getByRole('menuitem', { name: 'Schedule…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Schedule' });
+  await dialog.getByLabel('Comes down (optional)').fill(siteWall(at));
+  // With a trigger, the cloud keeps the time exactly.
+  await expect(dialog.getByText(/^Comes down at \w{3}, \w{3} \d+, /)).toBeVisible();
+  await axe(page);
+  await dialog.getByRole('button', { name: 'Schedule' }).click();
+  await expect.poll(() => text(COMMENCEMENT)).toContain('unpublishAt: ');
+  expect(((await control('state')) as ScheduleState).rebuilds).toEqual([]);
+
+  await control('advance', { ms: 10 * 60_000 });
+  const state = (await control('state')) as ScheduleState;
+  expect(state.rebuilds).toEqual([{ at: at.toISOString(), via: 'dispatch' }]);
+  expect(state.dispatches).toEqual([
+    { event_type: 'vesper-rebuild', client_payload: { at: at.toISOString() } },
+  ]);
+});
+
+test('holds a scheduled draft in Vesper, and publishes it as one commit at its time', async ({
+  page,
+}) => {
+  await control('schedule', { trigger: 'dispatch', holdScheduledDrafts: true });
+  // Later than the clock the last test moved on.
+  const at = minute(Date.now() + 30 * 60_000);
+  github.commitFiles(
+    {
+      [BOOK_SALE]: `---\ntitle: Book sale\nsummary: Used books.\nstartsAt: 2027-05-15T10:00:00-04:00\nlocation: main-campus\npublishAt: ${at.toISOString()}\n---\n\nBooks.\n`,
+    },
+    'Add “Book sale” in Events',
+    'developer',
+  );
+  await signIn(page, 'u_admin', '#/c/events/e/book-sale');
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText(/^Scheduled · /);
+  await page.getByRole('textbox', { name: 'Title' }).fill('Book sale, all week');
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText(/Draft saved/);
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
+  await expect(
+    page.getByText(/^Scheduled\. Vesper keeps it as a draft until .+, then publishes it\.$/),
+  ).toBeVisible();
+  const commits = github.log().length;
+  expect(text(BOOK_SALE)).toContain('title: Book sale\n');
+
+  await control('advance', { ms: 40 * 60_000 });
+  expect(github.log()).toHaveLength(commits + 1);
+  expect(github.log()[0]?.message).toMatch(/\nVesper-Editor: u_admin\n/);
+  expect(text(BOOK_SALE)).toContain('title: Book sale, all week\n');
+  const state = (await control('state')) as ScheduleState;
+  expect(state.holds.at(-1)).toMatchObject({ state: 'started', at: at.toISOString() });
+  // Its publish starts the site's build, so no rebuild is asked for beside it.
+  expect(state.dispatches).toHaveLength(1);
+});

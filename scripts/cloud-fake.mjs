@@ -786,6 +786,8 @@ export function createCloudFake(options) {
         if (key in settings) state.schedule[key] = settings[key];
       }
     },
+    /** The `repository_dispatch` events the fake GitHub received. */
+    dispatches: () => github.state.dispatches,
     /** Moves scheduling's clock on by `ms` and runs what fell due, as the alarm would. */
     advance: async (ms) => {
       state.schedule.ahead += ms;
@@ -851,6 +853,7 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
           emails: fake.state.emails,
           holds: fake.state.schedule.holds,
           rebuilds: fake.state.schedule.rebuilds,
+          dispatches: fake.dispatches(),
         });
       }
       res.statusCode = 404;

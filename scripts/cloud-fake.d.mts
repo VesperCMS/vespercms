@@ -71,6 +71,7 @@ export type CloudFake = {
     holdScheduledDrafts?: boolean;
     publicRepository?: boolean;
   }) => void;
+  dispatches: () => { event_type: string; client_payload: Record<string, unknown> }[];
   advance: (ms: number) => Promise<void>;
 };
 
