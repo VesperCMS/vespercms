@@ -18,12 +18,14 @@ The working plan: where each phase stands, the design of the next phase, and the
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; Jeremy's screen reader pass is open. See "Phase 3: outcome" below. |
 | 4 Cloud foundation | Done (2026-10-26). Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. A publish credits every draft's author (Jeremy's call b), both halves on production since 2026-10-22. The studio against the real API under `wrangler dev`, step 12's last piece, passed 2026-10-26 in `vesper-cloud` (CI green on GitHub, run 40358823912). Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
-| 4.5 Scheduled publish and unpublish | Designed 2026-10-21, and Jeremy confirmed its calls that day. Phase 4 met its acceptance criteria on 2026-10-26, so building can start. See "Phase 4.5: Scheduled publish and unpublish (design)" below. |
+| 4.5 Scheduled publish and unpublish | In progress, started 2026-10-26 at Jeremy's request, once Phase 4 met its criteria. Designed 2026-10-21, and Jeremy confirmed its calls that day. See "Phase 4.5: progress" and "Phase 4.5: Scheduled publish and unpublish (design)" below. |
 | 5 onward | Roadmap below |
 
 ## To do next
 
-Nothing is queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
+Phase 4.5, step 2's build half: see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it.
+
+Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
 Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
@@ -1520,6 +1522,18 @@ Jeremy confirmed every recommendation on 2026-10-20: 1a to 9a, and the smaller d
 - **The private repository,** `jeremybise/vesper-cloud`. I can create it once you OK it.
 
 **Not in this phase:** billing and the operator console (Phase 5); scheduling (4.5); forms (6); previews and click-to-edit (7); comments (8); the media library on R2; history; SSO and white-label (9); pull-request mode (9); GitLab.
+
+## Phase 4.5: progress
+
+Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. The steps are the design's order of work, below.
+
+**Step 2, core's half (2026-10-26):**
+- **`scheduledEvents`** (`packages/core/src/schedule/events.ts`): every change still to come in a site's files, soonest first, from the fields each collection's `schedule` names. A collection with `unpublish: false` has no unpublish events, and a time already passed has none.
+- **The status words** (`schedule/words.ts`): `scheduleStatus` says "Scheduled · Sat, Oct 31, 8:00 AM", "Live until Fri, Nov 13, 12:00 AM" or "Unpublished · Sun, Oct 25", in the site's zone, with the zone's short name only in the hour a DST change repeats ("1:30 AM EDT"). Beyond the design: the year is named when it isn't this year's ("Mon, Jan 4, 2027, 9:00 AM").
+- **Times in the site's zone** moved from the studio into core (`schedule/time.ts`), since the words, the build and the cloud need them. The DST tests found that a time the clocks skip was saved an hour early (2:30 AM on 14 March 2027 as 1:30 AM EST), and that east of Greenwich a repeated time took the second; both are fixed (DECISIONS.md, "Times are entered in the site's time zone").
+- **Tests:** America/New_York across 1 November 2026 and 14 March 2027 (a time chosen in October for November keeps `-05:00`, the repeated 1:30s read EDT and EST, a skipped 2:30 becomes 3:30), Europe/Paris's repeated and skipped hours, the words, and the events. Vitest: 4,403 passed, 3 skipped.
+
+**Next: step 2, the build's half.** The build's one instant (`VESPER_BUILD_TIME`), filtering scheduled collections in `vesper:content` (`getCollection`, `getEntry`, `getEntries`), unpublish redirects through `cleanRedirects`, `dist/_vesper/schedule.json`, and the warnings (missing schedule fields, pages that read `astro:content`). Then the studio (step 3). The platform facts the design marks "to check" (Actions' `schedule`, `repository_dispatch`, hosts' build hooks) are checked when step 4's templates start, which is where they're used.
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 
