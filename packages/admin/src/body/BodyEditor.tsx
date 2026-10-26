@@ -1,7 +1,13 @@
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
-import { NodeSelection, Plugin, TextSelection, type EditorState } from '@tiptap/pm/state';
+import {
+  NodeSelection,
+  Plugin,
+  Selection,
+  TextSelection,
+  type EditorState,
+} from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -408,7 +414,7 @@ function focusGrid(dom: HTMLElement): void {
 
 /** A name for the selected block, read out when the arrow keys land on it. */
 function selectionAnnouncement(editor: Editor, ui: Pick<BodyUi, 'catalog' | 'containers'>): string {
-  // Only for someone in the text: the editor opens with its last block selected.
+  // Only for someone in the text: a body with no text at all opens with its last block selected.
   if (!editor.isFocused) return '';
   const selected = selectedNode(editor, ui.containers);
   if (!selected) return '';
@@ -541,6 +547,11 @@ function WritingView({
         ...(manifest.markdoc ? { markdoc: manifest.markdoc.options } : {}),
       });
       created.commands.setContent(built.doc, { emitUpdate: false });
+      // setContent maps the empty document's caret to the end, which selects a last block
+      // that's a tag, so it was outlined and nothing fit the toolbar's Insert until a click.
+      // The caret starts in the first text instead, as when an editor is given its content.
+      const start = Selection.findFrom(created.state.doc.resolve(0), 1, true);
+      if (start) created.view.dispatch(created.state.tr.setSelection(start));
       model.current = { built, initial: snapshot(created.getJSON(), containers) };
     },
     onUpdate: ({ editor: updated }) => {

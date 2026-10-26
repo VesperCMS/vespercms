@@ -319,6 +319,17 @@ describe('Markdoc tags in the writing view', () => {
     expect(savedBody(api)).toBe(`${BODY.replace(`${youtube}\n\n`, '')}\n`);
   });
 
+  it('opens with the caret in the first text, so Insert is offered before the body has had focus', async () => {
+    setup();
+    const editor = await editorOf();
+    // The body ends with a partial, which the editor once opened selected: outlined, with no Insert.
+    expect(await screen.findByRole('button', { name: /Insert/ })).toBeInTheDocument();
+    expect(editor.isFocused).toBe(false);
+    expect(editor.state.selection).toBeInstanceOf(TextSelection);
+    expect(editor.state.selection.$from.parent.textContent).toMatch(/builds its editor/);
+    expect(document.querySelector('.ProseMirror-selectednode')).toBeNull();
+  });
+
   it('inserts a tag from the toolbar and opens its settings; a missing required attribute blocks saving', async () => {
     const { api, user } = setup();
     const editor = await editorOf();
