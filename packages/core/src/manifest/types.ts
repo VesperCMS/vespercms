@@ -25,6 +25,11 @@ export type Manifest = {
     /** IANA time zone for showing and entering times (spec §6.17), from vesper.config.ts. */
     timeZone?: string;
     /**
+     * How often the site's scheduled rebuild runs, in minutes (spec §6.17),
+     * for the studio's line on when a scheduled change goes live.
+     */
+    rebuildEvery?: number;
+    /**
      * How the site's URLs are written (spec §6.15.1): Astro's `base`,
      * `trailingSlash` and `build.format`, its `site`, and the time zone
      * for date tokens. Absent in manifests built outside Astro (the CLI),

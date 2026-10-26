@@ -69,6 +69,13 @@ export type VesperConfig = {
    */
   timeZone?: string;
   /**
+   * How often, in minutes, the site's scheduled rebuild runs (spec §6.17),
+   * as `vesper deploy init` set it up. The studio's Schedule dialog then
+   * says "This site rebuilds every hour" rather than only "the next time
+   * the site is built". At least 5.
+   */
+  rebuildEvery?: number;
+  /**
    * How redirects from `vesper.redirects.yaml` reach the live site (spec
    * §6.15.5). By default Astro writes an HTML redirect page at each old URL,
    * which works on any host. `native` adds the host's own rules too (true
@@ -99,6 +106,7 @@ const KNOWN_TOP_LEVEL = new Set([
   'markdoc',
   'mdx',
   'timeZone',
+  'rebuildEvery',
   'redirects',
   'a11y',
 ]);
@@ -222,6 +230,16 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
     problems.push({
       level: 'error',
       message: `timeZone must be an IANA time zone name such as "America/New_York", not ${JSON.stringify(timeZone)}.`,
+    });
+  }
+  const rebuildEvery = record.rebuildEvery;
+  if (
+    rebuildEvery !== undefined &&
+    (typeof rebuildEvery !== 'number' || !Number.isInteger(rebuildEvery) || rebuildEvery < 5)
+  ) {
+    problems.push({
+      level: 'error',
+      message: `rebuildEvery is how often the scheduled rebuild runs, in whole minutes, at least 5 (GitHub Actions' shortest schedule), not ${JSON.stringify(rebuildEvery)}.`,
     });
   }
   problems.push(
