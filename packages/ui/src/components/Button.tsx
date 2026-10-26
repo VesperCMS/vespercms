@@ -19,7 +19,10 @@ const VARIANTS: Record<ButtonVariant, string> = {
     'border-transparent bg-accent text-on-accent data-[hovered]:bg-accent-hover',
     'data-[hovered]:shadow-glow-accent data-[focus-visible]:shadow-glow-accent',
     // The glow fades in on hover only; on focus it's there at once (see colorTransition).
-    'data-[hovered]:transition-[background-color,box-shadow] duration-180 ease-out',
+    // Both timings name their properties: a bare duration animates `all`, and faded the
+    // focus ring and the turn from disabled, mid-fade below 4.5:1 (DECISIONS.md).
+    colorTransition,
+    'data-[hovered]:transition-[background-color,box-shadow] data-[hovered]:duration-180',
   ),
   secondary: cx(
     'border-border-strong bg-surface text-content data-[hovered]:bg-surface-sunken',

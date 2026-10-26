@@ -192,7 +192,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Pair every `outline-2` with `outline-solid` (`data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid`).** Tailwind 4's `outline-none` sets the outline style to `none` through a variable `outline-2` reuses, so the ring otherwise isn't drawn; the budget test checks it (DECISIONS.md, "Every focus outline is drawn solid").
 
-**Never transition what changes as focus moves (focus rings, the halo, chevrons): hover colours only, and nothing under reduced motion.** After a screen reader's or a script's click, React Aria moves focus only once every running transition has ended, and focus sits on the page meanwhile (DECISIONS.md, "Transitions never touch focus").
+**Never transition what changes as focus moves (focus rings, the halo, chevrons): hover colours only, and nothing under reduced motion. A `duration-*` sits on the line of a `transition-*` in the same state.** After a screen reader's or a script's click, React Aria moves focus only once every running transition has ended, and focus sits on the page meanwhile; a bare duration animates `all` (DECISIONS.md, "Transitions never touch focus").
 
 **A body blocks saving only for what the site's build would fail on (`validateMarkdocBody`'s filter); everything else is a warning. Unknown tags and functions block only in the dev API (`siteConfig`), which has the site's whole config.** Blocking on less would let a broken build through, and blocking on more would stop saves whenever the studio knows less of the config than Astro does.
 

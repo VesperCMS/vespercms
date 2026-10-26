@@ -124,6 +124,30 @@ describe('the design budget (spec §10.4)', () => {
     expect(missing).toEqual([]);
   });
 
+  it('gives every duration the properties it animates, in the same state', () => {
+    // `transition-property` starts as `all`, so a duration whose state names no
+    // properties animates everything, focus rings included (DECISIONS.md,
+    // "Transitions never touch focus"). The two sit on one line to be checked.
+    const loose = files.flatMap((file) =>
+      readFileSync(file, 'utf8')
+        .split('\n')
+        .flatMap((line, i) => {
+          const classes = line.split(/[\s'"`]+/);
+          return classes
+            .map((c) => /^(.*)duration-\d+$/.exec(c)?.[1])
+            .filter((state) => state !== undefined)
+            .filter(
+              (state) =>
+                !classes.some(
+                  (c) => c === `${state}transition` || c.startsWith(`${state}transition-`),
+                ),
+            )
+            .map((state) => `${name(file)}:${String(i + 1)}: ${state}duration-…`);
+        }),
+    );
+    expect(loose).toEqual([]);
+  });
+
   it('tokens.css declares exactly the named shadows', () => {
     const tokens = readFileSync(join(root, 'packages/ui/src/tokens.css'), 'utf8');
     const declared = [...tokens.matchAll(/^\s*--shadow-([a-z0-9-]+)\s*:/gm)].map((m) => m[1]);
