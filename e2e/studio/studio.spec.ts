@@ -191,7 +191,12 @@ test('the top bar’s glass is clear above the lines between panes and strips, i
         });
       }
       await page.mouse.move(0, 0);
-      const bar = await page.getByRole('banner').boundingBox();
+      // Only the glass: the site's name and the user menu would be counted too.
+      const banner = page.getByRole('banner');
+      await banner.evaluate((bar) => {
+        for (const child of bar.children) (child as HTMLElement).style.visibility = 'hidden';
+      });
+      const bar = await banner.boundingBox();
       if (!bar) throw new Error('no top bar');
       // Every pane and strip but the last, whose edge is the window's.
       const edges = await page
