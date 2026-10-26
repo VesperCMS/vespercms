@@ -239,6 +239,8 @@ Why all three: Vite's default CORS policy allows every localhost origin, so anot
 
 **`vesper.config.ts` takes a `timeZone` (an IANA name, checked when the config loads). Date-time fields show and accept wall time in that zone, name the zone in text ("Times are in Eastern Time, the site's time zone."), and fall back to the editor's own zone, saying so, when none is set.** A value carries the offset the editor meant: the studio sends `{ "$date": "2026-11-07T10:00:00-05:00" }`, core keeps the offset as a hidden property on the Date, and the YAML writer uses it in place of the old value's offset. So a time moved across a DST change is written `-05:00`, not October's `-04:00`. A file that stores UTC (`Z`) keeps UTC. Plain `Intl`, no time zone library.
 
+Since 2026-10-26 the conversions live in core (`schedule/time.ts`), for Phase 4.5's status words, the build and the cloud. Moving them, the DST tests found that a time the clocks skip moved back by the gap, not forward: 2:30 AM on 14 March 2027 was saved as 1:30 AM EST. It moves forward now, to 3:30 AM EDT, as the clocks do, and a repeated time takes the first in zones east of Greenwich too, where it had taken the second. Each is read against the zone's offsets a day either side of the time.
+
 ### 2026-10-17: The body editor loads on first use
 
 **Tiptap, its Markdown support and the body editor load as a separate chunk the first time an entry with a body (or a Markdown field) is opened, behind a short "Loading the body editor…" status.** They were over half of the `/admin` script: the first load went from 1,818 KB to 843 KB minified. The home screen, lists and data-only entries never need them.

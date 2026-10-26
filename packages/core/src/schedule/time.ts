@@ -1,12 +1,15 @@
-import { withOffset } from '@vesper/core';
+import { withOffset } from '../files/date-offset.ts';
 
 /*
  * Times in the site's time zone (spec §6.17): shown and entered as wall
  * time there, stored as an instant with that zone's offset on that day.
- * Plain Intl, no time zone library.
+ * Plain Intl, no time zone library, so the same code runs in the studio,
+ * the build and the cloud.
  */
 
-/** The site's zone when it's set and valid, otherwise the editor's own. */
+const DAY = 86_400_000;
+
+/** The site's zone when it's set and valid, otherwise the viewer's own. */
 export function resolveTimeZone(site: string | undefined): { zone: string; isSite: boolean } {
   if (site) {
     try {
@@ -60,20 +63,45 @@ export function wallTime(instant: Date, zone: string): string {
 }
 
 /**
- * The instant a wall time in the zone names, marked with that day's offset
- * so it's written as `…-05:00`. Times skipped by a DST change move forward;
- * repeated times take the first.
+ * Every instant a wall time names in the zone: one, two in the hour a DST
+ * change repeats, none in the hour it skips. Candidates come from the
+ * offsets a day either side, which differ only across a change.
  */
-export function fromWallTime(text: string, zone: string): Date | null {
-  const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(text);
-  if (!match) return null;
+function instantsOf(wall: string, zone: string): { exact: number[]; candidates: number[] } {
+  const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(wall);
+  if (!match) return { exact: [], candidates: [] };
   const [, y, mo, d, h, mi] = match.map(Number) as [number, number, number, number, number, number];
   const guess = Date.UTC(y, mo - 1, d, h, mi);
-  const first = offsetMinutes(new Date(guess), zone);
-  let instant = guess - first * 60_000;
-  const second = offsetMinutes(new Date(instant), zone);
-  if (second !== first) instant = guess - second * 60_000;
+  const offsets = new Set([
+    offsetMinutes(new Date(guess - DAY), zone),
+    offsetMinutes(new Date(guess + DAY), zone),
+  ]);
+  const candidates = [...offsets].map((offset) => guess - offset * 60_000);
+  const text = wall.slice(0, 16);
+  return {
+    exact: candidates
+      .filter((instant) => wallTime(new Date(instant), zone) === text)
+      .sort((a, b) => a - b),
+    candidates,
+  };
+}
+
+/**
+ * The instant a wall time in the zone names, marked with that day's offset
+ * so it's written as `…-05:00`. A time a DST change skips moves forward by
+ * the gap, as the clocks do (2:30 becomes 3:30); a repeated one takes the
+ * first.
+ */
+export function fromWallTime(text: string, zone: string): Date | null {
+  const { exact, candidates } = instantsOf(text, zone);
+  if (candidates.length === 0) return null;
+  const instant = exact[0] ?? Math.max(...candidates);
   return withOffset(new Date(instant), offsetMinutes(new Date(instant), zone));
+}
+
+/** Whether the instant's wall time happens twice in the zone, in the hour a DST change repeats. */
+export function isRepeatedTime(instant: Date, zone: string): boolean {
+  return instantsOf(wallTime(instant, zone), zone).exact.length > 1;
 }
 
 /** "Eastern Time", or the zone's own name when there's no friendlier one. */

@@ -284,6 +284,13 @@ export * from './a11y/index.ts';
 
 // Scheduling (spec §6.17): the publish window the search index and Phase 4.5's build filtering share.
 export { dateOf, isPublished, publishWindow } from './schedule/window.ts';
+export {
+  fromWallTime,
+  offsetMinutes,
+  resolveTimeZone,
+  wallTime,
+  zoneName,
+} from './schedule/time.ts';
 
 // Site search (spec §6.19): what the build tells Pagefind about each entry's page.
 export {

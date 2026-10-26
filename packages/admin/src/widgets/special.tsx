@@ -1,8 +1,15 @@
-import { isoWithOffset, offsetOf, slugify } from '@vesper/core';
+import {
+  fromWallTime,
+  isoWithOffset,
+  offsetOf,
+  resolveTimeZone,
+  slugify,
+  wallTime,
+  zoneName,
+} from '@vesper/core';
 import { RadioGroup, cx } from '@vesper/ui';
 import { useEffect, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
-import { fromWallTime, resolveTimeZone, wallTime, zoneName } from '../app/time.ts';
 import { useEditor } from '../editor/context.tsx';
 import { ChoosePageButton } from '../editor/PagePicker.tsx';
 import type { WidgetProps } from '../types.ts';
