@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CollectionManifest, Manifest } from '../manifest/types.ts';
 import { MemoryStorage } from '../storage/memory.ts';
-import { decodeData } from './protocol.ts';
+import { decodeData, encodeValue } from './protocol.ts';
 import { ContentService, expandNewEntryPath, slugify } from './service.ts';
 
 const blog: CollectionManifest = {
@@ -376,6 +376,85 @@ describe('ContentService: creating and deleting', () => {
       data: { title: 'Notes from the field' },
     });
     expect(again).toMatchObject({ ok: false, reason: 'conflict' });
+  });
+
+  it('copies an entry from its own text: line endings, styles and body bytes kept', async () => {
+    const { service, storage } = await setup();
+    const original = await service.readEntry('blog', 'harbor-at-dawn');
+    const result = await service.saveEntry({
+      collection: 'blog',
+      id: '',
+      version: null,
+      data: encodeValue({ ...decodeData(original?.data), title: 'Harbor at dawn (copy)' }),
+      ...(original?.body !== undefined ? { body: original.body } : {}),
+      copyOf: { id: 'harbor-at-dawn' },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      id: 'harbor-at-dawn-copy',
+      path: 'src/content/blog/harbor-at-dawn-copy.md',
+    });
+    expect(
+      new TextDecoder().decode(
+        (await storage.read('src/content/blog/harbor-at-dawn-copy.md'))?.bytes,
+      ),
+    ).toBe(HARBOR.replace('title: Harbor at dawn\r\n', 'title: Harbor at dawn (copy)\r\n'));
+  });
+
+  it('copies an entry whose ID came from its slug, with the slug left out', async () => {
+    const { service, storage } = await setup();
+    const result = await service.saveEntry({
+      collection: 'blog',
+      id: '',
+      version: null,
+      data: { title: 'Odd (copy)' },
+      body: '\n',
+      copyOf: { id: 'custom-slug' },
+    });
+    expect(result).toMatchObject({ ok: true, id: 'odd-copy' });
+    expect(
+      new TextDecoder().decode((await storage.read('src/content/blog/odd-copy.md'))?.bytes),
+    ).toBe('---\ntitle: Odd (copy)\n---\n');
+  });
+
+  it('points a copy in another folder at the same files, as a move would', async () => {
+    const { service, storage } = await setup({
+      'src/content/blog/2026/winter-market/index.md':
+        '---\ntitle: Winter market\ncover: ./stalls.jpg\n---\n\n![Stalls at dusk](./stalls.jpg)\n',
+    });
+    const original = await service.readEntry('blog', '2026/winter-market');
+    const result = await service.saveEntry({
+      collection: 'blog',
+      id: '',
+      version: null,
+      data: encodeValue({ ...decodeData(original?.data), title: 'Winter market (copy)' }),
+      ...(original?.body !== undefined ? { body: original.body } : {}),
+      copyOf: { id: '2026/winter-market' },
+    });
+    expect(result).toMatchObject({ ok: true, path: 'src/content/blog/winter-market-copy.md' });
+    expect(
+      new TextDecoder().decode(
+        (await storage.read('src/content/blog/winter-market-copy.md'))?.bytes,
+      ),
+    ).toBe(
+      '---\ntitle: Winter market (copy)\ncover: ./2026/winter-market/stalls.jpg\n---\n\n![Stalls at dusk](./2026/winter-market/stalls.jpg)\n',
+    );
+  });
+
+  it('saves a copy whose original has gone as any new entry', async () => {
+    const { service, storage } = await setup();
+    const result = await service.saveEntry({
+      collection: 'blog',
+      id: '',
+      version: null,
+      data: { title: 'Gone (copy)' },
+      body: 'Text.\n',
+      copyOf: { id: 'gone' },
+    });
+    expect(result).toMatchObject({ ok: true, path: 'src/content/blog/gone-copy.md' });
+    expect(
+      new TextDecoder().decode((await storage.read('src/content/blog/gone-copy.md'))?.bytes),
+    ).toBe('---\ntitle: Gone (copy)\n---\n\nText.\n');
   });
 
   it('appends a new file() entry with its id first', async () => {

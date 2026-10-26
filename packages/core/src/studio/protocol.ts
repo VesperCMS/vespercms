@@ -107,6 +107,14 @@ export type SaveRequest = {
    * page's folder.
    */
   parent?: string;
+  /**
+   * New entries only: the entry this one is a copy of (Duplicate, spec
+   * §10.3). The new file starts as the original's own text, with the copy's
+   * values and body spliced in, so its comments, key order and body bytes
+   * are kept, and it keeps the original's extension. In a tree collection
+   * it goes right after the original among its siblings.
+   */
+  copyOf?: { id: string };
 };
 
 export type FieldIssue = { path: (string | number)[]; message: string };

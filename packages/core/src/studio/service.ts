@@ -20,6 +20,9 @@ import { canonicalJson } from '../manifest/hash.ts';
 import type { CollectionManifest, Manifest } from '../manifest/types.ts';
 import { gitBlobSha } from '../storage/git-blob-sha.ts';
 import type { FileChange, StorageAdapter, StorageEntry, StoredFile } from '../storage/types.ts';
+import { DEFAULT_URL_SETTINGS, type UrlSettings } from '../urls/pattern.ts';
+import { rewriteBody, rewriteValues } from './links.ts';
+import { dirOf } from './media.ts';
 import {
   decodeData,
   encodeValue,
@@ -66,7 +69,15 @@ export type BodyValidator = (input: {
 export type TreeHooks = {
   placeNew: (
     collection: CollectionManifest,
-    request: { parent: string; slug: string; data: DataObject },
+    request: {
+      parent: string;
+      slug: string;
+      data: DataObject;
+      /** A copy's original (its entry ID): the copy goes right after it among its siblings. */
+      after?: string;
+      /** The new file's extension, when it isn't the collection's first format (a copy's). */
+      extension?: string;
+    },
   ) => Promise<
     { ok: true; relative: string; changes: FileChange[] } | { ok: false; response: SaveResponse }
   >;
@@ -112,6 +123,7 @@ export class ContentService {
   private readonly srcDir: string;
   private readonly now: () => Date;
   private readonly tree: () => TreeHooks | undefined;
+  private readonly urls: UrlSettings;
 
   constructor(storage: StorageAdapter, manifest: Manifest, options: ContentServiceOptions = {}) {
     this.storage = storage;
@@ -121,6 +133,7 @@ export class ContentService {
     this.srcDir = manifest.site.srcDir;
     this.now = options.now ?? (() => new Date());
     this.tree = options.tree ?? (() => undefined);
+    this.urls = manifest.site.urls ?? DEFAULT_URL_SETTINGS;
   }
 
   /** Every entry of a collection as stored: file, version, values and body. */
@@ -380,7 +393,13 @@ export class ContentService {
     }
 
     if (source.loader !== 'glob') return failure(readOnlyMessage(collection));
-    let relative = `${expandNewEntryPath(collection.presentation.newEntryPath, slug, this.now())}.${newEntryExtension(source)}`;
+    // A copy (Duplicate) keeps the original's format. If the original has gone
+    // since the copy was opened, the copy is saved as any new entry would be.
+    const original = request.copyOf ? await this.locate(collection, request.copyOf.id) : null;
+    const extension = original
+      ? original.path.slice(original.path.lastIndexOf('.') + 1)
+      : newEntryExtension(source);
+    let relative = `${expandNewEntryPath(collection.presentation.newEntryPath, slug, this.now())}.${extension}`;
     let placement: FileChange[] = [];
     const hooks = collection.presentation.tree ? this.tree() : undefined;
     if (hooks) {
@@ -388,6 +407,7 @@ export class ContentService {
         parent: request.parent ?? '',
         slug,
         data: values,
+        ...(original ? { after: original.id, extension } : {}),
       });
       if (!placed.ok) return placed.response;
       relative = placed.relative;
@@ -403,20 +423,33 @@ export class ContentService {
     if (await this.locate(collection, id)) {
       return { ok: false, reason: 'conflict', message: `An entry called "${id}" already exists.` };
     }
-    if (request.body !== undefined) {
-      const refused = await this.checkBody(
-        collection,
-        newEntryExtension(source),
-        request.body,
-        path,
-      );
+    // A copy in another folder: paths relative to the file (images, imports,
+    // partials) are rewritten to point at the same files from there, as a move does.
+    let copied = values;
+    let body = request.body;
+    if (original && dirOf(original.path) !== dirOf(path)) {
+      const context = { settings: this.urls, pages: new Map(), files: new Map() };
+      const place = { path: { from: original.path, to: path } };
+      const rewritten = rewriteValues(values, collection.fields, context, place).data;
+      if (isPlainObject(rewritten)) copied = rewritten;
+      if (
+        body !== undefined &&
+        (extension === 'md' || extension === 'mdx' || extension === 'mdoc')
+      ) {
+        body = rewriteBody(body, extension, context, place).text;
+      }
+    }
+    if (body !== undefined) {
+      const refused = await this.checkBody(collection, extension, body, path);
       if (refused) return refused;
     }
-    const bytes = newFileBytes(relative, values, request.body);
+    const written = original
+      ? copiedFile(original, copied, body)
+      : { bytes: newFileBytes(relative, values, body), reformatted: false };
     const response = await this.commit(
-      [...placement, { op: 'put', path, bytes, expectedVersion: null }],
+      [...placement, { op: 'put', path, bytes: written.bytes, expectedVersion: null }],
       `Add "${titleOf(collection, values, id)}" to ${collection.label}`,
-      { id, path, version: await gitBlobSha(bytes), reformatted: false },
+      { id, path, version: await gitBlobSha(written.bytes), reformatted: written.reformatted },
       collection.name,
     );
     return response;
@@ -723,6 +756,22 @@ export function expandNewEntryPath(pattern: string | undefined, slug: string, no
     .replaceAll(':year', String(now.getFullYear()))
     .replaceAll(':month', pad(now.getMonth() + 1))
     .replaceAll(':day', pad(now.getDate()));
+}
+
+/**
+ * A copy's file: the original's text with the copy's values and body spliced
+ * in, through the same writers as a save. The values are complete, so what
+ * the original holds now doesn't leak into the copy.
+ */
+function copiedFile(
+  original: Located,
+  data: DataObject,
+  body: string | undefined,
+): { bytes: Uint8Array; reformatted: boolean } {
+  if (original.format === 'json' || original.format === 'yaml') {
+    return writeDataFile(original.file.bytes, original.format, data);
+  }
+  return writeEntryFile(original.file.bytes, { data, ...(body !== undefined ? { body } : {}) });
 }
 
 function newEntryExtension(source: GlobSource): string {

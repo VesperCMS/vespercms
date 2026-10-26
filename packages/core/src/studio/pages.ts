@@ -625,7 +625,7 @@ export class PageService {
 
   private async placeNew(
     collection: CollectionManifest,
-    request: { parent: string; slug: string; data: DataObject },
+    request: Parameters<TreeHooks['placeNew']>[1],
   ): Promise<
     { ok: true; relative: string; changes: FileChange[] } | { ok: false; response: SaveResponse }
   > {
@@ -658,7 +658,7 @@ export class PageService {
         expectedVersion: parentEntry.file.version,
       });
     }
-    const extension = data.source.formats.find((f) => f !== 'toml') ?? 'md';
+    const extension = request.extension ?? data.source.formats.find((f) => f !== 'toml') ?? 'md';
     const relative = `${folder ? `${folder}/` : ''}${slug}.${extension}`;
     const id = defaultEntryId(relative, request.data);
     const depth = pathDepth(entryPath(id));
@@ -673,7 +673,18 @@ export class PageService {
     }
     const order = data.orders.get(parent);
     if (order?.readable && order.file && !order.names.includes(slug)) {
-      changes.push(orderPut(order, [...order.names, slug]));
+      if (request.after === undefined) {
+        changes.push(orderPut(order, [...order.names, slug]));
+      } else {
+        // A copy goes right after its original. An original the order doesn't
+        // list sorts by title, and so does its copy, beside it, unlisted too.
+        const original = findNode(data.tree, entryPath(request.after));
+        const at =
+          original && parentPathOf(original.path) === parent
+            ? order.names.indexOf(original.slug)
+            : -1;
+        if (at !== -1) changes.push(orderPut(order, order.names.toSpliced(at + 1, 0, slug)));
+      }
     }
     return { ok: true, relative, changes };
   }

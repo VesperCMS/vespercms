@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { Manifest } from '../manifest/types.ts';
 import { MemoryStorage } from '../storage/memory.ts';
 import { PageService, type StaticRoutes } from './pages.ts';
+import { decodeData, encodeValue } from './protocol.ts';
 import { ContentService, type TreeHooks } from './service.ts';
 
 /*
@@ -414,6 +415,63 @@ describe('new pages and deletes in a tree', () => {
     expect(await text(`${P}academics/_order.yaml`)).toBe(
       '- nursing\n- business\n- general-studies\n- welding\n',
     );
+  });
+
+  it('puts a copy right after its original, from the original’s own text, in one change set', async () => {
+    const { content, storage, text } = await setup();
+    const about = await content.readEntry('pages', 'about');
+    const result = await content.saveEntry({
+      collection: 'pages',
+      id: '',
+      version: null,
+      parent: '',
+      data: encodeValue({ ...decodeData(about?.data), title: 'About the college (copy)' }),
+      ...(about?.body !== undefined ? { body: about.body } : {}),
+      copyOf: { id: 'about' },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      id: 'about-the-college-copy',
+      path: `${P}about-the-college-copy.md`,
+    });
+    expect(storage.commits).toHaveLength(1);
+    expect(await text(`${P}about-the-college-copy.md`)).toBe(
+      (await text(`${P}about.md`))?.replace(
+        'title: About the college\n',
+        'title: About the college (copy)\n',
+      ),
+    );
+    expect(await text(`${P}_order.yaml`)).toBe(
+      '# Top-level page order (spec §6.15.3). Unlisted pages sort by title after these.\n- about\n- about-the-college-copy\n- academics\n- admissions\n- campus-life\n',
+    );
+  });
+
+  it('keeps a copy’s extension, and leaves an order that doesn’t list the original alone', async () => {
+    const { content, storage } = await setup();
+    const campus = await content.readEntry('pages', 'campus-life');
+    expect(
+      await content.saveEntry({
+        collection: 'pages',
+        id: '',
+        version: null,
+        parent: '',
+        data: encodeValue({ ...decodeData(campus?.data), title: 'Campus life (copy)' }),
+        ...(campus?.body !== undefined ? { body: campus.body } : {}),
+        copyOf: { id: 'campus-life' },
+      }),
+    ).toMatchObject({ ok: true, path: `${P}campus-life-copy.mdx` });
+
+    const thanks = await content.readEntry('pages', 'contact-thanks');
+    await content.saveEntry({
+      collection: 'pages',
+      id: '',
+      version: null,
+      parent: '',
+      data: encodeValue({ ...decodeData(thanks?.data), title: 'Thanks (copy)' }),
+      copyOf: { id: 'contact-thanks' },
+    });
+    // Both unlisted, so the copy sorts by title beside its original.
+    expect(storage.commits.at(-1)?.changes.map((c) => c.op)).toEqual(['put']);
   });
 
   it('refuses a new page whose address a static route owns', async () => {
