@@ -491,6 +491,67 @@ describe('ContentService: creating and deleting', () => {
   });
 });
 
+describe('ContentService: schedules', () => {
+  const events: CollectionManifest = {
+    ...blog,
+    name: 'events',
+    label: 'Events',
+    source: { ...blog.source, base: 'src/content/events' } as CollectionManifest['source'],
+    presentation: {
+      schedule: {
+        unpublish: true,
+        publishAt: 'publishAt',
+        unpublishAt: 'unpublishAt',
+        unpublishRedirect: 'unpublishRedirect',
+      },
+    },
+  };
+  const now = new Date('2026-10-26T16:00:00Z');
+  async function scheduled() {
+    const storage = await MemoryStorage.create({
+      'src/content/events/concert.md':
+        '---\ntitle: Harvest concert\npublishAt: 2026-10-31T08:00:00-04:00\n---\n',
+      'src/content/events/lecture.md':
+        '---\ntitle: Lecture\nunpublishAt: 2026-11-13T00:00:00-05:00\n---\n',
+      'src/content/events/open-house.md':
+        '---\ntitle: Open house\nunpublishAt: 2026-10-25T00:00:00-04:00\n---\n',
+      'src/content/events/commencement.md': '---\ntitle: Commencement\n---\n',
+    });
+    return new ContentService(storage, { ...manifest, collections: [blog, events] });
+  }
+
+  it('gives each row of a scheduled collection its times', async () => {
+    const rows = await (await scheduled()).listEntries('events');
+    expect(Object.fromEntries(rows.map((r) => [r.id, r.schedule]))).toEqual({
+      commencement: undefined,
+      concert: { publishAt: '2026-10-31T12:00:00.000Z' },
+      lecture: { unpublishAt: '2026-11-13T05:00:00.000Z' },
+      'open-house': { unpublishAt: '2026-10-25T04:00:00.000Z' },
+    });
+  });
+
+  it('lists the changes still to come, soonest first, with titles', async () => {
+    expect(await (await scheduled()).scheduledChanges(now)).toEqual([
+      {
+        at: '2026-10-31T12:00:00.000Z',
+        change: 'publish',
+        collection: 'events',
+        id: 'concert',
+        path: 'src/content/events/concert.md',
+        title: 'Harvest concert',
+      },
+      {
+        at: '2026-11-13T05:00:00.000Z',
+        change: 'unpublish',
+        collection: 'events',
+        id: 'lecture',
+        path: 'src/content/events/lecture.md',
+        title: 'Lecture',
+      },
+    ]);
+  });
+});
+
 describe('helpers', () => {
   it('slugify keeps nesting and drops punctuation and accents', () => {
     expect(slugify('Crème Brûlée: A How-To')).toBe('creme-brulee-a-how-to');

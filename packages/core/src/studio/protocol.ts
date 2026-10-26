@@ -62,6 +62,24 @@ export type EntrySummary = {
   updatedAt?: string;
   /** `true` when the entry's data says it's a draft (`draft: true`). */
   draft?: boolean;
+  /**
+   * A scheduled collection's entry: when it goes live and comes down
+   * (spec §6.17), ISO 8601, where set. The list's status words and its
+   * Scheduled filter read it.
+   */
+  schedule?: { publishAt?: string; unpublishAt?: string };
+};
+
+/** One change still to come in the site's files, for the studio's Scheduled view (spec §6.17). */
+export type ScheduledChange = {
+  /** When it happens, ISO 8601. */
+  at: string;
+  /** The entry goes live, or comes down. */
+  change: 'publish' | 'unpublish';
+  collection: string;
+  id: string;
+  path: string;
+  title: string;
 };
 
 /** One row of the home screen (spec §10.3): entry count and last edit per collection. */
