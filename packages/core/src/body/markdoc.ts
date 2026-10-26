@@ -2,6 +2,7 @@ import Markdoc from '@markdoc/markdoc';
 import { lineStarts } from '../files/text.ts';
 import { contentIndent, escapeRegExp, wholeBody } from './util.ts';
 import { markdocTags } from './markdoc-tag.ts';
+import { scanTable } from './table.ts';
 import type { BodyBlock, InlineChip, MarkdocParseOptions } from './types.ts';
 
 /*
@@ -72,7 +73,7 @@ export function markdocBlocks(body: string, options: MarkdocParseOptions = {}): 
   } catch {
     return wholeBody(body);
   }
-  return blocksOf(ast.children, new Lines(body));
+  return blocksOf(ast.children, new Lines(body), options);
 }
 
 /** Line-to-offset arithmetic over the body. */
@@ -100,7 +101,11 @@ class Lines {
   }
 }
 
-function blocksOf(nodes: readonly MarkdocNode[], lines: Lines): BodyBlock[] {
+function blocksOf(
+  nodes: readonly MarkdocNode[],
+  lines: Lines,
+  options: MarkdocParseOptions,
+): BodyBlock[] {
   return nodes.flatMap((node): BodyBlock[] => {
     const first = node.lines[0];
     const last = node.lines.at(-1);
@@ -111,7 +116,8 @@ function blocksOf(nodes: readonly MarkdocNode[], lines: Lines): BodyBlock[] {
     // when the block is rewritten.
     let end = Math.max(start, lines.lineEnd(Math.max(first, last - 1)));
     while (end > start && /\s/.test(lines.text[end - 1] ?? '')) end--;
-    if (node.type === 'tag') return [tagBlock(node, start, end, lines)];
+    if (node.type === 'tag') return [tagBlock(node, start, end, lines, options)];
+    if (node.type === 'table') return [tableBlock(node, start, end, lines, options)];
     const block = { start, end, type: node.type };
     if (!markdownShape(node)) return [{ ...block, kind: 'source' }];
     const chips = inlineChips(node, lines.text.slice(start, end), start);
@@ -129,6 +135,77 @@ function markdownShape(node: MarkdocNode): boolean {
 
 function hasFence(node: MarkdocNode): boolean {
   return node.type === 'fence' || node.children.some(hasFence);
+}
+
+/** A link or image with a title, which the writing view doesn't write back. */
+function hasTitle(node: MarkdocNode): boolean {
+  if ((node.type === 'link' || node.type === 'image') && node.attributes?.title) return true;
+  return node.children.some(hasTitle);
+}
+
+/** A node as Markdoc read it, without where it was. */
+function shape(node: MarkdocNode): unknown {
+  return [node.type, node.attributes ?? {}, node.children.map(shape)];
+}
+
+/**
+ * A pipe table as a block the writing view edits cell by cell, when the
+ * scanner's rows and cells are Markdoc's and every cell holds only inline
+ * Markdown the writing view writes back, with no annotations. Markdoc keeps
+ * only lines, so each cell's content is checked by reading it back in a
+ * table of its own: what Markdoc reads there must be what it read here.
+ */
+function tableBlock(
+  node: MarkdocNode,
+  start: number,
+  end: number,
+  lines: Lines,
+  options: MarkdocParseOptions,
+): BodyBlock {
+  const text = lines.text;
+  const fallback: BodyBlock = { start, end, kind: 'source', type: 'table' };
+  const table = scanTable(text, start, end, 'markdown-it');
+  const first = node.lines[0];
+  if (!table || first === undefined) return fallback;
+  const rows = node.children.flatMap((part) => part.children);
+  if (rows.length !== table.rows.length + 1) return fallback;
+  const scanned = [table.header, ...table.rows];
+  for (const [r, row] of rows.entries()) {
+    const cells = scanned[r]?.cells;
+    // The delimiter row is the line after the header.
+    if (!cells || row.lines[0] !== first + (r === 0 ? 0 : r + 1)) return fallback;
+    if (row.children.length !== cells.length) return fallback;
+    for (const [c, tableCell] of row.children.entries()) {
+      const at = cells[c];
+      if (!at) return fallback;
+      const { align, ...rest } = tableCell.attributes ?? {};
+      if ((align ?? null) !== table.align[c] || Object.keys(rest).length > 0) return fallback;
+      if (
+        (tableCell.annotations?.length ?? 0) > 0 ||
+        !tableCell.children.every(markdownShape) ||
+        hasTitle(tableCell)
+      ) {
+        return fallback;
+      }
+      const raw = text.slice(at.contentStart, at.contentEnd);
+      let alone: MarkdocNode;
+      try {
+        alone = parseMarkdoc(`|${raw}|\n|-|\n`, options);
+      } catch {
+        return fallback;
+      }
+      const read = alone.children[0]?.children[0]?.children[0]?.children[0];
+      if (
+        JSON.stringify(read?.children.map(shape)) !== JSON.stringify(tableCell.children.map(shape))
+      ) {
+        return fallback;
+      }
+      const chips = inlineChips(tableCell, raw, at.contentStart);
+      if (chips === null || chips.some((chip) => chip.kind === 'annotation')) return fallback;
+      if (chips.length > 0) at.chips = chips;
+    }
+  }
+  return { start, end, kind: 'table', type: 'table', table };
 }
 
 /**
@@ -221,7 +298,13 @@ function blankCode(text: string): string {
  * character between them. Otherwise it's kept whole (and its attributes can
  * still be edited), or, when even the opening can't be read, kept as written.
  */
-function tagBlock(node: MarkdocNode, start: number, end: number, lines: Lines): BodyBlock {
+function tagBlock(
+  node: MarkdocNode,
+  start: number,
+  end: number,
+  lines: Lines,
+  options: MarkdocParseOptions,
+): BodyBlock {
   const text = lines.text;
   const fallback: BodyBlock = { start, end, kind: 'source', type: 'tag' };
   const [opening] = markdocTags(text.slice(start, end));
@@ -264,7 +347,7 @@ function tagBlock(node: MarkdocNode, start: number, end: number, lines: Lines): 
     return whole;
   }
 
-  const children = blocksOf(node.children, lines);
+  const children = blocksOf(node.children, lines, options);
   let cursor = openEnd;
   for (const child of children) {
     if (child.start < cursor || text.slice(cursor, child.start).trim() !== '') return whole;

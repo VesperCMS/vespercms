@@ -52,9 +52,9 @@ describe('parseBody', () => {
     ]);
   });
 
-  it('protects what the writing view would change: tables, task items, footnotes, titles, reference links', () => {
+  it('protects what the writing view would change: HTML in tables, task items, footnotes, titles, reference links', () => {
     const text = [
-      '| a | b |\n| - | - |\n| 1 | 2 |',
+      '| a | b |\n| - | - |\n| 1<br>2 | 3 |',
       '- [ ] todo',
       'Note[^1].',
       '[^1]: The note.',

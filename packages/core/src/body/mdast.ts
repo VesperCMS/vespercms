@@ -4,6 +4,7 @@ import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { mdxFromMarkdown } from 'mdast-util-mdx';
 import { gfm } from 'micromark-extension-gfm';
 import { mdxjs } from 'micromark-extension-mdxjs';
+import { scanTable } from './table.ts';
 import { contentIndent, escapeRegExp, wholeBody } from './util.ts';
 import type { BodyBlock, InlineChip } from './types.ts';
 
@@ -17,8 +18,8 @@ import type { BodyBlock, InlineChip } from './types.ts';
 /**
  * Node types the writing view can show and write back faithfully. Anything
  * else makes the whole block a protected source block: flow expressions,
- * imports, raw HTML, tables, footnotes, reference-style links and images,
- * task list items, and links or images with a title.
+ * imports, raw HTML, footnotes, reference-style links and images, task list
+ * items, and links or images with a title. Tables are blocks of their own.
  */
 const WRITABLE_TYPES = new Set([
   'paragraph',
@@ -73,6 +74,7 @@ function blocksOf(nodes: readonly RootContent[], body: string): BodyBlock[] {
     const end = node.position?.end.offset;
     if (start === undefined || end === undefined) return [];
     if (node.type === 'mdxJsxFlowElement') return [elementBlock(node, start, end, body)];
+    if (node.type === 'table') return [tableBlock(node, start, end, body)];
     if (!writable(node)) return [{ start, end, kind: 'source', type: node.type }];
     const chips = chipsOf(node);
     return [
@@ -97,6 +99,36 @@ function chipsOf(node: Nodes): InlineChip[] {
     ];
   }
   return 'children' in node ? (node.children as Nodes[]).flatMap(chipsOf) : [];
+}
+
+type Table = Extract<RootContent, { type: 'table' }>;
+
+/**
+ * A pipe table as a block the writing view edits cell by cell, when the
+ * scanner's cells are exactly micromark's (each cell's content where its
+ * children are) and every cell holds only inline Markdown the writing view
+ * writes back. Otherwise it's kept as written.
+ */
+function tableBlock(node: Table, start: number, end: number, body: string): BodyBlock {
+  const fallback: BodyBlock = { start, end, kind: 'source', type: 'table' };
+  const table = scanTable(body, start, end, 'micromark');
+  if (!table || node.children.length !== table.rows.length + 1) return fallback;
+  if (table.align.some((a, i) => a !== (node.align?.[i] ?? null))) return fallback;
+  const lines = [table.header, ...table.rows];
+  for (const [r, row] of node.children.entries()) {
+    const cells = lines[r]?.cells;
+    if (!cells || row.children.length !== cells.length) return fallback;
+    for (const [c, tableCell] of row.children.entries()) {
+      const scanned = cells[c];
+      if (!scanned || !tableCell.children.every(writable)) return fallback;
+      const first = tableCell.children[0]?.position?.start.offset ?? scanned.contentStart;
+      const last = tableCell.children.at(-1)?.position?.end.offset ?? scanned.contentStart;
+      if (first !== scanned.contentStart || last !== scanned.contentEnd) return fallback;
+      const chips = chipsOf(tableCell);
+      if (chips.length > 0) scanned.chips = chips;
+    }
+  }
+  return { start, end, kind: 'table', type: 'table', table };
 }
 
 type FlowElement = Extract<RootContent, { type: 'mdxJsxFlowElement' }>;

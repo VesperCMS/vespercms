@@ -49,6 +49,37 @@ export type BodyTag = {
   indent?: string;
 };
 
+/** A column's alignment, from the colons in a pipe table's delimiter row; null when it has none. */
+export type TableAlign = 'left' | 'center' | 'right' | null;
+
+/** One cell of a pipe table. Offsets are absolute. */
+export type TableCell = {
+  /** The text between the cell's pipes (or the line's edge, without outer pipes). */
+  start: number;
+  end: number;
+  /** The content inside that, without padding. Empty cells have `contentStart === contentEnd`. */
+  contentStart: number;
+  contentEnd: number;
+  chips?: InlineChip[];
+};
+
+/** One line of a pipe table. Offsets are absolute. */
+export type TableLine = {
+  /** From the line's start (the block's start, for the header) to before its line ending. */
+  start: number;
+  end: number;
+  cells: TableCell[];
+};
+
+/** A pipe table every cell of which is one line of inline Markdown the writing view writes back. */
+export type BodyTable = {
+  align: TableAlign[];
+  header: TableLine;
+  /** The `|---|:---:|` line: its cells hold the dashes and colons. */
+  delimiter: TableLine;
+  rows: TableLine[];
+};
+
 export type BodyBlock = {
   /** Offsets of the block's own text in the body, without surrounding blank lines or indentation. */
   start: number;
@@ -56,13 +87,15 @@ export type BodyBlock = {
   /**
    * `markdown`: Markdown the writing view can show faithfully, perhaps with chips.
    * `tag`: a Markdoc tag or MDX element, with its structure in `tag`.
-   * `source`: anything else (expressions, imports, raw HTML, tables, comments,
+   * `table`: a pipe table whose cells the writing view can edit, with its structure in `table`.
+   * `source`: anything else (expressions, imports, raw HTML, other tables, comments,
    * link definitions). Edited as raw text, never reformatted.
    */
-  kind: 'markdown' | 'tag' | 'source';
+  kind: 'markdown' | 'tag' | 'table' | 'source';
   /** The parser's node type, such as `paragraph`, `heading`, `mdxJsxFlowElement` or `tag`. */
   type: string;
   tag?: BodyTag;
+  table?: BodyTable;
   chips?: InlineChip[];
 };
 

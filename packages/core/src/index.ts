@@ -143,8 +143,14 @@ export type {
   MarkdocParseOptions,
   ParseBodyOptions,
   ParsedBody,
+  BodyTable,
+  TableAlign,
+  TableCell,
+  TableLine,
 } from './body/types.ts';
 export { markdocTokenizerOptions, parseMarkdoc } from './body/markdoc.ts';
+export { escapePipes, unescapePipes } from './body/table.ts';
+export { editTable, tableValue, type TableEdit, type TableValue } from './body/table-edit.ts';
 export {
   markdocTags,
   markdocTagLayout,
