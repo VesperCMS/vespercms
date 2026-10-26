@@ -1,0 +1,322 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`deployWorkflow > writes each target as it ships > ftp, unscheduled, pnpm at the root 1`] = `
+"# Written by \`vesper deploy init --target ftp\`.
+# It’s yours to read and change: Vesper never deploys a site itself.
+#
+# It builds the site and copies it to the server by FTP:
+# - on every push to main, which includes each publish from the studio;
+# - when the Vesper cloud asks, at a scheduled change’s exact time;
+# - when someone runs it from the Actions tab;
+#
+# Its secrets are under Settings > Secrets and variables > Actions:
+# VESPER_FTP_HOST, VESPER_FTP_PORT, VESPER_FTP_USER, VESPER_FTP_PASSWORD,
+# VESPER_FTP_PATH.
+
+name: Vesper deploy
+
+on:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [vesper-rebuild]
+  workflow_dispatch:
+
+# One deploy at a time, so two uploads never mix. A newer run waits for
+# the one copying files; it never cancels it.
+concurrency:
+  group: vesper-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Turn on Corepack
+        run: corepack enable
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm run build
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+      - name: Upload by FTP
+        env:
+          OUT_DIR: dist/
+          HOST: \${{ secrets.VESPER_FTP_HOST }}
+          PORT: \${{ secrets.VESPER_FTP_PORT }}
+          LOGIN: \${{ secrets.VESPER_FTP_USER }}
+          LFTP_PASSWORD: \${{ secrets.VESPER_FTP_PASSWORD }}
+          REMOTE_PATH: \${{ secrets.VESPER_FTP_PATH }}
+        run: |
+          set -euo pipefail
+          need() {
+            if [ -z "$1" ]; then
+              echo "::error::Add the repository secret $2 (Settings > Secrets and variables > Actions)."
+              exit 1
+            fi
+          }
+          need "$HOST" VESPER_FTP_HOST
+          need "$LOGIN" VESPER_FTP_USER
+          need "$LFTP_PASSWORD" VESPER_FTP_PASSWORD
+          need "$REMOTE_PATH" VESPER_FTP_PATH
+          keep=""
+          for folder in .well-known cgi-bin; do
+            [ -e "$OUT_DIR$folder" ] || keep="$keep --exclude-glob $folder/"
+          done
+          mirror="mirror --reverse --delete --parallel=4$keep '$OUT_DIR' '$REMOTE_PATH'"
+          # Without TLS, FTP sends the password as plain text, so this insists on
+          # it (FTPS). For a host with no TLS at all, set ftp:ssl-force false; for
+          # a certificate made out to another name, set ssl:verify-certificate false.
+          settings="set ftp:ssl-force true; set ftp:ssl-protect-data true; set net:max-retries 2; set net:timeout 30"
+          lftp -c "$settings; open --env-password -u '$LOGIN' 'ftp://$HOST:\${PORT:-21}'; $mirror"
+"
+`;
+
+exports[`deployWorkflow > writes each target as it ships > hook, every hour 1`] = `
+"# Written by \`vesper deploy init --target hook\`.
+# It’s yours to read and change: Vesper never deploys a site itself.
+#
+# It asks the host to build the site, through its build hook. The host
+# builds on every push already, so this runs only:
+# - when the Vesper cloud asks, at a scheduled change’s exact time;
+# - when someone runs it from the Actions tab;
+# - every hour, but only when a scheduled change is due. It reads
+#   https://example.com/_vesper/schedule.json first.
+#
+# Its secrets are under Settings > Secrets and variables > Actions:
+# VESPER_BUILD_HOOK.
+
+name: Vesper rebuild
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  repository_dispatch:
+    types: [vesper-rebuild]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  VESPER_SITE_URL: 'https://example.com/'
+
+jobs:
+  # Scheduled runs only: every other run builds.
+  due:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      due: \${{ steps.check.outputs.due }}
+    steps:
+      - name: Check whether a scheduled change is due
+        id: check
+        run: |
+          node --input-type=module <<'EOF'
+          import { appendFileSync } from 'node:fs';
+
+          const url = new URL('_vesper/schedule.json', process.env.VESPER_SITE_URL);
+          const address = url.href;
+          url.searchParams.set('at', String(Date.now()));
+          let due = true;
+          let reason;
+          try {
+            const response = await fetch(url, {
+              headers: { 'cache-control': 'no-cache' },
+              signal: AbortSignal.timeout(20000),
+            });
+            if (!response.ok) throw new Error(\`it answered \${response.status}\`);
+            const schedule = await response.json().catch(() => null);
+            const next = schedule && schedule.version === 1 ? schedule.next : undefined;
+            if (next === null) {
+              due = false;
+              reason = 'Nothing is scheduled.';
+            } else if (typeof next === 'string' && !Number.isNaN(Date.parse(next))) {
+              due = Date.parse(next) <= Date.now();
+              reason = due ? \`A change was due at \${next}.\` : \`Nothing is due until \${next}.\`;
+            } else {
+              throw new Error('it is not a schedule this workflow knows');
+            }
+          } catch (error) {
+            const why = error instanceof Error ? error.message : String(error);
+            reason = \`\${address} could not be read (\${why}), so the site is rebuilt to be safe.\`;
+          }
+          console.log(reason);
+          appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
+          EOF
+
+  rebuild:
+    needs: due
+    if: \${{ !cancelled() && (github.event_name != 'schedule' || needs.due.outputs.due == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the build hook
+        env:
+          BUILD_HOOK: \${{ secrets.VESPER_BUILD_HOOK }}
+        run: |
+          if [ -z "$BUILD_HOOK" ]; then
+            echo "::error::Add the repository secret VESPER_BUILD_HOOK, the host's build hook URL."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --retry 3 --max-time 30 \\
+            -X POST -H 'Content-Type: application/json' -d '{}' "$BUILD_HOOK"
+"
+`;
+
+exports[`deployWorkflow > writes each target as it ships > sftp, scheduled, in a monorepo 1`] = `
+"# Written by \`vesper deploy init --target sftp --rebuild-every 60\`.
+# It’s yours to read and change: Vesper never deploys a site itself.
+#
+# It builds the site and copies it to the server by SFTP:
+# - on every push to main, which includes each publish from the studio;
+# - when the Vesper cloud asks, at a scheduled change’s exact time;
+# - when someone runs it from the Actions tab;
+# - every hour, but only when a scheduled change is due. It reads
+#   https://example.com/_vesper/schedule.json first.
+#
+# Its secrets are under Settings > Secrets and variables > Actions:
+# VESPER_SFTP_HOST, VESPER_SFTP_PORT, VESPER_SFTP_USER, VESPER_SFTP_PASSWORD,
+# VESPER_SFTP_KEY, VESPER_SFTP_KNOWN_HOSTS, VESPER_SFTP_PATH.
+
+name: Vesper deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '7 * * * *'
+  repository_dispatch:
+    types: [vesper-rebuild]
+  workflow_dispatch:
+
+# One deploy at a time, so two uploads never mix. A newer run waits for
+# the one copying files; it never cancels it.
+concurrency:
+  group: vesper-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  VESPER_SITE_URL: 'https://example.com/'
+
+jobs:
+  # Scheduled runs only: every other run builds.
+  due:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      due: \${{ steps.check.outputs.due }}
+    steps:
+      - name: Check whether a scheduled change is due
+        id: check
+        run: |
+          node --input-type=module <<'EOF'
+          import { appendFileSync } from 'node:fs';
+
+          const url = new URL('_vesper/schedule.json', process.env.VESPER_SITE_URL);
+          const address = url.href;
+          url.searchParams.set('at', String(Date.now()));
+          let due = true;
+          let reason;
+          try {
+            const response = await fetch(url, {
+              headers: { 'cache-control': 'no-cache' },
+              signal: AbortSignal.timeout(20000),
+            });
+            if (!response.ok) throw new Error(\`it answered \${response.status}\`);
+            const schedule = await response.json().catch(() => null);
+            const next = schedule && schedule.version === 1 ? schedule.next : undefined;
+            if (next === null) {
+              due = false;
+              reason = 'Nothing is scheduled.';
+            } else if (typeof next === 'string' && !Number.isNaN(Date.parse(next))) {
+              due = Date.parse(next) <= Date.now();
+              reason = due ? \`A change was due at \${next}.\` : \`Nothing is due until \${next}.\`;
+            } else {
+              throw new Error('it is not a schedule this workflow knows');
+            }
+          } catch (error) {
+            const why = error instanceof Error ? error.message : String(error);
+            reason = \`\${address} could not be read (\${why}), so the site is rebuilt to be safe.\`;
+          }
+          console.log(reason);
+          appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
+          EOF
+
+  deploy:
+    needs: due
+    if: \${{ !cancelled() && (github.event_name != 'schedule' || needs.due.outputs.due == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Build
+        working-directory: apps/site
+        run: npm run build
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+      - name: Upload by SFTP
+        working-directory: apps/site
+        env:
+          OUT_DIR: dist/
+          HOST: \${{ secrets.VESPER_SFTP_HOST }}
+          PORT: \${{ secrets.VESPER_SFTP_PORT }}
+          LOGIN: \${{ secrets.VESPER_SFTP_USER }}
+          LFTP_PASSWORD: \${{ secrets.VESPER_SFTP_PASSWORD }}
+          KEY: \${{ secrets.VESPER_SFTP_KEY }}
+          KNOWN_HOSTS: \${{ secrets.VESPER_SFTP_KNOWN_HOSTS }}
+          REMOTE_PATH: \${{ secrets.VESPER_SFTP_PATH }}
+        run: |
+          set -euo pipefail
+          need() {
+            if [ -z "$1" ]; then
+              echo "::error::Add the repository secret $2 (Settings > Secrets and variables > Actions)."
+              exit 1
+            fi
+          }
+          need "$HOST" VESPER_SFTP_HOST
+          need "$LOGIN" VESPER_SFTP_USER
+          need "$REMOTE_PATH" VESPER_SFTP_PATH
+          # The server must be the one whose keys are in VESPER_SFTP_KNOWN_HOSTS.
+          need "$KNOWN_HOSTS" VESPER_SFTP_KNOWN_HOSTS
+          if [ -z "$LFTP_PASSWORD$KEY" ]; then
+            echo "::error::Add the repository secret VESPER_SFTP_PASSWORD, or VESPER_SFTP_KEY for a private key."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh="ssh -a -x -o StrictHostKeyChecking=yes"
+          if [ -n "$KEY" ]; then
+            printf '%s\\n' "$KEY" > ~/.ssh/vesper_deploy
+            chmod 600 ~/.ssh/vesper_deploy
+            ssh="$ssh -i $HOME/.ssh/vesper_deploy"
+          fi
+          keep=""
+          for folder in .well-known cgi-bin; do
+            [ -e "$OUT_DIR$folder" ] || keep="$keep --exclude-glob $folder/"
+          done
+          mirror="mirror --reverse --delete --parallel=4$keep '$OUT_DIR' '$REMOTE_PATH'"
+          settings="set sftp:connect-program '$ssh'; set net:max-retries 2; set net:timeout 30"
+          lftp -c "$settings; open --env-password -u '$LOGIN' 'sftp://$HOST:\${PORT:-22}'; $mirror"
+"
+`;

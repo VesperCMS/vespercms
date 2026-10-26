@@ -105,7 +105,7 @@ export function siteConfigFiles(
   };
 }
 
-/** astro.config, which Vesper reads only to learn @astrojs/markdoc's options. */
+/** astro.config, which Vesper reads only for @astrojs/markdoc's options and `deploy init`'s few settings. */
 function astroConfigFile(root: string): string | undefined {
   return ['mjs', 'js', 'ts', 'mts', 'cjs', 'cts']
     .map((ext) => join(root, `astro.config.${ext}`))
@@ -226,6 +226,53 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
       forms,
       diagnostics,
     };
+  } finally {
+    await server.close();
+  }
+}
+
+export type AstroSettings = {
+  /** `site`, `base` and `outDir` as astro.config writes them. */
+  site?: string;
+  base?: string;
+  outDir?: string;
+  /** Why astro.config couldn't be read on its own, when it couldn't. */
+  problem?: string;
+};
+
+/**
+ * The few settings `vesper deploy init` needs from astro.config: where the
+ * live site is and where the build goes. Read as written, without Astro's
+ * defaults, through the same isolated Vite as the site's other configs.
+ */
+export async function loadAstroSettings(siteRoot: string): Promise<AstroSettings> {
+  const root = resolve(siteRoot);
+  const path = astroConfigFile(root);
+  if (!path) return {};
+  let server: ViteDevServer;
+  try {
+    server = await createIsolatedServer(root);
+  } catch (error) {
+    return { problem: messageOf(error) };
+  }
+  try {
+    const module = (await server.ssrLoadModule(path)) as { default?: unknown };
+    const config = (
+      typeof module.default === 'object' && module.default !== null ? module.default : {}
+    ) as { site?: unknown; base?: unknown; outDir?: unknown };
+    const outDir =
+      config.outDir instanceof URL
+        ? fileURLToPath(config.outDir)
+        : typeof config.outDir === 'string'
+          ? config.outDir
+          : undefined;
+    return {
+      ...(typeof config.site === 'string' ? { site: config.site } : {}),
+      ...(typeof config.base === 'string' ? { base: config.base } : {}),
+      ...(outDir !== undefined ? { outDir } : {}),
+    };
+  } catch (error) {
+    return { problem: messageOf(error) };
   } finally {
     await server.close();
   }

@@ -375,10 +375,16 @@ The package installs a `vesper` command (`src/node/cli.ts`). It loads the site's
 npx vesper agents            # write instructions for coding agents into AGENTS.md
 npx vesper agents --check    # in CI: fail when AGENTS.md no longer matches the schema
 npx vesper manifest          # print the manifest the studio is built from
+npx vesper deploy init --target sftp --rebuild-every 60   # a deploy workflow for GitHub Actions
 ```
 
 - **`vesper agents`** turns the manifest into a guide for coding agents: the rules that keep the studio and the build working (splice, never reformat; raw values; check with `astro build`), the parts the site uses (images, page trees, redirects, Markdoc tags, declared MDX components), and every collection with its files, URL and fields. It goes between `<!-- vesper:agents:start -->` and `<!-- vesper:agents:end -->` in `AGENTS.md`, or `--file` relative to the site; the rest of the file is left alone. The output is deterministic, so `--check` compares bytes. Claude Code reads `CLAUDE.md`: an `@AGENTS.md` line there imports the file.
 - **`vesper manifest`** prints the manifest, or writes it with `--out`, and exits with an error when a diagnostic is an error.
 - Both take `--root <site>` and `--src-dir <dir>`.
+- **`vesper deploy init`** writes one GitHub Actions workflow, `.github/workflows/vesper-deploy.yml` at the repository's root, and lists the repository secrets it reads. Vesper never deploys a site itself: the workflow is plain YAML that runs in your GitHub account, and it's yours to read and change. It never replaces a workflow without `--force`.
+  - **`--target sftp` or `ftp`** builds on every push to the default branch and mirrors Astro's output folder to the server with `lftp`, deleting what the build no longer has, so an unpublished page 404s. The server's own `.well-known` and `cgi-bin` folders are left alone unless the build has its own. SFTP checks the server against `VESPER_SFTP_KNOWN_HOSTS` (`ssh-keyscan -p 22 <server>`), and FTP insists on TLS.
+  - **`--target hook`** is for hosts that build from git (Netlify, Cloudflare Pages, Vercel): it only posts to the build hook in `VESPER_BUILD_HOOK`.
+  - **`--rebuild-every <minutes>`** (an hour by default for `hook`) adds a scheduled run. It reads the live site's `_vesper/schedule.json` first and rebuilds only once a scheduled change is due, or when the file can't be read. It takes 5, 6, 10, 12, 15, 20 or 30 minutes, or 1, 2, 3, 4, 6, 8, 12 or 24 hours, which a schedule keeps exactly. The site's address comes from `site` and `base` in `astro.config`, or `--url`. The command prints the `rebuildEvery` line for `vesper.config.ts`.
+  - Every workflow also runs on the cloud's `repository_dispatch` (`vesper-rebuild`), at a scheduled change's exact time, and from the Actions tab. It installs with the package manager whose lockfile is nearest the site (npm, pnpm or Yarn), with the Node version in `.nvmrc` or `.node-version`, or Node 24. `--branch` names the default branch when git can't.
 
 `agentGuide(manifest)` and `withAgentGuide(file, guide)` do the same as functions, from `@vesper/astro/node`.

@@ -23,7 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5, step 4, `vesper deploy init`: see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
+Phase 4.5, step 5: the protocol's schedule types, the fake cloud and the studio's held drafts. Step 4, `vesper deploy init`, was built 2026-10-26, with one call open for Jeremy (what an unreadable `schedule.json` does): see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
@@ -1561,7 +1561,32 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 - **Tests:** core (rows' schedules, the changes to come, `rebuildEvery` and its check); the studio in jsdom with only Date faked (words in the list and the bar, the Scheduled filter, the line and the view, Cancel and Reschedule… from it, Publish ▾'s items per entry, the dialog's checks, notes and accuracy line, with and without `rebuildEvery`, a live entry's dialog, Details and Change schedule… without saving, the public-repository line in GitHub mode); the `studio` e2e on Tokyo time (by keyboard, schedules an event's time to come down through Publish ▾ in the skipped hour of 8 March 2099, checks the file byte for byte, then reschedules and cancels it from the Scheduled view until the file is as it was, with axe in both themes on the dialog and the view, and focus back on the row's menu button), the dev marker on a page of a 2099 event, and the `github` e2e (one commit of just the time). Vitest: 4,433 passed, 3 skipped; every e2e project passes locally, 180 tests. CI green on GitHub (run 40386533648), Windows included.
 - **A keyboard pass** is in the e2e test above, in Chromium. The 4402 preview was another session's (the Tables worktree) while this was built, so there was no pass in the app's browser pane; a screen reader pass waits with the rest.
 
-**Next: step 4, `vesper deploy init`** and its workflows, with the due step's tests. The platform facts the design marks "to check" (Actions' `schedule`, `repository_dispatch`, hosts' build hooks) are checked when step 4's templates start, which is where they're used.
+**Step 4, `vesper deploy init` (2026-10-26),** as designed; DECISIONS.md's "`vesper deploy init` writes SFTP, FTP and build-hook workflows" says how, with the platform facts checked:
+- **The command:** `vesper deploy init --target sftp|ftp|hook [--rebuild-every <minutes>] [--url] [--branch] [--force]` writes `.github/workflows/vesper-deploy.yml` at the repository's root and lists the secrets to add, then the `rebuildEvery` line. It never replaces a workflow without `--force`, and it says in words what it can't find (no git repository, no lockfile, Bun, no address for a schedule, an interval a schedule can't keep, an output folder outside the site).
+- **The workflows:**
+  - `sftp` and `ftp` build on push to the default branch and mirror the output folder with lftp, deleting what the build no longer has;
+  - `hook` only posts to the host's build hook, an hour apart unless told otherwise;
+  - all three run on the cloud's `repository_dispatch` and from the Actions tab;
+  - a scheduled run first checks the live site's `schedule.json` in a job of its own.
+- **Beyond the design:**
+  - SFTP checks the server's host key from a secret;
+  - FTP insists on TLS;
+  - the server's `.well-known` and `cgi-bin` folders are spared unless the build has its own;
+  - runs start a few minutes past the hour, where GitHub delays fewer;
+  - `--rebuild-every` takes only intervals a schedule keeps exactly.
+- **Tests:**
+  - **The workflow:** snapshots of the three targets; triggers, jobs and quoting from the parsed YAML; the secrets each reads, exactly the ones it lists; the schedule for every interval.
+  - **The due step,** taken out of the generated YAML and run with Node against a local server: `next` passed, still to come and null; a 404, HTML, an unknown version, a time that isn't one and an unreachable host; and the address under the site's base, past caches.
+  - **The upload and hook steps:** run in bash with stand-ins for lftp and curl, checking the exact lftp and curl commands, the known-hosts file, a key in place of a password, a build's own `.well-known`, and each missing secret. They're skipped on Windows, where they were run by hand in Git Bash instead.
+  - **`planDeploy` and the CLI:** a site in a subfolder, each package manager, Astro's `outDir`, the hook's hourly default, each refusal, the default branch from git, and writing, refusing to overwrite and `--force`.
+  - **Integration:** astro.config read through Vite on vespercms.com and the playground.
+  - Vitest's unit and integration projects pass for these files; typecheck and lint pass.
+- **Not checked here:** a real lftp against a real server, and a real build hook. That's step 7's real-world check, on an SFTP host and on Netlify.
+
+**Open, for Jeremy:**
+- **An unreadable `schedule.json` rebuilds every run,** as the design says, so a scheduled change is never missed. Netlify's free plan has about 20 production deploys a month (300 credits at 15 each). A wrong address, or a site that has never deployed with Vesper, would spend the month's deploys in under a day of hourly runs. The alternative is to fail the scheduled run instead. GitHub then emails whoever last changed its schedule, and a site whose file is briefly unreadable just waits for the next run. Recommended: fail it, with the address it tried in the message.
+
+**Next: step 5,** the protocol's schedule types, the fake cloud's schedule and clock, and `runCloudContract`'s cases. Then the studio's held drafts, states and cancelling when connected.
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 
