@@ -25,7 +25,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 Nothing is queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
-Blocks (proposed and decided 2026-10-26): "Blocks: lists of different kinds (design)", below.
+Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. Not committed yet.
 
 ## vespercms.com and the docs
 
@@ -722,7 +722,7 @@ It was built on its own branch, `studio-panes`, so `main` stayed as it was until
 
 ## Blocks: lists of different kinds (design)
 
-Proposed 2026-10-26, from a review of what moving thosegeeks.com off EmDash would take. **Jeremy took (a) on every call the same day.**
+Proposed 2026-10-26, from a review of what moving thosegeeks.com off EmDash would take. **Jeremy took (a) on every call the same day, and it was built that day** (outcome at the end). DECISIONS.md records the calls ("Blocks are a discriminated union of objects"), and spec §6.2's mapping table matches.
 
 **Seen.**
 - **What sites write.** A page builder in Astro is a list whose items are different kinds, told apart by one key:
@@ -821,6 +821,17 @@ Proposed 2026-10-26, from a review of what moving thosegeeks.com off EmDash woul
 **Order.** None of Duplicate, Tables, History or Phase 4.5 changes the schema walk or the repeater, so this can go next, or in its own worktree beside Tables. The palette also uses the kit's `Menu`, so whichever of the two comes second builds on the other's changes there. It comes before moving thosegeeks.com off EmDash, which needs it.
 
 **The calls (decided 2026-10-26):** B1 to B6, each (a), as recommended.
+
+**Outcome (2026-10-26).** Built as designed, with these differences and details:
+- **Core.** `FieldKind` gains `union`, with `discriminator` and `variants` on the model (`packages/core/src/schema/walk.ts`). `childrenFor`, `variantFor` and `fieldChildren` (`schema/variants.ts`) serve widget resolution, the manifest's ratio and contrast checks, the field accessibility rules, the field checks, link rewriting, the issue target and `vesper agents`. Search's field lookups stay as they were: they only reach top-level fields and objects. A discriminated union that can't be kinds, and a plain union of objects with a shared literal key, get a warning in the terminal. A key that matches no kind reads "Choose one of the kinds the site has."
+- **The single choice doesn't confirm.** Its radio buttons change as the arrow keys move, so a dialog would fire on each step; changing back brings the fields back instead. "Change to" in a list confirms, as designed.
+- **The kit.** `Menu` takes a description per item, submenus (React Aria's `SubmenuTrigger`, whose own item takes its id from the collection) and a caller's trigger. `change-kind` (Lucide's Replace) is a new icon beside words.
+- **At most.** Every list now stops at its `max`: Add, Add below and Duplicate are disabled, with "At most N items." under Add.
+- **Playground.** `pages.blocks` (text, FAQ, figure), used on `admissions/tuition.md` and rendered by `[...path].astro`; `events.ticket` (free or paid), a single union with a kind of no fields. The manifest and `vesper agents` snapshots are regenerated.
+- **Docs and rules.** `content/fields.mdoc` has a Blocks part, the table rows, `union` among the widget names and `.max()`. CLAUDE.md's no-unions rule for vespercms.com now allows discriminated unions of objects.
+- **Checks.** Typecheck, lint and the format check pass. Vitest: 4,367 passed, 3 skipped, with new tests for the walk, the helpers, widget resolution, accessibility, field checks, links, messages, `vesper agents`, the kit's menu and the studio (`widgets/blocks.test.tsx`: rows, Add, Add below, Change to with and without its confirmation, cancelling, an unknown kind, `max`, the single choice). The playground builds, and the tuition page renders its blocks; its accessibility report is unchanged (only the fixtures page, on purpose).
+- **e2e.** `studio.spec.ts` adds an FAQ below the tuition page's text block, with one question, saves, then changes it to Text (confirming that its questions go), types its body and saves again; each time the file is checked byte for byte, and axe runs on the open block and on the dialog. In Chromium a row is named "Text , Paying in parts", the hidden comma being a span of its own, so the test matches the words around it. Every project passed: the studio's 37, and 173 across all of them in the full run before the test's last fix (static, GitHub, cloud and the site included), after building the playground and the site.
+- **Not done yet:** a manual keyboard pass in the browser (the 4402 preview was another session's when this was built), and a screen reader pass (with the rest, before launch). A plain FAQ added from Add can't be saved until it has a question, because the playground's `items` has no default; that's the schema's call, and a site that wants empty lists to save gives them `.default([])`.
 
 ## Calls of 2026-10-19
 

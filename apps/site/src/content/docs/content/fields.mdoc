@@ -18,13 +18,16 @@ Every field in a collection's schema becomes a control in the studio's editor. T
 | `z.array(z.enum([...]))` | A multi-select |
 | `z.object({ ... })` | A group of fields under its own heading. At the top of the form it's a section, set off by a line. |
 | `z.array(z.object({ ... }))` | A list of items, each a row named by its content that opens in place. Each row's "…" menu moves, duplicates and removes it; Alt+↑ and Alt+↓ on a row move it too. |
+| `z.discriminatedUnion('type', [ ... ])` | A choice of kind, then that kind's fields. See [Blocks](#blocks). |
+| `z.array(z.discriminatedUnion('type', [ ... ]))` | Blocks: a list whose items are different kinds. See [Blocks](#blocks). |
 | `reference('authors')` | A searchable list of that collection's entries. The file stores the entry's ID. |
 | `z.array(reference('posts'))` | An ordered list of entries, with Move up, Move down and Remove |
 | `image()` | An image picker. See [Images](/docs/content/images/). |
 
 A few more rules:
 
-- `.optional()` and `.default()` make a field optional, and a default fills in new entries. Most fields are required, so the studio marks the ones that aren't: "(optional)" after the label.
+- `.optional()` and `.default()` make a field optional, and a default fills in new entries.
+- A list with `.max()` stops adding at that many, and says so under its Add button. Most fields are required, so the studio marks the ones that aren't: "(optional)" after the label.
 - A union of string literals counts as an enum.
 - `.refine()` keeps the field's control. The refinement still runs when the entry is saved.
 - Fields appear in schema order. The first text field called `title`, `name`, `heading` or `label` becomes the page's heading in the editor.
@@ -35,12 +38,83 @@ Every save is checked against your schema. A problem shows under its field and i
 
 When Vesper has no control for a type, it shows the value as a small YAML text box marked "Edited as YAML", instead of hiding it or guessing. That happens for:
 
-- unions of different types, such as `z.union([z.string(), z.object({ ... })])`, discriminated unions included
+- unions of different types, such as `z.union([z.string(), z.object({ ... })])`. A union of objects told apart by one key gets a control when it's written as `z.discriminatedUnion`: see [Blocks](#blocks)
 - `.transform()` and `z.preprocess()`: the file holds something other than what the site reads, so editing the parsed value would write the wrong thing back
 - records, tuples, `z.any()`, recursive schemas, and literals that aren't strings
 - a schema that isn't a `z.object()` at the top level, whose whole frontmatter is then edited as YAML
 
 The text is read the way Astro reads it, and what you type is kept while it's invalid. If a field shows as YAML and you'd rather it didn't, a simpler type usually gives it a real control.
+
+## Blocks
+
+A page builder is a list whose items are different kinds, told apart by one key. Write it as `z.discriminatedUnion`, with an object for each kind that holds the key as a literal:
+
+```ts
+const sections = z
+  .array(
+    z.discriminatedUnion('type', [
+      z
+        .object({
+          type: z.literal('card_grid'),
+          heading: z.string(),
+          cards: z.array(z.object({ title: z.string(), body: z.string().optional() })),
+        })
+        .meta({ label: 'Card grid', description: 'Feature cards, numbered steps or a list.' }),
+      z
+        .object({
+          type: z.literal('faq'),
+          heading: z.string(),
+          items: z.array(z.object({ question: z.string(), answer: z.string() })),
+        })
+        .meta({ label: 'FAQ', description: 'Questions and answers.' }),
+      z
+        .object({ type: z.literal('figure'), image: fields.image(image), caption: z.string().optional() })
+        .meta({ label: 'Figure', description: 'One picture, with a caption.' }),
+    ]),
+  )
+  .max(20)
+  .default([]);
+```
+
+`fields.image()` takes the `image` helper from the collection's schema function, as on [Images](/docs/content/images/). The key can have any name, such as `type`, `kind` or `block`. In the file, each block is the key, then its fields:
+
+```yaml
+sections:
+  - type: faq
+    heading: Questions about cost
+    items:
+      - question: Are books included?
+        answer: No.
+```
+
+In the studio:
+
+- **Add** opens a menu of the kinds, each with its description. The new block opens, with focus in its first field. A list of one kind adds it straight away.
+- **Each row** is named by its kind, then its own words: the kind's `summary` field, a title-like field, or its first text, as in "Card grid · This industry has rules". It opens in place, like any list item.
+- **A row's "…" menu** has Add below, for a kind right after it, and Change to, for another kind. Change to keeps the fields both kinds have, under the same key and of the same kind. When something with content has no place in the new kind, the studio asks first and names it. Changing back before saving brings it back.
+- **A kind the schema doesn't list**, such as one removed from the code, shows as "Unknown kind" with the block as YAML, and Change to offers every kind. The site's build would refuse it, so the save does too.
+
+Each kind's `.meta()` takes `label` and `description` for the Add menu, and `summary` to name its rows. Without a label, the kind is its value in sentence case: `card_grid` is "Card grid".
+
+On its own, outside a list, a discriminated union is a choice of kind, as radio buttons or a select labelled "Kind", followed by that kind's fields. An optional one adds "None". Changing the kind works as Change to does, and changing back brings the fields back.
+
+Your site renders blocks itself, usually with a map from kind to component:
+
+```astro
+---
+import CardGrid from '../components/CardGrid.astro';
+import Faq from '../components/Faq.astro';
+import Figure from '../components/Figure.astro';
+
+const kinds = { card_grid: CardGrid, faq: Faq, figure: Figure };
+---
+{entry.data.sections.map((block) => {
+  const Block = kinds[block.type];
+  return <Block {...block} />;
+})}
+```
+
+Blocks suit pages made of sections: every field has its own control, images get the image picker, and a template can place a block or read its fields. For components inside a stretch of writing, such as a callout in an article, use [Markdoc tags or MDX components](/docs/content/markdoc-and-mdx/) in the body.
 
 ## Hints with .meta()
 
@@ -62,11 +136,11 @@ summary: z.string().meta({
 | `hidden` | Leaves the field out of the editor. Saves don't change its value. |
 | `readOnly` | Shows the value, but editors can't change it |
 | `autocomplete` | The browser's autofill hint, such as `email` |
-| `summary` | On a list of objects: the item field that names each row, such as `'question'`. Without it, the first of `title`, `name`, `label`, `heading` and `text` names it. |
+| `summary` | On a list of objects: the item field that names each row, such as `'question'`. Without it, the first of `title`, `name`, `label`, `heading` and `text` names it. On a kind's object, the field after the kind's name in its rows. |
 
 `.meta()` works before or after `.optional()` and `.default()`. Values must be plain data: a function in `widgetOptions` is dropped, with a warning.
 
-The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `url`, `slug`, `color`, `file`, `number`, `switch`, `date`, `datetime`, `select`, `radio`, `tags`, `multiselect`, `group`, `repeater`, `reference`, `references`, `image`, `geo` and `raw`. A name that doesn't exist, or a widget that can't edit the field's type (`color` on a number), falls back to the control the type implies. Vesper warns in the terminal, naming the field and the widget.
+The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `url`, `slug`, `color`, `file`, `number`, `switch`, `date`, `datetime`, `select`, `radio`, `tags`, `multiselect`, `group`, `union`, `repeater`, `reference`, `references`, `image`, `geo` and `raw`. A name that doesn't exist, or a widget that can't edit the field's type (`color` on a number), falls back to the control the type implies. Vesper warns in the terminal, naming the field and the widget.
 
 ## Field helpers
 

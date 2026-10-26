@@ -472,6 +472,29 @@ Rejected: guessing the shape from the values in the file. A new tag has nothing 
 
 Built 2026-10-25. The settings form had only ever set whole attributes, so a field inside a list attribute replaced the list with its own value; it now applies a nested change to the attribute's value.
 
+### 2026-10-26: Blocks are a discriminated union of objects
+
+**A `z.discriminatedUnion` whose options are objects, each holding the key as one string literal, gets a control: a list of them is blocks, and one on its own is a choice of kind. Jeremy took (a) on calls B1 to B6 in PLAN.md ("Blocks: lists of different kinds"):**
+- **B1.** Only `z.discriminatedUnion`. A plain `z.union` of objects that share a string-literal key stays raw, and the terminal says to write it as a discriminated union.
+- **B2.** Single fields as well as lists.
+- **B3.** A block is added at the end from Add, or below any row from its "…" menu.
+- **B4.** "Change to" in a row's menu keeps the fields both kinds have, under the same key and of the same kind, and confirms before it drops anything with content.
+- **B5.** Kinds are words and a description, from `.meta({ label, description })` on each object; no icons.
+- **B6.** Sites render blocks themselves, with a map from kind to component; Vesper ships no `<Blocks>`.
+
+How it works:
+- **Rows.** A row is named by its kind, then the kind's `summary` field, a title-like field or its first text, muted ("Card grid · This industry has rules"). On a page, the order of kinds is what someone scans for. The row's "…" menu is named with both, since several rows can share a kind.
+- **Unknown kinds.** An item whose key the schema doesn't list, or that has none, is a row named "Unknown kind: hero" holding the raw YAML field for the item, with every kind under "Change to". The save is still refused by the schema; the message for a key that matches no kind is "Choose one of the kinds the site has."
+- **Set aside.** What an item held as each kind it left is kept for the visit, so changing back before saving brings it back. The single choice doesn't confirm a change: its radio buttons change as the arrow keys move, so a dialog there would fire on every step, and changing back undoes it.
+- **At most.** At a list's `max`, Add, Add below and Duplicate are disabled, and a line says "At most 20 sections." This is every list's, which didn't check `max` before.
+- **New blocks** hold their key first, then their fields' own defaults, as a new entry gets them.
+
+Why: page builders are lists of different kinds (thosegeeks.com's sections have 11), and a raw YAML box was the only control. Markdoc tags in the body don't fit pages made of structured sections: every field sits behind a Settings dialog, a tag attribute gets no image picker and skips Astro's image pipeline, the build checks only that a list attribute is a list, and a template can't place one block elsewhere or read another's fields. Tags stay the way to put components inside prose.
+
+Rejected: a picker dialog with previews (heavier than a menu, and §10.4 asks for quiet); guessing kinds from a plain union (its errors can't point at a field); a `<Blocks>` component (a map is four lines a site can read).
+
+The kit's `Menu` gained a description line under an item's name, submenus (React Aria's `SubmenuTrigger`) and a caller's own trigger button. `change-kind` (Lucide's Replace) joins the icons that sit beside words.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas
@@ -519,6 +542,7 @@ A test runs `astro sync` on the playground and checks Vesper's entry IDs and fil
 - `inferredWidget`, `unknownReason`, `extraKeys`;
 - `hidden`, `readOnly`, `placeholder`, `autocomplete`, `safeToEcho`;
 - `search` (Phase 2.9): `'hide'` marks the boolean from `fields.hideFromSearch()`;
+- `discriminator` and `variants` (2026-10-26), for the one kind added since, `union`: a discriminated union of objects ("Blocks are a discriminated union of objects"). A union has no `children`; core's `childrenFor` picks a value's kind and `fieldChildren` lists every kind's, so a walker that doesn't know kinds skips them rather than misreading them. The manifest's version stays 1: the change only adds, and a studio only ever reads the manifest built with it;
 - constraint details: `patternFlags`, `step`, `integer` and inclusive bounds.
 
 The studio needs each of them to render the right control or message. They stay optional, so the spec's shape is still a valid model.
