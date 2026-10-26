@@ -12,6 +12,16 @@ People edit this site’s content in the Vesper studio at `/admin`, and every sa
 - **Write values as the file stores them, not as Zod parses them.** Leave out fields you aren’t setting, even ones with defaults, and keep dates in the form the file already uses.
 - **Check your work with `npx astro build`.** It validates every entry against its schema and fails on a body that doesn’t parse. Afterwards `.vesper/a11y-report.json`, when present, lists accessibility issues on the built pages, with the entry each came from.
 
+### Images
+
+An image field stores an object: `{ src, alt, decorative?, focus?, crops? }`.
+
+- `src` is the image file’s path relative to the entry’s file, as Astro’s `image()` expects. Put new images beside the collection’s existing ones, or in `src/assets/<collection>/`.
+- `alt` is required. Say what the image shows that the text around it doesn’t. For a purely decorative image, write `alt: ""` and `decorative: true`.
+- `focus: { x, y }` is the focal point, and `crops: { <ratio>: { x, y, w, h } }` holds crops for named ratios. Every number is from 0 to 1, measured from the top left. Editors set both in the studio; leave them as they are unless asked.
+- Never edit the image file to crop or resize it. Crops are cut at build, and the original stays as uploaded.
+- This site’s ratios (width ÷ height): `og` 1.91.
+
 ### Page trees
 
 In `pages` and `docs`, the folder is the hierarchy:
@@ -60,9 +70,21 @@ Markdown (`.md`) files in `src/content/pages/`, matching `**/[^_]*.md`. Fields g
 - `sections`: a list of objects with the fields below. Default `[]`.
   - `heading`: text. Required.
   - `intro`: Markdown on one line (bold, italic, code and links). Optional.
+  - `image`: an image (see Images). Optional. A screenshot or picture, shown in the light theme.
+  - `imageDark` (Image, dark theme): an image path, relative to the entry’s file. Optional. The same picture in the dark theme. It shares the alt text above.
   - `points`: a list of objects with the fields below. Default `[]`.
     - `title`: text. Required.
     - `body`: Markdown on one line (bold, italic, code and links). Required.
+    - `icon`: one of `accessibility`, `blocks`, `bot`, `code-xml` (Code), `crop`, `file-check` (File with a check), `file-diff` (File with changes), `file-text` (Document), `folder-lock` (Locked folder), `globe`, `images`, `keyboard`, `laptop`, `layout-template` (Layout), `list-tree` (Outline), `mail`, `rocket`, `search`, `shield-check` (Shield), `signpost`, `sliders-horizontal` (Settings), `sun-moon` (Sun and moon), `table`, `text-cursor-input` (Text field). Optional.
+    - `image`: an image (see Images). Optional. A screenshot or picture, shown in the light theme.
+    - `imageDark` (Image, dark theme): an image path, relative to the entry’s file. Optional. The same picture in the dark theme. It shares the alt text above.
+- `closing`: an object with the fields below. Optional. The last word, after the sections.
+  - `heading`: text. Required.
+  - `lead`: Markdown on one line (bold, italic, code and links). Optional.
+  - `command`: text. Optional. A shell command shown with a Copy button, like the install command.
+  - `actions`: a list of objects (at most 2 items) with the fields below. Default `[]`.
+    - `label`: text. Required.
+    - `href`: text. Required. A path on this site, like /docs/, or a full address.
 - `hideFromSearch` (Hide from site search): `true` or `false`. Default `false`. The page stays on the site. It just won’t show up in the site’s own search.
 
 #### Docs (`docs`)
