@@ -125,6 +125,39 @@ describe('the page outline (spec §6.15.2)', () => {
     expect(await within(grid).findByText('No pages match.')).toBeInTheDocument();
   });
 
+  it('keeps the folders opened before a search open once it is cleared', async () => {
+    const user = userEvent.setup();
+    setup();
+    const grid = await screen.findByRole('treegrid', { name: 'Pages' });
+    const academics = await within(grid).findByRole('row', { name: 'Academics' });
+    academics.focus();
+    await user.keyboard('{ArrowRight}');
+    await within(grid).findByRole('row', { name: 'Nursing' });
+    const search = screen.getByRole('searchbox', { name: 'Search' });
+
+    // A match elsewhere, and one under the open folder that opens the folders above it.
+    for (const query of ['apply', 'bridge']) {
+      await user.type(search, query);
+      await waitFor(() => {
+        expect(within(grid).getAllByRole('row')).toHaveLength(query === 'apply' ? 2 : 3);
+      });
+      await user.clear(search);
+      await within(grid).findByRole('row', { name: 'About the college' });
+      expect(within(grid).getByRole('row', { name: 'Academics' })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+      expect(within(grid).getByRole('row', { name: 'Nursing' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+      expect(within(grid).getByRole('row', { name: 'Admissions' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+    }
+  });
+
   it('expands with the arrow keys and opens a page with Enter', async () => {
     const user = userEvent.setup();
     setup();
