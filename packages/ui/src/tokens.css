@@ -10,9 +10,9 @@
  *   are reset to `initial`, so `bg-red-500`, `text-xl`, `font-black` or
  *   `shadow-lg` simply don't exist. A screen can only use what is declared
  *   below.
- * - Beyond neutrals there are exactly five colour roles: accent (with its
- *   hover state), accent-subtle, danger, focus and warning. No status hues:
- *   status is text.
+ * - Beyond neutrals there are exactly five colour roles: accent and
+ *   accent-subtle (each with its hover state), danger, focus and warning. No
+ *   status hues: status is text.
  * - scripts/a11y-contrast.mjs parses this file and fails CI if a colour is
  *   added outside the allowlist, or if any pair it lists misses its WCAG
  *   threshold in either theme, on solid surfaces or on glass.
@@ -47,6 +47,8 @@
   --color-accent: light-dark(oklch(48% 0.072 185), oklch(78% 0.1 185));
   --color-accent-hover: light-dark(oklch(42% 0.072 185), oklch(84% 0.075 185));
   --color-accent-subtle: light-dark(oklch(95% 0.025 185), oklch(31% 0.045 185));
+  /* The selected row, hovered: a step toward the accent, never back to a neutral. */
+  --color-accent-subtle-hover: light-dark(oklch(92.5% 0.035 185), oklch(35% 0.055 185));
 
   --color-danger: light-dark(oklch(51% 0.18 27), oklch(72% 0.15 27));
   --color-focus: light-dark(oklch(52% 0.14 250), oklch(75% 0.12 250));

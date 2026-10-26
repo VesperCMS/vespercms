@@ -42,8 +42,13 @@ export type TreeProps<T extends TreeNode> = {
   /** Keys pressed on a focused row (Alt+arrows to move it, say). Stop the event to keep it from the tree. */
   onRowKeyDown?: (item: T, event: KeyboardEvent<HTMLDivElement>) => void;
   emptyState?: ReactNode;
-  /** The row that's open now (the editor's list pane): accent-subtle and its halo. Its words say so too. */
+  /** The row that's open now (the editor's list pane): a flat accent-subtle fill. Its words say so too. */
   currentKey?: Key | null;
+  /**
+   * Room inside each row at either end, in spacing steps. Among panes the
+   * rows run edge to edge and carry the pane's own padding, so it's 4 there.
+   */
+  inset?: number;
 };
 
 export function Tree<T extends TreeNode>({
@@ -58,6 +63,7 @@ export function Tree<T extends TreeNode>({
   onRowKeyDown,
   emptyState,
   currentKey,
+  inset = 1,
 }: TreeProps<T>) {
   // React Aria's rows keep their own key handling, so row keys are read on the
   // way down, from whichever row has focus.
@@ -91,19 +97,26 @@ export function Tree<T extends TreeNode>({
           }
         : {})}
       className={cx(
-        'group rounded-md text-body outline-none data-[hovered]:bg-surface-sunken',
+        // Square and flat, with no halo: a selected row is a fill, not a raised pill (Jeremy, 2026-10-26).
+        'group text-body outline-none',
         'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
-        // Where a dragged page would land is the current item: accent-subtle and its halo.
-        'data-[drop-target]:bg-accent-subtle data-[drop-target]:shadow-glow-selected data-[dragging]:opacity-50',
-        item.id === currentKey && 'bg-accent-subtle shadow-glow-selected',
+        // Where a dragged page would land is filled as the current item is.
+        'data-[drop-target]:bg-accent-subtle data-[dragging]:opacity-50',
+        // Hovered, the current row steps toward the accent rather than back to a neutral.
+        item.id === currentKey
+          ? 'bg-accent-subtle data-[hovered]:bg-accent-subtle-hover'
+          : 'data-[hovered]:bg-surface-sunken',
         colorTransition,
       )}
     >
       <TreeItemContent>
         {({ isExpanded, hasChildItems, level, allowsDragging }) => (
           <div
-            className="flex min-h-12 items-center gap-1 py-1 pr-1"
-            style={{ paddingInlineStart: `calc(var(--spacing) * ${String(6 * (level - 1) + 1)})` }}
+            className="flex min-h-12 items-center gap-1 py-1"
+            style={{
+              paddingInlineStart: `calc(var(--spacing) * ${String(6 * (level - 1) + inset)})`,
+              paddingInlineEnd: `calc(var(--spacing) * ${String(inset)})`,
+            }}
           >
             {allowsDragging && (
               <RACButton
@@ -148,7 +161,14 @@ export function Tree<T extends TreeNode>({
         {...(expandedKeys ? { expandedKeys } : {})}
         {...(onExpandedChange ? { onExpandedChange } : {})}
         {...(dragAndDropHooks ? { dragAndDropHooks } : {})}
-        renderEmptyState={() => <p className="px-3 py-6 text-content-muted">{emptyState}</p>}
+        renderEmptyState={() => (
+          <p
+            className="py-6 text-content-muted"
+            style={{ paddingInline: `calc(var(--spacing) * ${String(inset + 2)})` }}
+          >
+            {emptyState}
+          </p>
+        )}
         className="flex w-full flex-col gap-0.5"
       >
         {renderItem}

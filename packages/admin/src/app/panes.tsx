@@ -367,6 +367,17 @@ function hereOf(route: Route): string | null {
 }
 
 /**
+ * A row of the structure pane: square and edge to edge, with the pane's
+ * padding inside it, as the list pane's rows are. Plain links get no
+ * `data-focus-visible`, so their outline is `focus-visible`'s, drawn inside
+ * the row where the pane's scrolling can't clip it.
+ */
+const structureRow = cx(
+  'flex min-h-10 items-center gap-2 px-4 text-body text-content no-underline',
+  'outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-focus',
+);
+
+/**
  * The structure pane: every collection, then settings, then the site's own
  * places. Always on screen, so the site's content is one click away. With
  * nothing chosen it's the deepest pane, so its heading is the page's `h1`.
@@ -399,9 +410,10 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
           href={href}
           aria-current={current ? 'page' : undefined}
           className={cx(
-            'flex min-h-10 items-center gap-2 rounded-md px-2 text-body text-content no-underline hover:bg-surface-sunken',
-            current && 'bg-accent-subtle font-semibold hover:bg-accent-subtle',
-            focusRing,
+            structureRow,
+            current
+              ? 'bg-accent-subtle font-semibold hover:bg-accent-subtle-hover'
+              : 'hover:bg-surface-sunken',
           )}
         >
           <span className="shrink-0 text-content-muted">{icon}</span>
@@ -427,17 +439,17 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
 
   return (
     <PaneFrame title="Content" headingRef={heading}>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto py-3">
         <ul className="flex flex-col gap-0.5">{collections.map(collectionItem)}</ul>
         {singletons.length > 0 && (
           <>
-            <Subheading className="mt-6 mb-1 px-2 text-small text-content-muted">
+            <Subheading className="mt-6 mb-1 px-4 text-small text-content-muted">
               Settings
             </Subheading>
             <ul className="flex flex-col gap-0.5">{singletons.map(collectionItem)}</ul>
           </>
         )}
-        <Subheading className="mt-6 mb-1 px-2 text-small text-content-muted">Site</Subheading>
+        <Subheading className="mt-6 mb-1 px-4 text-small text-content-muted">Site</Subheading>
         <ul className="flex flex-col gap-0.5">
           {item('media', hrefFor({ screen: 'media' }), 'Media', <Icon name="media" size={18} />)}
           {/* Redirects belong to the whole site (spec §7.5): a folder grant doesn't reach them. */}
@@ -454,10 +466,7 @@ function StructurePane({ route, studio }: { route: Route; studio: Studio }) {
                 href={siteUrl}
                 target="_blank"
                 rel="noopener"
-                className={cx(
-                  'flex min-h-10 items-center gap-2 rounded-md px-2 text-body text-content no-underline hover:bg-surface-sunken',
-                  focusRing,
-                )}
+                className={cx(structureRow, 'hover:bg-surface-sunken')}
               >
                 <Icon name="view-on-site" size={18} className="text-content-muted" />
                 View site

@@ -309,46 +309,50 @@ export function PageTree({
       {load.state === 'loading' ? (
         <p className="text-small text-content-muted">Loading pages…</p>
       ) : (
-        <Tree<Row>
-          label={collection.label}
-          items={shown}
-          // A row's name is this text: the title first, for type-ahead.
-          textValue={(row) => (row.current ? `${row.title}, open now` : row.title)}
-          // While searching, every page above a match is open, and the outline's own state waits.
-          expandedKeys={needle ? allKeys(shown) : expanded}
-          onExpandedChange={(keys) => {
-            if (!needle) setExpanded(keys);
-          }}
-          onAction={(row) => {
-            if (row.entryId !== undefined) onMenu(row, 'open');
-          }}
-          onRowKeyDown={onRowKeyDown}
-          {...(editable && covered('') ? { dragAndDropHooks } : {})}
-          emptyState={rows.length === 0 ? 'No pages yet.' : 'No pages match.'}
-          currentKey={currentKey}
-          renderRow={(row) => (
-            <>
-              <span className="min-w-0 flex-1 px-1">
-                <span className="block truncate font-semibold text-content">{row.title}</span>
-                <span className="block truncate font-mono text-caption text-content-muted">
-                  {row.url ?? `${row.path}/`}
+        // Among panes the rows run edge to edge, out through the pane's padding and with it inside them.
+        <div className={pane ? '-mx-3' : undefined}>
+          <Tree<Row>
+            label={collection.label}
+            items={shown}
+            inset={pane ? 4 : 1}
+            // A row's name is this text: the title first, for type-ahead.
+            textValue={(row) => (row.current ? `${row.title}, open now` : row.title)}
+            // While searching, every page above a match is open, and the outline's own state waits.
+            expandedKeys={needle ? allKeys(shown) : expanded}
+            onExpandedChange={(keys) => {
+              if (!needle) setExpanded(keys);
+            }}
+            onAction={(row) => {
+              if (row.entryId !== undefined) onMenu(row, 'open');
+            }}
+            onRowKeyDown={onRowKeyDown}
+            {...(editable && covered('') ? { dragAndDropHooks } : {})}
+            emptyState={rows.length === 0 ? 'No pages yet.' : 'No pages match.'}
+            currentKey={currentKey}
+            renderRow={(row) => (
+              <>
+                <span className="min-w-0 flex-1 px-1">
+                  <span className="block truncate font-semibold text-content">{row.title}</span>
+                  <span className="block truncate font-mono text-caption text-content-muted">
+                    {row.url ?? `${row.path}/`}
+                  </span>
                 </span>
-              </span>
-              <span className="shrink-0 text-small text-content-muted">{statusOf(row)}</span>
-              <Menu
-                label={`More actions for ${row.title}`}
-                items={menuItems(byKey.get(row.id) ?? row, rows, byPath, {
-                  editable,
-                  maxDepth,
-                  covered,
-                })}
-                onAction={(action) => {
-                  onMenu(row, action);
-                }}
-              />
-            </>
-          )}
-        />
+                <span className="shrink-0 text-small text-content-muted">{statusOf(row)}</span>
+                <Menu
+                  label={`More actions for ${row.title}`}
+                  items={menuItems(byKey.get(row.id) ?? row, rows, byPath, {
+                    editable,
+                    maxDepth,
+                    covered,
+                  })}
+                  onAction={(action) => {
+                    onMenu(row, action);
+                  }}
+                />
+              </>
+            )}
+          />
+        </div>
       )}
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}

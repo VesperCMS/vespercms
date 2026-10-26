@@ -36,13 +36,10 @@ const PLACES: [string, RegExp, string[]][] = [
     ['packages/ui/src/components/Button.tsx'],
   ],
   [
-    'glow-selected: the current item',
+    // Not a pane's rows, which are a flat fill (DECISIONS.md, "A pane's current row is a flat fill").
+    'glow-selected: the current item in a menu or a choice list',
     /\bshadow-glow-selected\b/,
-    [
-      'packages/ui/src/components/choices.tsx',
-      'packages/ui/src/components/overlays.tsx',
-      'packages/ui/src/components/Tree.tsx',
-    ],
+    ['packages/ui/src/components/choices.tsx', 'packages/ui/src/components/overlays.tsx'],
   ],
   [
     'glass-edge and glass-bar: the top bar',

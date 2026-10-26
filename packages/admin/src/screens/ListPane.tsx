@@ -247,18 +247,20 @@ export function ListPane({
         onScroll={(event) => {
           remember(api, collection.name, { scrollTop: event.currentTarget.scrollTop });
         }}
-        className="min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+        className="min-h-0 flex-1 overflow-y-auto pb-3"
       >
         {failed && !entries ? (
-          <p role="alert" className="text-small text-danger">
+          <p role="alert" className="px-4 text-small text-danger">
             Couldn’t load {collection.label.toLowerCase()}.
           </p>
         ) : !entries ? (
-          <p className="text-small text-content-muted">Loading…</p>
+          <p className="px-4 text-small text-content-muted">Loading…</p>
         ) : (
           <Tree<Row>
             label={collection.label}
             items={rows}
+            // Rows run edge to edge, with the pane's padding inside them.
+            inset={4}
             // A row's name is this text, so it carries what the row shows: the title first, for type-ahead.
             textValue={(row) =>
               [row.title, row.meta, row.current ? 'open now' : ''].filter(Boolean).join(', ')

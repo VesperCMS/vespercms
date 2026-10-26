@@ -20,8 +20,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /**
  * The spec §10.4 budget. Neutrals are unlimited in principle but listed, so a new token is
- * always a deliberate change to this file. Beyond neutrals: accent (+hover), accent-subtle,
- * danger, focus, warning.
+ * always a deliberate change to this file. Beyond neutrals: accent (+hover), accent-subtle
+ * (+hover), danger, focus, warning.
  */
 export const ALLOWED_TOKENS = {
   neutral: [
@@ -34,7 +34,15 @@ export const ALLOWED_TOKENS = {
     'content-muted',
     'on-accent',
   ],
-  role: ['accent', 'accent-hover', 'accent-subtle', 'danger', 'focus', 'warning'],
+  role: [
+    'accent',
+    'accent-hover',
+    'accent-subtle',
+    'accent-subtle-hover',
+    'danger',
+    'focus',
+    'warning',
+  ],
 };
 
 /** Tokens exempt from contrast pairs, with the reason. */
@@ -72,6 +80,9 @@ export const PAIRS = [
 
   ['content-muted', 'accent-subtle', 4.5, 'secondary text on the current item'],
   ['accent', 'accent-subtle', 4.5, 'a link or quiet button on the current item'],
+  ['content', 'accent-subtle-hover', 4.5, 'text on the selected row, hovered'],
+  ['content-muted', 'accent-subtle-hover', 4.5, 'secondary text on the selected row, hovered'],
+  ['focus', 'accent-subtle-hover', 3, 'focus ring on the selected row, hovered'],
   ['content', 'glass-bar', 4.5, 'the top bar, over whatever scrolls beneath'],
   ['content-muted', 'glass-bar', 4.5, 'status text in the top bar'],
   ['accent', 'glass-bar', 4.5, 'links and quiet buttons in the top bar'],
