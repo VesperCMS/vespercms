@@ -264,7 +264,7 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 - Spacing only from the token scale. Hairline borders only.
 - Type sizes and radii only from the tokens: `text-title`, `text-heading-1`–`3`, `text-body`, `text-label`, `text-small`, `text-caption`; `rounded-sm`, `-md`, `-lg`, `-full` (DECISIONS.md, "One type scale replaces Tailwind's sizes").
 - Shadows only on overlays (`shadow-overlay`), plus four named glows in their named places: `glow-accent` (the primary button), `glow-selected` (the current item in a menu or a choice list; a pane's current row is a flat fill), `glow-focus` (outside the focus ring) and `glass-edge` (DECISIONS.md, 2026-10-18).
-- Glass only on what floats (the top bar, menus, popovers, drawers, dialogs, the scrim), at least 88% fill, with solid fallbacks.
+- Glass only on what floats (the top bar, a pane's header, menus, popovers, drawers, dialogs, the scrim), at least 88% fill, with solid fallbacks. Among panes, each pane scrolls beneath the top bar and its own header (DECISIONS.md, "Panes scroll beneath glass").
 
 **If a new feature has no obvious quiet place in the interface, stop and propose one instead of adding a panel.** Every feature PR states where it lives in the UI and what it hides behind.
 

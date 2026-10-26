@@ -1283,7 +1283,7 @@ What GitHub's documentation and changelog said on 2026-10-19 (checked then; see 
 - `glow-focus`: a halo outside the solid 2px focus ring, never in its place. The ring carries the 3:1 contrast; the halo only adds warmth.
 - `glass-edge`: the lit edge of the sticky top bar, and the rim of glass overlays beside `shadow-overlay`.
 
-**Glass (a translucent fill over a blurred backdrop) is only for surfaces that float: the top bar, menus, popovers, the Details drawer, dialogs and the modal scrim.** The fill is at least 88% of the solid surface, which keeps every text pair at 4.5:1 even over a solid `content`-coloured backdrop; the contrast check computes those pairs. Without `backdrop-filter`, under `prefers-reduced-transparency` and in forced colours, the surfaces are solid. The glows are mixed from the accent with `color-mix(in oklch, var(--color-accent) N%, transparent)`, so they follow it, and raw hex and rgba stay out of class names. `packages/admin/src/budget.test.ts` allows these tokens and no other shadow.
+**Glass (a translucent fill over a blurred backdrop) is only for surfaces that float: the top bar, menus, popovers, the Details drawer, dialogs and the modal scrim.** (Since 2026-10-26, a pane's header too: "Panes scroll beneath glass".) The fill is at least 88% of the solid surface, which keeps every text pair at 4.5:1 even over a solid `content`-coloured backdrop; the contrast check computes those pairs. Without `backdrop-filter`, under `prefers-reduced-transparency` and in forced colours, the surfaces are solid. The glows are mixed from the accent with `color-mix(in oklch, var(--color-accent) N%, transparent)`, so they follow it, and raw hex and rgba stay out of class names. `packages/admin/src/budget.test.ts` allows these tokens and no other shadow.
 
 Why: Jeremy chose glass and glow as part of the direction. Vesper is named for the evening star, so its depth is light. Each effect is a reward or a locator, never the only way something is shown, and the text carries every meaning.
 
@@ -1410,6 +1410,20 @@ Rejected:
 - Opening list items as further panes, which would put the rest of the entry out of sight.
 - A collection's whole list screen, a table with columns, as the deepest pane when no entry is open, and a narrower pane only beside an entry. That was built first, on the branch where panes were tried. Choosing an entry then swapped the list for another, and Jeremy wanted the list to be one consistent pane (2026-10-25). Among panes the table's columns became the list fields under each title, and its sort headers a Sort menu. One screen at a time, a flat collection's list is still the table.
 - Remembering a collapsed pane per collection, which would make people collapse each list once.
+
+### 2026-10-26: Panes scroll beneath glass
+
+**Among panes, each pane scrolls from the window's top: its content passes beneath its own header, which stays put, and on up beneath the top bar, which floats over the row of panes. Both are `glass-bar`, the top bar's frosted surface at 88%, so what scrolls stays present beneath them. A list pane's search, Sort and Show sit in its header. A pane's scroll padding is the top bar's height plus its header's, both measured as they wrap, so a focused control lands clear of both (WCAG 2.2's 2.4.11, Focus Not Obscured). One screen at a time, nothing changes: the page scrolls beneath the sticky top bar, as before.**
+
+Why: Jeremy noticed the studio had lost the glassy top bar he chose in the design pass. It hadn't changed, but since panes (2026-10-25) each pane scrolled in its own box below it, so nothing ever passed beneath the glass and it read as solid. Pane headers were never glass.
+
+Notes on how it's built:
+- `PaneFrame` is the pane's scroller, with the bar's height (`--studio-bar`, set by the pane shell) as its top padding. Its header is `sticky top-0`: a sticky offset counts from inside the scroller's padding, so a `top` of the bar's height put the header twice as low.
+- The list pane remembers its scroll on the frame (`scrollRef`, `onScroll`), as it did on its own scroller.
+- The strips start their content below the bar too.
+- `prefers-reduced-transparency`, forced colours and browsers without `backdrop-filter` get solid surfaces, from `glass-bar` itself.
+
+The studio e2e test checks that a pane's header stays at the bar's bottom as it scrolls, that the content passes beneath, that the header is frosted, and that a field focused from the bottom lands below the header.
 
 ### 2026-10-26: A pane's current row is a flat fill
 
