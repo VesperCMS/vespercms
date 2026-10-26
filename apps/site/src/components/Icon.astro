@@ -1,0 +1,42 @@
+---
+import { icons } from 'lucide';
+
+// A Lucide icon, drawn at build time from the package's own nodes, so no
+// script or icon font reaches the page. Decorative: it always sits beside
+// words that say the same thing.
+interface Props {
+  /** Lucide's name, like `list-tree`. */
+  name: string;
+  size?: number;
+  class?: string;
+}
+
+const { name, size = 20, class: className } = Astro.props;
+const key = name.replace(/(^|-)([a-z0-9])/g, (_, _dash: string, c: string) => c.toUpperCase());
+const node = (icons as Record<string, [string, Record<string, string>][] | undefined>)[key];
+if (!node) throw new Error(`Icon: Lucide has no icon named "${name}"`);
+const escape = (value: string) => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+const inner = node
+  .map(
+    ([tag, attrs]) =>
+      `<${tag} ${Object.entries(attrs)
+        .map(([attr, value]) => `${attr}="${escape(String(value))}"`)
+        .join(' ')}></${tag}>`,
+  )
+  .join('');
+---
+
+<svg
+  class:list={['icon', className]}
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  focusable="false"
+  set:html={inner}
+/>

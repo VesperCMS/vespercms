@@ -32,12 +32,36 @@
   --radius-lg: 1rem;
   --page: 72rem;
   --measure: 45rem;
+  --header-height: 4rem;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* The studio's overlay shadow and the primary button's glow (tokens.css). */
+  --shadow-overlay:
+    0 12px 32px light-dark(oklch(30% 0.03 55 / 0.14), oklch(0% 0 0 / 0.5)),
+    0 2px 6px light-dark(oklch(30% 0.03 55 / 0.1), oklch(0% 0 0 / 0.35));
+  --glow-accent:
+    0 0 0 1px
+      light-dark(
+        color-mix(in oklch, var(--accent) 10%, transparent),
+        color-mix(in oklch, var(--accent) 30%, transparent)
+      ),
+    0 6px 20px -6px light-dark(color-mix(in oklch, var(--accent) 55%, transparent), transparent),
+    0 0 28px -4px light-dark(transparent, color-mix(in oklch, var(--accent) 55%, transparent));
 
   /* <Search> (spec §6.19) takes the site's colours. */
   --vesper-search-accent: var(--focus);
   --vesper-search-surface: var(--surface-raised);
   --vesper-search-border: var(--border-strong);
   --vesper-search-radius: var(--radius-md);
+}
+
+/* A visitor's choice from the theme toggle (ThemeToggle.astro). */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 *,
@@ -48,6 +72,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* In-page links land below the sticky header. */
+  scroll-padding-top: calc(var(--header-height) + 1rem);
 }
 
 body {
@@ -196,16 +222,45 @@ main:focus {
 /* Header and footer */
 
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   border-bottom: 1px solid var(--border);
+  /* Glass, as the studio's top bar: the page's own surface, frosted. */
+  background: color-mix(in oklch, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header {
+    background: var(--surface);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .site-header {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* On a phone the header wraps to two rows, too tall to keep on screen. */
+@media (max-width: 40rem) {
+  .site-header {
+    position: static;
+  }
 }
 
 .site-header-inner {
   max-width: var(--page);
   margin: 0 auto;
-  padding: 0.875rem 1.5rem;
+  padding: 0.75rem 1.5rem;
+  min-height: var(--header-height);
   display: flex;
   align-items: center;
-  gap: 1rem 2rem;
+  gap: 0.75rem 2rem;
   flex-wrap: wrap;
 }
 
@@ -256,9 +311,50 @@ main:focus {
   font-weight: 600;
 }
 
+.site-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Only with scripts, which it needs. */
+.theme-toggle {
+  display: none;
+}
+
+[data-js] .theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--content);
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-sunken);
+}
+
+.theme-toggle > .icon {
+  grid-area: 1 / 1;
+}
+
+.theme-toggle-moon,
+.theme-toggle[aria-pressed='true'] .theme-toggle-sun {
+  display: none;
+}
+
+.theme-toggle[aria-pressed='true'] .theme-toggle-moon {
+  display: block;
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
-  margin-top: 5rem;
+  margin-top: 6rem;
 }
 
 .site-footer-inner {
@@ -389,6 +485,55 @@ main:focus {
   max-width: var(--measure);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .theme-toggle .icon {
+    animation: turn-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+@keyframes turn-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+}
+
+/*
+ * The theme toggle's view transition: the new theme spreads in a circle from
+ * where it was pressed (ThemeToggle.astro sets the centre and radius).
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: theme-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--theme-x, 50%) var(--theme-y, 0));
+  }
+
+  to {
+    clip-path: circle(var(--theme-r, 150%) at var(--theme-x, 50%) var(--theme-y, 0));
+  }
+}
+
 /* Docs */
 
 .docs {
@@ -418,15 +563,15 @@ main:focus {
   .docs-toc {
     display: block;
     position: sticky;
-    top: 2rem;
+    top: calc(var(--header-height) + 2rem);
     font-size: 0.875rem;
   }
 }
 
 .docs-menu {
   position: sticky;
-  top: 2rem;
-  max-height: calc(100vh - 4rem);
+  top: calc(var(--header-height) + 2rem);
+  max-height: calc(100vh - var(--header-height) - 4rem);
   overflow-y: auto;
   font-size: 0.9375rem;
 }

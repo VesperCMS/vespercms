@@ -2,6 +2,7 @@
 import { Search, SearchHead } from '@vesper/astro/components';
 import { getEntry } from 'vesper:content';
 import Mark from '../components/Mark.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
 import '../styles/site.css';
 
 interface Props {
@@ -25,6 +26,18 @@ const fullTitle = home ? title : `${title} · Vesper`;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline>
+      // Before first paint, so a chosen theme never flashes the other one.
+      // ThemeToggle.astro stores the choice; the hero's art waits for `data-js`.
+      document.documentElement.dataset.js = '';
+      try {
+        const theme = localStorage.getItem('vesper-theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch {
+        // Storage can be off; the system's theme applies.
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{fullTitle}</title>
     {description && <meta name="description" content={description} />}
@@ -65,7 +78,10 @@ const fullTitle = home ? title : `${title} · Vesper`;
             ))}
           </ul>
         </nav>
-        <Search />
+        <div class="site-tools">
+          <Search />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
     <main id="main" tabindex="-1">
