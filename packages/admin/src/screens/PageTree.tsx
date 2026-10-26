@@ -54,6 +54,8 @@ type Moving = { row: Row; parent: string };
 
 const TOP = '/';
 
+const PAGE_TYPE = 'application/x-vesper-page';
+
 export function PageTree({
   collection,
   currentId = null,
@@ -195,9 +197,12 @@ export function PageTree({
   // A move to another parent opens the same dialog as "Move to…", so its effects are confirmed.
   // Off while searching through `isDisabled`, never by leaving the hooks out: the tree calls
   // them only when it's given them, so dropping them mid-render breaks the order of its hooks.
+  // A page travels as its own type, never text: the entry beside the outline would type
+  // its key into a Markdown field, and the outline would take a list's row for a page.
   const { dragAndDropHooks } = useDragAndDrop<Row>({
     isDisabled: needle !== '',
-    getItems: (keys) => [...keys].map((key) => ({ 'text/plain': String(key) })),
+    acceptedDragTypes: [PAGE_TYPE],
+    getItems: (keys) => [...keys].map((key) => ({ [PAGE_TYPE]: String(key) })),
     onMove: (event) => {
       // A drop onto a page is onItemDrop's: it moves the page under that one.
       if (event.target.dropPosition === 'on') return;
@@ -224,7 +229,7 @@ export function PageTree({
       const target = byKey.get(String(event.target.key));
       const item = event.items[0];
       if (!target || item?.kind !== 'text') return;
-      void item.getText('text/plain').then((key) => {
+      void item.getText(PAGE_TYPE).then((key) => {
         const row = byKey.get(key);
         if (row && row !== target && row.path !== '') setMoving({ row, parent: target.path });
       });

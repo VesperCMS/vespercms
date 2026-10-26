@@ -7,9 +7,17 @@ import {
   type FieldModel,
   type FieldVariant,
 } from '@vesper/core';
-import { Button, Chevron, cx, Dialog, focusRing, Menu, type MenuItem } from '@vesper/ui';
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Button as RACButton, Disclosure, DisclosurePanel, Heading } from 'react-aria-components';
+import { Button, Chevron, cx, Dialog, focusRing, Icon, Menu, type MenuItem } from '@vesper/ui';
+import { useEffect, useRef, useState, type DragEvent, type ReactNode, type RefObject } from 'react';
+import {
+  Button as RACButton,
+  Disclosure,
+  DisclosurePanel,
+  Heading,
+  useDrag,
+  useDrop,
+  type KeyboardEvent,
+} from 'react-aria-components';
 import { useFileUrl } from '../app/file-url.tsx';
 import { formatCount } from '../app/format.ts';
 import { useEditor, type EditorState } from '../editor/context.tsx';
@@ -137,6 +145,12 @@ function emptyItem(item: FieldModel | undefined): DataValue {
 let lastItemId = 0;
 const newItemId = () => `item${String(++lastItemId)}`;
 
+/** A dragged row carries only this, so nothing else on the page (a Markdown field) takes it as text. */
+const DRAG_TYPE = 'application/x-vesper-list-item';
+
+/** Where a dragged row would land: before the row at `slot`, drawn as a line `top` pixels down the list. */
+type Landing = { slot: number; top: number };
+
 /** A change of kind that would remove content, waiting for the person to confirm it. */
 type PendingChange = {
   index: number;
@@ -160,9 +174,11 @@ function inWords(labels: readonly string[]): string {
  * groups are sections, and list items are rows that open in place"). Rows
  * are closed when the entry opens, except a new item and any holding a field
  * that a refused save names. Order never depends on drag-and-drop (spec
- * §10.6): each item's "…" menu moves it, and Alt+↑/↓ on a row does too.
- * Closed items stay in the page (`hidden="until-found"`), so the browser's
- * find, the error summary and Go to field still reach every field.
+ * §10.6): each item's "…" menu moves it, and Alt+↑/↓ on a row does too. A
+ * row's handle drags it as well, for the pointer only (DECISIONS.md, "List
+ * rows drag by a handle"). Closed items stay in the page
+ * (`hidden="until-found"`), so the browser's find, the error summary and Go
+ * to field still reach every field.
  *
  * A list of kinds (a discriminated union) names each row by its kind. Add
  * offers the kinds, each row's "…" menu adds one below it or changes its
@@ -313,6 +329,72 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
         rowButton(newId)(),
     );
   };
+
+  // Only the list a row is dragged from takes the drop. Until then every list stands aside,
+  // so the lists inside its open rows let the drag through, and no row lands in another list.
+  const [dragged, setDragged] = useState<string | null>(null);
+  const [landing, setLanding] = useState<Landing | null>(null);
+  const landingAt = (y: number): Landing | null => {
+    const element = list.current;
+    const from = dragged === null ? -1 : ids.indexOf(dragged);
+    if (!element || from === -1) return null;
+    const box = element.getBoundingClientRect();
+    const rows = [...element.children].map((child) => child.getBoundingClientRect());
+    // Before the first row whose middle is below the pointer.
+    const found = rows.findIndex((row) => box.top + y < row.top + row.height / 2);
+    const slot = found === -1 ? rows.length : found;
+    const before = rows[slot - 1];
+    const after = rows[slot];
+    // Either side of the dragged row is where it is already.
+    if (slot === from || slot === from + 1 || (!before && !after)) return null;
+    // The line sits in the middle of the gap, or as far outside the first or last row.
+    const half = (Number.parseFloat(getComputedStyle(element).rowGap) || 0) / 2;
+    const top =
+      before && after
+        ? (before.bottom + after.top) / 2
+        : before
+          ? before.bottom + half
+          : (after?.top ?? 0) - half;
+    // Drawn beside the list, in the widget's own box.
+    const frame = element.parentElement?.getBoundingClientRect() ?? box;
+    return { slot, top: top - frame.top };
+  };
+  const { dropProps } = useDrop({
+    ref: list,
+    isDisabled: dragged === null,
+    // Its drags are the pointer's: the keyboard's drag and drop isn't offered here.
+    hasDropButton: true,
+    getDropOperation: (types) => (types.has(DRAG_TYPE) ? 'move' : 'cancel'),
+    onDropEnter: ({ y }) => {
+      setLanding(landingAt(y));
+    },
+    onDropMove: ({ y }) => {
+      const next = landingAt(y);
+      setLanding((now) => (now?.slot === next?.slot ? now : next));
+    },
+    onDropExit: () => {
+      setLanding(null);
+    },
+    onDrop: ({ y }) => {
+      const at = landingAt(y);
+      const from = dragged === null ? -1 : ids.indexOf(dragged);
+      setLanding(null);
+      // The same move as the menu's and the keyboard's, announced the same way.
+      if (at && from !== -1) move(from, at.slot > from ? at.slot - 1 : at.slot);
+    },
+  });
+  const drag = disabled
+    ? undefined
+    : (itemId: string) => ({
+        onStart: () => {
+          setDragged(itemId);
+        },
+        onEnd: () => {
+          setDragged(null);
+          setLanding(null);
+        },
+      });
+
   /** Moves an item to another kind; one that would remove content waits for a confirmation. */
   const changeTo = (index: number, to: FieldVariant, confirmed = false) => {
     const itemId = ids[index];
@@ -404,7 +486,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
   const addLabel = `Add ${names.one}`;
   const allOpen = items.length > 0 && ids.every((itemId) => open.has(itemId));
   return (
-    <div className="flex flex-col gap-3">
+    <div className="relative flex flex-col gap-3">
       {asRows && items.length >= 3 && (
         <div className="-mt-1 flex justify-end">
           <Button
@@ -418,7 +500,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
         </div>
       )}
       {items.length === 0 && <p className="text-small text-content-muted">None yet.</p>}
-      <ol ref={list} className={cx('flex flex-col', asRows ? 'gap-2' : 'gap-3')}>
+      <ol {...dropProps} ref={list} className={cx('flex flex-col', asRows ? 'gap-2' : 'gap-3')}>
         {items.map((entry, index) => {
           const itemId = ids[index] ?? String(index);
           const { name, detail } = rowOf(entry, index);
@@ -469,9 +551,13 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
                   ) {
                     event.preventDefault();
                     setMenuFor(itemId);
+                  } else {
+                    // React Aria stops a button's keys unless told otherwise, and ⌘S listens on the window.
+                    event.continuePropagation();
                   }
                 }}
                 menu={itemMenu(index, itemId, spoken)}
+                drag={drag?.(itemId)}
                 editor={editor}
               >
                 <Field field={item} path={[...path, index]} label={name} item="row" />
@@ -480,6 +566,14 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
           );
         })}
       </ol>
+      {/* Beside the list, not in it: a list holds only its items. */}
+      {landing && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 h-0.5 -translate-y-1/2 rounded-full bg-accent"
+          style={{ top: landing.top }}
+        />
+      )}
       <div className="flex flex-col items-start gap-1">
         {kinds && kinds.length > 1 ? (
           <Menu
@@ -583,6 +677,37 @@ function RowThumbnail({ src, entryPath }: { src: string; entryPath: string }) {
   );
 }
 
+/**
+ * A row's drag handle, for the pointer only: no Tab stop, and hidden from
+ * screen readers, which move items with Alt+↑/↓ and the "…" menu. Those say
+ * where the item lands; a drag mode would only add a stop to every row.
+ */
+function DragHandle({
+  dragProps,
+  header,
+}: {
+  dragProps: ReturnType<typeof useDrag>['dragProps'];
+  header: RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <span
+      {...dragProps}
+      aria-hidden="true"
+      onDragStart={(event: DragEvent<HTMLElement>) => {
+        dragProps.onDragStart?.(event);
+        // The row's header follows the pointer, not the handle alone and not an open row's fields.
+        const row = header.current;
+        if (!row || event.defaultPrevented) return;
+        const box = row.getBoundingClientRect();
+        event.dataTransfer.setDragImage(row, event.clientX - box.left, event.clientY - box.top);
+      }}
+      className="ml-1 inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md text-content-muted hover:text-content active:cursor-grabbing"
+    >
+      <Icon name="drag" />
+    </span>
+  );
+}
+
 /** One item: a row that names it and opens in place, with its "…" menu beside it. */
 function ItemRow({
   id,
@@ -597,6 +722,7 @@ function ItemRow({
   onOpenChange,
   onKeyDown,
   menu,
+  drag,
   editor,
   children,
 }: {
@@ -612,9 +738,21 @@ function ItemRow({
   onOpenChange: (expanded: boolean) => void;
   onKeyDown: (event: KeyboardEvent) => void;
   menu: ReactNode;
+  /** Its handle's start and end; none while the list can't change. */
+  drag: { onStart: () => void; onEnd: () => void } | undefined;
   editor: EditorState;
   children: ReactNode;
 }) {
+  const header = useRef<HTMLDivElement>(null);
+  const { dragProps, isDragging } = useDrag({
+    isDisabled: !drag,
+    // No drag button: the keyboard moves items with Alt+↑/↓ and the menu instead.
+    hasDragButton: true,
+    getItems: () => [{ [DRAG_TYPE]: itemId }],
+    getAllowedDropOperations: () => ['move'],
+    onDragStart: () => drag?.onStart(),
+    onDragEnd: () => drag?.onEnd(),
+  });
   const trigger = (
     <RACButton
       slot="trigger"
@@ -653,9 +791,14 @@ function ItemRow({
       id={itemId}
       isExpanded={isOpen}
       onExpandedChange={onOpenChange}
-      className="group rounded-md border border-border bg-surface-raised"
+      className={cx(
+        'group rounded-md border border-border bg-surface-raised',
+        isDragging && 'opacity-50',
+      )}
     >
-      <div className="flex items-center gap-1 pr-1">
+      {/* Its own background, so the picture that follows a drag is the row as it looks. */}
+      <div ref={header} className="flex items-center gap-1 rounded-md bg-surface-raised pr-1">
+        {drag && <DragHandle dragProps={dragProps} header={header} />}
         {headingLevel ? (
           <Heading level={headingLevel} className="m-0 min-w-0 flex-1">
             {trigger}

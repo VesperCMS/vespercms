@@ -190,6 +190,8 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Move focus to a field with `focusWhenShown` (`editor/reveal.ts`), never `element.focus()` alone.** A field inside a closed list item, or on a tab that isn't chosen, is in the page but hidden; it asks every item around the field to open first (DECISIONS.md, "Top-level groups are sections, and list items are rows that open in place").
 
+**A drag in the studio carries its own type (`application/x-vesper-…`), never `text/plain`, and its drop target accepts only that type.** A Markdown field takes the plain text of any drag dropped on it, and the outline beside the entry took a list's row for a page (DECISIONS.md, "List rows drag by a handle").
+
 **Pair every `outline-2` with `outline-solid` (`data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid`).** Tailwind 4's `outline-none` sets the outline style to `none` through a variable `outline-2` reuses, so the ring otherwise isn't drawn; the budget test checks it (DECISIONS.md, "Every focus outline is drawn solid").
 
 **Never transition what changes as focus moves (focus rings, the halo, chevrons): hover colours only, and nothing under reduced motion. A `duration-*` sits on the line of a `transition-*` in the same state.** After a screen reader's or a script's click, React Aria moves focus only once every running transition has ended, and focus sits on the page meanwhile; a bare duration animates `all` (DECISIONS.md, "Transitions never touch focus").

@@ -17,7 +17,7 @@ Every field in a collection's schema becomes a control in the studio's editor. T
 | `z.array(z.string())` | A tag list: type a value and press Enter |
 | `z.array(z.enum([...]))` | A multi-select |
 | `z.object({ ... })` | A group of fields under its own heading. At the top of the form it's a section, set off by a line. |
-| `z.array(z.object({ ... }))` | A list of items, each a row named by its content that opens in place. Each row's "…" menu moves, duplicates and removes it; Alt+↑ and Alt+↓ on a row move it too. |
+| `z.array(z.object({ ... }))` | A list of items, each a row named by its content that opens in place. Drag a row by its handle to move it, open or closed. Each row's "…" menu moves, duplicates and removes it; Alt+↑ and Alt+↓ on a row move it too. A list of images has the same rows, with a thumbnail. |
 | `z.discriminatedUnion('type', [ ... ])` | A choice of kind, then that kind's fields. See [Blocks](#blocks). |
 | `z.array(z.discriminatedUnion('type', [ ... ]))` | Blocks: a list whose items are different kinds. See [Blocks](#blocks). |
 | `reference('authors')` | A searchable list of that collection's entries. The file stores the entry's ID. |

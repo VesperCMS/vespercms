@@ -2,12 +2,14 @@
 import type { EntryDocument, FieldModel, Manifest, SaveRequest } from '@vesper/core';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { dragFrom, layOutLists, rowTop } from '../test/drag.ts';
 import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 import { changeKind, kindRow } from './union.tsx';
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   window.location.hash = '';
 });
 
@@ -107,6 +109,21 @@ describe('a list of kinds', () => {
       screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent),
     ).toEqual(['Text, Paying in parts', 'Text', 'FAQ, Questions about cost']);
     expect(await saved(user, api)).toEqual([tuition[0], { type: 'text' }, tuition[1]]);
+  });
+
+  it('drags a block by its handle, as any row', async () => {
+    layOutLists();
+    const { api, user } = open(tuition);
+    const text = await screen.findByRole('button', { name: /^Text/ });
+    const list = text.closest('ol');
+    const handle = list?.querySelector(':scope > li [draggable="true"]');
+    const faq = list?.querySelectorAll(':scope > li')[1];
+    if (!handle || !faq) throw new Error('no rows');
+    // Below the middle of the FAQ: the text block goes under it.
+    const drag = await dragFrom(handle, faq, rowTop(1) + 30);
+    drag.drop();
+    expect(screen.getByText('Moved Text to position 2 of 2.')).toBeInTheDocument();
+    expect(await saved(user, api)).toEqual([tuition[1], tuition[0]]);
   });
 
   it('changes a kind, asking first when content would go, and brings it back on changing back', async () => {
