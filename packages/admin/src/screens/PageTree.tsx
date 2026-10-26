@@ -152,6 +152,8 @@ export function PageTree({
       navigate({ screen: 'edit', collection: collection.name, id: row.entryId });
     } else if (action === 'child') {
       navigate({ screen: 'new', collection: collection.name, parent: row.path });
+    } else if (action === 'duplicate' && row.entryId !== undefined) {
+      navigate({ screen: 'copy', collection: collection.name, id: row.entryId });
     } else if (action === 'move') {
       setMoving({ row, parent: parentOf(row.path) });
     } else if (action === 'up' || action === 'down') {
@@ -617,6 +619,9 @@ function menuItems(
     items.push({ id: 'child', label: 'Add child page', icon: 'add-child' });
   if (row.entryId === undefined)
     items.push({ id: 'section', label: 'Create section page', icon: 'add-child' });
+  // A copy goes beside its original, in the parent's folder, which the grant must cover.
+  if (row.entryId !== undefined && options.covered(parentOf(row.path)))
+    items.push({ id: 'duplicate', label: 'Duplicate', icon: 'duplicate' });
   if (row.path !== '') {
     items.push({ id: 'move', label: 'Move to…', icon: 'move-to' });
     // The order of siblings lives in their parent's folder, which the grant must cover too.

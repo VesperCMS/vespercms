@@ -4,6 +4,7 @@ import {
   decodeData,
   deepEqual,
   encodeValue,
+  entryPath as treePathOf,
   entryUrlKey,
   formatUrl,
   lineEndings,
@@ -30,6 +31,7 @@ import {
   Menu,
   Tabs,
   TextArea,
+  TextField,
   type MenuItem,
 } from '@vesper/ui';
 import {
@@ -37,6 +39,7 @@ import {
   lazy,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -51,6 +54,7 @@ import { entriesChanged } from '../app/entries-changed.ts';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
+import { copiedValues } from '../editor/copy.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
 import { focusWhenShown, REVEAL_EVENT } from '../editor/reveal.ts';
@@ -66,6 +70,7 @@ import {
 } from '../editor/values.ts';
 import type { BodyChecks } from '../body/checks.ts';
 import type { BodyApi } from '../body/BodyEditor.tsx';
+import { isMac } from '../body/shortcuts.ts';
 import { useEntryNotes } from '../a11y/useNotes.ts';
 import {
   ConflictCompare,
@@ -86,16 +91,19 @@ const BodyEditor = lazy(() =>
 /**
  * Opens an entry (or starts a new one when `id` is null) and hands it to the
  * form. A reload after a conflict remounts the form with the new version.
+ * With `copy`, the entry is the original of a new one (Duplicate).
  */
 export function EntryEditor({
   collection,
   id,
   parent,
+  copy = false,
 }: {
   collection: CollectionManifest;
   id: string | null;
   /** New pages in a tree collection: the parent page's path (spec §6.15.2). */
   parent?: string;
+  copy?: boolean;
 }) {
   const { api } = useStudio();
   const [load, reload] = useLoad<EntryDocument | null>(
@@ -120,13 +128,29 @@ export function EntryEditor({
       </Screen>
     );
   }
+  if (copy && load.value?.status !== 'editable') {
+    return (
+      <Screen title="This entry can’t be duplicated">
+        <p className="mb-4">
+          {load.value?.message ?? 'Only entries the studio can edit as fields can be duplicated.'}
+        </p>
+        <Link icon="back" href={hrefFor({ screen: 'list', collection: collection.name })}>
+          Back to {collection.label}
+        </Link>
+      </Screen>
+    );
+  }
+  // A copy in a tree goes beside its original, under the same parent page.
+  const copyParent =
+    copy && load.value && collection.presentation.tree ? parentPath(treePathOf(load.value.id)) : '';
   return (
     <EntryForm
       key={load.value?.version ?? 'new'}
       collection={collection}
       doc={load.value}
+      copy={copy}
       onReload={reload}
-      {...(parent !== undefined ? { parent } : {})}
+      {...(parent !== undefined ? { parent } : copyParent ? { parent: copyParent } : {})}
     />
   );
 }
@@ -146,21 +170,27 @@ type CloudNotice =
 function EntryForm({
   collection,
   doc,
+  copy,
   onReload,
   parent,
 }: {
   collection: CollectionManifest;
+  /** The entry, or a copy's original. */
   doc: EntryDocument | null;
+  /** A new entry that starts as a copy of `doc` (Duplicate, spec §10.3). */
+  copy: boolean;
   onReload: () => void;
   parent?: string;
 }) {
   const { api, siteUrl, manifest, loadMdxProps, account, cloud } = useStudio();
   // GitHub mode publishes on save: the button and its words say so (spec §6.8).
   const publishes = api.publishesOnSave();
-  const isNew = doc === null;
+  /** The entry being edited: none yet for a new one, a copy included. */
+  const entry = copy ? null : doc;
+  const isNew = entry === null;
   const status = doc?.status ?? 'editable';
   /** The entry's file: known once it's saved, guessed for a new one. */
-  const [savedPath, setSavedPath] = useState<string | null>(doc?.path ?? null);
+  const [savedPath, setSavedPath] = useState<string | null>(entry?.path ?? null);
   const pathRef = useRef(savedPath);
   const filePath = savedPath ?? likelyPath(collection, parent);
   // In the cloud, the member's grants decide what they may change (spec §7.5).
@@ -176,21 +206,27 @@ function EntryForm({
   const bodyEol = lineEndings(doc?.body ?? '').dominant;
   const initial = useMemo<Saved>(
     () => ({
-      values: doc ? decodeData(doc.data) : initialValues(collection.fields),
+      values: doc
+        ? copy
+          ? copiedValues(collection, decodeData(doc.data))
+          : decodeData(doc.data)
+        : initialValues(collection.fields),
       body: (doc?.body ?? '').slice(bodyPrefix.length).replace(/\r\n/g, '\n'),
       raw: (doc?.rawFrontmatter ?? '').replace(/^\r?\n/, ''),
     }),
-    [doc, collection.fields, bodyPrefix.length],
+    [doc, copy, collection, bodyPrefix.length],
   );
 
+  /** Where unsaved changes are kept: by entry, with a copy apart from its original and from new entries. */
+  const keptId = copy && doc ? `${doc.id}\ncopy` : (entry?.id ?? null);
   // Changes kept across a sign-in that expired mid-edit, put back once.
-  const [kept] = useState(() => takeKept(collection.name, doc?.id ?? null));
+  const [kept] = useState(() => takeKept(collection.name, keptId));
   const [values, setValues] = useState<DataObject>(kept?.values ?? initial.values);
   const [body, setBody] = useState(kept?.body ?? initial.body);
   const [raw, setRaw] = useState(kept?.raw ?? initial.raw);
   const [saved, setSaved] = useState<Saved>(initial);
-  const [version, setVersion] = useState<string | null>(doc?.version ?? null);
-  const [entryId, setEntryId] = useState<string | null>(doc?.id ?? null);
+  const [version, setVersion] = useState<string | null>(entry?.version ?? null);
+  const [entryId, setEntryId] = useState<string | null>(entry?.id ?? null);
   const [saving, setSaving] = useState(false);
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [notice, setNotice] = useState<Notice>(null);
@@ -223,6 +259,8 @@ function EntryForm({
 
   const arranged = useMemo(() => arrangeFields(collection), [collection]);
   // As local mode has always had it; the cloud's draft lookups use `filePath`.
+  // A copy's relative paths start from its original's file, and saving
+  // rewrites them if the copy lands in another folder.
   const entryPath = doc?.path ?? likelyPath(collection);
   const format = bodyFormat(doc, collection);
 
@@ -467,6 +505,7 @@ function EntryForm({
           ? { body: bodyPrefix + (bodyEol === '\r\n' ? body.replace(/\n/g, '\r\n') : body) }
           : {}),
         ...(isNew && parent !== undefined ? { parent } : {}),
+        ...(copy && doc && version === null ? { copyOf: { id: doc.id } } : {}),
       };
       try {
         const result = await api.saveEntry(request);
@@ -515,7 +554,7 @@ function EntryForm({
           if (!auto) setNotice({ kind: 'error', text: error.message });
         } else if (error instanceof ApiError && error.status === 401 && account) {
           // Kept for after the sign-in redirect, which would otherwise lose them.
-          keep(collection.name, entryId, { values, body, raw });
+          keep(collection.name, entryId ?? keptId, { values, body, raw });
           setNotice({ kind: 'expired', text: error.message });
         } else {
           setNotice({
@@ -550,6 +589,9 @@ function EntryForm({
       blockOn,
       recheck,
       account,
+      copy,
+      doc,
+      keptId,
     ],
   );
 
@@ -588,9 +630,7 @@ function EntryForm({
 
   // Unsaved changes are kept on this device as they're typed (spec §6.9), and
   // put back if the page reloads before they reach the cloud.
-  const keptAt = cloud
-    ? keptKey(cloud.client.settings.project, collection.name, doc?.id ?? null)
-    : null;
+  const keptAt = cloud ? keptKey(cloud.client.settings.project, collection.name, keptId) : null;
   // Until the kept copy has been looked for, nothing is written or cleared:
   // the editor opens clean, and clearing then would lose what it's about to restore.
   const [keptChecked, setKeptChecked] = useState(false);
@@ -722,12 +762,52 @@ function EntryForm({
     }
   };
 
+  // A function-form URL runs only where vesper.config.ts is loaded: in the
+  // browser in GitHub mode and the cloud, in the dev API in local mode. The
+  // site's page list has every entry's address worked out either way.
+  const functionUrl = useFunctionUrl(collection, isNew ? null : entryId, version);
   const viewUrl =
     !isNew && entryId && siteUrl !== undefined
-      ? pageUrl(collection, entryId, saved.values, manifest)
+      ? typeof collection.presentation.url === 'string'
+        ? pageUrl(collection, entryId, saved.values, manifest)
+        : functionUrl
       : null;
+  const editingLink = !isNew && entryId ? editingLinkOf(collection.name, entryId) : null;
+  /** A link to copy that the clipboard refused: shown, selected, to copy by hand. */
+  const [copyByHand, setCopyByHand] = useState<{ label: string; text: string } | null>(null);
+  /** "Link copied" stands in the status for a few seconds after a copy. */
+  const [linkCopied, setLinkCopied] = useState(0);
+  useEffect(() => {
+    if (linkCopied === 0) return;
+    const timer = setTimeout(() => {
+      setLinkCopied(0);
+    }, 4000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [linkCopied]);
+  const copyLink = async (label: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setLinkCopied((n) => n + 1);
+    } catch {
+      // No clipboard over plain http, or permission refused.
+      setCopyByHand({ label, text });
+    }
+  };
   const menuItems: MenuItem[] = [
-    ...(viewUrl ? [{ id: 'view', label: 'View on site', icon: 'view-on-site' as const }] : []),
+    ...(viewUrl
+      ? [
+          { id: 'view', label: 'View on site', icon: 'view-on-site' as const },
+          { id: 'copy-page', label: 'Copy page address', icon: 'link' as const },
+        ]
+      : []),
+    ...(editingLink
+      ? [{ id: 'copy-link', label: 'Copy editing link', icon: 'link' as const }]
+      : []),
+    ...(!isNew && entryId && editable && status === 'editable' && !collection.presentation.singleton
+      ? [{ id: 'duplicate', label: 'Duplicate', icon: 'duplicate' as const }]
+      : []),
     ...(cloud && entryDraft && editable
       ? [{ id: 'discard', label: 'Discard draft…', isDanger: true, icon: 'delete' as const }]
       : []),
@@ -764,7 +844,8 @@ function EntryForm({
     ? { href: hrefFor({ screen: 'home' }), label: 'Content' }
     : { href: hrefFor({ screen: 'list', collection: collection.name }), label: collection.label };
 
-  const statusLine = [draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ');
+  const statusLine =
+    linkCopied > 0 ? 'Link copied' : [draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ');
   // Content, the collection's own tabs, then Details; no tab list when Content is all there is.
   const panels = sourceOnly
     ? []
@@ -844,6 +925,15 @@ function EntryForm({
               items={menuItems}
               onAction={(action) => {
                 if (action === 'view' && viewUrl) window.open(viewUrl, '_blank', 'noopener');
+                if (action === 'copy-page' && viewUrl) {
+                  void copyLink('Page address', pageAddress(viewUrl, manifest));
+                }
+                if (action === 'copy-link' && editingLink) {
+                  void copyLink('Editing link', editingLink);
+                }
+                if (action === 'duplicate' && entryId) {
+                  navigate({ screen: 'copy', collection: collection.name, id: entryId });
+                }
                 if (action === 'delete') setConfirmDelete(true);
                 if (action === 'discard') setConfirmDiscard(true);
               }}
@@ -901,8 +991,13 @@ function EntryForm({
     </Suspense>
   ) : null;
 
+  // A copy's heading says what it is until it's saved (the title field below already says " (copy)").
+  const heading =
+    copy && doc
+      ? `${collection.presentation.tree ? 'New page' : 'New entry'}, a copy of ${titleOf(decodeData(doc.data), arranged.title) || doc.id}`
+      : titleText;
   return (
-    <Screen title={titleText} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar} column>
+    <Screen title={heading} hideTitle={Boolean(arranged.title) && !sourceOnly} bar={bar} column>
       <EditorContext.Provider value={editor}>
         <div className="mx-auto flex max-w-editor flex-col gap-6">
           {doc?.message && (
@@ -1046,6 +1141,21 @@ function EntryForm({
       />
 
       <Dialog
+        title={`Copy the ${copyByHand?.label.toLowerCase() ?? 'link'}`}
+        isOpen={copyByHand !== null}
+        onOpenChange={(open) => {
+          if (!open) setCopyByHand(null);
+        }}
+      >
+        {(close) => (
+          <CopyByHand
+            label={copyByHand?.label ?? 'Link'}
+            text={copyByHand?.text ?? ''}
+            onDone={close}
+          />
+        )}
+      </Dialog>
+      <Dialog
         title={`Delete “${titleText}”?`}
         role="alertdialog"
         isOpen={confirmDelete}
@@ -1102,6 +1212,35 @@ function EntryForm({
         </>
       )}
     </Screen>
+  );
+}
+
+/** A link the clipboard refused, focused and selected so the shortcut copies it at once. */
+function CopyByHand({ label, text, onDone }: { label: string; text: string; onDone: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  // Before React Aria's dialog effect, which then finds focus inside and
+  // leaves it, as the crop dialog does.
+  useLayoutEffect(() => {
+    const input = box.current?.querySelector('input');
+    input?.focus();
+    input?.select();
+  }, []);
+  return (
+    <div ref={box} className="flex flex-col gap-6">
+      <TextField
+        label={label}
+        description={`Press ${isMac ? '⌘C' : 'Ctrl+C'} to copy.`}
+        value={text}
+        isReadOnly
+        onFocus={(event) => {
+          event.target.select();
+        }}
+        inputClassName="font-mono"
+      />
+      <div className="flex justify-end">
+        <Button onPress={onDone}>Done</Button>
+      </div>
+    </div>
   );
 }
 
@@ -1289,6 +1428,59 @@ function pageUrl(
   };
   const key = entryUrlKey(pattern, { id, collection: collection.name, data }, settings);
   return key === null ? null : formatUrl(key, settings);
+}
+
+/**
+ * A function-form URL's page address, from the site's page list (spec
+ * §6.15.1), looked up again after each save. Null for a string pattern,
+ * which the editor works out itself, and while the list loads.
+ */
+function useFunctionUrl(
+  collection: CollectionManifest,
+  id: string | null,
+  version: string | null,
+): string | null {
+  const { api } = useStudio();
+  const wanted = typeof collection.presentation.url === 'object' && id !== null;
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!wanted) return;
+    let live = true;
+    api.listPages().then(
+      (pages) => {
+        if (!live) return;
+        setUrl(pages.find((p) => p.collection === collection.name && p.id === id)?.url ?? null);
+      },
+      () => {
+        // Without the list there's no address to show; the rest of the editor works as usual.
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [api, wanted, collection.name, id, version]);
+  return wanted ? url : null;
+}
+
+/**
+ * The page's full address, to paste anywhere: on Astro's `site` when the
+ * site sets one, so a link copied in local mode is the live one, and on
+ * the studio's own origin otherwise.
+ */
+function pageAddress(url: string, manifest: Manifest): string {
+  const site = manifest.site.urls?.site;
+  const origin = site ? new URL(site).origin : window.location.origin;
+  return new URL(url, origin).href;
+}
+
+/** The studio's address for an entry, which survives a reload on any host (hash routing). */
+function editingLinkOf(collection: string, id: string): string {
+  return new URL(hrefFor({ screen: 'edit', collection, id }), window.location.href).href;
+}
+
+/** A tree path's parent ('' for the top level). */
+function parentPath(path: string): string {
+  return path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 }
 
 /**

@@ -321,7 +321,12 @@ function panesFor(route: Route, studio: Studio, wide: boolean): PaneSpec[] {
   if (route.screen === 'redirects') {
     return [structure, flex('redirects', 'Redirects', <Redirects />)];
   }
-  if (route.screen === 'list' || route.screen === 'edit' || route.screen === 'new') {
+  if (
+    route.screen === 'list' ||
+    route.screen === 'edit' ||
+    route.screen === 'new' ||
+    route.screen === 'copy'
+  ) {
     const collection = studio.collection(route.collection);
     if (!collection) {
       return [
@@ -339,7 +344,8 @@ function panesFor(route: Route, studio: Studio, wide: boolean): PaneSpec[] {
         <EntryEditor
           key={JSON.stringify(route)}
           collection={collection}
-          id={currentId}
+          id={route.screen === 'copy' ? route.id : currentId}
+          copy={route.screen === 'copy'}
           {...(route.screen === 'new' && route.parent !== undefined
             ? { parent: route.parent }
             : {})}

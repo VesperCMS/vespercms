@@ -11,6 +11,8 @@ export type Route =
   | { screen: 'list'; collection: string }
   | { screen: 'edit'; collection: string; id: string }
   | { screen: 'new'; collection: string; parent?: string }
+  /** A new entry that starts as a copy of another (Duplicate, spec §10.3). */
+  | { screen: 'copy'; collection: string; id: string }
   | { screen: 'media' }
   | { screen: 'redirects' }
   /** Home with the cloud's Changes open: review emails link here. Home alone elsewhere. */
@@ -36,6 +38,9 @@ export function parseRoute(hash: string): Route {
     if (parts[2] === 'e' && parts[3] !== undefined && parts.length === 4) {
       return { screen: 'edit', collection: parts[1], id: parts[3] };
     }
+    if (parts[2] === 'e' && parts[3] !== undefined && parts[4] === 'copy' && parts.length === 5) {
+      return { screen: 'copy', collection: parts[1], id: parts[3] };
+    }
   }
   return { screen: 'not-found', path };
 }
@@ -59,6 +64,8 @@ export function hrefFor(route: KnownRoute): string {
         : `#/c/${enc(route.collection)}/new`;
     case 'edit':
       return `#/c/${enc(route.collection)}/e/${enc(route.id)}`;
+    case 'copy':
+      return `#/c/${enc(route.collection)}/e/${enc(route.id)}/copy`;
   }
 }
 

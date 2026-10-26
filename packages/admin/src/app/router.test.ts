@@ -11,6 +11,10 @@ describe('parseRoute and hrefFor', () => {
     // Entry IDs from nested folders contain slashes; they stay one segment.
     { screen: 'edit', collection: 'pages', id: 'academics/nursing/clinical-placements' },
     { screen: 'edit', collection: 'blog', id: 'new' },
+    { screen: 'copy', collection: 'blog', id: 'harbor-at-dawn' },
+    { screen: 'copy', collection: 'pages', id: 'academics/nursing/clinical-placements' },
+    // An entry may be called "copy" too.
+    { screen: 'edit', collection: 'blog', id: 'copy' },
   ];
 
   it.each(routes)('round-trips %o', (route) => {

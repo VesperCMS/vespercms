@@ -188,7 +188,15 @@ describe('the page outline (spec §6.15.2)', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((i) => i.textContent),
-    ).toEqual(['Open', 'Add child page', 'Move to…', 'Move up', 'Move down', 'Delete…']);
+    ).toEqual([
+      'Open',
+      'Add child page',
+      'Duplicate',
+      'Move to…',
+      'Move up',
+      'Move down',
+      'Delete…',
+    ]);
     await user.click(within(menu).getByRole('menuitem', { name: 'Move to…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Move “Nursing”' });
     await expectNoViolations();
@@ -237,6 +245,49 @@ describe('the page outline (spec §6.15.2)', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       '/contact/ is already a page on this site that isn’t edited here',
     );
+  });
+
+  it('duplicates a page beside its original, under the same parent', async () => {
+    const user = userEvent.setup();
+    const { api } = setup();
+    api.readEntry.mockResolvedValue({
+      collection: 'pages',
+      id: 'academics/nursing/rn-to-bsn',
+      path: `${P}academics/nursing/rn-to-bsn.md`,
+      version: 'v1',
+      format: 'md',
+      status: 'editable',
+      data: { title: 'RN to BSN bridge' },
+      body: '\nOnline, with two weekend residencies.\n',
+    });
+    (await screen.findByRole('row', { name: 'Academics' })).focus();
+    await user.keyboard('{ArrowRight}');
+    (await screen.findByRole('row', { name: 'Nursing' })).focus();
+    await user.keyboard('{ArrowRight}');
+    await user.click(
+      await screen.findByRole('button', { name: 'More actions for RN to BSN bridge' }),
+    );
+    await user.click(await screen.findByRole('menuitem', { name: 'Duplicate' }));
+    await waitFor(() => {
+      expect(window.location.hash).toBe('#/c/pages/e/academics%2Fnursing%2Frn-to-bsn/copy');
+    });
+    expect(await screen.findByRole('textbox', { name: 'Title' })).toHaveValue(
+      'RN to BSN bridge (copy)',
+    );
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'New page, a copy of RN to BSN bridge' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/This page will go under “Nursing”/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          version: null,
+          parent: 'academics/nursing',
+          copyOf: { id: 'academics/nursing/rn-to-bsn' },
+        }),
+      );
+    });
   });
 
   it('adds a child page and creates a missing section page from the menu', async () => {
