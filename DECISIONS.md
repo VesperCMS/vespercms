@@ -424,7 +424,7 @@ Rejected: binding Shift-Mod-ArrowLeft and -Right to commands that select to the 
 - **A muted detail** follows the name.
 - **A "…" menu** holds Move up, Move down, Duplicate and Remove. Alt+↑/↓ on the row also moves the item.
 
-**Rows open in place, as the kit's `Disclosure` (call F1). They're closed when an entry opens, except a new item and any item holding a field that a refused save or Go to field leads to. Closed items stay mounted, `hidden="until-found"`, so the browser's find still reaches them. No drag handles yet (F3).**
+**Rows open in place, as the kit's `Disclosure` (call F1). They're closed when an entry opens, except a new item and any item holding a field that a refused save or Go to field leads to. Closed items stay mounted, `hidden="until-found"`, so the browser's find still reaches them. No drag handles yet (F3).** (Amended 2026-10-26: rows drag by a handle too; "List rows drag by a handle", below.)
 
 Why: on vespercms.com's home page the form was 9,628px tall, with 66 move and remove buttons. 22 of its 30 groups were named "Item N (required)", and a group's legend looked exactly like a field's label. Spec §10.2 asks for typography and space, not boxes.
 
@@ -471,6 +471,23 @@ Why: Markdoc can't describe what's inside an `Array`. MDX components' `props` (s
 Rejected: guessing the shape from the values in the file. A new tag has nothing to guess from, and one odd item changes the form.
 
 Built 2026-10-25. The settings form had only ever set whole attributes, so a field inside a list attribute replaced the list with its own value; it now applies a nested change to the attribute's value.
+
+### 2026-10-26: List rows drag by a handle
+
+**Each row of a list of objects or images has a drag handle before its name, as the outline's pages do. Jeremy asked for it on 2026-10-26. A drop is the same move as the "…" menu's and Alt+↑/↓: the same announcement ("Moved Our mission to position 2 of 2."), focus on the moved row, and a save that moves the item's text as it is ("A moved list item moves its text as it is"). Jeremy took the recommendation on each call, 2026-10-26:**
+- **The handle is the pointer's alone (call D1).** It isn't a Tab stop, and screen readers don't see it (`aria-hidden`). Keyboards and screen readers move items with Alt+↑/↓ and the menu, which say where an item lands, and the menu is the single-pointer way that WCAG 2.2's 2.5.7 asks for. Rejected: a button with React Aria's keyboard drag (Enter, Tab to a row, Enter), as the outline's handle has. Rows aren't a grid, so it would add a third Tab stop to every row.
+- **Lists of objects and lists of images (call D2).** Rejected: objects only; and every list, which would give handles to lists of plain items, which are inline fields, not rows.
+- **Open or closed (call D3).** Only the row's header follows the pointer, and an open row stays open where it lands. Rejected: closed rows only.
+
+How it works:
+- React Aria's `useDrag` and `useDrop`, from `react-aria-components`, so no new dependency. Not the outline's `useDragAndDrop`: that needs a collection (a GridList or Tree), and a row holds a whole form, whose fields a grid's arrow keys and focus handling would fight.
+- Only the list a row is dragged from takes the drop. Every list's drop target is off until one of its own rows is dragged, so a list inside an open row lets the drag through to the list it came from, and a row never lands in another list, whose items have another shape.
+- A row lands before the first row whose middle is below the pointer, shown by a 2px `accent` line in the gap between them: a mark, not a border, so §10.4's hairlines don't apply. Either side of the dragged row is where it already is, so there's no line there and a drop does nothing. The line sits beside the `<ol>`, never in it, since a list holds only its items (axe's `list` rule).
+- A drag carries only its own type, `application/x-vesper-list-item`, so a Markdown field it crosses can't take it as text.
+- The page outline now drags pages as `application/x-vesper-page` and accepts only that type. Among panes it sits beside the entry: a page dropped on a Markdown field typed its key there ("campus-life"), and the outline marked a page as the target for a list's row.
+- A Markdoc tag's settings dialog draws list attributes with the same rows, so they drag too, and the attribute's items move as written ("A list attribute written one item per line changes item by item").
+
+Built 2026-10-26. jsdom has no drag and drop and no layout, so the widget tests stand in a DataTransfer and lay rows out 40px tall, 8px apart (`packages/admin/src/test/drag.ts`); the studio e2e test drags in Chromium and compares the file byte for byte. That test found a bug from the rows' first build: React Aria stops every key at a button unless its handler lets the key go on, so with focus on a row (where a drop or Alt+↑/↓ leaves it) Ctrl+S never reached the editor's shortcut on the window, and Escape never reached a tag's settings dialog. Keys the row doesn't use now go on.
 
 ## Schema introspection
 
