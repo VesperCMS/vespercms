@@ -323,6 +323,54 @@ test('by keyboard: list items are rows that move with Alt+arrows and open in pla
   );
 });
 
+test('by pointer: a row drags by its handle, open or closed; a drop moves only that item’s lines', async ({
+  page,
+}) => {
+  const path = 'src/content/pages/about.md';
+  touches(path);
+  const before = read(path);
+  await page.goto('/admin/#/c/pages/e/about');
+  const mission = page.getByRole('button', { name: /^Our mission/ });
+  const accreditation = page.getByRole('button', { name: /^Accreditation/ });
+  await expect(mission).toBeVisible();
+  // The handle is the pointer's alone, hidden from screen readers, so it's found by what it is.
+  const handleOf = (row: typeof mission) =>
+    page.getByRole('listitem').filter({ has: row }).locator('[draggable="true"]');
+  await expectAccessible(page);
+
+  // Let go below the middle of Accreditation, and Our mission lands under it.
+  await handleOf(mission).dragTo(accreditation, { targetPosition: { x: 40, y: 40 } });
+  await expect(page.getByText('Moved Our mission to position 2 of 2.')).toBeAttached();
+  await expect(page.getByRole('main').getByRole('heading', { level: 3 })).toHaveText([
+    /^Accreditation/,
+    /^Our mission/,
+  ]);
+  await page.keyboard.press(keys.save);
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  const missionLines = before.slice(
+    before.indexOf('  - heading: Our mission'),
+    before.indexOf('  - heading: Accreditation'),
+  );
+  const accreditationLines = before.slice(
+    before.indexOf('  - heading: Accreditation'),
+    before.indexOf('---', 4),
+  );
+  expect(read(path)).toBe(
+    before.replace(missionLines + accreditationLines, accreditationLines + missionLines),
+  );
+
+  // Open, it drags the same way and stays open; dropped above Accreditation, the file is as it was.
+  await mission.click();
+  await expect(mission).toHaveAttribute('aria-expanded', 'true');
+  await handleOf(mission).dragTo(accreditation, { targetPosition: { x: 40, y: 4 } });
+  await expect(page.getByText('Moved Our mission to position 1 of 2.')).toBeAttached();
+  await expect(mission).toHaveAttribute('aria-expanded', 'true');
+  await expectAccessible(page);
+  await page.keyboard.press(keys.save);
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  expect(read(path)).toBe(before);
+});
+
 test('the writing view rewrites only the paragraph that was edited', async ({ page }) => {
   const path = 'src/content/blog/harbor-at-dawn.md';
   touches(path);
