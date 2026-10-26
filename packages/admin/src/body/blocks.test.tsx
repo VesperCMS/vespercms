@@ -4,7 +4,8 @@ import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import type { EntryDocument, FieldModel, SaveRequest } from '@vesper/core';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { dragFrom, layOutLists, rowTop } from '../test/drag.ts';
 import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 
 /*
@@ -15,6 +16,7 @@ import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '.
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   window.location.hash = '';
 });
 
@@ -159,7 +161,8 @@ describe('Markdoc tags in the writing view', () => {
     expect(savedBody(api)).toBe(`${BODY.replace('type="tip"', 'type="warning"')}\n`);
   });
 
-  it('edits a list attribute shaped by a schema hint as rows, and saves only the changed item’s line', async () => {
+  /** A FAQ tag whose `items` attribute is a list of objects, from a schema hint, in the body. */
+  function withFaq() {
     const manifest = structuredClone(playgroundManifest);
     const items: FieldModel = {
       path: ['items'],
@@ -204,6 +207,11 @@ describe('Markdoc tags in the writing view', () => {
       partials: PARTIALS,
     });
     renderStudio('#/c/docs/e/getting-started', { api, manifest });
+    return { api, faq };
+  }
+
+  it('edits a list attribute shaped by a schema hint as rows, and saves only the changed item’s line', async () => {
+    const { api, faq } = withFaq();
     const user = userEvent.setup();
     const editor = await editorOf();
     // A self-closing tag is a card.
@@ -232,6 +240,41 @@ describe('Markdoc tags in the writing view', () => {
         '  { question: "Parking?", answer: "Behind the library." }',
         '  {question: "Parking?", answer: "In the garage."}',
       )}\n`,
+    );
+  });
+
+  it('drags a list attribute’s row in the tag’s settings, and saves the items moved as written', async () => {
+    layOutLists();
+    const { api } = withFaq();
+    const user = userEvent.setup();
+    const editor = await editorOf();
+    selectNode(
+      editor,
+      findNode(editor, 'vesperCard', (a) => a.name === 'faq'),
+    );
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog', { name: 'FAQ settings' });
+    const list = within(dialog).getByRole('list');
+    const [open, parking] = list.querySelectorAll(':scope > li');
+    const handle = parking?.querySelector('[draggable="true"]');
+    if (!open || !handle) throw new Error('no rows');
+    // Above the middle of the first row.
+    const drag = await dragFrom(handle, open, rowTop(0) + 5);
+    drag.drop();
+    expect(within(dialog).getByText('Moved Parking? to position 1 of 2.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+    // Each item keeps its own text; only the comma between them stays where it was.
+    expect(savedBody(api)).toBe(
+      `${[
+        '{% faq items=[',
+        '  { question: "Parking?", answer: "Behind the library." },',
+        '  { question: "Open late?", answer: "Until ten." }',
+        '] /%}',
+      ].join('\n')}\n`,
     );
   });
 
