@@ -294,6 +294,70 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
   );
 });
 
+test('Duplicate opens a copy; its save is the original’s text with only the title changed', async ({
+  page,
+  context,
+}) => {
+  const original = 'src/content/blog/welcome.md';
+  const copy = 'src/content/blog/welcome-to-the-playground-copy.md';
+  touches(original, copy);
+  const before = read(original);
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/admin/#/c/blog/e/welcome');
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(
+    'Welcome to the playground',
+  );
+  const more = page.getByRole('button', { name: 'More actions for Welcome to the playground' });
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Copy editing link' }).click();
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText('Link copied');
+  await expect(more).toBeFocused();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(
+    /\/admin\/#\/c\/blog\/e\/welcome$/,
+  );
+
+  // Where the clipboard refuses, the link is shown to copy by hand. Closing
+  // that, or a confirmation, gives focus back to the menu's button.
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = () => Promise.reject(new Error('Not allowed'));
+  });
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Copy editing link' }).click();
+  const byHand = page.getByRole('dialog', { name: 'Copy the editing link' });
+  await expect(byHand.getByRole('textbox', { name: 'Editing link' })).toBeFocused();
+  await expectAccessible(page);
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Delete…' }).click();
+  await expect(page.getByRole('alertdialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+
+  await more.click();
+  await expectAccessible(page);
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+  await expect(page).toHaveURL(/#\/c\/blog\/e\/welcome\/copy$/);
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(
+    'Welcome to the playground (copy)',
+  );
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'New entry, a copy of Welcome to the playground' }),
+  ).toBeFocused();
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText('Not saved yet');
+  await expectAccessible(page);
+  await page.keyboard.press(keys.save);
+  await expect(page).toHaveURL(/#\/c\/blog\/e\/welcome-to-the-playground-copy$/);
+
+  expect(read(copy)).toBe(
+    before.replace(
+      'title: "Welcome to the playground"',
+      'title: "Welcome to the playground (copy)"',
+    ),
+  );
+  expect(read(original)).toBe(before);
+});
+
 test('by keyboard: list items are rows that move with Alt+arrows and open in place; a move moves their lines', async ({
   page,
 }) => {

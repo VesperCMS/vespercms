@@ -118,6 +118,40 @@ test('publishes an edit and a new image as one commit, changing nothing else', a
   expect(post).toContain('src: ../../assets/blog/portrait-exif-6.jpg\n');
 });
 
+test('a duplicate publishes as one commit that adds the copy, from the original’s text', async ({
+  page,
+}) => {
+  const original = 'src/content/blog/welcome.md';
+  const before = new TextDecoder().decode(github.files()[original]);
+  const commits = github.log().length;
+  await signIn(page, '#/c/blog/e/welcome');
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(
+    'Welcome to the playground',
+  );
+  await page.getByRole('button', { name: 'More actions for Welcome to the playground' }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(
+    'Welcome to the playground (copy)',
+  );
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
+  await expect(page).toHaveURL(/#\/c\/blog\/e\/welcome-to-the-playground-copy$/);
+
+  const log = github.log();
+  expect(log).toHaveLength(commits + 1);
+  expect(log[0]?.message).toBe(
+    'Add "Welcome to the playground (copy)" to Blog posts\n\nVesper-Collection: blog',
+  );
+  expect(log[0]?.changed).toEqual(['A\tsrc/content/blog/welcome-to-the-playground-copy.md']);
+  expect(
+    new TextDecoder().decode(github.files()['src/content/blog/welcome-to-the-playground-copy.md']),
+  ).toBe(
+    before.replace(
+      'title: "Welcome to the playground"',
+      'title: "Welcome to the playground (copy)"',
+    ),
+  );
+});
+
 test('reports a change published elsewhere as a conflict, and offers to reload', async ({
   page,
 }) => {

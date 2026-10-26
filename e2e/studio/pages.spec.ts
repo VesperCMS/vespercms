@@ -186,6 +186,7 @@ test('by keyboard: move Nursing and its pages to the top level, in one go', asyn
   const menu = page.getByRole('menu');
   await expect(menu).toBeVisible();
   await page.keyboard.press('ArrowDown'); // Add child page
+  await page.keyboard.press('ArrowDown'); // Duplicate
   await page.keyboard.press('ArrowDown'); // Move to…
   await expect(menu.getByRole('menuitem', { name: 'Move to…' })).toBeFocused();
   await page.keyboard.press('Enter');
