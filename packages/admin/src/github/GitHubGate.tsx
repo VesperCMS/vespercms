@@ -30,7 +30,15 @@ type State =
   | { kind: 'signed-out'; message?: string }
   | { kind: 'no-access'; login: string }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; session: Session; login: string; name: string; picture: string };
+  | {
+      kind: 'ready';
+      session: Session;
+      login: string;
+      name: string;
+      picture: string;
+      /** The repository is public: a scheduled change can be read there early (spec §6.17). */
+      publicRepository: boolean;
+    };
 
 export function GitHubGate({
   settings,
@@ -81,9 +89,10 @@ export function GitHubGate({
           ? ((await user.json()) as { login?: string; name?: string | null; avatar_url?: string })
           : {};
         const login = profile.login ?? '';
-        const permissions = repo.ok
-          ? ((await repo.json()) as { permissions?: { push?: boolean } }).permissions
-          : undefined;
+        const details = repo.ok
+          ? ((await repo.json()) as { permissions?: { push?: boolean }; private?: boolean })
+          : {};
+        const permissions = details.permissions;
         if (!permissions?.push) {
           set({ kind: 'no-access', login });
           return;
@@ -94,6 +103,7 @@ export function GitHubGate({
           login,
           name: profile.name?.trim() || `@${login}`,
           picture: avatarAt(profile.avatar_url ?? '', 64),
+          publicRepository: details.private === false,
         });
       } catch {
         set({
@@ -150,6 +160,7 @@ export function GitHubGate({
             signOut: leave,
             signInAgain: signIn,
             expired,
+            ...(state.publicRepository ? { publicRepository: true } : {}),
           }
         : null,
     [state, leave, signIn, expired],

@@ -26,6 +26,7 @@ import {
   Button,
   Dialog,
   ErrorSummary,
+  IconButton,
   InlineStatus,
   Link,
   Menu,
@@ -71,6 +72,10 @@ import {
 import type { BodyChecks } from '../body/checks.ts';
 import type { BodyApi } from '../body/BodyEditor.tsx';
 import { isMac } from '../body/shortcuts.ts';
+import { useNow } from '../schedule/now.ts';
+import { ScheduleDialog } from '../schedule/ScheduleDialog.tsx';
+import { ScheduleSummary } from '../schedule/ScheduleSummary.tsx';
+import { scheduleKeys, scheduleWords, siteZone, timesOf, withTimes } from '../schedule/times.ts';
 import { useEntryNotes } from '../a11y/useNotes.ts';
 import {
   ConflictCompare,
@@ -462,7 +467,17 @@ function EntryForm({
    * can't be reached.
    */
   const save = useCallback(
-    async ({ pastGate = false, auto = false }: { pastGate?: boolean; auto?: boolean } = {}) => {
+    async ({
+      pastGate = false,
+      auto = false,
+      override,
+    }: {
+      pastGate?: boolean;
+      auto?: boolean;
+      /** Values to save in place of the form's, set in the same step (a schedule's times). */
+      override?: DataObject;
+    } = {}) => {
+      const current = override ?? values;
       if (!editable || saving) return false;
       setSaving(true);
       if (!auto) setNotice(null);
@@ -500,7 +515,7 @@ function EntryForm({
         version,
         ...(sourceOnly
           ? { rawFrontmatter: `\n${raw.endsWith('\n') ? raw : `${raw}\n`}` }
-          : { data: encodeValue(values) }),
+          : { data: encodeValue(current) }),
         ...(isContent && (bodyChanged || isNew)
           ? { body: bodyPrefix + (bodyEol === '\r\n' ? body.replace(/\n/g, '\r\n') : body) }
           : {}),
@@ -511,7 +526,7 @@ function EntryForm({
         const result = await api.saveEntry(request);
         setOffline(false);
         if (result.ok) {
-          const snapshot = { values, body, raw };
+          const snapshot = { values: current, body, raw };
           setSaved(snapshot);
           dirtyRef.current = false;
           setVersion(result.version);
@@ -554,7 +569,7 @@ function EntryForm({
           if (!auto) setNotice({ kind: 'error', text: error.message });
         } else if (error instanceof ApiError && error.status === 401 && account) {
           // Kept for after the sign-in redirect, which would otherwise lose them.
-          keep(collection.name, entryId ?? keptId, { values, body, raw });
+          keep(collection.name, entryId ?? keptId, { values: current, body, raw });
           setNotice({ kind: 'expired', text: error.message });
         } else {
           setNotice({
@@ -670,7 +685,7 @@ function EntryForm({
   }, [keptAt]);
 
   /** Publishes the entry's draft, saving it first (spec §7.4). The publish gate applies here. */
-  const publishDraft = async () => {
+  const publishDraft = async (override?: DataObject) => {
     if (!cloud || publishing) return;
     setCloudNotice(null);
     if (blockOn.size > 0 && (await recheck()).some((note) => blockOn.has(note.rule))) {
@@ -678,7 +693,8 @@ function EntryForm({
       setRefusals((n) => n + 1);
       return;
     }
-    if ((dirtyRef.current || isNew) && !(await save())) return;
+    if ((dirtyRef.current || isNew || override) && !(await save(override ? { override } : {})))
+      return;
     setPublishing(true);
     try {
       await cloud.drafts.refresh();
@@ -844,8 +860,87 @@ function EntryForm({
     ? { href: hrefFor({ screen: 'home' }), label: 'Content' }
     : { href: hrefFor({ screen: 'list', collection: collection.name }), label: collection.label };
 
+  // Scheduling (spec §6.17): the schedule's words in the bar, Publish ▾ and the schedule in Details.
+  const schedule = collection.presentation.schedule;
+  const now = useNow();
+  const { zone } = siteZone(manifest);
+  const savedTimes = schedule ? timesOf(collection, saved.values) : {};
+  const later = (date: Date | undefined) => date !== undefined && date.getTime() > now.getTime();
+  /** Live already, so Schedule… sets only when it comes down (call 8). */
+  const live = !isNew && !later(savedTimes.publishAt);
+  const scheduleText = schedule && !isNew ? scheduleWords(schedule, saved.values, zone, now) : null;
+  const nowLabel = publishes ? 'Publish now' : 'Make it live now';
+  /** Sets the values and saves them, or publishes them where saves are drafts. */
+  const saveWith = async (next: DataObject) => {
+    setValues(next);
+    if (cloud) await publishDraft(next);
+    else await save({ override: next });
+  };
+  const withoutPublishTime = () => {
+    const { publishAt: _gone, ...rest } = timesOf(collection, values);
+    return withTimes(collection, values, rest);
+  };
+  // Publish ▾'s menu, for whoever presses the primary button to publish (or save).
+  const scheduleItems: MenuItem[] =
+    schedule && editable && (!cloud || access?.publish)
+      ? [
+          ...(!live || schedule.unpublish
+            ? [{ id: 'schedule', label: 'Schedule…', icon: 'schedule' as const }]
+            : []),
+          ...(later(savedTimes.publishAt)
+            ? [{ id: 'now', label: nowLabel, icon: 'publish-now' as const }]
+            : []),
+          // A publish time stays until it's rescheduled: there's no draft to go back to (call 9).
+          ...(live && later(savedTimes.unpublishAt)
+            ? [{ id: 'cancel', label: 'Cancel schedule', icon: 'unschedule' as const }]
+            : []),
+        ]
+      : [];
+  const [scheduling, setScheduling] = useState<'publish' | 'set' | null>(null);
+  const scheduleMenu =
+    scheduleItems.length > 0 ? (
+      <Menu
+        label="More ways to publish"
+        trigger={<IconButton icon="chevron" label="More ways to publish" />}
+        items={scheduleItems}
+        onAction={(action) => {
+          if (action === 'schedule') setScheduling('publish');
+          if (action === 'now') void saveWith(withoutPublishTime());
+          if (action === 'cancel') {
+            const { publishAt } = timesOf(collection, values);
+            void saveWith(withTimes(collection, values, publishAt ? { publishAt } : {}));
+          }
+        }}
+      />
+    ) : null;
+  /** The schedule's fields give way to its summary, where the first of them would be. */
+  const scheduledKeys = new Set(scheduleKeys(collection));
+  const fieldsOf = (fields: FieldModel[]) => {
+    let summarized = false;
+    return fields.flatMap((field) => {
+      if (!scheduledKeys.has(keyOf(field))) {
+        return [<Field key={keyOf(field)} field={field} path={[keyOf(field)]} />];
+      }
+      if (summarized) return [];
+      summarized = true;
+      return [
+        <ScheduleSummary
+          key="schedule"
+          collection={collection}
+          values={values}
+          zone={zone}
+          onChange={() => {
+            setScheduling('set');
+          }}
+        />,
+      ];
+    });
+  };
+
   const statusLine =
-    linkCopied > 0 ? 'Link copied' : [draft ? 'Draft' : '', statusText].filter(Boolean).join(' · ');
+    linkCopied > 0
+      ? 'Link copied'
+      : [draft ? 'Draft' : '', scheduleText ?? '', statusText].filter(Boolean).join(' · ');
   // Content, the collection's own tabs, then Details; no tab list when Content is all there is.
   const panels = sourceOnly
     ? []
@@ -902,6 +997,7 @@ function EntryForm({
               {publishes ? 'Publish' : 'Save'}
             </Button>
           )}
+          {editable && !cloud && scheduleMenu}
           {/* The cloud: a new entry's first save is by hand; after that drafts save themselves. */}
           {editable && cloud && isNew && (
             <Button onPress={() => void save()} isPending={saving}>
@@ -919,6 +1015,7 @@ function EntryForm({
               {access?.publish ? 'Publish' : 'Request review'}
             </Button>
           )}
+          {editable && cloud && (dirty || isNew || entryDraft) && !review && scheduleMenu}
           {menuItems.length > 0 && (
             <Menu
               label={`More actions for ${titleText}`}
@@ -1108,9 +1205,7 @@ function EntryForm({
                   label: tabLabel(panel),
                   children: (
                     <>
-                      {panel.fields.map((field) => (
-                        <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
-                      ))}
+                      {fieldsOf(panel.fields)}
                       {panel.id === 'main' && bodyEditor}
                     </>
                   ),
@@ -1119,10 +1214,7 @@ function EntryForm({
             </TabsRevealing>
           ) : (
             <>
-              {!sourceOnly &&
-                arranged.main.map((field) => (
-                  <Field key={keyOf(field)} field={field} path={[keyOf(field)]} />
-                ))}
+              {!sourceOnly && fieldsOf(arranged.main)}
               {bodyEditor}
             </>
           )}
@@ -1140,6 +1232,25 @@ function EntryForm({
         }}
       />
 
+      {schedule && scheduling && (
+        <ScheduleDialog
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) setScheduling(null);
+          }}
+          collection={collection}
+          initial={timesOf(collection, values)}
+          live={live}
+          purpose={scheduling}
+          nowLabel={nowLabel}
+          onSubmit={(times) => {
+            const next = withTimes(collection, values, times);
+            if (scheduling === 'publish') void saveWith(next);
+            else setValues(next);
+          }}
+          onNow={() => void saveWith(withoutPublishTime())}
+        />
+      )}
       <Dialog
         title={`Copy the ${copyByHand?.label.toLowerCase() ?? 'link'}`}
         isOpen={copyByHand !== null}

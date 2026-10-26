@@ -1,5 +1,5 @@
 import { decodeValue, humanize, type CollectionManifest, type EntrySummary } from '@vesper/core';
-import { ButtonLink, Select, Table, TextField, type TableColumn } from '@vesper/ui';
+import { ButtonLink, Link, Select, Table, TextField, type TableColumn } from '@vesper/ui';
 import { useEffect, useMemo, useState } from 'react';
 import type { SortDescriptor } from 'react-aria-components';
 import { useStudio } from '../app/context.tsx';
@@ -9,8 +9,9 @@ import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
 import { Screen } from '../app/Screen.tsx';
+import { hasUpcoming, rowData, scheduleWords, siteZone } from '../schedule/times.ts';
 
-type Filter = 'all' | 'drafts' | 'attention';
+type Filter = 'all' | 'drafts' | 'attention' | 'scheduled';
 
 /**
  * A collection's entries (spec §10.3): one row per entry with its title,
@@ -18,7 +19,8 @@ type Filter = 'all' | 'drafts' | 'attention';
  * words. One search box and one status filter; sort by column header.
  */
 export function EntryList({ collection }: { collection: CollectionManifest }) {
-  const { api, cloud } = useStudio();
+  const { api, cloud, manifest } = useStudio();
+  const { zone } = siteZone(manifest);
   const [load] = useLoad(() => api.listEntries(collection.name), collection.name);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -54,6 +56,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
 
   const needsAttention = entries.some((e) => e.status !== 'editable');
   const hasDrafts = entries.some((e) => e.draft);
+  const hasScheduled = entries.some((e) => hasUpcoming(e.schedule));
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const shown = entries.filter(
@@ -63,10 +66,17 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
           entry.id.toLowerCase().includes(needle)) &&
         (filter === 'all' ||
           (filter === 'drafts' && entry.draft === true) ||
-          (filter === 'attention' && entry.status !== 'editable')),
+          (filter === 'attention' && entry.status !== 'editable') ||
+          (filter === 'scheduled' && hasUpcoming(entry.schedule))),
     );
     return [...shown].sort(compareBy(sort));
   }, [entries, query, filter, sort]);
+  const words = (entry: EntrySummary) =>
+    scheduleWords(
+      collection.presentation.schedule,
+      rowData(collection.presentation.schedule, entry.schedule),
+      zone,
+    );
 
   return (
     <Screen
@@ -93,7 +103,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
           onChange={setQuery}
           className="w-full max-w-xs"
         />
-        {(hasDrafts || needsAttention) && (
+        {(hasDrafts || needsAttention || hasScheduled) && (
           <Select
             label="Show"
             value={filter}
@@ -104,9 +114,15 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
               { value: 'all', label: 'All entries' },
               ...(hasDrafts ? [{ value: 'drafts', label: 'Drafts' }] : []),
               ...(needsAttention ? [{ value: 'attention', label: 'Needs a developer' }] : []),
+              ...(hasScheduled ? [{ value: 'scheduled', label: 'Scheduled' }] : []),
             ]}
             className="w-48"
           />
+        )}
+        {filter === 'scheduled' && (
+          <Link href={hrefFor({ screen: 'scheduled' })} className="mb-2">
+            Everything scheduled on the site
+          </Link>
         )}
         {collection.editable && !singleton && mayCreateIn(cloud, collection) && (
           // The screen's one primary action.
@@ -133,7 +149,9 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
             hrefFor({ screen: 'edit', collection: collection.name, id: entry.id })
           }
           emptyState={entries.length === 0 ? 'No entries yet.' : 'No entries match.'}
-          renderCell={(entry, column) => <Cell entry={entry} column={column} />}
+          renderCell={(entry, column) => (
+            <Cell entry={entry} column={column} schedule={words(entry)} />
+          )}
         />
       )}
       <p className="sr-only" role="status">
@@ -147,7 +165,15 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
 
 export const TITLE_KEYS = new Set(['title', 'name', 'heading', 'label']);
 
-function Cell({ entry, column }: { entry: EntrySummary; column: string }) {
+function Cell({
+  entry,
+  column,
+  schedule,
+}: {
+  entry: EntrySummary;
+  column: string;
+  schedule: string | null;
+}) {
   if (column === 'title') {
     return (
       <span className="font-semibold text-content">
@@ -167,14 +193,26 @@ function Cell({ entry, column }: { entry: EntrySummary; column: string }) {
       </span>
     );
   }
-  if (column === 'status') return <span className="text-content-muted">{statusText(entry)}</span>;
+  if (column === 'status') {
+    return <span className="text-content-muted">{statusText(entry, schedule)}</span>;
+  }
   return <span>{formatListValue(entry.fields[column.slice('field:'.length)])}</span>;
 }
 
-export function statusText(entry: Pick<EntrySummary, 'status' | 'draft'>): string {
-  if (entry.status === 'read-only') return 'Read only';
-  if (entry.status === 'source-only') return 'Edit as YAML';
-  return entry.draft ? 'Draft' : '';
+/** An entry's status in words: what it is, then its schedule ("Draft · Scheduled · Sat, Oct 31, 8:00 AM"). */
+export function statusText(
+  entry: Pick<EntrySummary, 'status' | 'draft'>,
+  schedule: string | null = null,
+): string {
+  const kind =
+    entry.status === 'read-only'
+      ? 'Read only'
+      : entry.status === 'source-only'
+        ? 'Edit as YAML'
+        : entry.draft
+          ? 'Draft'
+          : '';
+  return [kind, schedule ?? ''].filter(Boolean).join(' · ');
 }
 
 /** A list field's value as short text. Dates at midnight UTC are calendar dates. */

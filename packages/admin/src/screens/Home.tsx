@@ -8,6 +8,7 @@ import { collectionIcon } from '../app/collection-icon.ts';
 import { Screen } from '../app/Screen.tsx';
 import { shownTo } from '../cloud/access.ts';
 import { DraftsWaiting } from '../cloud/changes.tsx';
+import { ScheduledLine } from '../schedule/ScheduledView.tsx';
 
 /**
  * The home screen (spec §10.3): a plain list of collections and singletons,
@@ -33,6 +34,7 @@ export function Home() {
           <DraftsWaiting />
         </div>
       )}
+      <ScheduledLine className="mb-8 max-w-2xl" />
       {summary.state === 'failed' && (
         <p className="mb-6 text-danger" role="alert">
           Couldn’t load entry counts: {summary.message}

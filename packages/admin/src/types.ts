@@ -69,6 +69,11 @@ export type Account = {
   signOutLabel: string;
   /** The cloud's dashboard, for "Open dashboard". */
   dashboardUrl?: string;
+  /**
+   * GitHub mode: the repository is public, so a change scheduled there can
+   * be read before it goes live (spec §6.17). The Schedule dialog says so.
+   */
+  publicRepository?: boolean;
   signOut: () => void;
   /** Signs in again after the session expired, coming back to the same screen. */
   signInAgain: () => void;

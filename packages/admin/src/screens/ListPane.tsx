@@ -1,5 +1,5 @@
 import type { CollectionManifest, EntrySummary } from '@vesper/core';
-import { ButtonLink, Menu, TextField, Tree, type TreeNode } from '@vesper/ui';
+import { ButtonLink, Link, Menu, TextField, Tree, type TreeNode } from '@vesper/ui';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { SortDescriptor } from 'react-aria-components';
 import type { StudioApi } from '../app/api.ts';
@@ -10,6 +10,7 @@ import { hrefFor, navigate } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
 import { PaneFrame, useLeadHeading } from '../app/Screen.tsx';
 import { entryShownTo, mayCreateIn } from '../cloud/access.ts';
+import { hasUpcoming, rowData, scheduleWords, siteZone } from '../schedule/times.ts';
 import {
   compareBy,
   defaultSort,
@@ -28,7 +29,7 @@ import {
  * visit, so the list is as it was when it's drawn again.
  */
 
-type Filter = 'all' | 'drafts' | 'attention';
+type Filter = 'all' | 'drafts' | 'attention' | 'scheduled';
 type Memory = { query: string; filter: Filter; sort: string | null; scrollTop: number };
 
 // Kept per studio, so a fresh sign-in starts afresh.
@@ -99,7 +100,8 @@ export function ListPane({
   /** The entry open beside the list, or null. */
   currentId: string | null;
 }) {
-  const { api, cloud } = useStudio();
+  const { api, cloud, manifest } = useStudio();
+  const { zone } = siteZone(manifest);
   const memory = memoryOf(api, collection.name);
   const heading = useRef<HTMLHeadingElement>(null);
   useLeadHeading(collection.label, heading);
@@ -143,6 +145,7 @@ export function ListPane({
   );
   const hasDrafts = visible.some((entry) => entry.draft);
   const needsAttention = visible.some((entry) => entry.status !== 'editable');
+  const hasScheduled = visible.some((entry) => hasUpcoming(entry.schedule));
 
   // Fresh rows when the open entry changes: the tree reuses a row whose item is the same object.
   const rows = useMemo<Row[]>(() => {
@@ -158,7 +161,8 @@ export function ListPane({
             entry.id.toLowerCase().includes(needle)) &&
           (filter === 'all' ||
             (filter === 'drafts' && entry.draft === true) ||
-            (filter === 'attention' && entry.status !== 'editable')),
+            (filter === 'attention' && entry.status !== 'editable') ||
+            (filter === 'scheduled' && hasUpcoming(entry.schedule))),
       )
       .sort(compareBy(descriptorOf(collection, sort)))
       .map((entry) => ({
@@ -167,7 +171,14 @@ export function ListPane({
         entryId: entry.id,
         meta: [
           ...listKeys.map((key) => formatListValue(entry.fields[key])),
-          statusText(entry),
+          statusText(
+            entry,
+            scheduleWords(
+              collection.presentation.schedule,
+              rowData(collection.presentation.schedule, entry.schedule),
+              zone,
+            ),
+          ),
           entry.updatedAt ? `edited ${formatRelative(entry.updatedAt)}` : '',
         ]
           .filter(Boolean)
@@ -175,7 +186,7 @@ export function ListPane({
         current: entry.id === currentId,
         children: [],
       }));
-  }, [visible, query, filter, sort, collection, currentId]);
+  }, [visible, query, filter, sort, collection, currentId, zone]);
 
   // Back where it was scrolled, before the pane is painted.
   useLayoutEffect(() => {
@@ -190,6 +201,7 @@ export function ListPane({
     { id: 'all', label: 'All entries' },
     ...(hasDrafts ? [{ id: 'drafts', label: 'Drafts' }] : []),
     ...(needsAttention ? [{ id: 'attention', label: 'Needs a developer' }] : []),
+    ...(hasScheduled ? [{ id: 'scheduled', label: 'Scheduled' }] : []),
   ];
   const newEntry =
     collection.editable && mayCreateIn(cloud, collection)
@@ -246,6 +258,11 @@ export function ListPane({
               />
             )}
           </div>
+          {filter === 'scheduled' && (
+            <Link href={hrefFor({ screen: 'scheduled' })} className="text-small">
+              Everything scheduled on the site
+            </Link>
+          )}
         </div>
       }
     >

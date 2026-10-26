@@ -4,6 +4,8 @@ import type { Server } from 'node:http';
 export type GitHubFakeState = {
   token: string;
   push: boolean;
+  /** Whether the repository is private; tests flip it to see a public one. */
+  private: boolean;
   protected: boolean;
   rateLimited: boolean;
   truncate: boolean;
@@ -39,6 +41,8 @@ export function createGitHubFake(options: {
   token?: string;
   login?: string;
   push?: boolean;
+  /** `false` for a public repository; repositories are private by default. */
+  private?: boolean;
 }): GitHubFake;
 
 export function serveGitHubFake(fake: GitHubFake, port: number, host?: string): Promise<Server>;
