@@ -5,6 +5,12 @@ import vesper from '@vesper/astro';
 import { defineConfig } from 'astro/config';
 import { sourceConditions } from '../../scripts/vite-source-conditions.mjs';
 
+// The events are test fixtures with fixed dates, so every build of the
+// playground is as of one instant (spec §6.17): which events are live, which
+// redirect, and schedule.json's next change stay the same whenever it's
+// built. Set VESPER_BUILD_TIME yourself to build it as of another time.
+process.env.VESPER_BUILD_TIME ??= '2026-10-26T12:00:00-04:00';
+
 // Site search (spec §6.19): blog posts filter by tag (addendum §7); posts and
 // events sort by date once their section is chosen.
 const search = {

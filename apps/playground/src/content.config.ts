@@ -178,8 +178,9 @@ const locations = defineCollection({
 });
 
 const events = defineCollection({
-  // Scheduling is on for this collection (vesper.config.ts from Phase 1). The
-  // build-time filtering by publishAt/unpublishAt arrives in Phase 4.5 (D18).
+  // Scheduling is on for this collection (vesper.config.ts): builds leave out
+  // events outside publishAt and unpublishAt, and redirect an unpublished one
+  // to its unpublishRedirect (D18).
   loader: glob({ pattern: '**/[^_]*.md', base: './src/content/events' }),
   schema: z.object({
     title: z.string(),

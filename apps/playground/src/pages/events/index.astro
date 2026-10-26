@@ -2,9 +2,8 @@
 import { getCollection, getEntry } from 'vesper:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
-// Phase 0 lists every event. From Phase 4.5, vesper:content leaves out
-// entries whose publishAt is in the future or whose unpublishAt has passed,
-// judged at build time (D18).
+// vesper:content leaves out events whose publishAt is still to come or whose
+// unpublishAt has passed, at the build's instant (D18); in dev they're all here.
 const events = (await getCollection('events')).sort(
   (a, b) => a.data.startsAt.getTime() - b.data.startsAt.getTime(),
 );
