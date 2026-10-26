@@ -309,6 +309,41 @@ describe('Dialog, Menu and Disclosure', () => {
     expect(onAction).toHaveBeenCalledWith('delete');
   });
 
+  it('Menu opens from a caller’s button, describes items and opens submenus by keyboard', async () => {
+    const onAction = vi.fn();
+    render(
+      <Menu
+        label="Add section"
+        trigger={<Button icon="add">Add section</Button>}
+        items={[
+          { id: 'faq', label: 'FAQ', description: 'Questions and answers.' },
+          {
+            id: 'more',
+            label: 'Add below',
+            items: [
+              { id: 'below:faq', label: 'FAQ' },
+              { id: 'below:stats', label: 'Stat band', description: 'Big numbers.' },
+            ],
+          },
+        ]}
+        onAction={onAction}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Add section' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    const faq = await screen.findByRole('menuitem', { name: 'FAQ' });
+    await waitFor(() => expect(faq).toHaveFocus());
+    expect(faq).toHaveAccessibleDescription('Questions and answers.');
+    await user.keyboard('{ArrowDown}{ArrowRight}');
+    const stats = await screen.findByRole('menuitem', { name: 'Stat band' });
+    expect(stats).toHaveAccessibleDescription('Big numbers.');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onAction).toHaveBeenCalledWith('below:stats');
+    await expectNoViolations();
+  });
+
   it('Menu offers one choice as radio items, apart from its actions', async () => {
     const onAction = vi.fn();
     const onChange = vi.fn();

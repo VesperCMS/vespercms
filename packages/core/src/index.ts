@@ -5,6 +5,7 @@ export type {
   FieldKind,
   FieldModel,
   FieldOption,
+  FieldVariant,
 } from './field-model.ts';
 
 // Schema introspection: Zod 4 schemas into field models (spec §6.2, §6.3.1).
@@ -19,6 +20,7 @@ export {
   type ZodLike,
 } from './schema/walk.ts';
 export { humanize } from './schema/humanize.ts';
+export { childrenFor, fieldChildren, variantFor } from './schema/variants.ts';
 
 /**
  * Version of the manifest format (spec §6.2). Bump on any breaking change to

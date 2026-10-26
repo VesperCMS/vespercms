@@ -1,5 +1,6 @@
 import { isPlainObject, type DataObject, type DataValue } from '../files/equal.ts';
 import type { FieldModel } from '../field-model.ts';
+import { childrenFor, variantFor } from '../schema/variants.ts';
 import type { FieldIssue } from './protocol.ts';
 
 /*
@@ -85,8 +86,16 @@ function check(
       return;
     }
     case 'object':
+    case 'union':
       if (!isPlainObject(value)) return;
-      for (const child of field.children ?? []) {
+      if (field.kind === 'union' && !variantFor(field, value)) {
+        issues.push({
+          path: [...at, field.discriminator ?? ''],
+          message: 'Choose one of the kinds the site has.',
+        });
+        return;
+      }
+      for (const child of childrenFor(field, value)) {
         const key = child.path.at(-1) ?? '';
         check(child, value[key], [...at, key], issues);
       }

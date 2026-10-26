@@ -167,6 +167,45 @@ describe('rewriteValues', () => {
     expect(result.links).toBe(2);
   });
 
+  it('rewrites a URL field by each item’s own kind', () => {
+    const blocks = field(['blocks'], {
+      kind: 'array',
+      children: [
+        field(['blocks', '[]'], {
+          kind: 'union',
+          discriminator: 'type',
+          variants: [
+            {
+              value: 'cta',
+              label: 'CTA',
+              children: [field(['blocks', '[]', 'href'], { widget: 'url' })],
+            },
+            { value: 'text', label: 'Text', children: [field(['blocks', '[]', 'href'])] },
+          ],
+        }),
+      ],
+    });
+    const result = rewriteValues(
+      {
+        blocks: [
+          { type: 'cta', href: '/academics/nursing/' },
+          // The same key in a kind where it isn't a URL field stays as it is.
+          { type: 'text', href: '/academics/nursing/' },
+        ],
+      },
+      [blocks],
+      context,
+      stays,
+    );
+    expect(result.data).toEqual({
+      blocks: [
+        { type: 'cta', href: '/nursing/' },
+        { type: 'text', href: '/academics/nursing/' },
+      ],
+    });
+    expect(result.links).toBe(1);
+  });
+
   it('keeps relative paths pointing at the same files', () => {
     const result = rewriteValues(
       { hero: { src: '../../../assets/blog/harbor.jpg' }, note: './lab.jpg' },

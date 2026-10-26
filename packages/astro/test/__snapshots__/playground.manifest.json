@@ -608,6 +608,279 @@
         },
         {
           "path": [
+            "blocks"
+          ],
+          "kind": "array",
+          "required": false,
+          "label": "Blocks",
+          "children": [
+            {
+              "path": [
+                "blocks",
+                "[]"
+              ],
+              "kind": "union",
+              "required": true,
+              "label": "Item",
+              "discriminator": "type",
+              "variants": [
+                {
+                  "value": "text",
+                  "label": "Text",
+                  "description": "A heading and a few paragraphs.",
+                  "children": [
+                    {
+                      "path": [
+                        "blocks",
+                        "[]",
+                        "heading"
+                      ],
+                      "kind": "string",
+                      "required": false,
+                      "label": "Heading",
+                      "inferredWidget": "text",
+                      "widget": "text"
+                    },
+                    {
+                      "path": [
+                        "blocks",
+                        "[]",
+                        "body"
+                      ],
+                      "kind": "string",
+                      "required": true,
+                      "label": "Body",
+                      "widget": "markdown",
+                      "inferredWidget": "text"
+                    }
+                  ]
+                },
+                {
+                  "value": "faq",
+                  "label": "FAQ",
+                  "description": "Questions and answers.",
+                  "children": [
+                    {
+                      "path": [
+                        "blocks",
+                        "[]",
+                        "heading"
+                      ],
+                      "kind": "string",
+                      "required": true,
+                      "label": "Heading",
+                      "inferredWidget": "text",
+                      "widget": "text"
+                    },
+                    {
+                      "path": [
+                        "blocks",
+                        "[]",
+                        "items"
+                      ],
+                      "kind": "array",
+                      "required": true,
+                      "label": "Items",
+                      "children": [
+                        {
+                          "path": [
+                            "blocks",
+                            "[]",
+                            "items",
+                            "[]"
+                          ],
+                          "kind": "object",
+                          "required": true,
+                          "label": "Item",
+                          "children": [
+                            {
+                              "path": [
+                                "blocks",
+                                "[]",
+                                "items",
+                                "[]",
+                                "question"
+                              ],
+                              "kind": "string",
+                              "required": true,
+                              "label": "Question",
+                              "inferredWidget": "text",
+                              "widget": "text"
+                            },
+                            {
+                              "path": [
+                                "blocks",
+                                "[]",
+                                "items",
+                                "[]",
+                                "answer"
+                              ],
+                              "kind": "string",
+                              "required": true,
+                              "label": "Answer",
+                              "widget": "textarea",
+                              "inferredWidget": "text"
+                            }
+                          ],
+                          "extraKeys": "strip",
+                          "inferredWidget": "group",
+                          "widget": "group"
+                        }
+                      ],
+                      "inferredWidget": "repeater",
+                      "widget": "repeater"
+                    }
+                  ]
+                },
+                {
+                  "value": "figure",
+                  "label": "Figure",
+                  "description": "One picture, with a caption.",
+                  "children": [
+                    {
+                      "path": [
+                        "blocks",
+                        "[]",
+                        "image"
+                      ],
+                      "kind": "object",
+                      "required": true,
+                      "label": "Image",
+                      "widget": "image",
+                      "children": [
+                        {
+                          "path": [
+                            "blocks",
+                            "[]",
+                            "image",
+                            "src"
+                          ],
+                          "kind": "image",
+                          "required": true,
+                          "label": "Src",
+                          "inferredWidget": "image",
+                          "widget": "image"
+                        },
+                        {
+                          "path": [
+                            "blocks",
+                            "[]",
+                            "image",
+                            "alt"
+                          ],
+                          "kind": "string",
+                          "required": true,
+                          "label": "Alt",
+                          "inferredWidget": "text",
+                          "widget": "text"
+                        },
+                        {
+                          "path": [
+                            "blocks",
+                            "[]",
+                            "image",
+                            "decorative"
+                          ],
+                          "kind": "boolean",
+                          "required": false,
+                          "label": "Decorative",
+                          "inferredWidget": "switch",
+                          "widget": "switch"
+                        },
+                        {
+                          "path": [
+                            "blocks",
+                            "[]",
+                            "image",
+                            "focus"
+                          ],
+                          "kind": "object",
+                          "required": false,
+                          "label": "Focal point",
+                          "children": [
+                            {
+                              "path": [
+                                "blocks",
+                                "[]",
+                                "image",
+                                "focus",
+                                "x"
+                              ],
+                              "kind": "number",
+                              "required": true,
+                              "label": "X",
+                              "constraints": {
+                                "min": 0,
+                                "max": 1
+                              },
+                              "inferredWidget": "number",
+                              "widget": "number"
+                            },
+                            {
+                              "path": [
+                                "blocks",
+                                "[]",
+                                "image",
+                                "focus",
+                                "y"
+                              ],
+                              "kind": "number",
+                              "required": true,
+                              "label": "Y",
+                              "constraints": {
+                                "min": 0,
+                                "max": 1
+                              },
+                              "inferredWidget": "number",
+                              "widget": "number"
+                            }
+                          ],
+                          "extraKeys": "strip",
+                          "inferredWidget": "group",
+                          "widget": "group"
+                        },
+                        {
+                          "path": [
+                            "blocks",
+                            "[]",
+                            "image",
+                            "crops"
+                          ],
+                          "kind": "unknown",
+                          "required": false,
+                          "label": "Crops",
+                          "unknownReason": "record",
+                          "inferredWidget": "raw",
+                          "widget": "raw"
+                        }
+                      ],
+                      "extraKeys": "strip",
+                      "inferredWidget": "group"
+                    },
+                    {
+                      "path": [
+                        "blocks",
+                        "[]",
+                        "caption"
+                      ],
+                      "kind": "string",
+                      "required": false,
+                      "label": "Caption",
+                      "inferredWidget": "text",
+                      "widget": "text"
+                    }
+                  ]
+                }
+              ],
+              "inferredWidget": "union",
+              "widget": "union"
+            }
+          ],
+          "inferredWidget": "repeater",
+          "widget": "repeater"
+        },
+        {
+          "path": [
             "brochure"
           ],
           "kind": "string",
@@ -1218,6 +1491,57 @@
         },
         {
           "path": [
+            "ticket"
+          ],
+          "kind": "union",
+          "required": false,
+          "label": "Ticket",
+          "discriminator": "kind",
+          "variants": [
+            {
+              "value": "free",
+              "label": "Free",
+              "children": []
+            },
+            {
+              "value": "paid",
+              "label": "Paid",
+              "description": "Bought ahead, at the address below.",
+              "children": [
+                {
+                  "path": [
+                    "ticket",
+                    "price"
+                  ],
+                  "kind": "number",
+                  "required": true,
+                  "label": "Price",
+                  "constraints": {
+                    "min": 0
+                  },
+                  "inferredWidget": "number",
+                  "widget": "number"
+                },
+                {
+                  "path": [
+                    "ticket",
+                    "url"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "URL",
+                  "widget": "url",
+                  "format": "url",
+                  "inferredWidget": "url"
+                }
+              ]
+            }
+          ],
+          "inferredWidget": "union",
+          "widget": "union"
+        },
+        {
+          "path": [
             "publishAt"
           ],
           "kind": "date",
@@ -1800,5 +2124,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "8b0029c134cd533b80f362b35bec8ad83c8db859bfd0ead474caefc7acaaedfe"
+  "hash": "3e3937a6f6caa37c17ff5a219cde5e0996fdc59580ed8a480bb44bb6941a5279"
 }

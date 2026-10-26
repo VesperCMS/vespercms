@@ -5,6 +5,7 @@ import { markdocTagLayout, markdocTags, markdocValue } from '../body/markdoc-tag
 import type { BodyFormat } from '../body/types.ts';
 import { isPlainObject, type DataValue } from '../files/equal.ts';
 import type { FieldModel } from '../field-model.ts';
+import { childrenFor } from '../schema/variants.ts';
 import { formatUrl, parseSiteUrl, reshapeUrl, urlKey, type UrlSettings } from '../urls/pattern.ts';
 import { dirOf, relativePath } from './media.ts';
 
@@ -134,7 +135,7 @@ export function rewriteValues(
       return value.map((v) => walk(v, item));
     }
     if (isPlainObject(value)) {
-      const children = model ? model.children : fields;
+      const children = model ? childrenFor(model, value) : fields;
       return Object.fromEntries(
         Object.entries(value).map(([key, v]) => [
           key,

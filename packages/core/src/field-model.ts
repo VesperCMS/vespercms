@@ -17,9 +17,26 @@ export type FieldKind =
   | 'object'
   | 'image'
   | 'reference'
+  | 'union'
   | 'unknown';
 
 export type FieldOption = { value: string; label: string };
+
+/**
+ * One kind of a discriminated union (`kind: 'union'`): the object whose
+ * discriminator holds `value`. Its `children` leave the discriminator out,
+ * since the kind itself is that value (DECISIONS.md, "Blocks are a
+ * discriminated union of objects").
+ */
+export type FieldVariant = {
+  value: string;
+  /** `meta.label` on the kind's object, or its value in sentence case. */
+  label: string;
+  description?: string;
+  /** The field that names an item of this kind in a list ("heading"). */
+  summary?: string;
+  children: FieldModel[];
+};
 
 export type FieldConstraints = {
   min?: number;
@@ -85,6 +102,10 @@ export type FieldModel = {
   search?: 'hide';
   /** Lists of objects: the item field that names each item's row in the editor ("question"). */
   summary?: string;
+  /** Unions: the key whose value says which kind an object is (`type`). */
+  discriminator?: string;
+  /** Unions: each kind, in schema order. A union has no `children`; see `childrenFor`. */
+  variants?: FieldVariant[];
 };
 
 export type DiagnosticLevel = 'error' | 'warning' | 'info';

@@ -33,6 +33,19 @@ describe('inferWidget (spec §6.3 step 3)', () => {
     expect(only({ x: schema }).field.widget).toBe(widget);
   });
 
+  it('gives kinds the union control, a list of them the repeater, and resolves each kind’s fields', () => {
+    const kinds = z.discriminatedUnion('type', [
+      z.object({ type: z.literal('text'), body: z.string().meta({ widget: 'textarea' }) }),
+      z.object({ type: z.literal('faq'), items: z.array(z.string()) }),
+    ]);
+    expect(only({ x: kinds }).field).toMatchObject({ kind: 'union', widget: 'union' });
+    const list = only({ x: z.array(kinds) }).field;
+    expect(list.widget).toBe('repeater');
+    const [text, faqKind] = list.children?.[0]?.variants ?? [];
+    expect(text?.children[0]).toMatchObject({ widget: 'textarea', inferredWidget: 'text' });
+    expect(faqKind?.children[0]).toMatchObject({ widget: 'tags' });
+  });
+
   it('is exported for the studio’s fallback', () => {
     expect(inferWidget({ path: ['x'], kind: 'unknown', required: false, label: 'X' })).toBe('raw');
   });

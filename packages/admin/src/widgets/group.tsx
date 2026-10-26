@@ -1,5 +1,13 @@
-import { isPlainObject, resolveMediaPath, type DataValue, type FieldModel } from '@vesper/core';
-import { Button, Chevron, cx, focusRing, Icon, Menu, type MenuItem } from '@vesper/ui';
+import {
+  isPlainObject,
+  resolveMediaPath,
+  variantFor,
+  type DataObject,
+  type DataValue,
+  type FieldModel,
+  type FieldVariant,
+} from '@vesper/core';
+import { Button, Chevron, cx, Dialog, focusRing, Icon, Menu, type MenuItem } from '@vesper/ui';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode, type RefObject } from 'react';
 import {
   Button as RACButton,
@@ -17,6 +25,7 @@ import { Field } from '../editor/Field.tsx';
 import { REVEAL_EVENT } from '../editor/reveal.ts';
 import { keyOf, pathKey, type ValuePath } from '../editor/values.ts';
 import type { WidgetProps } from '../types.ts';
+import { changeKind, changeSummary, kindRow, kindValue } from './union.tsx';
 
 type GroupProps = WidgetProps<DataValue> & { path: ValuePath };
 
@@ -142,6 +151,23 @@ const DRAG_TYPE = 'application/x-vesper-list-item';
 /** Where a dragged row would land: before the row at `slot`, drawn as a line `top` pixels down the list. */
 type Landing = { slot: number; top: number };
 
+/** A change of kind that would remove content, waiting for the person to confirm it. */
+type PendingChange = {
+  index: number;
+  itemId: string;
+  from: string;
+  to: FieldVariant;
+  /** Labels of the fields with content the new kind has no place for. */
+  dropped: string[];
+};
+
+/** "Heading and Cards": a short list of field labels in words. */
+function inWords(labels: readonly string[]): string {
+  return labels.length <= 1
+    ? (labels[0] ?? '')
+    : `${labels.slice(0, -1).join(', ')} and ${labels.at(-1) ?? ''}`;
+}
+
 /**
  * The repeater (spec §6.3.2). A list of objects or images shows each item as
  * a row named by its content, which opens in place (DECISIONS.md, "Top-level
@@ -153,15 +179,26 @@ type Landing = { slot: number; top: number };
  * rows drag by a handle"). Closed items stay in the page
  * (`hidden="until-found"`), so the browser's find, the error summary and Go
  * to field still reach every field.
+ *
+ * A list of kinds (a discriminated union) names each row by its kind. Add
+ * offers the kinds, each row's "…" menu adds one below it or changes its
+ * kind, and a change that would remove content asks first (DECISIONS.md,
+ * "Blocks are a discriminated union of objects").
  */
 export function RepeaterWidget({ value, onChange, field, path, disabled, id }: GroupProps) {
   const editor = useEditor();
   const items: DataValue[] = Array.isArray(value) ? value : [];
   const item = field.children?.[0];
   const names = itemNames(field);
-  const asRows = item?.kind === 'object' || isImageItem(item);
+  const kinds = item?.kind === 'union' ? (item.variants ?? []) : null;
+  const asRows = item?.kind === 'object' || kinds !== null || isImageItem(item);
+  const max = field.constraints?.max;
+  const full = max !== undefined && items.length >= max;
   const status = useRef<HTMLParagraphElement>(null);
   const list = useRef<HTMLOListElement>(null);
+  // What each item held as each kind it left, so changing back before saving brings it back.
+  const setAside = useRef(new Map<string, Map<string, DataObject>>());
+  const [pending, setPending] = useState<PendingChange | null>(null);
 
   // Items have no identity in the file. Each gets one for this visit, so the
   // open rows and focus follow an item through moves; the file never sees it.
@@ -228,7 +265,14 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
   const update = (next: DataValue[]) => {
     onChange(next.length === 0 && !field.required ? undefined : next);
   };
-  const nameAt = (index: number) => itemSummary(items[index] ?? null, index, field).name;
+  /** A row's name and the muted words after it. */
+  const rowOf = (entry: DataValue, index: number): { name: string; detail: string } => {
+    if (kinds && item) return kindRow(entry, item);
+    const { name, key } = itemSummary(entry, index, field);
+    return { name, detail: item && asRows ? itemDetail(entry, item, key) : '' };
+  };
+  const nameAt = (index: number) => rowOf(items[index] ?? null, index).name;
+  const kindNamed = (named: string) => kinds?.find((kind) => kind.value === named);
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= items.length || disabled) return;
@@ -245,6 +289,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
     focusLater(rowButton(movedId));
   };
   const duplicate = (index: number) => {
+    if (full) return;
     const copy = structuredClone(items[index] ?? null);
     const copyId = newItemId();
     setKept([...ids.slice(0, index + 1), copyId, ...ids.slice(index + 1)]);
@@ -262,18 +307,26 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
     const neighbour = nextIds[Math.min(index, next.length - 1)];
     focusLater(neighbour ? rowButton(neighbour) : () => document.getElementById(`${id}-add`));
   };
-  const add = () => {
+  /** A new item at `at`: of `kind` in a list of kinds, otherwise empty. */
+  const insertAt = (at: number, kind?: FieldVariant) => {
+    if (full || disabled) return;
     const newId = newItemId();
-    setKept([...ids, newId]);
+    setKept([...ids.slice(0, at), newId, ...ids.slice(at)]);
     if (asRows) toggle(newId, true);
-    update([...items, emptyItem(item)]);
-    announce(`Added ${names.one} ${String(items.length + 1)}.`);
+    const fresh = kind && item ? kindValue(item, kind) : emptyItem(item);
+    update([...items.slice(0, at), fresh, ...items.slice(at)]);
+    const position = `${names.one} ${String(at + 1)}`;
+    announce(
+      kind
+        ? `Added ${kind.label}, ${position} of ${String(items.length + 1)}.`
+        : `Added ${position}.`,
+    );
     focusLater(
       () =>
         document
           .getElementById(`${id}-panel-${newId}`)
           ?.querySelector<HTMLElement>('input, textarea, [contenteditable="true"], button') ??
-        moreButton(newId),
+        rowButton(newId)(),
     );
   };
 
@@ -342,27 +395,85 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
         },
       });
 
-  const actions = (index: number): MenuItem[] => [
-    { id: 'up', label: 'Move up', icon: 'move-up', isDisabled: disabled || index === 0 },
-    {
-      id: 'down',
-      label: 'Move down',
-      icon: 'move-down',
-      isDisabled: disabled || index === items.length - 1,
-    },
-    { id: 'duplicate', label: 'Duplicate', icon: 'duplicate', isDisabled: disabled },
-    { id: 'remove', label: 'Remove', icon: 'delete', isDanger: true, isDisabled: disabled },
-  ];
+  /** Moves an item to another kind; one that would remove content waits for a confirmation. */
+  const changeTo = (index: number, to: FieldVariant, confirmed = false) => {
+    const itemId = ids[index];
+    if (!item || !itemId || disabled) return;
+    const entry = items[index] ?? null;
+    const asides = setAside.current.get(itemId) ?? new Map<string, DataObject>();
+    const change = changeKind(item, entry, to, asides.get(to.value));
+    if (change.dropped.length > 0 && !confirmed) {
+      setPending({ index, itemId, from: nameAt(index), to, dropped: change.dropped });
+      return;
+    }
+    const from = variantFor(item, entry);
+    if (from && isPlainObject(entry)) asides.set(from.value, entry);
+    setAside.current.set(itemId, asides);
+    update(items.map((one, i) => (i === index ? change.value : one)));
+    announce(`Changed to ${to.label}. ${changeSummary(change)}`.trim());
+    focusLater(rowButton(itemId));
+  };
+  /** The kinds as menu items, each with its description: "Add below" and "Change to" open these. */
+  const kindItems = (prefix: string, except?: string): MenuItem[] =>
+    (kinds ?? [])
+      .filter((kind) => kind.value !== except)
+      .map((kind) => ({
+        id: `${prefix}:${kind.value}`,
+        label: kind.label,
+        ...(kind.description ? { description: kind.description } : {}),
+      }));
+  const actions = (index: number): MenuItem[] => {
+    const moves: MenuItem[] = [
+      { id: 'up', label: 'Move up', icon: 'move-up', isDisabled: disabled || index === 0 },
+      {
+        id: 'down',
+        label: 'Move down',
+        icon: 'move-down',
+        isDisabled: disabled || index === items.length - 1,
+      },
+    ];
+    const last: MenuItem[] = [
+      { id: 'duplicate', label: 'Duplicate', icon: 'duplicate', isDisabled: disabled || full },
+      { id: 'remove', label: 'Remove', icon: 'delete', isDanger: true, isDisabled: disabled },
+    ];
+    if (!kinds || !item) return [...moves, ...last];
+    const [only] = kinds;
+    const below: MenuItem =
+      kinds.length === 1 && only
+        ? { id: `below:${only.value}`, label: 'Add below', icon: 'add' }
+        : { id: 'below', label: 'Add below', icon: 'add', items: kindItems('below') };
+    const others = kindItems('change', variantFor(item, items[index] ?? null)?.value);
+    return [
+      ...moves,
+      { ...below, isDisabled: disabled || full },
+      ...(others.length > 0
+        ? [
+            {
+              id: 'change',
+              label: 'Change to',
+              icon: 'change-kind' as const,
+              isDisabled: disabled,
+              items: others,
+            },
+          ]
+        : []),
+      ...last,
+    ];
+  };
   const act = (index: number) => (action: string) => {
     if (action === 'up') move(index, index - 1);
     if (action === 'down') move(index, index + 1);
     if (action === 'duplicate') duplicate(index);
     if (action === 'remove') remove(index);
+    const below = action.startsWith('below:') ? kindNamed(action.slice(6)) : undefined;
+    if (below) insertAt(index + 1, below);
+    const change = action.startsWith('change:') ? kindNamed(action.slice(7)) : undefined;
+    if (change) changeTo(index, change);
   };
-  const itemMenu = (index: number, itemId: string, name: string) => (
+  const itemMenu = (index: number, itemId: string, spoken: string) => (
     <ItemMenu
       id={`${id}-more-${itemId}`}
-      label={`Actions for ${name}`}
+      label={`Actions for ${spoken}`}
       items={actions(index)}
       onAction={act(index)}
       isOpen={menuFor === itemId}
@@ -372,6 +483,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
     />
   );
 
+  const addLabel = `Add ${names.one}`;
   const allOpen = items.length > 0 && ids.every((itemId) => open.has(itemId));
   return (
     <div className="relative flex flex-col gap-3">
@@ -391,7 +503,9 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
       <ol {...dropProps} ref={list} className={cx('flex flex-col', asRows ? 'gap-2' : 'gap-3')}>
         {items.map((entry, index) => {
           const itemId = ids[index] ?? String(index);
-          const { name, key } = itemSummary(entry, index, field);
+          const { name, detail } = rowOf(entry, index);
+          // Several rows can share a kind ("Card grid"), so its words go into the menu's name.
+          const spoken = kinds && detail ? `${name}, ${detail}` : name;
           if (!item) return null;
           if (!asRows) {
             return (
@@ -404,7 +518,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
                     item="inline"
                   />
                 </div>
-                {itemMenu(index, itemId, name)}
+                {itemMenu(index, itemId, spoken)}
               </li>
             );
           }
@@ -415,7 +529,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
                 id={id}
                 itemId={itemId}
                 name={name}
-                detail={itemDetail(entry, item, key)}
+                detail={detail}
                 problems={countUnder(editor.issues, at)}
                 notes={countUnder(editor.notes, at)}
                 image={isImageItem(item) ? imageSource(entry) : null}
@@ -442,7 +556,7 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
                     event.continuePropagation();
                   }
                 }}
-                menu={itemMenu(index, itemId, name)}
+                menu={itemMenu(index, itemId, spoken)}
                 drag={drag?.(itemId)}
                 editor={editor}
               >
@@ -460,12 +574,78 @@ export function RepeaterWidget({ value, onChange, field, path, disabled, id }: G
           style={{ top: landing.top }}
         />
       )}
-      <div>
-        <Button id={`${id}-add`} icon="add" isDisabled={disabled} onPress={add}>
-          Add {names.one}
-        </Button>
+      <div className="flex flex-col items-start gap-1">
+        {kinds && kinds.length > 1 ? (
+          <Menu
+            label={addLabel}
+            trigger={
+              <Button id={`${id}-add`} icon="add" isDisabled={disabled || full}>
+                {addLabel}
+              </Button>
+            }
+            items={kindItems('add')}
+            onAction={(action) => {
+              const kind = kindNamed(action.slice(4));
+              if (kind) insertAt(items.length, kind);
+            }}
+          />
+        ) : (
+          <Button
+            id={`${id}-add`}
+            icon="add"
+            isDisabled={disabled || full}
+            onPress={() => {
+              insertAt(items.length, kinds?.[0]);
+            }}
+          >
+            {addLabel}
+          </Button>
+        )}
+        {full && (
+          <p className="text-small text-content-muted">
+            At most {formatCount(max, names.one, names.many)}.
+          </p>
+        )}
       </div>
       <p ref={status} role="status" className="sr-only" />
+      <Dialog
+        title={pending ? `Change ${pending.from} to ${pending.to.label}?` : ''}
+        role="alertdialog"
+        isOpen={pending !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setPending(null);
+        }}
+      >
+        {pending && (
+          <>
+            <p className="mb-6">
+              {inWords(pending.dropped)} {pending.dropped.length === 1 ? 'has' : 'have'} no place in{' '}
+              {pending.to.label}, so {pending.dropped.length === 1 ? 'it is' : 'they are'} removed.
+              Changing back before you save brings {pending.dropped.length === 1 ? 'it' : 'them'}{' '}
+              back.
+            </p>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button
+                onPress={() => {
+                  setPending(null);
+                  focusLater(rowButton(pending.itemId));
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onPress={() => {
+                  setPending(null);
+                  changeTo(pending.index, pending.to, true);
+                }}
+              >
+                Change to {pending.to.label}
+              </Button>
+            </div>
+          </>
+        )}
+      </Dialog>
     </div>
   );
 }

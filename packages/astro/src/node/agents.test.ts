@@ -111,6 +111,46 @@ describe('agentGuide', () => {
     );
   });
 
+  it('lists each kind of a union with its key’s value and its own fields', () => {
+    const kinds = field('sections.[]', {
+      kind: 'union',
+      discriminator: 'type',
+      variants: [
+        {
+          value: 'card_grid',
+          label: 'Cards',
+          description: 'Feature cards, steps or a list',
+          children: [field('sections.[].heading', {})],
+        },
+        { value: 'faq', label: 'FAQ', children: [] },
+      ],
+    });
+    const guide = agentGuide(
+      site([
+        notes([
+          field('sections', {
+            kind: 'array',
+            required: false,
+            default: [],
+            constraints: { max: 20 },
+            children: [kinds],
+          }),
+          field('ticket', { ...kinds, path: ['ticket'], required: false, label: 'ticket' }),
+        ]),
+      ]),
+    );
+    expect(guide).toContain(
+      [
+        '- `sections`: a list (at most 20 items) of objects of the kinds below, each named by its `type`. Default `[]`.',
+        // A label that only restates the value ("FAQ" for faq) isn't repeated.
+        '  - `type: card_grid` (Cards): Feature cards, steps or a list.',
+        '    - `heading`: text. Required.',
+        '  - `type: faq`: No other fields.',
+        '- `ticket`: an object of one of the kinds below, named by its `type`. Optional.',
+      ].join('\n'),
+    );
+  });
+
   it('explains images, trees, redirects and tags only for sites that have them', () => {
     const plain = agentGuide(site([notes([field('title', {})])]));
     expect(plain).not.toContain('### Images');

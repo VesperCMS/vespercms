@@ -14,6 +14,8 @@ import {
   Modal,
   ModalOverlay,
   Popover,
+  SubmenuTrigger,
+  Text,
   Tooltip as RACTooltip,
   TooltipTrigger,
   type Key,
@@ -130,6 +132,13 @@ export type MenuItem = {
   isCurrent?: boolean;
   /** An icon before the words: one of the studio's, or a drawing (a collection's icon). */
   icon?: IconName | IconNode;
+  /** A line under the name, read as the item's description ("Questions and answers"). */
+  description?: string;
+  /**
+   * A submenu: the item opens these instead of acting (→ opens, ← closes).
+   * Their ids reach the menu's `onAction` like any other item's.
+   */
+  items?: MenuItem[];
 };
 
 export type MenuChoice = {
@@ -151,6 +160,8 @@ export type MenuProps = {
   triggerIcon?: IconName;
   /** A picture before a text trigger's words, in the icon's place: the user menu's `Avatar`. */
   triggerPicture?: ReactNode;
+  /** The caller's own trigger, such as the kit's `Button` ("Add section"), instead of either of the menu's. */
+  trigger?: ReactNode;
   /**
    * Shown at the top of the open menu, above its items: who is signed in.
    * Hidden from screen readers, since the trigger's name says the same.
@@ -198,15 +209,22 @@ const menuItemClass = cx(
 const hairlineAbove =
   "relative mt-2 before:pointer-events-none before:absolute before:inset-x-2 before:-top-1 before:border-t before:border-border before:content-['']";
 
-function renderItem(items: MenuItem[], item: MenuItem, afterChoice: boolean) {
+function renderItem(
+  items: MenuItem[],
+  item: MenuItem,
+  afterChoice: boolean,
+  onAction: (id: string) => void,
+) {
   const index = items.indexOf(item);
   // Destructive items go last, after a hairline; so does the first item after a choice.
   const afterHairline =
     (item.isDanger === true && index > 0 && !items[index - 1]?.isDanger) ||
     (afterChoice && index === 0);
-  return (
+  const sub = item.items;
+  const entry = (
     <RACMenuItem
-      id={item.id}
+      // A submenu's own item takes its id from the collection, through SubmenuTrigger.
+      {...(sub ? {} : { id: item.id })}
       textValue={item.label}
       className={cx(
         menuItemClass,
@@ -222,8 +240,38 @@ function renderItem(items: MenuItem[], item: MenuItem, afterChoice: boolean) {
           className={cx('mr-2', !item.isDanger && 'text-content-muted')}
         />
       )}
-      {item.label}
+      {item.description ? (
+        <span className="flex min-w-0 flex-col py-1">
+          <Text slot="label">{item.label}</Text>
+          <Text slot="description" className="text-small text-content-muted">
+            {item.description}
+          </Text>
+        </span>
+      ) : (
+        item.label
+      )}
+      {/* It points the way the submenu opens; turned once, never animated. */}
+      {item.items && <Chevron className="ml-auto -rotate-90 pl-2" />}
     </RACMenuItem>
+  );
+  if (!sub) return entry;
+  return (
+    <SubmenuTrigger>
+      {entry}
+      <Popover offset={-4} className={cx('max-w-sm min-w-56', popoverClass)}>
+        <RACMenu
+          aria-label={item.label}
+          onAction={(key: Key) => {
+            onAction(String(key));
+          }}
+          items={sub}
+          disabledKeys={sub.filter((one) => one.isDisabled).map((one) => one.id)}
+          className="outline-none"
+        >
+          {(one) => renderItem(sub, one, false, onAction)}
+        </RACMenu>
+      </Popover>
+    </SubmenuTrigger>
   );
 }
 
@@ -237,6 +285,7 @@ export function Menu({
   triggerText,
   triggerIcon,
   triggerPicture,
+  trigger,
   header,
   choice,
   isOpen,
@@ -251,26 +300,31 @@ export function Menu({
       {...(isOpen !== undefined ? { isOpen } : {})}
       {...(onOpenChange ? { onOpenChange } : {})}
     >
-      {triggerText ? (
-        <RACButton
-          className={cx(
-            'inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
-            colorTransition,
-            focusRing,
-          )}
-        >
-          {triggerPicture ? (
-            <span className="mr-1 flex">{triggerPicture}</span>
-          ) : (
-            triggerIcon && <Icon name={triggerIcon} size={18} />
-          )}
-          <span className="min-w-0 truncate">{triggerText}</span>
-          <Chevron />
-        </RACButton>
-      ) : (
-        <IconButton icon="more" label={label} />
-      )}
-      <Popover placement="bottom end" className={cx('min-w-56', popoverClass)}>
+      {trigger ??
+        (triggerText ? (
+          <RACButton
+            className={cx(
+              'inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
+              colorTransition,
+              focusRing,
+            )}
+          >
+            {triggerPicture ? (
+              <span className="mr-1 flex">{triggerPicture}</span>
+            ) : (
+              triggerIcon && <Icon name={triggerIcon} size={18} />
+            )}
+            <span className="min-w-0 truncate">{triggerText}</span>
+            <Chevron />
+          </RACButton>
+        ) : (
+          <IconButton icon="more" label={label} />
+        ))}
+      {/* A caller's button sits at the start of its row ("Add section"); the "…" at the end. */}
+      <Popover
+        placement={trigger ? 'bottom start' : 'bottom end'}
+        className={cx('min-w-56', popoverClass)}
+      >
         {header && (
           <div aria-hidden="true" className="mb-1 border-b border-border px-3 pt-2 pb-3">
             {header}
@@ -326,7 +380,7 @@ export function Menu({
                 </MenuSection>
               ) : (
                 <MenuSection id="items" aria-label={label} items={group.items}>
-                  {(item) => renderItem(group.items, item, true)}
+                  {(item) => renderItem(group.items, item, true, onAction)}
                 </MenuSection>
               )
             }
@@ -345,7 +399,7 @@ export function Menu({
              * Rendered from `items`, not as static children: opened from the
              * keyboard, React Aria then focuses the first item itself.
              */}
-            {(item) => renderItem(items, item, false)}
+            {(item) => renderItem(items, item, false, onAction)}
           </RACMenu>
         )}
       </Popover>

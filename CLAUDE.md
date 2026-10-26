@@ -238,7 +238,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **The docs describe only what is built today.** They are the product's promise; check a claim against the code, not the spec, which also holds plans.
 
-**vespercms.com's schemas use no unions.** Every field then gets a real control in the studio instead of raw YAML.
+**vespercms.com's schemas use no unions but `z.discriminatedUnion` of objects.** Every field then gets a real control in the studio instead of raw YAML; a discriminated union of objects is blocks (DECISIONS.md, "Blocks are a discriminated union of objects").
 
 **The agent guide (`agentGuide`) is built only from the manifest and stays deterministic: no dates, no environment.** `vesper agents --check` compares bytes, and CI runs it on `apps/site/AGENTS.md` (DECISIONS.md, "`vesper agents` writes agent instructions from the manifest").
 

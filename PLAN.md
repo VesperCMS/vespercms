@@ -25,6 +25,8 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 Nothing is queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
+Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. Not committed yet.
+
 ## vespercms.com and the docs
 
 Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing site and the user docs as one Astro site, `apps/site`, edited with Vesper itself, plus `vesper agents`. The reasons are in DECISIONS.md ("Vesper's own site").
@@ -717,6 +719,119 @@ It was built on its own branch, `studio-panes`, so `main` stayed as it was until
 - **Moving between collections.** The list pane remounts when the collection changes, so its scroll and search start again, kept per collection.
 - **The collapse button.** It's icon-only, an exception to §10.4 noted in DECISIONS.md. Words ("Hide") would be the alternative.
 - **Not done here:** a screen reader pass.
+
+## Blocks: lists of different kinds (design)
+
+Proposed 2026-10-26, from a review of what moving thosegeeks.com off EmDash would take. **Jeremy took (a) on every call the same day, and it was built that day** (outcome at the end). DECISIONS.md records the calls ("Blocks are a discriminated union of objects"), and spec §6.2's mapping table matches.
+
+**Seen.**
+- **What sites write.** A page builder in Astro is a list whose items are different kinds, told apart by one key:
+
+  ```ts
+  sections: z.array(z.discriminatedUnion('type', [cardGrid, faq, showcase, servicesGrid])).default([]),
+  ```
+
+  thosegeeks.com's `sections` field has 11 kinds: card grid, tag list, FAQ, stats, rich text, showcase, a label card for the hero, and four that list another collection (services, featured work, quotes, recent writing). Its home page and service pages are built from it. The 420 landing page has six blocks of four kinds: three card grids, a showcase with a screenshot, rich text and the label card. EmDash edits it as a block list (`~/code/thosegeeks-emdash/seed/seed.json` has the kinds).
+- **What Vesper does.** `unionField` in `packages/core/src/schema/walk.ts` makes any union that isn't string literals `kind: 'unknown'`, so the whole list is one raw YAML box (`content/fields.mdoc`, "Raw YAML fields"). vespercms.com avoids it with sections of one shape, and CLAUDE.md's rule against unions on that site exists for this reason.
+- **Markdoc tags aren't the answer here.** Each kind could be a tag in the body, and the `schema` hint gives its lists rows. But a tag attribute can't use the image picker and its path doesn't go through Astro's image pipeline, and a template can't place one block somewhere else: thosegeeks lifts its label card into the hero, and puts a proof band before the first tag list or FAQ. Tags stay the way to put components inside prose.
+- **What Zod gives,** checked against the installed Zod 4.6.7 through `astro/zod`:
+  - `z.discriminatedUnion('type', [...])` has `def.type: 'union'`, `def.discriminator` and `def.options`, and each option's `.meta()` reads as usual.
+  - A missing or unknown `type` is one issue: `invalid_union`, `note: 'No matching discriminator'`, at `[…, index, 'type']`, listing the allowed values. A known `type` reports that kind's own issues at their own paths.
+  - A plain `z.union` of objects reports `invalid_union` with every option's issues nested inside it, so its messages can't point at a field.
+- **What already works.** A block is a plain map in the file, so saving needs nothing new: the patch diff and the YAML and JSON writers already splice, move and copy list items as whole maps (DECISIONS.md, "A moved list item moves its text as it is"). The rows that open in place (`RepeaterWidget` in `packages/admin/src/widgets/group.tsx`) already name, move, copy and remove items. The cloud needs nothing either: drafts are checked with the site's own schemas (`_vesper/schemas.js`), and grants match file paths.
+
+**Design.**
+- **In the field model.** A new kind, `union`, for a discriminated union whose options are all objects, each holding the key as one string literal:
+
+  ```ts
+  { kind: 'union', discriminator: 'type', variants: [{ value: 'faq', label: 'FAQ', description?, summary?, children: FieldModel[] }] }
+  ```
+
+  - A variant's `label`, `description` and `summary` come from `.meta()` on its object, as a field's do. Without a label, it's the value in sentence case: `card_grid` is "Card grid".
+  - The key itself isn't among a variant's `children`: it is the variant.
+  - Children's paths are value paths, as an object's are: `['sections', '[]', 'heading']`, whichever variant holds it.
+  - Anything else stays raw, with its reason: an option that isn't an object, a key that allows several values or none, a union as an option, `unionFallback`. A plain `z.union` of objects that share a string-literal key gets a diagnostic in the terminal: "Use z.discriminatedUnion('type', …) for this field to get a control in the studio" (call B1).
+- **One place that knows variants.** Core gains `fieldChildren(field)` (every variant's children, for walks over a schema) and `childrenFor(field, value)` (the variant the value names, for walks over an entry). Every walker that reads a field's `children` switches to one of them. Found today: widget resolution (`widgets/resolve.ts`), the manifest's ratio and contrast checks (`manifest/build.ts`), the field accessibility rules (`a11y/fields.ts`), the field checks (`studio/field-checks.ts`), link rewriting (`studio/links.ts`), search's field marks (`search/fields.ts`), the issue target (`packages/admin/src/editor/target.ts`) and `vesper agents` (`packages/astro/src/node/agents.ts`); a search for `.children` finds the rest when building. The union model has no `children`, so a walker that hasn't learned variants skips them rather than misreading them.
+- **A list of unions: blocks.** The repeater, with these differences:
+  - **Add.** "Add {item}" (from the list's label, as today: "Add section") opens a menu of the kinds, each with its description under its name. Choosing one adds the kind, its key first, with its fields' defaults as a new entry gets them, at the end. Its row opens and its first control gets focus. A list of one kind adds it directly.
+  - **Add below.** Each row's "…" menu gains "Add below", a submenu of the same kinds (call B3).
+  - **Rows.** A row is named by its kind, with its summary as the muted detail: "Card grid · This industry has rules. Your website should already know them." The summary is the kind's `summary` field, else a title-like field, else its first text, as `itemSummary` already finds it. On a page the order of kinds is what someone scans for, and kinds are short names.
+  - **Change to.** The "…" menu gains "Change to", a submenu of the other kinds (call B4). Fields whose key and kind are the same in both keep their values, and the rest are dropped. When anything would be dropped, a confirmation names those fields. Dropped values are kept for the visit, so changing back before saving brings them back.
+  - **An unknown kind.** An item whose key the schema doesn't list, or that has none, is a row named "Unknown kind: {value}" holding the raw YAML field for that item, with "Change to" to fix it. The save is refused by the schema, as now, and the message for a missing or unknown key becomes "Choose a kind for this {item}." instead of "This value doesn't match any of the allowed shapes."
+  - **At most.** At the list's `max`, Add is disabled and a line under it says so: "At most 20 sections." This applies to every list, which doesn't check `max` today.
+- **A single union: a choice of kinds** (call B2). The field's group starts with the kinds, as radio buttons for four or fewer, otherwise a select, labelled "Kind", then the chosen kind's fields. An optional field adds "None". Changing the kind works as "Change to" does.
+- **Inside Markdoc and MDX.** A tag attribute's `schema` hint and an MDX component's `props` go through the same walk, so a union there gets the same control in the settings dialog.
+- **Nesting.** A kind may hold its own blocks, such as a two-column kind with a list in each column: rows open inside rows, as lists of lists already do.
+- **On the site.** Nothing from Vesper (call B6). The docs show the pattern:
+
+  ```astro
+  ---
+  const kinds = { card_grid: CardGrid, faq: Faq, showcase: Showcase };
+  ---
+  {entry.data.sections.map((block) => {
+    const Block = kinds[block.type];
+    return <Block {...block} />;
+  })}
+  ```
+- **Docs and rules.** `content/fields.mdoc` gets a "Blocks" part and a row in its table, and discriminated unions of objects leave its "Raw YAML fields" list. `vesper agents` describes a union by its key and each kind with its fields. CLAUDE.md's rule against unions on vespercms.com narrows to plain unions.
+
+**Where it lives.** In the form, as a list's rows. No new screen or panel. Add stays a secondary button with its words and icon, and kinds are words with a description, not icons (call B5). The kit's `Menu` gains a description line under an item's name and submenus (React Aria's `SubmenuTrigger`); it has neither today.
+
+**Keyboard and screen readers.**
+- Add opens a menu: the arrows move through the kinds, typing jumps to one by name, Enter adds it, and Escape returns to Add. The new row opens with focus on its first control, announced as "Added FAQ, section 4 of 4."
+- In a row's "…" menu (Shift+F10 on the row, as now), "Add below" and "Change to" open their submenus with → and close them with ←. After "Change to", focus returns to the row, announced as "Changed to Stats. Heading kept; Cards removed."
+- A row's accessible name is its kind, then its detail, then its problems, as now: "Card grid, This industry has rules…, 1 problem".
+- The single choice is a radio group or select labelled "Kind" inside the field's fieldset, so it's heard after the field's name.
+- Alt+↑ and Alt+↓, Open all, and `focusWhenShown` opening closed rows work unchanged.
+
+**Tests.**
+- Core: the walk (variants, labels from meta and from values, the key left out, each raw case with its reason, the plain-union diagnostic, nesting, optional and default); `fieldChildren` and `childrenFor`; each walker above with a field inside a variant (an image's alt, a link to a moved page, a ratio, an issue's target); the new message; `vesper agents`' snapshot.
+- Admin: widget tests for Add (one kind and several), Add below, row names, Change to (kept and dropped fields, the confirmation, changing back), an unknown kind, a refused save opening the row, `max`, the single choice with None, and axe in each state. The kit: the menu's descriptions and submenus, by keyboard, with axe.
+- Playground: `pages` gains an optional `blocks` field with three kinds (text with one-line Markdown, an FAQ list, an image with a caption through `fields.image`), used on one new page. `events` gains an optional `ticket`, `{ kind: 'free' }` or `{ kind: 'paid', price, url }`, so one kind has no fields of its own.
+- e2e (studio): add a block below the first, fill it in, save, and check the file byte for byte: only the new block's lines are added. Change a block's kind and save. axe on the form with blocks open. The GitHub and cloud projects need nothing new, since they save through the same services.
+
+**Size.** Medium: about five commits. The model and the walk; the walkers; the kit's menu; the widget; the playground, docs and agents.
+
+**Risks.**
+- A walker that should follow variants and doesn't. Each one gets a test with a field inside a variant, and a missed one skips variants instead of misreading them.
+- Submenus are new to the kit. React Aria has them, but they need their own keyboard and axe tests.
+
+**Free or paid.** Free, as every field control is.
+
+**Calls.**
+- **B1. Which unions get the control.**
+  - (a) `z.discriminatedUnion` of objects only, with the diagnostic for a plain union that could be one. Recommended: the key is written down, and Zod's errors for a plain union can't point at a field.
+  - (b) Also a plain `z.union` of objects that share one string-literal key. It saves a site one edit, but its errors land on the whole item.
+- **B2. Single fields as well as lists.**
+  - (a) Both. Recommended: the kind's form is the same component, and a one-of field ("a page on this site, or a web address"; "free or paid") is common.
+  - (b) Lists only. A single union stays raw until a site asks.
+- **B3. Where a new block goes.**
+  - (a) At the end from Add, and below any row from its "…" menu. Recommended: thosegeeks' home page and its 420 page have six blocks each, so a block added at the end can be several Alt+↑ presses from where it belongs.
+  - (b) At the end only, then Move up, as lists are today.
+- **B4. Changing a block's kind.**
+  - (a) "Change to" in the row's menu, keeping the fields that match and confirming what's dropped. Recommended: the single choice needs the same switch anyway, and without it changing a kind means retyping the block.
+  - (b) Not in lists: Duplicate, edit and Remove instead.
+- **B5. Icons for kinds.**
+  - (a) Words and a description only. Recommended: it keeps the menu quiet (§10.4), and a description tells kinds apart better than a picture.
+  - (b) A Lucide icon beside each kind's name, from `.meta({ icon })`.
+- **B6. A helper for rendering.**
+  - (a) None: the docs show the pattern above. Recommended: it's plain Astro a site can read and change, and a helper is API to keep.
+  - (b) A `<Blocks>` component in `@vesper/astro` that takes the list and a map of components.
+
+**Order.** None of Duplicate, Tables, History or Phase 4.5 changes the schema walk or the repeater, so this can go next, or in its own worktree beside Tables. The palette also uses the kit's `Menu`, so whichever of the two comes second builds on the other's changes there. It comes before moving thosegeeks.com off EmDash, which needs it.
+
+**The calls (decided 2026-10-26):** B1 to B6, each (a), as recommended.
+
+**Outcome (2026-10-26).** Built as designed, with these differences and details:
+- **Core.** `FieldKind` gains `union`, with `discriminator` and `variants` on the model (`packages/core/src/schema/walk.ts`). `childrenFor`, `variantFor` and `fieldChildren` (`schema/variants.ts`) serve widget resolution, the manifest's ratio and contrast checks, the field accessibility rules, the field checks, link rewriting, the issue target and `vesper agents`. Search's field lookups stay as they were: they only reach top-level fields and objects. A discriminated union that can't be kinds, and a plain union of objects with a shared literal key, get a warning in the terminal. A key that matches no kind reads "Choose one of the kinds the site has."
+- **The single choice doesn't confirm.** Its radio buttons change as the arrow keys move, so a dialog would fire on each step; changing back brings the fields back instead. "Change to" in a list confirms, as designed.
+- **The kit.** `Menu` takes a description per item, submenus (React Aria's `SubmenuTrigger`, whose own item takes its id from the collection) and a caller's trigger. `change-kind` (Lucide's Replace) is a new icon beside words.
+- **At most.** Every list now stops at its `max`: Add, Add below and Duplicate are disabled, with "At most N items." under Add.
+- **Playground.** `pages.blocks` (text, FAQ, figure), used on `admissions/tuition.md` and rendered by `[...path].astro`; `events.ticket` (free or paid), a single union with a kind of no fields. The manifest and `vesper agents` snapshots are regenerated.
+- **Docs and rules.** `content/fields.mdoc` has a Blocks part, the table rows, `union` among the widget names and `.max()`. CLAUDE.md's no-unions rule for vespercms.com now allows discriminated unions of objects.
+- **Checks.** Typecheck, lint and the format check pass. Vitest: 4,367 passed, 3 skipped, with new tests for the walk, the helpers, widget resolution, accessibility, field checks, links, messages, `vesper agents`, the kit's menu and the studio (`widgets/blocks.test.tsx`: rows, Add, Add below, Change to with and without its confirmation, cancelling, an unknown kind, `max`, the single choice). The playground builds, and the tuition page renders its blocks; its accessibility report is unchanged (only the fixtures page, on purpose).
+- **e2e.** `studio.spec.ts` adds an FAQ below the tuition page's text block, with one question, saves, then changes it to Text (confirming that its questions go), types its body and saves again; each time the file is checked byte for byte, and axe runs on the open block and on the dialog. In Chromium a row is named "Text , Paying in parts", the hidden comma being a span of its own, so the test matches the words around it. Every project passed: the studio's 37, and 173 across all of them in the full run before the test's last fix (static, GitHub, cloud and the site included), after building the playground and the site.
+- **Not done yet:** a manual keyboard pass in the browser (the 4402 preview was another session's when this was built), and a screen reader pass (with the rest, before launch). A plain FAQ added from Add can't be saved until it has a question, because the playground's `items` has no default; that's the schema's call, and a site that wants empty lists to save gives them `.default([])`.
 
 ## Calls of 2026-10-19
 

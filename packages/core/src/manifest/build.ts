@@ -4,6 +4,7 @@ import type { A11ySettings } from '../a11y/types.ts';
 import { dataFormatOf } from '../files/data-file.ts';
 import { entryKindOf, patternExtensions } from '../collections/entries.ts';
 import type { Diagnostic, FieldModel } from '../field-model.ts';
+import { fieldChildren } from '../schema/variants.ts';
 import { extractMarkdocSchema, type MarkdocConfigLike } from '../markdoc/extract.ts';
 import { markdocFields } from '../markdoc/fields.ts';
 import type {
@@ -262,7 +263,7 @@ function ratioDiagnostics(
   ratios: Record<string, number>,
 ): Diagnostic[] {
   const found: Diagnostic[] = [];
-  const visit = (collection: string, fields: FieldModel[]) => {
+  const visit = (collection: string, fields: readonly FieldModel[]) => {
     for (const field of fields) {
       const listed = field.widget === 'image' ? field.widgetOptions?.ratios : undefined;
       if (Array.isArray(listed)) {
@@ -277,7 +278,7 @@ function ratioDiagnostics(
           });
         }
       }
-      if (field.children) visit(collection, field.children);
+      visit(collection, fieldChildren(field));
     }
   };
   for (const collection of collections) visit(collection.name, collection.fields ?? []);
@@ -309,7 +310,7 @@ function contrastDiagnostics(
 ): Diagnostic[] {
   if (a11y?.backgrounds?.length) return [];
   const found: Diagnostic[] = [];
-  const visit = (collection: string, fields: FieldModel[]) => {
+  const visit = (collection: string, fields: readonly FieldModel[]) => {
     for (const field of fields) {
       if (field.widget === 'color' && isContrastUse(field.widgetOptions?.contrast)) {
         found.push({
@@ -320,7 +321,7 @@ function contrastDiagnostics(
           path: field.path.map(String),
         });
       }
-      if (field.children) visit(collection, field.children);
+      visit(collection, fieldChildren(field));
     }
   };
   for (const collection of collections) visit(collection.name, collection.fields ?? []);

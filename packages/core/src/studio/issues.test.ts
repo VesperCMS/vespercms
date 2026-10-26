@@ -47,6 +47,24 @@ describe('issuesFromZod', () => {
     ]);
   });
 
+  it('asks for a kind when a discriminated union’s key matches none, at the key', () => {
+    const blocks = z.array(
+      z.discriminatedUnion('type', [
+        z.object({ type: z.literal('faq'), heading: z.string() }),
+        z.object({ type: z.literal('stats') }),
+      ]),
+    );
+    const result = blocks.safeParse([{ type: 'hero' }, { type: 'faq' }]);
+    expect(issuesFromZod(result.error?.issues ?? [])).toEqual([
+      { path: [0, 'type'], message: 'Choose one of the kinds the site has.' },
+      { path: [1, 'heading'], message: 'This is required.' },
+    ]);
+    // A plain union still says its shapes don't match.
+    expect(messages(z.union([z.string(), z.number()]), true)).toEqual([
+      'This value doesn’t match any of the allowed shapes.',
+    ]);
+  });
+
   it('works without reportInput too', () => {
     const result = z.object({ title: z.string() }).safeParse({});
     expect(issuesFromZod(result.error?.issues ?? [])[0]?.message).toBe('This is required.');

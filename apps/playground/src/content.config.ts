@@ -55,27 +55,62 @@ const pages = defineCollection({
   // /academics/nursing/. `_order.yaml` and `_`-prefixed drafts sit beside the
   // pages and are kept out by the pattern.
   loader: glob({ pattern: '**/[^_]*.{md,mdx}', base: './src/content/pages' }),
-  schema: z.object({
-    title: z.string(),
-    summary: z.string().optional(),
-    nav: z
-      .object({
-        label: z.string().optional().meta({ description: 'Shorter title for menus.' }),
-        hidden: z.boolean().default(false),
-      })
-      .meta({ label: 'Navigation' })
-      .optional(),
-    sections: z
-      .array(
-        z.object({
-          heading: z.string(),
-          body: fields.markdown({ inline: true }),
-        }),
-      )
-      .default([]),
-    brochure: fields.file({ accept: 'application/pdf' }).optional(),
-    hideFromSearch: fields.hideFromSearch(),
-  }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      summary: z.string().optional(),
+      nav: z
+        .object({
+          label: z.string().optional().meta({ description: 'Shorter title for menus.' }),
+          hidden: z.boolean().default(false),
+        })
+        .meta({ label: 'Navigation' })
+        .optional(),
+      sections: z
+        .array(
+          z.object({
+            heading: z.string(),
+            body: fields.markdown({ inline: true }),
+          }),
+        )
+        .default([]),
+      // Blocks: a list of different kinds, told apart by `type` (DECISIONS.md, "Blocks are
+      // a discriminated union of objects"). Each kind's .meta() names it in the Add menu.
+      blocks: z
+        .array(
+          z.discriminatedUnion('type', [
+            z
+              .object({
+                type: z.literal('text'),
+                heading: z.string().optional(),
+                body: fields.markdown(),
+              })
+              .meta({ label: 'Text', description: 'A heading and a few paragraphs.' }),
+            z
+              .object({
+                type: z.literal('faq'),
+                heading: z.string(),
+                items: z.array(
+                  z.object({
+                    question: z.string(),
+                    answer: z.string().meta({ widget: 'textarea' }),
+                  }),
+                ),
+              })
+              .meta({ label: 'FAQ', description: 'Questions and answers.' }),
+            z
+              .object({
+                type: z.literal('figure'),
+                image: fields.image(image),
+                caption: z.string().optional(),
+              })
+              .meta({ label: 'Figure', description: 'One picture, with a caption.' }),
+          ]),
+        )
+        .optional(),
+      brochure: fields.file({ accept: 'application/pdf' }).optional(),
+      hideFromSearch: fields.hideFromSearch(),
+    }),
 });
 
 const docs = defineCollection({
@@ -152,6 +187,15 @@ const events = defineCollection({
     startsAt: fields.datetime(),
     endsAt: fields.datetime().optional(),
     location: reference('locations').optional(),
+    // One of two kinds, chosen in the studio before its own fields (a single union).
+    ticket: z
+      .discriminatedUnion('kind', [
+        z.object({ kind: z.literal('free') }).meta({ label: 'Free' }),
+        z
+          .object({ kind: z.literal('paid'), price: z.number().min(0), url: fields.url() })
+          .meta({ label: 'Paid', description: 'Bought ahead, at the address below.' }),
+      ])
+      .optional(),
     publishAt: fields.datetime().optional(),
     unpublishAt: fields.datetime().optional(),
     unpublishRedirect: z

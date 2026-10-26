@@ -20,10 +20,15 @@ import { FileWidget, ImageWidget } from './image.tsx';
 import { ReferencesWidget, ReferenceWidget } from './reference.tsx';
 import { LazyMarkdownWidget } from './markdown-lazy.tsx';
 import { ColorWidget, DateTimeWidget, SlugWidget, UrlWidget } from './special.tsx';
+import { UnionWidget } from './union.tsx';
 
 // Built-ins receive values of every shape; the registry can't be narrower.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BuiltinWidgetProps = WidgetProps<any> & { path: ValuePath };
+export type BuiltinWidgetProps = WidgetProps<any> & {
+  path: ValuePath;
+  /** The field is a list item in its own row, which already names it (a union's kind). */
+  inRow?: boolean;
+};
 
 export type BuiltinWidget = {
   component: ComponentType<BuiltinWidgetProps>;
@@ -58,6 +63,7 @@ const BUILTIN: Record<string, BuiltinWidget> = {
   tags: { component: TagsWidget },
   multiselect: { component: TagsWidget },
   group: { component: GroupWidget, group: true, rendersChildren: true, section: true },
+  union: { component: UnionWidget, group: true, rendersChildren: true, section: true },
   repeater: { component: RepeaterWidget, group: true, rendersChildren: true, section: true },
   raw: { component: RawWidget },
   markdown: { component: LazyMarkdownWidget },
@@ -77,6 +83,7 @@ const BY_KIND: Partial<Record<FieldKind, string>> = {
   date: 'date',
   enum: 'select',
   object: 'group',
+  union: 'union',
   array: 'repeater',
   reference: 'reference',
   image: 'image',

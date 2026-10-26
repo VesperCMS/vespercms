@@ -371,6 +371,74 @@ test('by pointer: a row drags by its handle, open or closed; a drop moves only t
   expect(read(path)).toBe(before);
 });
 
+test('blocks: a kind added below a row and a kind changed in place write only their own lines', async ({
+  page,
+}) => {
+  const path = 'src/content/pages/admissions/tuition.md';
+  touches(path);
+  const before = read(path);
+  await page.goto('/admin/#/c/pages/e/admissions%2Ftuition');
+  // Chromium names a row "Text , Paying in parts": the comma is a hidden span of its own.
+  const text = page.getByRole('button', { name: /^Text\W+Paying in parts/ });
+  await expect(text).toBeVisible();
+  await expect(page.getByRole('button', { name: /^FAQ\W+Questions about cost/ })).toBeVisible();
+  await expectAccessible(page);
+
+  // An FAQ below the text block, from its row's menu: it opens, with focus in its first field.
+  await text.focus();
+  await page.keyboard.press('Shift+F10');
+  await page.getByRole('menuitem', { name: 'Add below' }).click();
+  await page.getByRole('menuitem', { name: 'FAQ' }).click();
+  await expect(page.getByText('Added FAQ, block 2 of 3.')).toBeAttached();
+  await page.keyboard.type('Paying for books');
+  // The playground's FAQ needs its list of questions, so the new block gets one.
+  await page.getByRole('button', { name: 'Add item' }).click();
+  await page.keyboard.type('Can I pay monthly?');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Yes, in four payments.');
+  await expectAccessible(page);
+  await page.keyboard.press(keys.save);
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  const existing = '  - type: faq\n    heading: Questions about cost';
+  const added = [
+    '  - type: faq',
+    '    heading: Paying for books',
+    '    items:',
+    '      - question: Can I pay monthly?',
+    '        answer: Yes, in four payments.',
+    '',
+  ].join('\n');
+  expect(read(path)).toBe(before.replace(existing, added + existing));
+
+  // To Text: the heading carries over, and the questions go once the change is confirmed.
+  const row = page.getByRole('button', { name: /^FAQ\W+Paying for books/ });
+  await row.focus();
+  await page.keyboard.press('Shift+F10');
+  await page.getByRole('menuitem', { name: 'Change to' }).click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
+  const dialog = page.getByRole('alertdialog', { name: 'Change FAQ to Text?' });
+  await expect(dialog).toContainText('Items has no place in Text, so it is removed.');
+  await expectAccessible(page);
+  await dialog.getByRole('button', { name: 'Change to Text' }).click();
+  await expect(page.getByText('Changed to Text. Heading kept. Items removed.')).toBeAttached();
+  const changed = page.getByRole('button', { name: /^Text\W+Paying for books/ });
+  await expect(changed).toBeFocused();
+  await page
+    .getByRole('group', { name: /^Text\W+Paying for books/ })
+    .getByRole('textbox', { name: 'Body' })
+    .click();
+  await page.keyboard.type('Four payments a year.');
+  await page.keyboard.press(keys.save);
+  await expect(page.getByText('Saved just now')).toBeVisible();
+  const asText = [
+    '  - type: text',
+    '    heading: Paying for books',
+    '    body: Four payments a year.',
+    '',
+  ].join('\n');
+  expect(read(path)).toBe(before.replace(existing, asText + existing));
+});
+
 test('the writing view rewrites only the paragraph that was edited', async ({ page }) => {
   const path = 'src/content/blog/harbor-at-dawn.md';
   touches(path);

@@ -201,11 +201,13 @@ const blog = defineCollection({
 | `z.array(z.enum([...]))` | Multi-select |
 | `z.object({...})` | Field group (fieldset with legend) |
 | `z.array(z.object({...}))` | Repeater (add, remove, reorder) |
+| `z.discriminatedUnion('type', [z.object({...}), ...])` | A choice of kind, then that kind's fields (decided October 26, 2026) |
+| `z.array(z.discriminatedUnion(...))` | Blocks: each row named by its kind, with Add, Add below and Change to (October 26, 2026) |
 | `image()` | Image upload (§6.6) |
 | `reference('collection')` | Relation picker (search, single or multi) |
 | `.optional()` / `.default()` | Not required / prefilled |
 | Markdown/MDX/Markdoc body | Body editor (§6.5) |
-| Anything unmappable (custom transforms, refinements, unions) | Raw YAML field with a short notice. Never crash and never drop data. |
+| Anything unmappable (custom transforms, refinements, other unions) | Raw YAML field with a short notice. Never crash and never drop data. |
 
 **Meta keys** read through Zod 4's `.meta()`:
 
@@ -213,7 +215,8 @@ const blog = defineCollection({
 - `widget`, `widgetOptions` (§6.3), `placeholder` (never used as a label)
 - `hidden`, `readOnly`
 - `autocomplete` (also used for forms)
-- `summary`, on a list of objects: the item field that names each item's row in the editor (decided October 25, 2026)
+- `summary`, on a list of objects: the item field that names each item's row in the editor (decided October 25, 2026). On a kind's object, the field that names its row after the kind (October 26, 2026)
+- `label` and `description` on each object of a discriminated union name that kind in the Add menu (October 26, 2026)
 
 **Implementation notes**
 
