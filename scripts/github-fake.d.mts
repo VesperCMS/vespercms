@@ -11,6 +11,8 @@ export type GitHubFakeState = {
   truncate: boolean;
   beforeRefUpdate: (() => void) | null;
   codes: Map<string, { challenge: string | null; redirect: string | null }>;
+  /** `repository_dispatch` events sent to the repository. */
+  dispatches: { event_type: string; client_payload: Record<string, unknown> }[];
   log: string[];
 };
 

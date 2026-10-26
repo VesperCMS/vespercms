@@ -56,6 +56,8 @@ export function createGitHubFake(options) {
     beforeRefUpdate: null,
     /** OAuth codes waiting to be exchanged, with their PKCE challenge. */
     codes: new Map(),
+    /** `repository_dispatch` events sent to the repository, as its workflows would receive them. */
+    dispatches: [],
     /** Every request, for tests that count them. */
     log: [],
   };
@@ -395,6 +397,19 @@ export function createGitHubFake(options) {
       }
       git(['update-ref', `refs/heads/${branch}`, body.sha]);
       return json(200, { ref: `refs/heads/${branch}`, object: { sha: body.sha, type: 'commit' } });
+    }
+    // The cloud's trigger for a scheduled rebuild (spec §6.17): GitHub answers 204.
+    if (rest === '/dispatches' && request.method === 'POST') {
+      if (!state.push) return json(404, { message: 'Not Found' });
+      const body = await request.json();
+      if (typeof body.event_type !== 'string' || body.event_type.length > 100) {
+        return json(422, { message: 'Invalid request.' });
+      }
+      state.dispatches.push({
+        event_type: body.event_type,
+        client_payload: body.client_payload ?? {},
+      });
+      return new Response(null, { status: 204, headers: CORS });
     }
     return json(404, { message: 'Not Found' });
   }

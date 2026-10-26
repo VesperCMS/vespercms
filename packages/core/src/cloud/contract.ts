@@ -3,7 +3,14 @@ import { gitBlobSha } from '../storage/git-blob-sha.ts';
 import type { Member } from './grants.ts';
 import { CloudClient, CloudError, authorizeUrl, createPkce } from './client.ts';
 import { createDpopKey } from './dpop.ts';
-import { encodeChange, fromBase64, type CloudStudioSettings, type CloudUser } from './protocol.ts';
+import {
+  encodeChange,
+  fromBase64,
+  type CloudScheduledEvent,
+  type CloudStudioSettings,
+  type CloudUser,
+  type ScheduleTrigger,
+} from './protocol.ts';
 
 /*
  * What the studio relies on from the cloud's API, as a reusable suite
@@ -15,12 +22,25 @@ import { encodeChange, fromBase64, type CloudStudioSettings, type CloudUser } fr
  * `src/content/pages/admissions/index.md`,
  * `src/content/pages/admissions/apply.md` and `src/content/blog/a.md` in a
  * collection layout like the playground's (`pages` and `blog` glob
- * collections), and these people, by role:
+ * collections), plus `src/content/events/fair.md` in `events`, a scheduled
+ * collection (`schedule: true`, so `publishAt` and `unpublishAt`) whose fair
+ * goes live at `FAIR_AT`. Its people, by role:
  * - `admin`: site admin;
  * - `editor`: an editor granted `pages` under `admissions/**`, publishing allowed;
  * - `contributor`: a contributor with no grants (the whole site, never publishing);
  * - `viewer`: a viewer.
+ *
+ * Scheduled publishing starts with no trigger, nothing held and a private
+ * repository, until `setSchedule` says otherwise.
  */
+
+/** When the fixture's fair goes live: far enough ahead to stay to come. */
+export const FAIR_AT = '2099-01-01T13:00:00.000Z';
+
+/** The fixture's `src/content/events/fair.md`, or another event going live at `at`. */
+export function eventFile(title: string, at: string): string {
+  return `---\ntitle: ${title}\npublishAt: ${at}\n---\n${title}\n`;
+}
 
 export type CloudFixture = {
   settings: CloudStudioSettings;
@@ -38,6 +58,20 @@ export type CloudFixture = {
   commits: () => Promise<{ message: string }[]>;
   /** Makes the host report a status for a commit, where the fixture can. */
   reportDeploy?: (commit: string, state: 'building' | 'live' | 'failed') => void;
+  /** The site's scheduled publishing, as a site admin sets it in the dashboard, and its repository's visibility. */
+  setSchedule: (settings: {
+    trigger: ScheduleTrigger;
+    holdScheduledDrafts: boolean;
+    publicRepository: boolean;
+  }) => Promise<void>;
+  /**
+   * Runs what falls due in the next `ms`, as the cloud's alarm would once
+   * that time had passed. It moves only scheduling's clock: tokens and
+   * proofs keep the real time.
+   */
+  advance: (ms: number) => Promise<void>;
+  /** The rebuilds the cloud asked the host or the site's workflow for, oldest first, each with the time it was for. */
+  rebuilds: () => Promise<{ at: string }[]>;
 };
 
 const encoder = new TextEncoder();
@@ -460,6 +494,197 @@ export function runCloudContract(
         message: { summary: 'Viewer' },
       });
       equal(!saved.ok && saved.reason, 'forbidden', 'a viewer can’t draft');
+    });
+
+    // Scheduled publishing (spec §6.17): the cloud's half of Phase 4.5.
+    const fair = 'src/content/events/fair.md';
+    const soon = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString();
+    const eventAt = (events: CloudScheduledEvent[], path: string) =>
+      events.find((event) => event.path === path && event.change === 'publish');
+    const draftEvent = (client: CloudClient, name: string, at: string) =>
+      client.saveDraft({
+        changes: [
+          encodeChange({
+            op: 'put',
+            path: `src/content/events/${name}.md`,
+            bytes: text(eventFile(name, at)),
+          }),
+        ],
+        message: {
+          summary: `Add “${name}” in Events`,
+          trailers: { 'Vesper-Collection': 'events' },
+        },
+      });
+    const reason = (answer: { ok: boolean; reason?: string }) => !answer.ok && answer.reason;
+
+    it('says how the site publishes on schedule, and what’s still to come', async () => {
+      const fixture = await create();
+      const { client } = await signIn(fixture, 'viewer');
+      const quiet = await client.schedule();
+      equal(quiet.trigger, null, 'no trigger until a site admin chooses one');
+      equal(quiet.holdScheduledDrafts, false, 'nothing is held unless a site admin asks');
+      equal(quiet.publicRepository, false);
+      equal(quiet.events, [], 'without a trigger, a time in the files waits for the next build');
+
+      await fixture.setSchedule({
+        trigger: 'dispatch',
+        holdScheduledDrafts: false,
+        publicRepository: true,
+      });
+      const set = await client.schedule();
+      equal(set.trigger, 'dispatch');
+      equal(set.publicRepository, true);
+      equal(eventAt(set.events, fair)?.at, FAIR_AT, 'a time in the files is listed');
+      equal(eventAt(set.events, fair)?.state, 'waiting', 'waiting for its rebuild');
+    });
+
+    it('asks for one rebuild at a time, however many changes share it', async () => {
+      const fixture = await create();
+      await fixture.setSchedule({
+        trigger: 'hook',
+        holdScheduledDrafts: false,
+        publicRepository: false,
+      });
+      const { client } = await signIn(fixture, 'admin');
+      const at = soon(5);
+      await draftEvent(client, 'open-day', at);
+      await draftEvent(client, 'talk', at);
+      const ids = (await client.drafts()).drafts.map((d) => d.id);
+      equal((await client.publish(ids)).ok, true, 'published, with a time still to come');
+      const states = async () =>
+        (await client.schedule()).events.filter((e) => e.at === at).map((e) => e.state);
+      equal(await states(), ['waiting', 'waiting'], 'both wait for their time');
+      equal(await fixture.rebuilds(), [], 'nothing is rebuilt before it');
+
+      await fixture.advance(10 * 60_000);
+      equal(await fixture.rebuilds(), [{ at }], 'one rebuild for both, at their time');
+      equal(await states(), ['started', 'started'], 'and both say so');
+      await fixture.advance(10 * 60_000);
+      equal((await fixture.rebuilds()).length, 1, 'once');
+    });
+
+    it('holds drafts until their time, then publishes them as one commit, crediting whoever held them', async () => {
+      const fixture = await create();
+      await fixture.setSchedule({
+        trigger: 'dispatch',
+        holdScheduledDrafts: true,
+        publicRepository: true,
+      });
+      const { client, user } = await signIn(fixture, 'admin');
+      const path = 'src/content/events/gala.md';
+      const at = soon(5);
+      await draftEvent(client, 'gala', at);
+      const id = (await client.drafts()).drafts[0]?.id ?? '';
+      const held = await client.hold([id], at);
+      equal(held.ok, true, 'the draft is held');
+      const event = held.ok ? held.event : undefined;
+      equal(event?.state, 'held');
+      equal(event?.path, path, 'the change names the entry’s file');
+      equal(event?.held?.drafts, [id]);
+      equal(event?.held?.by.id, user.id, 'and who held it');
+      equal((await client.drafts()).drafts[0]?.held?.at, at, 'the draft says until when');
+      const commits = (await fixture.commits()).length;
+      equal(await fixture.published(path), null, 'nothing is published before the time');
+
+      await fixture.advance(10 * 60_000);
+      equal(await fixture.published(path), eventFile('gala', at), 'at its time it’s published');
+      const log = await fixture.commits();
+      equal(log.length, commits + 1, 'as one commit');
+      ok(
+        (log[0]?.message ?? '').split('\n').includes(`Vesper-Editor: ${user.id}`),
+        'crediting whoever held it',
+      );
+      equal((await client.drafts()).drafts, [], 'the draft is gone');
+      equal(
+        eventAt((await client.schedule()).events, path)?.state,
+        'started',
+        'the change is done',
+      );
+      equal(
+        await fixture.rebuilds(),
+        [],
+        'its publish starts the build, so no rebuild is asked for',
+      );
+    });
+
+    it('holds only what the member could publish, for a time still to come, on a site that holds', async () => {
+      const fixture = await create();
+      const { client: admin } = await signIn(fixture, 'admin');
+      const { client: editor } = await signIn(fixture, 'editor');
+      const { client: contributor } = await signIn(fixture, 'contributor');
+      const at = soon(5);
+      await draftEvent(contributor, 'reunion', at);
+      const id = (await admin.drafts()).drafts[0]?.id ?? '';
+      equal(reason(await admin.hold([id], at)), 'rejected', 'a site that doesn’t hold refuses');
+
+      await fixture.setSchedule({
+        trigger: null,
+        holdScheduledDrafts: true,
+        publicRepository: false,
+      });
+      equal(reason(await contributor.hold([id], at)), 'forbidden', 'a contributor can’t publish');
+      equal(reason(await editor.hold([id], at)), 'forbidden', 'nor an editor outside their grant');
+      equal(reason(await admin.hold([id], soon(-1))), 'rejected', 'nor is a time that has passed');
+      equal(
+        (await admin.hold([id], at)).ok,
+        true,
+        'an approver holds it, with or without a trigger',
+      );
+    });
+
+    it('lets a held change go back to being a draft', async () => {
+      const fixture = await create();
+      await fixture.setSchedule({
+        trigger: 'dispatch',
+        holdScheduledDrafts: true,
+        publicRepository: false,
+      });
+      const { client } = await signIn(fixture, 'admin');
+      const at = soon(5);
+      await draftEvent(client, 'picnic', at);
+      const id = (await client.drafts()).drafts[0]?.id ?? '';
+      const held = await client.hold([id], at);
+      await client.release(held.ok ? held.event.id : '');
+      const draft = (await client.drafts()).drafts[0];
+      equal(draft?.id, id, 'the draft stays');
+      equal(draft?.held, undefined, 'no longer held');
+      const path = 'src/content/events/picnic.md';
+      equal(eventAt((await client.schedule()).events, path), undefined, 'nothing waits');
+      await fixture.advance(10 * 60_000);
+      equal(await fixture.published(path), null, 'and nothing is published at the time');
+    });
+
+    it('publishes nothing held whose file changed since, and says why', async () => {
+      const fixture = await create();
+      await fixture.setSchedule({
+        trigger: 'dispatch',
+        holdScheduledDrafts: true,
+        publicRepository: false,
+      });
+      const { client } = await signIn(fixture, 'admin');
+      const at = soon(5);
+      await client.saveDraft({
+        changes: [
+          encodeChange({ op: 'put', path: fair, bytes: text(eventFile('Fair, sooner', at)) }),
+        ],
+        message: { summary: 'Update “Fair” in Events' },
+      });
+      const id = (await client.drafts()).drafts[0]?.id ?? '';
+      equal((await client.hold([id], at)).ok, true, 'the draft is held');
+      await fixture.publishElsewhere(fair, eventFile('Fair, moved', FAIR_AT));
+
+      await fixture.advance(10 * 60_000);
+      equal(
+        await fixture.published(fair),
+        eventFile('Fair, moved', FAIR_AT),
+        'nothing is overwritten',
+      );
+      const failed = (await client.schedule()).events.find((e) => e.held?.drafts.includes(id));
+      equal(failed?.state, 'failed', 'the change failed');
+      ok((failed?.message ?? '').length > 0, 'and says why, in words');
+      const draft = (await client.drafts()).drafts[0];
+      equal(draft?.id, id, 'the draft is kept');
+      equal(draft?.held, undefined, 'and waits no more');
     });
   });
 }

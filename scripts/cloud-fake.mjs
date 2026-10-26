@@ -16,12 +16,18 @@
 //
 // The fake app signs in whoever `state.signedIn` names, at once, so tests
 // never see a sign-in page.
+//
+// Scheduled publishing (spec §6.17) keeps a clock of its own, which tests
+// move with `advance(ms)`; tokens and DPoP proofs keep the real time. Moving
+// it runs what fell due, as the real cloud's alarm would.
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import {
+  ContentService,
   GitHubStorage,
   changeAccess,
   clearDrafts,
+  collectionOf,
   decodeChange,
   discardDraft,
   draftForWire,
@@ -68,8 +74,26 @@ export function createCloudFake(options) {
     /** Emails the cloud would have sent. */
     emails: [],
     log: [],
+    /** Scheduled publishing, as a site admin sets it in the dashboard, and what it has done. */
+    schedule: {
+      trigger: null,
+      holdScheduledDrafts: false,
+      publicRepository: false,
+      /** Milliseconds scheduling's clock is ahead of the real one. */
+      ahead: 0,
+      /** Up to when the alarm has run. */
+      ranTo: Date.now(),
+      /** Held changes: `{ id, drafts, at, by, path, state, message? }`. */
+      holds: [],
+      /** What became of each time in the files, by event ID, once it came. */
+      results: new Map(),
+      /** Rebuilds asked of the host or the workflow, with the time each was for. */
+      rebuilds: [],
+    },
   };
   const now = () => Date.now() + state.skew * 1000;
+  const scheduleNow = () => Date.now() + state.schedule.ahead;
+  const DAY = 24 * 3600 * 1000;
   const seconds = () => Math.floor(now() / 1000);
   /** Where review emails send people, as the real cloud's do: the studio's Changes. */
   const changesUrl = () => `${site.origins[0] ?? ''}/admin/#/changes`;
@@ -287,6 +311,151 @@ export function createCloudFake(options) {
         : { op: 'put', path: file.path, bytes: new Uint8Array(), expectedVersion: file.base },
     );
   const mayEdit = (member, draft) => changeAccess(member, manifest, draftChanges(draft));
+  const mayPublish = (member, draft) => {
+    const access = mayEdit(member, draft);
+    return access.ok && access.publish;
+  };
+
+  /** The hold a draft waits in, if any. */
+  const holdOf = (id) =>
+    state.schedule.holds.find((hold) => hold.state === 'held' && hold.drafts.includes(id));
+  /** A draft as the API sends it, saying when it's held until. */
+  const wireDraft = (draft) => {
+    const hold = holdOf(draft.id);
+    return { ...draftForWire(draft), ...(hold ? { held: { at: hold.at, event: hold.id } } : {}) };
+  };
+  /** Drafts published or discarded leave their holds; a hold left with none is gone. */
+  const unhold = (ids) => {
+    for (const hold of state.schedule.holds) {
+      if (hold.state === 'held') hold.drafts = hold.drafts.filter((id) => !ids.includes(id));
+    }
+    state.schedule.holds = state.schedule.holds.filter(
+      (hold) => hold.state !== 'held' || hold.drafts.length > 0,
+    );
+  };
+  const holdEvent = (hold) => ({
+    id: hold.id,
+    at: hold.at,
+    change: 'publish',
+    path: hold.path,
+    state: hold.state,
+    held: { drafts: [...hold.drafts], by: hold.by },
+    ...(hold.message ? { message: hold.message } : {}),
+  });
+  const fileEventId = (change) => `${change.change}:${change.path}:${change.at}`;
+  /** Times still to come in the published files, read with core as the build reads them. */
+  const fileChanges = (after) =>
+    new ContentService(published, manifest).scheduledChanges(new Date(after));
+
+  /** What `GET /schedule` lists: held changes always, times in the files when there's a trigger. */
+  async function scheduleEvents() {
+    const at = scheduleNow();
+    const events = [];
+    if (state.schedule.trigger) {
+      for (const change of await fileChanges(at)) {
+        events.push({
+          id: fileEventId(change),
+          at: change.at,
+          change: change.change,
+          path: change.path,
+          state: 'waiting',
+        });
+      }
+      for (const [id, result] of state.schedule.results) {
+        if (at - Date.parse(result.at) < DAY) events.push({ id, ...result });
+      }
+    }
+    for (const hold of state.schedule.holds) {
+      if (hold.state === 'held' || at - Date.parse(hold.at) < DAY) events.push(holdEvent(hold));
+    }
+    return events.sort(
+      (a, b) => Date.parse(a.at) - Date.parse(b.at) || a.path.localeCompare(b.path),
+    );
+  }
+
+  /** Publishes a held change as Publish would, by whoever held it, or says why it can't. */
+  async function publishHeld(hold) {
+    const fail = (message) => {
+      hold.state = 'failed';
+      hold.message = message;
+      const scheduler = person(hold.by.id);
+      if (scheduler) {
+        state.emails.push({
+          to: scheduler.email,
+          subject: 'A scheduled change wasn’t published',
+          url: `${site.origins[0] ?? ''}/admin/#/scheduled`,
+        });
+      }
+      state.drafts.version += 1;
+      return false;
+    };
+    const scheduler = person(hold.by.id);
+    const drafts = hold.drafts.map(draftById);
+    if (drafts.some((d) => !d)) return fail('Some of its changes were discarded.');
+    if (!scheduler || drafts.some((d) => !mayPublish(memberOf(scheduler), d))) {
+      return fail(`${hold.by.name} can no longer publish these changes, so they wait as a draft.`);
+    }
+    const changeSet = publishChangeSet(state.drafts, hold.drafts, {
+      by: by(scheduler),
+      noReplyDomain: 'users.noreply.vesper.test',
+    });
+    const result = await published.commit(changeSet);
+    if (!result.ok) {
+      return fail(
+        'The page changed on the site after it was scheduled, so it wasn’t published. It waits as a draft: open it to compare and publish.',
+      );
+    }
+    clearDrafts(state.drafts, hold.drafts);
+    state.reviews = state.reviews.filter((r) => !r.drafts.some((d) => hold.drafts.includes(d)));
+    state.deploys.set(result.version, { state: 'building' });
+    hold.state = 'started';
+    return true;
+  }
+
+  /**
+   * The alarm: everything due since it last ran. Held changes are published
+   * first; then each instant gets one rebuild, unless a publish at that
+   * instant already starts the host's build.
+   */
+  async function fire() {
+    const to = scheduleNow();
+    const from = state.schedule.ranTo;
+    state.schedule.ranTo = to;
+    const instants = new Map();
+    for (const hold of state.schedule.holds) {
+      if (hold.state !== 'held' || Date.parse(hold.at) > to) continue;
+      const committed = await publishHeld(hold);
+      instants.set(hold.at, (instants.get(hold.at) ?? false) || committed);
+    }
+    if (state.schedule.trigger) {
+      for (const change of await fileChanges(from)) {
+        if (Date.parse(change.at) > to) continue;
+        state.schedule.results.set(fileEventId(change), {
+          at: change.at,
+          change: change.change,
+          path: change.path,
+          state: 'started',
+        });
+        if (!instants.has(change.at)) instants.set(change.at, false);
+      }
+    }
+    for (const [at, built] of [...instants].sort(([a], [b]) => Date.parse(a) - Date.parse(b))) {
+      if (built || !state.schedule.trigger) continue;
+      state.schedule.rebuilds.push({ at, via: state.schedule.trigger });
+      if (state.schedule.trigger === 'dispatch') {
+        await github.handle(
+          new Request(`http://github.fake/repos/${github.owner}/${github.repo}/dispatches`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${github.state.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ event_type: 'vesper-rebuild', client_payload: { at } }),
+          }),
+        );
+      }
+    }
+  }
 
   async function readBlob(version) {
     for (const draft of state.drafts.drafts) {
@@ -326,7 +495,7 @@ export function createCloudFake(options) {
     if (rest === '/drafts' && method === 'GET') {
       return json(request, 200, {
         version: String(state.drafts.version),
-        drafts: state.drafts.drafts.map(draftForWire),
+        drafts: state.drafts.drafts.map(wireDraft),
       });
     }
     if (rest === '/drafts' && method === 'PUT') {
@@ -351,7 +520,7 @@ export function createCloudFake(options) {
       return json(request, 200, {
         ok: true,
         version: String(state.drafts.version),
-        draft: saved.draft ? draftForWire(saved.draft) : null,
+        draft: saved.draft ? wireDraft(saved.draft) : null,
       });
     }
     if ((found = /^\/drafts\/([\w-]+)$/.exec(rest)) && method === 'DELETE') {
@@ -360,6 +529,7 @@ export function createCloudFake(options) {
       const access = mayEdit(member, draft);
       if (!access.ok) return error(request, 403, 'forbidden', access.message);
       discardDraft(state.drafts, draft.id);
+      unhold([draft.id]);
       state.reviews = state.reviews.filter((r) => !r.drafts.includes(draft.id));
       return json(request, 200, { ok: true, version: String(state.drafts.version) });
     }
@@ -401,9 +571,87 @@ export function createCloudFake(options) {
       const result = await published.commit(changeSet);
       if (!result.ok) return json(request, result.reason === 'conflict' ? 409 : 422, result);
       clearDrafts(state.drafts, ids);
+      unhold(ids);
       state.reviews = state.reviews.filter((r) => !r.drafts.some((d) => ids.includes(d)));
       state.deploys.set(result.version, { state: 'building' });
       return json(request, 200, { ok: true, commit: result.version });
+    }
+    if (rest === '/schedule' && method === 'GET') {
+      return json(request, 200, {
+        trigger: state.schedule.trigger,
+        holdScheduledDrafts: state.schedule.holdScheduledDrafts,
+        publicRepository: state.schedule.publicRepository,
+        events: await scheduleEvents(),
+      });
+    }
+    if (rest === '/schedule' && method === 'POST') {
+      const body = await request.json();
+      const ids = Array.isArray(body.drafts) ? body.drafts : [];
+      const drafts = ids.map(draftById);
+      if (!state.schedule.holdScheduledDrafts) {
+        return json(request, 400, {
+          ok: false,
+          reason: 'rejected',
+          message:
+            'This site publishes scheduled changes at once. A site admin can have Vesper keep them until their time, in the dashboard.',
+        });
+      }
+      if (ids.length === 0 || drafts.some((d) => !d)) {
+        return error(request, 404, 'not_found', 'Some of these changes are gone.');
+      }
+      for (const draft of drafts) {
+        const access = mayEdit(member, draft);
+        if (!access.ok || !access.publish) {
+          return json(request, 403, {
+            ok: false,
+            reason: 'forbidden',
+            message: access.ok ? 'Scheduling these changes needs an approver.' : access.message,
+          });
+        }
+      }
+      const at = Date.parse(String(body.at ?? ''));
+      if (Number.isNaN(at) || at <= scheduleNow()) {
+        return json(request, 400, {
+          ok: false,
+          reason: 'rejected',
+          message: 'That time has passed. Choose a later one.',
+        });
+      }
+      // Holding drafts again moves them: a reschedule.
+      unhold(ids);
+      const entry =
+        drafts
+          .flatMap((d) => d.files.map((f) => f.path))
+          .find((path) => collectionOf(manifest, path)?.collection.presentation?.schedule) ??
+        drafts[0].files[0]?.path ??
+        '';
+      const hold = {
+        id: `h_${token().slice(0, 12)}`,
+        drafts: [...ids],
+        at: new Date(at).toISOString(),
+        by: by(p),
+        path: entry,
+        state: 'held',
+      };
+      state.schedule.holds.push(hold);
+      state.drafts.version += 1;
+      return json(request, 200, {
+        ok: true,
+        version: String(state.drafts.version),
+        event: holdEvent(hold),
+      });
+    }
+    if ((found = /^\/schedule\/([\w-]+)$/.exec(rest)) && method === 'DELETE') {
+      const hold = state.schedule.holds.find((h) => h.id === found[1] && h.state === 'held');
+      if (!hold) return error(request, 404, 'not_found', 'That change isn’t waiting any more.');
+      for (const draft of hold.drafts.map(draftById).filter(Boolean)) {
+        if (!mayPublish(member, draft)) {
+          return error(request, 403, 'forbidden', 'Only an approver can change this schedule.');
+        }
+      }
+      state.schedule.holds = state.schedule.holds.filter((h) => h !== hold);
+      state.drafts.version += 1;
+      return json(request, 200, { ok: true, version: String(state.drafts.version) });
     }
     if (rest === '/reviews' && method === 'GET') {
       return json(request, 200, { reviews: state.reviews });
@@ -532,6 +780,17 @@ export function createCloudFake(options) {
       const p = person(id);
       if (p) Object.assign(p, member);
     },
+    /** Scheduled publishing's settings, as a site admin sets them in the dashboard. */
+    setSchedule: (settings) => {
+      for (const key of ['trigger', 'holdScheduledDrafts', 'publicRepository']) {
+        if (key in settings) state.schedule[key] = settings[key];
+      }
+    },
+    /** Moves scheduling's clock on by `ms` and runs what fell due, as the alarm would. */
+    advance: async (ms) => {
+      state.schedule.ahead += ms;
+      await fire();
+    },
   };
 }
 
@@ -542,7 +801,9 @@ export function createCloudFake(options) {
  * - `POST /__test/sign-in-as` `{ id }`: who the app signs in next;
  * - `POST /__test/down` `{ down }`;
  * - `POST /__test/deploy` `{ commit, state, url? }`: what the host reports;
- * - `GET /__test/state`: drafts, reviews and emails.
+ * - `POST /__test/schedule` `{ trigger?, holdScheduledDrafts?, publicRepository? }`;
+ * - `POST /__test/advance` `{ ms }`: scheduling's clock moves on, and what fell due runs;
+ * - `GET /__test/state`: drafts, reviews, emails, held changes and rebuilds.
  */
 export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
   const server = createServer(async (req, res) => {
@@ -570,6 +831,14 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
         });
         return answer({ ok: true });
       }
+      if (req.url === '/__test/schedule') {
+        fake.setSchedule(input);
+        return answer({ ok: true });
+      }
+      if (req.url === '/__test/advance') {
+        await fake.advance(Number(input.ms) || 0);
+        return answer({ ok: true });
+      }
       if (req.url === '/__test/state') {
         return answer({
           drafts: fake.state.drafts.drafts.map((d) => ({
@@ -580,6 +849,8 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
           })),
           reviews: fake.state.reviews,
           emails: fake.state.emails,
+          holds: fake.state.schedule.holds,
+          rebuilds: fake.state.schedule.rebuilds,
         });
       }
       res.statusCode = 404;

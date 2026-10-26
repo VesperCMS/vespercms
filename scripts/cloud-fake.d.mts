@@ -8,6 +8,8 @@ import type {
   GitHubStorage,
   Manifest,
   Review,
+  ScheduledEventState,
+  ScheduleTrigger,
   SiteRole,
 } from '@vesper/core';
 import type { GitHubFake } from './github-fake.mjs';
@@ -31,6 +33,27 @@ export type CloudFakeState = {
   deploys: Map<string, DeployStatus>;
   emails: { to: string; subject: string; url: string }[];
   log: string[];
+  schedule: {
+    trigger: ScheduleTrigger;
+    holdScheduledDrafts: boolean;
+    publicRepository: boolean;
+    ahead: number;
+    ranTo: number;
+    holds: {
+      id: string;
+      drafts: string[];
+      at: string;
+      by: { id: string; name: string };
+      path: string;
+      state: ScheduledEventState;
+      message?: string;
+    }[];
+    results: Map<
+      string,
+      { at: string; change: 'publish' | 'unpublish'; path: string; state: ScheduledEventState }
+    >;
+    rebuilds: { at: string; via: 'hook' | 'dispatch' }[];
+  };
 };
 
 export type CloudFake = {
@@ -43,6 +66,12 @@ export type CloudFake = {
   fetch: typeof fetch;
   setDeploy: (commit: string, status: DeployStatus) => void;
   setMember: (id: string, member: { role?: SiteRole; grants?: Grant[] | null }) => void;
+  setSchedule: (settings: {
+    trigger?: ScheduleTrigger;
+    holdScheduledDrafts?: boolean;
+    publicRepository?: boolean;
+  }) => void;
+  advance: (ms: number) => Promise<void>;
 };
 
 export function createCloudFake(options: {

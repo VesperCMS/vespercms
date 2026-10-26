@@ -5,6 +5,7 @@ import type {
   CloudStudioSettings,
   DeployStatus,
   DraftsResponse,
+  HoldResponse,
   PublishResponse,
   Review,
   ReviewAnswer,
@@ -12,6 +13,7 @@ import type {
   ReviewsResponse,
   SaveDraftRequest,
   SaveDraftResponse,
+  ScheduleResponse,
   TokenResponse,
   TreeResponse,
 } from './protocol.ts';
@@ -276,6 +278,16 @@ export class CloudClient {
   }
   status(commit: string): Promise<DeployStatus> {
     return this.site('GET', `/status?commit=${encodeURIComponent(commit)}`);
+  }
+  schedule(): Promise<ScheduleResponse> {
+    return this.site('GET', '/schedule');
+  }
+  hold(drafts: readonly string[], at: string): Promise<HoldResponse> {
+    return this.site('POST', '/schedule', { drafts, at });
+  }
+  /** A held change goes back to being a draft. */
+  release(id: string): Promise<{ ok: true; version: string }> {
+    return this.site('DELETE', `/schedule/${encodeURIComponent(id)}`);
   }
 
   /** Ends the sign-in here and in the cloud. */

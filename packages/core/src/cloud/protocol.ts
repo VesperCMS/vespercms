@@ -119,6 +119,8 @@ export type Draft = {
   updatedAt: string;
   /** Set while the draft waits for an approver. */
   review?: string;
+  /** Set while the cloud holds the draft until a time, to publish it then (`POST /schedule`). */
+  held?: { at: string; event: string };
 };
 
 /** `GET /sites/{site}/drafts`. `version` changes whenever any draft does. */
@@ -166,6 +168,63 @@ export type ReviewRequest = { drafts: string[]; note?: string };
 export type ReviewsResponse = { reviews: Review[] };
 /** `POST /sites/{site}/reviews/{id}`: an approver's answer short of publishing. */
 export type ReviewAnswer = { action: 'comment' | 'request-changes'; body: string };
+
+/**
+ * How the cloud asks for a rebuild at a scheduled time (spec §6.17), as a
+ * site admin chose in the dashboard: the host's deploy hook, or
+ * `repository_dispatch` to the site's workflow. `null`: neither, so a time
+ * in the files waits for the site's next build.
+ */
+export type ScheduleTrigger = 'hook' | 'dispatch' | null;
+
+/**
+ * Where a scheduled change stands:
+ * - `waiting`: a time in the site's files, when the cloud will ask for a rebuild;
+ * - `held`: drafts the cloud keeps until the time, and publishes then;
+ * - `started`: done at its time: held drafts published, or a rebuild asked for;
+ * - `live`: the live site was built after the time;
+ * - `failed`: the rebuild failed, or held drafts couldn't be published (`message` says why).
+ */
+export type ScheduledEventState = 'waiting' | 'held' | 'started' | 'live' | 'failed';
+
+export type CloudScheduledEvent = {
+  /** What `DELETE /schedule/{id}` takes, for a held change. */
+  id: string;
+  at: string;
+  change: 'publish' | 'unpublish';
+  /** The entry's file, from the site's root. */
+  path: string;
+  state: ScheduledEventState;
+  /** A held change: its drafts, and who scheduled them (they're credited, and told if it fails). */
+  held?: { drafts: string[]; by: { id: string; name: string } };
+  /** Why it failed, in plain words. */
+  message?: string;
+};
+
+/** `GET /sites/{site}/schedule`. */
+export type ScheduleResponse = {
+  trigger: ScheduleTrigger;
+  /** Scheduled drafts wait in the cloud rather than being published at once (spec §6.17). */
+  holdScheduledDrafts: boolean;
+  /** The site's repository can be read by anyone, so a scheduled file there can be read early. */
+  publicRepository: boolean;
+  /**
+   * Changes still to come, then those of the last day, soonest first: held
+   * changes always, and times in the files when there's a trigger.
+   */
+  events: CloudScheduledEvent[];
+};
+
+/**
+ * `POST /sites/{site}/schedule`: holds drafts until `at`, then publishes
+ * them as Publish does, crediting whoever held them. The same grants and
+ * checks as Publish apply now, and again at the time.
+ */
+export type HoldRequest = { drafts: string[]; at: string };
+
+export type HoldResponse =
+  | { ok: true; version: string; event: CloudScheduledEvent }
+  | { ok: false; reason: 'forbidden' | 'rejected'; message: string };
 
 /** `GET /sites/{site}/status?commit=…`: what the host reported for a published commit (spec §6.16). */
 export type DeployStatus = {
