@@ -23,7 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5, step 6: the cloud's own half, in `vesper-cloud`. Steps 4 (`vesper deploy init`) and 5 (the schedule in the protocol, the fake and the studio) were built 2026-10-26, with one call open for Jeremy (what an unreadable `schedule.json` does): see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
+Phase 4.5, step 7: the real-world check (a Netlify site and an SFTP host, Jeremy's to provide), then the docs page. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, not yet deployed) were built 2026-10-26, with one call open for Jeremy (what an unreadable `schedule.json` does): see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
 
@@ -1613,14 +1613,19 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 - **Not built here:** the cloud's own half (step 6), and holding a draft that's published from Changes or approved from a review (DECISIONS.md, "Not held").
 - **Found while testing, from Phase 4:** in the cloud, Publish (or Schedule…) pressed while the draft is saving does nothing, with no word. `save` returns early while a save is in flight, and `publishDraft` stops there. The cloud's e2e tests wait for "Draft saved" before publishing, which hid it. A person meets it only by publishing within about a second of typing. The fix is to have Publish wait for the save in flight, then save what's left; it isn't made here.
 
-**Next: step 6, in `vesper-cloud`:**
-- move its `vesper` submodule to this work;
-- the SiteDO's schedule, alarm, triggers and results;
-- the push webhook;
-- the dashboard's scheduled-publishing settings and recent results;
-- the six new contract cases against the real API, with a fixture that has `events` and `fair.md`.
+**Step 6, the cloud's own half (2026-10-26),** built in `vesper-cloud` with its `vesper` submodule at `4950e7c`; not deployed. Its PLAN.md ("Phase 4.5") and DECISIONS.md say how:
+- the site object's `/schedule`, held drafts and one alarm;
+- the deploy hook or `repository_dispatch` at each instant;
+- live or failed from the live site's `schedule.json`;
+- GitHub's push webhook;
+- the dashboard's settings and recent results.
 
-Then step 7: the real-world check and the docs page.
+The six new contract cases pass against the real API in workerd, and both of its e2e projects pass, the studio's included. Before a deploy, Jeremy:
+- applies migration 0004;
+- sets `SECRETS_KEY` and `GITHUB_WEBHOOK_SECRET`;
+- turns on VesperCMS's push webhook.
+
+**Next: step 7,** the real-world check: a Netlify site with a build hook and an SFTP host with the `sftp` template, a post scheduled 5 minutes ahead on each, against §11's 2 minutes. Then the docs page.
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 
