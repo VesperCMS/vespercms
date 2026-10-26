@@ -104,6 +104,18 @@ Markdown (`.md`) or MDX (`.mdx`) files in `src/content/pages/`, matching `**/[^_
 - `sections`: a list of objects with the fields below. Default `[]`.
   - `heading`: text. Required.
   - `body`: Markdown on one line (bold, italic, code and links). Required.
+- `blocks`: a list of objects of the kinds below, each named by its `type`. Optional.
+  - `type: text`: A heading and a few paragraphs.
+    - `heading`: text. Optional.
+    - `body`: Markdown (paragraphs, lists, bold, italic, code and links). Required.
+  - `type: faq`: Questions and answers.
+    - `heading`: text. Required.
+    - `items`: a list of objects with the fields below. Required.
+      - `question`: text. Required.
+      - `answer`: text. Required.
+  - `type: figure`: One picture, with a caption.
+    - `image`: an image (see Images). Required.
+    - `caption`: text. Optional.
 - `brochure`: a path to a file. Optional.
 - `hideFromSearch` (Hide from site search): `true` or `false`. Default `false`. The page stays on the site. It just won’t show up in the site’s own search.
 
@@ -153,6 +165,11 @@ Markdown (`.md`) files in `src/content/events/`, matching `**/[^_]*.md`. Fields 
 - `startsAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Required.
 - `endsAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Optional.
 - `location`: the ID of an entry in `locations`. Optional.
+- `ticket`: an object of one of the kinds below, named by its `kind`. Optional.
+  - `kind: free`: No other fields.
+  - `kind: paid`: Bought ahead, at the address below.
+    - `price`: a number, at least 0. Required.
+    - `url`: a full URL. Required.
 - `publishAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Optional.
 - `unpublishAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Optional.
 - `unpublishRedirect`: text. Optional. Where visitors go after this event is unpublished.
