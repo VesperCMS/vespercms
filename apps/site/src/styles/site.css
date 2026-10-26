@@ -279,10 +279,6 @@ main:focus {
   color: var(--content);
 }
 
-.brand .mark-star {
-  fill: var(--accent);
-}
-
 .site-nav {
   margin-inline-start: auto;
 }
@@ -381,18 +377,6 @@ main:focus {
   padding: 0 1.5rem;
 }
 
-.hero {
-  padding: 5rem 0 3rem;
-  max-width: 50rem;
-}
-
-.hero h1 {
-  font-size: clamp(2.25rem, 1.5rem + 3vw, 3.5rem);
-  line-height: 1.1;
-  letter-spacing: -0.025em;
-  margin-bottom: 1.25rem;
-}
-
 .lead {
   font-size: 1.25rem;
   line-height: 1.55;
@@ -415,13 +399,18 @@ main:focus {
 .button {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   min-height: 2.75rem;
   padding: 0.5rem 1.25rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
+  background: var(--surface);
   color: var(--content);
   font-weight: 600;
   text-decoration: none;
+  transition:
+    background-color 120ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
 }
 
 .button:hover {
@@ -439,15 +428,139 @@ main:focus {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   color: var(--on-accent);
+  box-shadow: var(--glow-accent);
 }
+
+.button-arrow {
+  transition: transform 180ms var(--ease-out);
+}
+
+.button:hover .button-arrow {
+  transform: translateX(3px);
+}
+
+/*
+ * The hero: words on one side, the mark on the other, and a canvas behind
+ * both (src/lib/hero-art.ts). The canvas paints the page's surface where its
+ * art fades, so the hero needs no background of its own. Until the art is
+ * live, the slot's SVG is the mark; scripts hide it at first to keep it from
+ * flashing, and show it after a moment if the art never starts.
+ */
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.hero-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+.hero[data-art='live'] .hero-canvas {
+  opacity: 1;
+  transition: opacity 0.8s var(--ease-out);
+}
+
+.hero-inner {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.hero-text {
+  max-width: 44rem;
+}
+
+.hero h1 {
+  font-size: clamp(2.375rem, 1.5rem + 3.4vw, 4rem);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.25rem;
+}
+
+.hero-mark {
+  position: relative;
+  order: -1;
+  width: min(48vw, 11rem);
+  aspect-ratio: 1;
+  margin-inline-start: -1.25rem;
+}
+
+/* The star's glow, for the still mark. */
+.hero-mark::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    circle at 72% 26%,
+    color-mix(in oklch, var(--accent) 28%, transparent),
+    transparent 32%
+  );
+}
+
+.hero-fallback {
+  position: relative;
+  width: 100%;
+  height: auto;
+  color: var(--content);
+}
+
+[data-js] .hero:not([data-art]) .hero-mark {
+  opacity: 0;
+  animation: appear 0.4s 2.5s forwards;
+}
+
+.hero[data-art='live'] .hero-mark::before,
+.hero[data-art='live'] .hero-fallback {
+  visibility: hidden;
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 60rem) {
+  .hero-inner {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    min-height: min(38rem, calc(100svh - var(--header-height)));
+    padding-block: 2rem;
+    gap: 3rem;
+  }
+
+  .hero-mark {
+    order: 0;
+    width: min(100%, 26rem);
+    justify-self: center;
+    margin: 0;
+  }
+}
+
+/* Sections */
 
 .section {
-  padding: 2.5rem 0;
-  border-top: 1px solid var(--border);
+  padding-top: 6rem;
 }
 
-.section > h2 {
-  margin-top: 0;
+.section h2,
+.closing h2 {
+  font-size: clamp(1.75rem, 1.25rem + 1.6vw, 2.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  margin: 0 0 1rem;
+}
+
+.section-head {
+  max-width: var(--measure);
 }
 
 .section-intro {
@@ -456,20 +569,181 @@ main:focus {
   font-size: 1.125rem;
 }
 
+.point-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+/* A section beside its picture. */
+.feature {
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+@media (min-width: 64rem) {
+  .feature {
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    gap: 4rem;
+  }
+
+  .feature-flip {
+    grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+  }
+
+  .feature-flip .feature-text {
+    order: 2;
+  }
+}
+
+.feature-points {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.feature-points li {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.feature-points li > div:only-child {
+  grid-column: 1 / -1;
+}
+
+.feature-points h3 {
+  font-size: 1.0625rem;
+  margin: 0.375rem 0 0.25rem;
+}
+
+.feature-points p {
+  margin: 0;
+  color: var(--content-muted);
+}
+
+/* Screenshots. The dark picture shows wherever the page is dark. */
+.shot {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.shot .shot-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .shot .shot-light {
+    display: none;
+  }
+
+  :root:not([data-theme='light']) .shot .shot-dark {
+    display: block;
+  }
+}
+
+:root[data-theme='dark'] .shot .shot-light {
+  display: none;
+}
+
+:root[data-theme='dark'] .shot .shot-dark {
+  display: block;
+}
+
+.feature-shot {
+  box-shadow:
+    var(--shadow-overlay),
+    0 40px 90px -40px color-mix(in oklch, var(--accent) 50%, transparent);
+}
+
+/* Points with pictures: cards with the picture on top. */
+.showcase {
+  list-style: none;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+}
+
+.showcase-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.showcase-card .shot {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.showcase-text {
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.showcase-text h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.375rem;
+}
+
+.inline-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.showcase-text p {
+  margin: 0;
+  color: var(--content-muted);
+}
+
+/* Points without: cards with an icon. */
 .points {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
   gap: 1rem;
   list-style: none;
-  margin: 1.5rem 0 0;
+  margin: 2rem 0 0;
   padding: 0;
 }
 
 .point {
-  padding: 1.25rem 1.375rem;
+  padding: 1.375rem 1.5rem 1.5rem;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+}
+
+.point .point-icon {
+  margin-bottom: 1rem;
+  transition: box-shadow 180ms var(--ease-out);
+}
+
+.point:hover .point-icon {
+  box-shadow: var(--glow-accent);
 }
 
 .point h3 {
@@ -485,6 +759,78 @@ main:focus {
   max-width: var(--measure);
 }
 
+/* The closing: one more statement, the install command and the buttons. */
+.closing {
+  position: relative;
+  margin-top: 7rem;
+  padding: 4rem 1.5rem;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(
+      70% 90% at 50% 0%,
+      light-dark(
+        color-mix(in oklch, var(--accent-subtle) 90%, transparent),
+        color-mix(in oklch, var(--accent) 12%, transparent)
+      ),
+      transparent 70%
+    ),
+    var(--surface-raised);
+  overflow: hidden;
+}
+
+.closing .lead {
+  margin-inline: auto;
+}
+
+.closing .actions {
+  justify-content: center;
+}
+
+.command {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.375rem 0.375rem 1.125rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.command code {
+  overflow-x: auto;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+}
+
+.command-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: none;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--content);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.command-copy[hidden] {
+  display: none;
+}
+
+.command-copy:hover {
+  background: var(--surface-sunken);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -497,9 +843,67 @@ main:focus {
   border: 0;
 }
 
+/*
+ * Motion. The hero's words rise once; the rest rises as it scrolls into
+ * view, where the browser can tie it to scrolling (no script). Nothing moves
+ * with reduced motion, and nothing waits on motion to be readable.
+ */
 @media (prefers-reduced-motion: no-preference) {
+  .hero-text > * {
+    animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .hero-text > :nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  .hero-text > :nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
   .theme-toggle .icon {
     animation: turn-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @supports (animation-timeline: view()) {
+    .section-head,
+    .feature-text,
+    .point,
+    .showcase-card,
+    .closing {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+
+    .point:nth-child(3n + 2),
+    .showcase-card:nth-child(2n) {
+      animation-range: entry 10% entry 80%;
+    }
+
+    .point:nth-child(3n) {
+      animation-range: entry 20% entry 90%;
+    }
+
+    .feature-shot {
+      animation: tilt-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 45%;
+    }
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+}
+
+@keyframes tilt-in {
+  from {
+    opacity: 0.4;
+    transform: perspective(1400px) rotateX(14deg) translateY(3rem) scale(0.95);
   }
 }
 

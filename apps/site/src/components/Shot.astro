@@ -1,0 +1,41 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Img } from '@vesper/astro/components';
+import type { CollectionEntry } from 'vesper:content';
+
+// A screenshot in a frame, as both themes have it: the dark picture replaces
+// the light one wherever the site is dark (site.css), and the hidden one is
+// lazy, so it's never fetched. Both carry the light picture's alt text.
+type Section = CollectionEntry<'pages'>['data']['sections'][number];
+
+interface Props {
+  image: NonNullable<Section['image']>;
+  dark?: ImageMetadata | undefined;
+  sizes: string;
+  class?: string;
+}
+
+const { image, dark, sizes, class: className } = Astro.props;
+const widths = [480, 720, 960, 1280, 1600];
+---
+
+<figure class:list={['shot', className]}>
+  <Img
+    image={image}
+    widths={widths}
+    sizes={sizes}
+    loading="lazy"
+    decoding="async"
+    class:list={[dark && 'shot-light']}
+  />
+  {dark && (
+    <Img
+      image={{ ...image, src: dark }}
+      widths={widths}
+      sizes={sizes}
+      loading="lazy"
+      decoding="async"
+      class="shot-dark"
+    />
+  )}
+</figure>

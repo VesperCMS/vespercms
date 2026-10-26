@@ -1,30 +1,54 @@
 ---
-// Vesper's mark, "Launch", in its small cut (DECISIONS.md, "Vesper's mark is
-// Launch"), as VesperMark in @vesper/ui draws it at 24px and below.
-// Decorative: it sits beside the visible name.
+// Vesper's mark, "Launch" (DECISIONS.md, "Vesper's mark is Launch"), cut as
+// VesperMark in @vesper/ui cuts it: at 24px and below a heavier stroke and a
+// bigger star with no halo; larger, the star has its 20% halo. Decorative:
+// it sits beside the visible name, or behind the hero's words.
 interface Props {
   size?: number;
+  class?: string;
 }
 
-const { size = 24 } = Astro.props;
+const { size = 24, class: className } = Astro.props;
+const small = size <= 24;
 ---
 
-<svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" focusable="false">
+<svg
+  class:list={['mark', className]}
+  viewBox="0 0 64 64"
+  width={size}
+  height={size}
+  aria-hidden="true"
+  focusable="false"
+>
   <path
-    d="M11 14 L29 50 L42 25"
+    d={small ? 'M11 14 L29 50 L42 25' : 'M12 14 L30 50 L43 25'}
     fill="none"
     stroke="currentColor"
-    stroke-width="11"
+    stroke-width={small ? 11 : 9}
     stroke-linecap="round"
     stroke-linejoin="round"
   ></path>
-  <circle class="mark-star" cx="52" cy="11" r="7"></circle>
+  {!small && <circle class="mark-halo" cx="51" cy="12" r="10" />}
+  <circle class="mark-star" cx={small ? 52 : 51} cy={small ? 11 : 12} r={small ? 7 : 5.5} />
 </svg>
 
 <style>
+  .mark-star,
+  .mark-halo {
+    fill: var(--accent);
+  }
+
+  .mark-halo {
+    opacity: 0.2;
+  }
+
   @media (forced-colors: active) {
     .mark-star {
       fill: CanvasText;
+    }
+
+    .mark-halo {
+      display: none;
     }
   }
 </style>
