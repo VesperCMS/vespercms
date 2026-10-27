@@ -164,7 +164,11 @@ export type MenuProps = {
   triggerText?: string;
   /** An icon before a text trigger's words ("+ Insert"). */
   triggerIcon?: IconName;
-  /** A picture before a text trigger's words, in the icon's place: the user menu's `Avatar`. */
+  /**
+   * A picture that stands for a text trigger's words, which then name the
+   * button without being shown: the user menu's `Avatar` (DECISIONS.md,
+   * "The user menu's button is the person's picture").
+   */
   triggerPicture?: ReactNode;
   /** The caller's own trigger, such as the kit's `Button` ("Add section"), instead of either of the menu's. */
   trigger?: ReactNode;
@@ -333,17 +337,23 @@ export function Menu({
           (triggerText ? (
             <RACButton
               className={cx(
-                'inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md border border-transparent px-3 text-body text-content data-[hovered]:bg-surface-sunken',
+                'inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md border border-transparent text-body text-content data-[hovered]:bg-surface-sunken',
+                triggerPicture ? 'px-2' : 'px-3',
                 colorTransition,
                 focusRing,
               )}
             >
               {triggerPicture ? (
-                <span className="mr-1 flex">{triggerPicture}</span>
+                <>
+                  <span className="flex">{triggerPicture}</span>
+                  <span className="sr-only">{triggerText}</span>
+                </>
               ) : (
-                triggerIcon && <Icon name={triggerIcon} size={18} />
+                <>
+                  {triggerIcon && <Icon name={triggerIcon} size={18} />}
+                  <span className="min-w-0 truncate">{triggerText}</span>
+                </>
               )}
-              <span className="min-w-0 truncate">{triggerText}</span>
               <Chevron />
             </RACButton>
           ) : (

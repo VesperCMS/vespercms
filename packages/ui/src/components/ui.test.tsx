@@ -368,7 +368,8 @@ describe('Dialog, Menu and Disclosure', () => {
       />,
     );
     const user = userEvent.setup();
-    // The picture is beside the words, so the button is named by them alone.
+    // The picture stands for the words, which name the button without being shown.
+    expect(screen.getByText('@ada')).toHaveClass('sr-only');
     await user.click(screen.getByRole('button', { name: '@ada' }));
     const menu = await screen.findByRole('menu');
     expect(screen.getByRole('group', { name: 'Appearance' })).toBeInTheDocument();

@@ -1583,6 +1583,10 @@ The 4px is less than the text's own padding, so a toolbar in its place above the
 
 **One screen at a time, on every screen but the editor, the top bar is two lines: the site's name with the user menu at the line's end, then Content, Site and the cloud's Changes, flush with the site's name ("Content" lines up under it). The site's name takes no room of its own in the wrap and grows into what's left, so a long one is cut short rather than pushing the user menu onto a line of its own.** Before, the row wrapped as it pleased: the site's name alone on the first line and every menu pushed right on the second. Jeremy asked for the user menu up beside the name and the site's menus flush left below it. Changes sits with Content and Site because "3 changes, 1 to review" doesn't fit beside a name on a phone. Among panes nothing changes: one line, with Changes and the user menu at its end.
 
+### 2026-10-27: The user menu's button is the person's picture (an exception to spec §10.4)
+
+**The user menu's button shows the person's picture (their avatar, or their initials) and a chevron, not their name. Their name, or "@login" in GitHub mode, still names the button, as text only screen readers get; the open menu shows it above Appearance.** Jeremy didn't think the name needed spelling out. It's an icon-only button outside spec §10.4's list, added to it here: a picture of the person signed in is the convention for an account menu, and the chevron says it opens. The kit's `Menu` takes `triggerPicture` as standing for `triggerText`, which then names the button without being shown.
+
 ### 2026-10-27: A closed list row answers the pointer
 
 **A list item's row, while closed, hovers to `surface-sunken`, as a pane's rows do. An open row doesn't: it's a form.** Jeremy asked for a subtle hover in the collapsed state.
