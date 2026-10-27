@@ -2,7 +2,8 @@
 import type { EntryDocument, Manifest } from '@vesper/core';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { PANES } from '../app/panes.tsx';
 import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
@@ -66,6 +67,29 @@ const harbor: EntryDocument = {
   },
   body: '\nThe first boats go out around five.\n',
 };
+
+/**
+ * Wide enough for panes, where the entry's bar has room for the count as a
+ * button; one screen at a time (jsdom's default), it's in the "…" menu.
+ */
+function widely() {
+  let spy: MockInstance<typeof window.matchMedia> | undefined;
+  beforeEach(() => {
+    spy = vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+      matches: query === PANES,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+  });
+  afterEach(() => {
+    spy?.mockRestore();
+  });
+}
 
 function open(hash: string, doc: EntryDocument, manifest: Manifest = siteWithBackgrounds()) {
   const api = fakeApi({ documents: { [`${doc.collection}/${doc.id}`]: doc } });
@@ -185,6 +209,8 @@ describe('PDF notes', () => {
 });
 
 describe('the notes drawer', () => {
+  widely();
+
   it('opens from the count in the top bar, lists notes by field, and goes to each', async () => {
     const user = open('#/c/fixtures/e/accessibility-mistakes', fixture);
     const count = await screen.findByRole('button', { name: '3 accessibility notes' });
@@ -243,7 +269,35 @@ describe('the notes drawer', () => {
   });
 });
 
+describe('the notes on a narrow screen', () => {
+  it('are the first item of the "…" menu, which opens the drawer and gets focus back', async () => {
+    const user = open('#/c/fixtures/e/accessibility-mistakes', fixture);
+    const more = await screen.findByRole('button', {
+      name: 'More actions for Accessibility mistakes',
+    });
+    // The body's notes are found a moment after it loads.
+    await screen.findByText(/Heading jumps from level 2 to level 4/);
+    // Not a button in the bar, where the way back and the status need the room.
+    expect(screen.queryByRole('button', { name: '3 accessibility notes' })).toBeNull();
+    await user.click(more);
+    const items = await screen.findAllByRole('menuitem');
+    expect(items[0]).toHaveAccessibleName('3 accessibility notes');
+    await user.click(items[0] as HTMLElement);
+    const drawer = await screen.findByRole('dialog', { name: 'Accessibility notes' });
+    expect(within(drawer).getAllByRole('button', { name: 'Go to field' })).toHaveLength(3);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(more).toHaveFocus();
+    });
+  });
+});
+
 describe('the publish gate', () => {
+  widely();
+
   function gated(rules: string[]): Manifest {
     const manifest = siteWithBackgrounds();
     manifest.site.a11y = { ...manifest.site.a11y, blockPublishOn: rules as never };

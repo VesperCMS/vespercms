@@ -156,6 +156,32 @@ describe('the entry editor', () => {
     await expectNoViolations();
   });
 
+  it('always says something in the status: No changes, or Read only where it can’t be edited', async () => {
+    const { user } = setup('#/c/blog/e/harbor-at-dawn');
+    const title = await screen.findByRole('textbox', { name: 'Title' });
+    expect(screen.getAllByRole('status')[0]).toHaveTextContent('No changes');
+    await user.type(title, '!');
+    expect(screen.getAllByRole('status')[0]).toHaveTextContent('Unsaved changes');
+    // Back as it was: nothing to save again.
+    await user.type(title, '{Backspace}');
+    expect(screen.getAllByRole('status')[0]).toHaveTextContent('No changes');
+    cleanup();
+
+    renderStudio('#/c/blog/e/harbor-at-dawn', {
+      api: fakeApi({
+        documents: {
+          'blog/harbor-at-dawn': {
+            ...harbor,
+            status: 'read-only',
+            message: 'This entry uses a newer format.',
+          },
+        },
+      }),
+    });
+    await screen.findByText('This entry uses a newer format.');
+    expect(screen.getAllByRole('status')[0]).toHaveTextContent('Read only');
+  });
+
   it('saves edited values, leaves an untouched body out, and says so', async () => {
     const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
     const title = await screen.findByRole('textbox', { name: 'Title' });

@@ -93,7 +93,8 @@ export function Screen({
       // What sticks inside the screen (the formatting toolbar) sticks below the top bar.
       style={{ '--sticky-top': `${String(headerHeight)}px` } as CSSProperties}
     >
-      <StudioHeader bar={bar ?? <DefaultBar />} headerRef={header} />
+      {/* The editor's bar has its own way back, so on a narrow screen it needs the room. */}
+      <StudioHeader bar={bar ?? <DefaultBar />} headerRef={header} homeLink={bar === undefined} />
       <main
         id="main"
         tabIndex={-1}
@@ -286,9 +287,12 @@ export function PaneFrame({
 export function StudioHeader({
   bar,
   headerRef,
+  homeLink = true,
 }: {
   bar?: ReactNode;
   headerRef?: Ref<HTMLElement>;
+  /** False drops the site's name, the link home, on a narrow screen (the editor's bar). */
+  homeLink?: boolean;
 }) {
   const { siteName } = useStudio();
   const pane = usePane();
@@ -316,7 +320,8 @@ export function StudioHeader({
           <a
             href={hrefFor({ screen: 'home' })}
             className={cx(
-              'inline-flex items-center gap-2 rounded-sm text-heading-3 tracking-tight text-content no-underline',
+              'items-center gap-2 rounded-sm text-heading-3 tracking-tight text-content no-underline',
+              homeLink ? 'inline-flex' : 'hidden sm:inline-flex',
               // Only Vesper's own name is lowercase; a site's shows as the site writes it.
               siteName === VESPER_NAME && 'lowercase',
               'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus',

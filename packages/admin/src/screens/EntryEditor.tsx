@@ -54,7 +54,7 @@ import { useLoad } from '../app/load.ts';
 import { usePane } from '../app/pane-context.ts';
 import { entriesChanged } from '../app/entries-changed.ts';
 import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
-import { Screen } from '../app/Screen.tsx';
+import { Screen, useMeasure } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
 import { copiedValues } from '../editor/copy.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
@@ -999,10 +999,12 @@ function EntryForm({
     });
   };
 
+  // Never empty, so the way back (or the title) above it always sits in the same place.
   const statusLine =
     linkCopied > 0
       ? 'Link copied'
-      : [draft ? 'Draft' : '', scheduleText ?? '', statusText].filter(Boolean).join(' · ');
+      : [draft ? 'Draft' : '', scheduleText ?? '', statusText].filter(Boolean).join(' · ') ||
+        (editable ? 'No changes' : 'Read only');
   // Content, the collection's own tabs, then Details; no tab list when Content is all there is.
   const panels = sourceOnly
     ? []
@@ -1023,83 +1025,107 @@ function EntryForm({
       ? `${panel.label} (${formatCount(count, 'problem', 'problems')})`
       : panel.label;
   };
+  /*
+   * The bar keeps one height and one row whatever the status says (spec
+   * §10.3). The status has a line of its own, under the way back (one screen
+   * at a time) or the title (among panes), never empty, and cut short rather
+   * than wrapped. The buttons never wrap or shift.
+   */
+  const [barRef, barWidth] = useMeasure('width', Number.POSITIVE_INFINITY);
+  // The notes' count takes a button's room; where the bar has none, it's the "…" menu's first item.
+  // A width of 0 is a bar not laid out (jsdom), so nothing is known about its room.
+  const notesInMenu = notes.length > 0 && (!pane || (barWidth > 0 && barWidth < NOTES_ROOM));
+  const moreItems: MenuItem[] = notesInMenu
+    ? [
+        {
+          id: 'notes',
+          label: notesCount(notes.length, blocking.length),
+          icon: 'accessibility' as const,
+        },
+        ...menuItems,
+      ]
+    : menuItems;
   const bar = (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
-      {!pane && (
-        <Link icon="back" href={back.href} className="text-small">
-          {back.label}
-        </Link>
+    <div ref={barRef} className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+      <div className="flex min-w-0 flex-1 flex-col">
+        {!pane && (
+          <Link icon="back" href={back.href} className="min-w-0 self-start text-small">
+            <span className="min-w-0 truncate">{back.label}</span>
+          </Link>
+        )}
+        {/* Among panes, the title field is the pane's heading; with no field, the heading shows. */}
+        {pane && Boolean(arranged.title) && !sourceOnly && (
+          <span className="truncate font-semibold text-content">{titleText}</span>
+        )}
+        <InlineStatus dot className="h-5 min-w-0">
+          <span className="min-w-0 truncate">{statusLine}</span>
+        </InlineStatus>
+      </div>
+      {notes.length > 0 && !notesInMenu && (
+        // Outside the live status, so typing doesn't announce every change in the count.
+        <Button
+          variant="quiet"
+          onPress={() => {
+            setNotesOpen(true);
+          }}
+          className="shrink-0"
+        >
+          {notesCount(notes.length, blocking.length)}
+        </Button>
       )}
-      {/* On a narrow screen the title field is just below, so the bar leaves it out. */}
-      <span className="hidden min-w-0 flex-1 truncate font-semibold text-content sm:block">
-        {titleText}
-      </span>
-      <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2 sm:gap-x-4">
-        <InlineStatus dot={statusLine !== ''}>{statusLine}</InlineStatus>
-        {notes.length > 0 && (
-          // Outside the live status, so typing doesn't announce every change in the count.
+      <div className="flex shrink-0 items-center gap-2">
+        {editable && !cloud && (
           <Button
-            variant="quiet"
-            onPress={() => {
-              setNotesOpen(true);
-            }}
+            id={SAVE_ID}
+            variant="primary"
+            onPress={() => void save()}
+            isPending={saving}
+            pulse={savedPulse}
           >
-            {notesCount(notes.length, blocking.length)}
+            {publishes ? 'Publish' : 'Save'}
           </Button>
         )}
-        <div className="flex items-center gap-2">
-          {editable && !cloud && (
-            <Button
-              id={SAVE_ID}
-              variant="primary"
-              onPress={() => void save()}
-              isPending={saving}
-              pulse={savedPulse}
-            >
-              {publishes ? 'Publish' : 'Save'}
-            </Button>
-          )}
-          {editable && !cloud && scheduleMenu}
-          {/* The cloud: a new entry's first save is by hand; after that drafts save themselves. */}
-          {editable && cloud && isNew && (
-            <Button onPress={() => void save()} isPending={saving}>
-              Save draft
-            </Button>
-          )}
-          {editable && cloud && (dirty || isNew || entryDraft) && !review && (
-            <Button
-              id={SAVE_ID}
-              variant="primary"
-              onPress={() => void (access?.publish ? publishDraft() : startReview())}
-              isPending={publishing}
-              pulse={savedPulse}
-            >
-              {access?.publish ? 'Publish' : 'Request review'}
-            </Button>
-          )}
-          {editable && cloud && (dirty || isNew || entryDraft) && !review && scheduleMenu}
-          {menuItems.length > 0 && (
-            <Menu
-              label={`More actions for ${titleText}`}
-              items={menuItems}
-              onAction={(action) => {
-                if (action === 'view' && viewUrl) window.open(viewUrl, '_blank', 'noopener');
-                if (action === 'copy-page' && viewUrl) {
-                  void copyLink('Page address', pageAddress(viewUrl, manifest));
-                }
-                if (action === 'copy-link' && editingLink) {
-                  void copyLink('Editing link', editingLink);
-                }
-                if (action === 'duplicate' && entryId) {
-                  navigate({ screen: 'copy', collection: collection.name, id: entryId });
-                }
-                if (action === 'delete') setConfirmDelete(true);
-                if (action === 'discard') setConfirmDiscard(true);
-                if (action === 'cancel-publish') void cancelPublish();
-              }}
-            />
-          )}
-        </div>
+        {editable && !cloud && scheduleMenu}
+        {/* The cloud: a new entry's first save is by hand; after that drafts save themselves. */}
+        {editable && cloud && isNew && (
+          <Button onPress={() => void save()} isPending={saving}>
+            Save draft
+          </Button>
+        )}
+        {editable && cloud && (dirty || isNew || entryDraft) && !review && (
+          <Button
+            id={SAVE_ID}
+            variant="primary"
+            onPress={() => void (access?.publish ? publishDraft() : startReview())}
+            isPending={publishing}
+            pulse={savedPulse}
+          >
+            {access?.publish ? 'Publish' : 'Request review'}
+          </Button>
+        )}
+        {editable && cloud && (dirty || isNew || entryDraft) && !review && scheduleMenu}
+        {moreItems.length > 0 && (
+          <Menu
+            label={`More actions for ${titleText}`}
+            items={moreItems}
+            onAction={(action) => {
+              if (action === 'notes') setNotesOpen(true);
+              if (action === 'view' && viewUrl) window.open(viewUrl, '_blank', 'noopener');
+              if (action === 'copy-page' && viewUrl) {
+                void copyLink('Page address', pageAddress(viewUrl, manifest));
+              }
+              if (action === 'copy-link' && editingLink) {
+                void copyLink('Editing link', editingLink);
+              }
+              if (action === 'duplicate' && entryId) {
+                navigate({ screen: 'copy', collection: collection.name, id: entryId });
+              }
+              if (action === 'delete') setConfirmDelete(true);
+              if (action === 'discard') setConfirmDiscard(true);
+              if (action === 'cancel-publish') void cancelPublish();
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -1511,6 +1537,8 @@ function CloudNotices({
 }
 
 const SAVE_ID = 'entry-save';
+/** The bar's least width, in pixels, with room for the notes' count as a button (36rem). */
+const NOTES_ROOM = 576;
 
 /** Where a new page will go in the tree: under its parent, named by title. */
 function ParentNote({ collection, parent }: { collection: CollectionManifest; parent: string }) {

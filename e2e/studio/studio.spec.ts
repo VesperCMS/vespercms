@@ -217,6 +217,39 @@ test('the top bar’s glass is clear above the lines between panes and strips, i
   }
 });
 
+test('on a phone, the editor’s bar keeps one row and one height as its status changes', async ({
+  page,
+}) => {
+  touches('src/content/blog/welcome.md');
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto('/admin/#/c/blog/e/welcome');
+  const title = page.getByRole('textbox', { name: 'Title' });
+  await expect(title).toHaveValue('Welcome to the playground');
+  const bar = page.getByRole('banner');
+  const back = bar.getByRole('link', { name: 'Blog posts' });
+  const save = bar.getByRole('button', { name: 'Save' });
+  const shape = async () => ({
+    bar: (await bar.boundingBox())?.height,
+    back: (await back.boundingBox())?.y,
+    save: await save.boundingBox(),
+  });
+  const before = await shape();
+  // The way back and Save share the one row.
+  expect(before.back).toBeLessThan((before.save?.y ?? 0) + (before.save?.height ?? 0));
+
+  await title.focus();
+  await page.keyboard.press(keys.lineEnd);
+  await page.keyboard.type(', again');
+  await expect(bar.getByRole('status')).toHaveText('Unsaved changes');
+  expect(await shape()).toEqual(before);
+  await page.keyboard.press(keys.save);
+  await expect(bar.getByRole('status')).toHaveText(/^Saved/);
+  expect(await shape()).toEqual(before);
+  // Nothing runs past the window's edge.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+  await expectAccessible(page);
+});
+
 test('by keyboard: panes, full width: the collections, the list and the entry, folding when they don’t fit', async ({
   page,
 }) => {
