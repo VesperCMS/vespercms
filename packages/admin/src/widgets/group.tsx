@@ -796,8 +796,17 @@ function ItemRow({
         isDragging && 'opacity-50',
       )}
     >
-      {/* Its own background, so the picture that follows a drag is the row as it looks. */}
-      <div ref={header} className="flex items-center gap-1 rounded-md bg-surface-raised pr-1">
+      {/*
+       * Its own background, so the picture that follows a drag is the row as it looks.
+       * A closed row answers the pointer, like the rows of a pane; an open one is a form.
+       */}
+      <div
+        ref={header}
+        className={cx(
+          'flex items-center gap-1 rounded-md bg-surface-raised pr-1',
+          !isOpen && 'hover:bg-surface-sunken',
+        )}
+      >
         {drag && <DragHandle dragProps={dragProps} header={header} />}
         {headingLevel ? (
           <Heading level={headingLevel} className="m-0 min-w-0 flex-1">
