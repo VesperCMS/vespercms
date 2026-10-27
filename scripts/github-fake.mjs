@@ -193,7 +193,11 @@ export function createGitHubFake(options) {
       }
     };
     walk(folder);
-    return commitFiles(files, 'Seed', login);
+    const commit = commitFiles(files, 'Seed', login);
+    // Tests copy a seeded repository per test: packed, it's 25 files instead
+    // of one per object, and the copy took 180 ms on Windows, not 30.
+    git(['repack', '-a', '-d', '-q']);
+    return commit;
   }
 
   /** The branch's files as `{ path: bytes }`, for tests to compare byte for byte. */
