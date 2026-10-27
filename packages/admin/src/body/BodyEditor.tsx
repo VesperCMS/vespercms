@@ -77,6 +77,7 @@ import {
   type ContainerTypes,
 } from './nodes.ts';
 import { revealInEditor, revealInSource } from './reveal.ts';
+import { scrollClearOfToolbar, stuckToolbar } from './scroll.ts';
 import { isMac, shortcut } from './shortcuts.ts';
 import { BlockSettings, partialFiles, relativePath } from './settings.tsx';
 import { useFileUrl } from '../app/file-url.tsx';
@@ -472,6 +473,7 @@ function WritingView({
     onChangeRef.current = onChange;
   });
   const [linkOpen, setLinkOpen] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const [picking, setPicking] = useState(false);
   const [imagePath, setImagePath] = useState<string | null>(null);
   const previewUrl = useFileUrl(imagePath);
@@ -538,6 +540,7 @@ function WritingView({
     editable: !disabled,
     extensions,
     editorProps: {
+      handleScrollToSelection: (view) => scrollClearOfToolbar(view, toolbarRef.current),
       attributes: (state) => ({
         id: 'entry-body',
         'aria-labelledby': 'entry-body-label',
@@ -700,7 +703,11 @@ function WritingView({
             'has-[#entry-body:focus-visible]:ring-6 has-[#entry-body:focus-visible]:ring-(color:--glow-focus)',
           )}
         >
-          <div className="border-b border-border p-1">
+          {/*
+           * Stuck below the bar while the text scrolls, so the tools stay at
+           * hand in a long body. Opaque, not glass: it covers text being edited.
+           */}
+          <div ref={toolbarRef} className={stuckToolbar}>
             <FormatToolbar
               editor={editor}
               disabled={disabled}

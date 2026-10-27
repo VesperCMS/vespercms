@@ -5,6 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { ToggleButton, ToolButton, Toolbar, cx } from '@vesper/ui';
 import { useEffect, useRef, useState } from 'react';
 import { LinkDialog } from '../body/BodyEditor.tsx';
+import { scrollClearOfToolbar, stuckToolbar } from '../body/scroll.ts';
 import { shortcut } from '../body/shortcuts.ts';
 import type { WidgetProps } from '../types.ts';
 import { inputClass } from './basic.tsx';
@@ -142,6 +143,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
       extras,
     ],
     editorProps: {
+      handleScrollToSelection: (view) => scrollClearOfToolbar(view, toolbar.current),
       attributes: {
         id,
         role: 'textbox',
@@ -216,7 +218,8 @@ export function MarkdownWidget(props: WidgetProps<string>) {
           'has-[.ProseMirror-focused]:ring-6 has-[.ProseMirror-focused]:ring-(color:--glow-focus)',
         )}
       >
-        <div ref={toolbar} className="border-b border-border p-1">
+        {/* Stuck below the bar while a long value scrolls, as the body's is. */}
+        <div ref={toolbar} className={stuckToolbar}>
           <Toolbar label={`Formatting for ${field.label}`}>
             <ToggleButton
               icon="bold"

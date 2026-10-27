@@ -15,7 +15,9 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
+  type Ref,
   type RefObject,
   type UIEvent,
 } from 'react';
@@ -66,6 +68,7 @@ export function Screen({
   const pane = usePane();
   const heading = useRef<HTMLHeadingElement>(null);
   useLeadHeading(title, heading);
+  const [header, headerHeight] = useMeasure('height', 56);
 
   if (pane) {
     return (
@@ -85,8 +88,12 @@ export function Screen({
   }
 
   return (
-    <div className={cx('min-h-screen', afterglow && 'afterglow')}>
-      <StudioHeader bar={bar ?? <DefaultBar />} />
+    <div
+      className={cx('min-h-screen', afterglow && 'afterglow')}
+      // What sticks inside the screen (the formatting toolbar) sticks below the top bar.
+      style={{ '--sticky-top': `${String(headerHeight)}px` } as CSSProperties}
+    >
+      <StudioHeader bar={bar ?? <DefaultBar />} headerRef={header} />
       <main
         id="main"
         tabIndex={-1}
@@ -216,10 +223,14 @@ export function PaneFrame({
       {...(main ? { id: 'main', tabIndex: -1 } : {})}
       onScroll={onScroll}
       className={cx('min-h-0 flex-1 overflow-y-auto outline-none', className)}
-      style={{
-        paddingTop: 'var(--studio-bar, 0px)',
-        scrollPaddingTop: `calc(var(--studio-bar, 0px) + ${String(headerHeight)}px)`,
-      }}
+      style={
+        {
+          paddingTop: 'var(--studio-bar, 0px)',
+          scrollPaddingTop: `calc(var(--studio-bar, 0px) + ${String(headerHeight)}px)`,
+          // What sticks inside the pane (the formatting toolbar) sticks below its header.
+          '--sticky-top': `${String(headerHeight)}px`,
+        } as CSSProperties
+      }
     >
       {/* A sticky offset counts from inside the scroller's padding, so top-0 holds it just below the bar. */}
       <div ref={header} className="glass-bar sticky top-0 z-10 border-b border-border">
@@ -272,7 +283,13 @@ export function PaneFrame({
  * bar (the menus, or the editor's own); among panes it spans the full width
  * and holds what's the person's, since the structure pane holds the site's.
  */
-export function StudioHeader({ bar }: { bar?: ReactNode }) {
+export function StudioHeader({
+  bar,
+  headerRef,
+}: {
+  bar?: ReactNode;
+  headerRef?: Ref<HTMLElement>;
+}) {
   const { siteName } = useStudio();
   const pane = usePane();
   return (
@@ -289,7 +306,7 @@ export function StudioHeader({ bar }: { bar?: ReactNode }) {
         Skip to content
       </a>
       {/* Sticky and frosted, so the page stays present as it scrolls beneath. */}
-      <header className="glass-bar sticky top-0 z-40 shadow-glass-edge">
+      <header ref={headerRef} className="glass-bar sticky top-0 z-40 shadow-glass-edge">
         <div
           className={cx(
             'flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:gap-x-4',
