@@ -1,0 +1,35 @@
+name: Windows
+
+# The unit tests on Windows, which prove the .gitattributes rules, CRLF fixtures
+# and path handling, since Git for Windows checks out with autocrlf=true and
+# agencies edit on Windows too. They run weekly and by hand
+# (`gh workflow run windows.yml`), not on every push: the job was about half of
+# what a CI run billed, since Windows minutes count double, and npm test already
+# runs on Windows on Jeremy's machine (DECISIONS.md, "CI skips prose, and the
+# Windows tests run weekly").
+on:
+  schedule:
+    # Mondays, 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+# Nothing here writes to the repository or publishes anything.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      # From TypeScript source through the @vesper/source condition, as in ci.yml.
+      - run: npm test

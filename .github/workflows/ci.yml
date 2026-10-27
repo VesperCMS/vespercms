@@ -7,6 +7,7 @@ name: CI
 # - Prose: the notes at the root (PLAN.md, DECISIONS.md, CLAUDE.md, the spec)
 #   and the READMEs. Nothing builds, lints or formats them. Markdown anywhere
 #   else still runs CI, since the playground's and the corpus's is test data.
+# The Windows tests run weekly and by hand, in windows.yml.
 on:
   pull_request:
     paths-ignore:
@@ -68,13 +69,8 @@ jobs:
       - run: npm run agents -w @vesper/site -- --check
 
   test:
-    # Windows proves the .gitattributes rules, CRLF fixtures and path handling, since
-    # Git for Windows checks out with autocrlf=true and agencies edit on Windows too.
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    # Linux only; the same tests run on Windows weekly and by hand (windows.yml).
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
