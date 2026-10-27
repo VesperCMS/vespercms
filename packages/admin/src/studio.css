@@ -85,12 +85,26 @@
     font-weight: var(--font-weight-semibold);
   }
 
+  /* Each level a step smaller, down to the text's own size; the last is muted to tell it apart. */
   .vesper-body h3,
   .vesper-body h4,
   .vesper-body h5,
   .vesper-body h6 {
     font-size: 1.0625rem;
     font-weight: var(--font-weight-semibold);
+  }
+
+  .vesper-body h4 {
+    font-size: 1rem;
+  }
+
+  .vesper-body h5,
+  .vesper-body h6 {
+    font-size: 0.9375rem;
+  }
+
+  .vesper-body h6 {
+    color: var(--color-content-muted);
   }
 
   .vesper-body ul {

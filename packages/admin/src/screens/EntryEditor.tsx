@@ -1147,6 +1147,7 @@ function EntryForm({
         disabled={!editable}
         entryPath={entryPath}
         imageFolder={`${manifest.site.srcDir}/assets/${collection.name}`}
+        headingStart={collection.presentation.headingStart ?? 2}
       />
     </Suspense>
   ) : null;

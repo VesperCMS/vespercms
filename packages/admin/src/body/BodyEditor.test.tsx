@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
+import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
   cleanup();
   window.location.hash = '';
+});
+
+// jsdom has no layout; ProseMirror asks for rectangles when it scrolls to the selection.
+Object.assign(Range.prototype, {
+  getClientRects: () => [],
+  getBoundingClientRect: () => new DOMRect(),
 });
 
 const campusLife = {
@@ -47,6 +54,68 @@ describe('the body editor', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Bold' })).toHaveFocus();
     });
+  });
+
+  it('sets the text style, Paragraph or Heading 2 to 6, from one menu, and goes back to the text', async () => {
+    const api = fakeApi({ documents: { 'pages/campus-life': campusLife } });
+    renderStudio('#/c/pages/e/campus-life', { api });
+    const user = userEvent.setup();
+    const body = await screen.findByRole('textbox', { name: 'Body' });
+    const editor = (body as unknown as { editor: Editor }).editor;
+    act(() => {
+      const line = within(body).getByText(/Clubs meet/);
+      editor.commands.setTextSelection(editor.view.posAtDOM(line.firstChild as Text, 3));
+    });
+    const style = await screen.findByRole('button', { name: 'Text style: Paragraph' });
+    await user.click(style);
+    // Named by its button, as the kit's menus with their own button are.
+    const menu = await screen.findByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitemradio')
+        .map((item) => item.textContent),
+    ).toEqual(['Paragraph', 'Heading 2', 'Heading 3', 'Heading 4', 'Heading 5', 'Heading 6']);
+    expect(within(menu).getByRole('menuitemradio', { name: 'Paragraph' })).toBeChecked();
+    await user.click(within(menu).getByRole('menuitemradio', { name: 'Heading 4' }));
+    await waitFor(() => {
+      expect(body).toHaveFocus();
+    });
+    expect(within(body).getByRole('heading', { level: 4 })).toHaveTextContent('Clubs meet weekly.');
+    expect(screen.getByRole('button', { name: 'Text style: Heading 4' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+    expect(api.saveEntry.mock.calls[0]?.[0]).toHaveProperty(
+      'body',
+      expect.stringContaining('\n#### Clubs meet *weekly*.\n'),
+    );
+  });
+
+  it('starts the text styles where the collection’s headings start', async () => {
+    const manifest = structuredClone(playgroundManifest);
+    const pages = manifest.collections.find((c) => c.name === 'pages');
+    if (pages) pages.presentation.headingStart = 1;
+    renderStudio('#/c/pages/e/campus-life', {
+      api: fakeApi({ documents: { 'pages/campus-life': campusLife } }),
+      manifest,
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /^Text style/ }));
+    const menu = await screen.findByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitemradio')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Paragraph',
+      'Heading 1',
+      'Heading 2',
+      'Heading 3',
+      'Heading 4',
+      'Heading 5',
+      'Heading 6',
+    ]);
   });
 
   it('round-trips the source view without changing a byte', async () => {

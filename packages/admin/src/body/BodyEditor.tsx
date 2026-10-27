@@ -22,8 +22,10 @@ import {
 import {
   Button,
   Checkbox,
+  Chevron,
   Dialog,
   Icon,
+  Menu,
   TextArea,
   SuggestField,
   ToggleButton,
@@ -104,6 +106,8 @@ export type BodyEditorProps = {
   notes?: readonly A11yNote[];
   /** Filled with the editor's actions, for the entry's notes drawer. */
   apiRef?: RefObject<BodyApi | null>;
+  /** The level the body's top headings should have (the collection's `headingStart`); 2 when absent. */
+  headingStart?: number;
 };
 
 /** What the rest of the entry editor can ask of the body editor. */
@@ -464,6 +468,7 @@ function WritingView({
   entryPath,
   imageFolder,
   partials = null,
+  headingStart = 2,
   revealRef,
 }: BodyEditorProps & { revealRef: RefObject<((offset: number) => void) | null> }) {
   const { manifest, loadMdxProps } = useStudio();
@@ -711,6 +716,7 @@ function WritingView({
             <FormatToolbar
               editor={editor}
               disabled={disabled}
+              headingStart={headingStart}
               onLink={() => {
                 setLinkOpen(true);
               }}
@@ -823,12 +829,14 @@ function WritingView({
 function FormatToolbar({
   editor,
   disabled,
+  headingStart,
   onLink,
   onImage,
   insert,
 }: {
   editor: Editor;
   disabled: boolean;
+  headingStart: number;
   onLink: () => void;
   onImage: () => void;
   /** The Insert menu, for bodies whose site has tags or components. */
@@ -840,8 +848,7 @@ function FormatToolbar({
       bold: e.isActive('bold'),
       italic: e.isActive('italic'),
       code: e.isActive('code'),
-      heading2: e.isActive('heading', { level: 2 }),
-      heading3: e.isActive('heading', { level: 3 }),
+      level: e.isActive('heading') ? Number(e.getAttributes('heading').level) : 0,
       bullets: e.isActive('bulletList'),
       numbers: e.isActive('orderedList'),
       quote: e.isActive('blockquote'),
@@ -868,22 +875,7 @@ function FormatToolbar({
         onChange={() => chain().toggleItalic().run()}
       />
       <ToolbarSeparator />
-      <ToggleButton
-        icon="heading"
-        label="Heading"
-        shortcut={shortcut('Mod', 'Alt', '2')}
-        isDisabled={disabled}
-        isSelected={state.heading2}
-        onChange={() => chain().toggleHeading({ level: 2 }).run()}
-      />
-      <ToggleButton
-        icon="subheading"
-        label="Subheading"
-        shortcut={shortcut('Mod', 'Alt', '3')}
-        isDisabled={disabled}
-        isSelected={state.heading3}
-        onChange={() => chain().toggleHeading({ level: 3 }).run()}
-      />
+      <TextStyleMenu editor={editor} level={state.level} start={headingStart} disabled={disabled} />
       <ToolbarSeparator />
       <ToggleButton
         icon="bullets"
@@ -928,6 +920,70 @@ function FormatToolbar({
       <ToolButton icon="image" label="Image" isDisabled={disabled} onPress={onImage} />
       {insert}
     </Toolbar>
+  );
+}
+
+/**
+ * The block under the caret as a paragraph or a heading, in one menu: six
+ * toggles would crowd the toolbar. The headings start where the
+ * collection's do (`headingStart`, 2 when the layout's title is the `h1`),
+ * as the accessibility checks expect; Ctrl+Alt+1 to 6 still make any level.
+ * Its button names the style where the caret is, at one width, so the tools
+ * after it don't shift as the caret moves. Choosing sends focus back to the
+ * text, as a tool does.
+ */
+function TextStyleMenu({
+  editor,
+  level,
+  start,
+  disabled,
+}: {
+  editor: Editor;
+  /** The heading's level where the caret is, or 0 in a paragraph. */
+  level: number;
+  /** The first heading level offered. */
+  start: number;
+  disabled: boolean;
+}) {
+  const current = level === 0 ? 'Paragraph' : `Heading ${String(level)}`;
+  const levels = [1, 2, 3, 4, 5, 6].filter((n) => n >= Math.min(start, 6));
+  const options = [
+    { id: '0', label: 'Paragraph' },
+    ...levels.map((n) => ({ id: String(n), label: `Heading ${String(n)}` })),
+  ];
+  return (
+    <Menu
+      label="Text style"
+      items={[]}
+      onAction={() => undefined}
+      trigger={
+        <ToolButton
+          aria-label={`Text style: ${current}`}
+          isDisabled={disabled}
+          className="w-28 gap-1"
+        >
+          <span className="min-w-0 flex-1 truncate text-left">{current}</span>
+          <Chevron />
+        </ToolButton>
+      }
+      choice={{
+        title: 'Text style',
+        options,
+        selected: String(level),
+        onChange: (id) => {
+          const next = Number(id);
+          if (next === 0) editor.chain().setParagraph().run();
+          else
+            editor
+              .chain()
+              .setHeading({ level: next as 1 | 2 | 3 | 4 | 5 | 6 })
+              .run();
+        },
+        onClosed: () => {
+          editor.commands.focus();
+        },
+      }}
+    />
   );
 }
 

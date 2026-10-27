@@ -99,7 +99,7 @@ describe('a list of kinds', () => {
 
   it('adds a kind below a row from its menu', async () => {
     const { api, user } = open(tuition);
-    const text = await screen.findByRole('button', { name: /^Text/ });
+    const text = await screen.findByRole('button', { name: /^Text, / });
     text.focus();
     await user.keyboard('{Shift>}{F10}{/Shift}');
     await user.click(await screen.findByRole('menuitem', { name: 'Add below' }));
@@ -114,7 +114,7 @@ describe('a list of kinds', () => {
   it('drags a block by its handle, as any row', async () => {
     layOutLists();
     const { api, user } = open(tuition);
-    const text = await screen.findByRole('button', { name: /^Text/ });
+    const text = await screen.findByRole('button', { name: /^Text, / });
     const list = text.closest('ol');
     const handle = list?.querySelector(':scope > li [draggable="true"]');
     const faq = list?.querySelectorAll(':scope > li')[1];
