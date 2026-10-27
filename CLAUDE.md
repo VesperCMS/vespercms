@@ -307,6 +307,7 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 
 - `npm run dev` brings up the playground and anything the phase touches, with seed or fixture data.
 - Typecheck, lint and unit tests pass. New behavior has tests.
+- The Windows tests pass on GitHub: CI runs them only weekly, so run `gh workflow run windows.yml` (DECISIONS.md, "CI skips prose, and the Windows tests run weekly").
 - axe (via Playwright) passes on every new screen, and a manual keyboard pass is noted.
 - Each package has a README. Anything deployable has deployment notes.
 - `DECISIONS.md` and `CLAUDE.md` are updated.

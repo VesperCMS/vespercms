@@ -93,6 +93,13 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 - What the move broke until it's reconnected by hand: the cloud's CI token (`VESPER_READ_TOKEN`, scoped to the old owner), the VesperCMS app's access to this repository (installed on Jeremy's account, not the organization), and Cloudflare Pages' access for vespercms.com.
 - The npm scope is still `@vesper`, and unclaimed. Whether it becomes `@vespercms` too is open (spec §13.1).
 
+### 2026-10-27: CI skips prose, and the Windows tests run weekly
+
+**Jeremy chose on 2026-10-27, with the organization's free minutes nearly spent for October: CI doesn't run for a push or pull request whose every changed file is prose (the Markdown files at the root, and the READMEs of `packages/*`, `apps/*` and `templates/*`), and the Windows unit tests moved out of CI into `.github/workflows/windows.yml`, which runs on Mondays and by hand.** By 27 October the month had used 970 Linux and 530 Windows minutes of the free plan's 2,000. A full run had grown to about 27 Linux minutes plus a Windows job of 16 to 18, which count double, so the Windows job was about half of every run. This extends the content skip ("CI skips pushes that only change the site's content").
+- Prose: 25 of October's 79 pushes to `main` changed only those files, including the notes that record a green run, and each ran everything. Nothing builds, lints or formats them. Markdown elsewhere still runs CI, since the playground's and the corpus's `.md` files are test data.
+- Windows: `npm test` already runs on Windows on Jeremy's machine, so the job on every push mostly repeated it. What's given up: a Windows-only break can sit on `main` until the next Monday, or until someone runs `gh workflow run windows.yml`. A phase isn't done until that run has passed (CLAUDE.md, "Definition of done for a phase").
+- Rejected for now: making the repository public early (Actions is free for public repositories, but going public is the launch's call), a self-hosted runner on Jeremy's PC (its e2e would compete with local runs for ports 4400–4410), and paying for minutes past the allowance, about $0.33 a full run.
+
 ## Packages and tooling
 
 ### 2026-10-17: Workspace packages resolve to source through a custom export condition
