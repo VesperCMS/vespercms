@@ -23,7 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5, step 7: the real-world check (a Netlify site and an SFTP host, Jeremy's to provide), then the docs page. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, not yet deployed) were built 2026-10-26, and its one open call (what an unreadable `schedule.json` does) was decided and built 2026-10-27: the scheduled run fails without building. See "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
+Phase 4.5, step 7: the real-world check (a Netlify site and an SFTP host, Jeremy's to provide), then the docs page. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, on production since 2026-10-27) were built 2026-10-26, and its one open call (what an unreadable `schedule.json` does) was decided and built 2026-10-27: the scheduled run fails without building. See "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below. Jeremy's round of editor changes (queued 2026-10-27) was built that day: see "Editor round, 2026-10-27 (outcome)", below.
 
@@ -1630,19 +1630,16 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 - **Not built here:** the cloud's own half (step 6), and holding a draft that's published from Changes or approved from a review (DECISIONS.md, "Not held").
 - **Found while testing, from Phase 4:** in the cloud, Publish (or Schedule…) pressed while the draft is saving does nothing, with no word. `save` returns early while a save is in flight, and `publishDraft` stops there. The cloud's e2e tests wait for "Draft saved" before publishing, which hid it. A person meets it only by publishing within about a second of typing. The fix is to have Publish wait for the save in flight, then save what's left; it isn't made here.
 
-**Step 6, the cloud's own half (2026-10-26),** built in `vesper-cloud` with its `vesper` submodule at `4950e7c`; not deployed. Its PLAN.md ("Phase 4.5") and DECISIONS.md say how:
+**Step 6, the cloud's own half (2026-10-26),** built in `vesper-cloud` with its `vesper` submodule at `4950e7c`; on production since 2026-10-27. Its PLAN.md ("Phase 4.5") and DECISIONS.md say how:
 - the site object's `/schedule`, held drafts and one alarm;
 - the deploy hook or `repository_dispatch` at each instant;
 - live or failed from the live site's `schedule.json`;
 - GitHub's push webhook;
 - the dashboard's settings and recent results.
 
-The six new contract cases pass against the real API in workerd, and both of its e2e projects pass, the studio's included. Before a deploy, Jeremy:
-- applies migration 0004;
-- sets `SECRETS_KEY` and `GITHUB_WEBHOOK_SECRET`;
-- turns on VesperCMS's push webhook.
+The six new contract cases pass against the real API in workerd, and both of its e2e projects pass, the studio's included. On 2026-10-27, with Jeremy's OK, migration 0004 was applied, `SECRETS_KEY` and `GITHUB_WEBHOOK_SECRET` set, and both Workers deployed at `vesper-cloud`'s `8470c8d`. Jeremy turned on VesperCMS's push webhook, and a commit from the studio was answered 204.
 
-**Next: step 7,** the real-world check: a Netlify site with a build hook and an SFTP host with the `sftp` template, a post scheduled 5 minutes ahead on each, against §11's 2 minutes. Then the docs page.
+**Next: step 7,** the real-world check: a Netlify site with a build hook and an SFTP host with the `sftp` template, a post scheduled 5 minutes ahead on each, against §11's 2 minutes. Then the docs page. Each site is a private copy of this repository at `main`, connected to the cloud, with two changes: the playground's `VESPER_BUILD_TIME` line removed, or every build stays at noon on 26 October and the post never appears, and vesper's own CI workflow deleted, so a publish doesn't run it.
 
 ## Phase 4.5: Scheduled publish and unpublish (design)
 
