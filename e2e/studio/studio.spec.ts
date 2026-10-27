@@ -322,6 +322,16 @@ test('by keyboard: panes, full width: the collections, the list and the entry, f
   await page.setViewportSize({ width: 700, height: 900 });
   await expect(structure).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Blog posts' })).toBeVisible();
+
+  // Wide again: the top bar comes back new, and the panes start below it, not beneath it.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const save = page.getByRole('main').getByRole('button', { name: 'Save' });
+  await expect(save).toBeVisible();
+  const bar = await page.getByRole('banner').boundingBox();
+  const saveBox = await save.boundingBox();
+  expect(saveBox?.y).toBeGreaterThanOrEqual((bar?.y ?? 0) + (bar?.height ?? 0));
+  // Nothing covers it: a trial click checks that Save would get the click.
+  await save.click({ trial: true });
 });
 
 test('a deep link survives a reload', async ({ page }) => {

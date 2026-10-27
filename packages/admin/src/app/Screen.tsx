@@ -133,22 +133,36 @@ export function useLeadHeading(title: string, heading: RefObject<HTMLElement | n
   }, [navigation.count, leads, heading]);
 }
 
-/** An element's height in pixels, kept current as it wraps or the window changes. */
-export function useHeight(ref: RefObject<HTMLElement | null>, fallback: number): number {
-  const [height, setHeight] = useState(fallback);
+/**
+ * An element's width or height in pixels, kept current as it wraps or the
+ * window changes: give it the returned ref. A callback ref, never a ref
+ * object, because what's measured may be replaced or come and go: the top
+ * bar among panes leaves as the window narrows and comes back new as it
+ * widens, and a ref object went on measuring the bar that left, at 0, so
+ * every pane's header sat beneath the new one. The editor's bar moves from
+ * the top bar into a pane's header the same way.
+ */
+export function useMeasure(
+  side: 'width' | 'height',
+  fallback: number,
+): [(element: HTMLElement | null) => void, number] {
+  const [element, setElement] = useState<HTMLElement | null>(null);
+  const [size, setSize] = useState(fallback);
   useLayoutEffect(() => {
-    const element = ref.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => {
-      setHeight(element.offsetHeight);
-    });
+    const measure = () => {
+      // A detached element measures 0 on its way out.
+      if (!element.isConnected) return;
+      setSize(side === 'width' ? element.offsetWidth : element.offsetHeight);
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(element);
-    setHeight(element.offsetHeight);
+    measure();
     return () => {
       observer.disconnect();
     };
-  }, [ref]);
-  return height;
+  }, [element, side]);
+  return [setElement, size];
 }
 
 /**
@@ -193,8 +207,7 @@ export function PaneFrame({
   const landmark = pane?.landmark ?? 'main';
   const main = landmark === 'main';
   const Heading = pane?.level === 2 ? 'h2' : 'h1';
-  const header = useRef<HTMLDivElement>(null);
-  const headerHeight = useHeight(header, 56);
+  const [header, headerHeight] = useMeasure('height', 56);
   return (
     <div
       ref={scrollRef}

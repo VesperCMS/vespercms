@@ -25,7 +25,7 @@ import type { Studio } from './context.tsx';
 import { useLoad } from './load.ts';
 import { hrefFor, type Route } from './router.ts';
 import { PaneContext, usePane, type PaneInfo } from './pane-context.ts';
-import { PaneFrame, Screen, StudioHeader, useHeight, useLeadHeading } from './Screen.tsx';
+import { PaneFrame, Screen, StudioHeader, useLeadHeading, useMeasure } from './Screen.tsx';
 
 /*
  * The studio on wide screens, full width: panes side by side, Sanity-style
@@ -178,8 +178,7 @@ export function PaneShell({
 
   // The top bar floats over the panes, which scroll from the window's top beneath it, so its
   // glass has something to frost. Each pane starts its content below it (PaneFrame).
-  const bar = useRef<HTMLDivElement>(null);
-  const barHeight = useHeight(bar, 56);
+  const [bar, barHeight] = useMeasure('height', 56);
 
   return (
     <div
