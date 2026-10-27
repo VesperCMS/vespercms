@@ -390,6 +390,54 @@ describe('Dialog, Menu and Disclosure', () => {
     expect(onAction).toHaveBeenCalledWith('sign-out');
   });
 
+  it('Menu applies a choice at once, then hands focus on once it has closed', async () => {
+    const onChange = vi.fn();
+    const elsewhere = document.createElement('textarea');
+    document.body.append(elsewhere);
+    const onClosed = vi.fn(() => {
+      elsewhere.focus();
+    });
+    render(
+      <Menu
+        label="Text style"
+        triggerText="Paragraph"
+        items={[]}
+        onAction={() => undefined}
+        choice={{
+          title: 'Text style',
+          options: [
+            { id: 'p', label: 'Paragraph' },
+            { id: 'h2', label: 'Heading 2' },
+          ],
+          selected: 'p',
+          onChange,
+          onClosed,
+        }}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Paragraph' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Heading 2' }));
+    expect(onChange).toHaveBeenCalledWith('h2');
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(elsewhere).toHaveFocus();
+    });
+    expect(onClosed).toHaveBeenCalledTimes(1);
+
+    // Choosing the current option changes nothing, but still hands focus on.
+    elsewhere.blur();
+    await user.click(screen.getByRole('button', { name: 'Paragraph' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Paragraph' }));
+    await waitFor(() => {
+      expect(elsewhere).toHaveFocus();
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    elsewhere.remove();
+  });
+
   it('Avatar shows a picture, or initials when there is none or it fails', () => {
     expect(initialsOf('Ada Lovelace King')).toBe('AL');
     expect(initialsOf('@jeremybise')).toBe('J');

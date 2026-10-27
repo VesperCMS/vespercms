@@ -147,6 +147,12 @@ export type MenuChoice = {
   options: { id: string; label: string }[];
   selected: string;
   onChange: (id: string) => void;
+  /**
+   * Once the menu has closed after an option was chosen (the current one
+   * included), with focus back on its button: where focus goes next. The
+   * body's Text style sends it back to the text.
+   */
+  onClosed?: () => void;
 };
 
 export type MenuProps = {
@@ -308,8 +314,9 @@ export function Menu({
     if (shown || id === null) return;
     chosen.current = null;
     anchor.current?.querySelector<HTMLElement>('button')?.focus();
-    onAction(id);
-  }, [shown, onAction]);
+    if (choiceIds.has(id)) choice?.onClosed?.();
+    else onAction(id);
+  });
   const groups: MenuGroup[] = choice
     ? [{ id: 'choice', choice }, ...(items.length > 0 ? [{ id: 'items' as const, items }] : [])]
     : [];
@@ -357,8 +364,8 @@ export function Menu({
           <RACMenu
             aria-label={label}
             onAction={(key: Key) => {
-              // Choosing an option is a selection, not an action.
-              if (!choiceIds.has(String(key))) act(String(key));
+              // Choosing an option is a selection, made at once; only its `onClosed` waits.
+              act(String(key));
             }}
             items={groups}
             disabledKeys={items.filter((item) => item.isDisabled).map((item) => item.id)}
