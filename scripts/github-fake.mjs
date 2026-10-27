@@ -84,7 +84,39 @@ export function createGitHubFake(options) {
   }
   const text = (args, extra) => git(args, extra).toString('utf8').trim();
 
+  // Starting git costs about 25 ms on Windows, and the studio reads every
+  // file through here, so a process per blob read and per ref read took most
+  // of the cloud tests' time there (October 2026). A blob never changes for
+  // its SHA, so each is read from git once, and many at a time.
+  const blobs = new Map();
+
+  /** Blobs by SHA in one git process, `null` for any the repository doesn't have. */
+  function readBlobs(shas) {
+    const wanted = [...new Set(shas)].filter((sha) => !blobs.has(sha));
+    if (wanted.length > 0) {
+      // Each answer is `<sha> <type> <size>\n<bytes>\n`, or `<sha> missing\n`.
+      const out = git(['cat-file', '--batch'], { input: `${wanted.join('\n')}\n` });
+      let at = 0;
+      for (const sha of wanted) {
+        const end = out.indexOf(0x0a, at);
+        const [, type, size] = out.subarray(at, end).toString('utf8').split(' ');
+        at = end + 1;
+        if (type === 'missing') continue;
+        if (type === 'blob') blobs.set(sha, out.subarray(at, at + Number(size)));
+        at += Number(size) + 1;
+      }
+    }
+    return shas.map((sha) => (blobs.has(sha) ? Buffer.from(blobs.get(sha)) : null));
+  }
+
   function head() {
+    // The ref's own file, where git keeps one; packed refs go through git.
+    try {
+      const tip = readFileSync(join(dir, 'refs', 'heads', ...branch.split('/')), 'utf8').trim();
+      if (/^[0-9a-f]{40}$/.test(tip)) return tip;
+    } catch {
+      // Not a loose ref.
+    }
     try {
       return text(['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]);
     } catch {
@@ -113,7 +145,11 @@ export function createGitHubFake(options) {
     }
   }
 
-  const blob = (bytes) => text(['hash-object', '-w', '--stdin'], { input: Buffer.from(bytes) });
+  function blob(bytes) {
+    const sha = text(['hash-object', '-w', '--stdin'], { input: Buffer.from(bytes) });
+    blobs.set(sha, Buffer.from(bytes));
+    return sha;
+  }
 
   /**
    * Commits files straight to the branch, as someone else pushing would:
@@ -164,13 +200,15 @@ export function createGitHubFake(options) {
   function files() {
     const tip = head();
     if (!tip) return {};
-    const out = {};
-    for (const line of text(['ls-tree', '-r', tip]).split('\n').filter(Boolean)) {
-      const [meta, path] = line.split('\t');
-      const sha = meta.split(' ')[2];
-      out[path] = git(['cat-file', 'blob', sha]);
-    }
-    return out;
+    const entries = text(['ls-tree', '-r', tip])
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const [meta, path] = line.split('\t');
+        return { path, sha: meta.split(' ')[2] };
+      });
+    const bytes = readBlobs(entries.map((entry) => entry.sha));
+    return Object.fromEntries(entries.map((entry, i) => [entry.path, bytes[i]]));
   }
 
   /** Commits on the branch, newest first, with the files each changed. */
@@ -282,18 +320,20 @@ export function createGitHubFake(options) {
     }
     if (path === '/graphql' && request.method === 'POST') {
       const { query } = await request.json();
+      const objects = [...query.matchAll(/(\w+): object\(oid: "([0-9a-f]{40})"\)/g)];
+      const bytes = readBlobs(objects.map(([, , oid]) => oid));
       const repository = {};
-      for (const [, alias, oid] of query.matchAll(/(\w+): object\(oid: "([0-9a-f]{40})"\)/g)) {
-        try {
-          const bytes = git(['cat-file', 'blob', oid]);
-          const decoded = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
-          try {
-            repository[alias] = { text: decoded.decode(bytes), isBinary: false };
-          } catch {
-            repository[alias] = { text: null, isBinary: true };
-          }
-        } catch {
+      for (const [i, [, alias]] of objects.entries()) {
+        const blob = bytes[i];
+        if (!blob) {
           repository[alias] = null;
+          continue;
+        }
+        const decoded = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+        try {
+          repository[alias] = { text: decoded.decode(blob), isBinary: false };
+        } catch {
+          repository[alias] = { text: null, isBinary: true };
         }
       }
       return json(200, { data: { repository } });
@@ -313,9 +353,10 @@ export function createGitHubFake(options) {
     }
     let found;
     if ((found = /^\/git\/ref\/heads\/(.+)$/.exec(rest)) && request.method === 'GET') {
-      if (decodeURIComponent(found[1]) !== branch || !head())
+      const tip = head();
+      if (decodeURIComponent(found[1]) !== branch || !tip)
         return json(404, { message: 'Not Found' });
-      return json(200, { ref: `refs/heads/${branch}`, object: { sha: head(), type: 'commit' } });
+      return json(200, { ref: `refs/heads/${branch}`, object: { sha: tip, type: 'commit' } });
     }
     if ((found = /^\/git\/commits\/([0-9a-f]{40})$/.exec(rest)) && request.method === 'GET') {
       const tree = text(['rev-parse', `${found[1]}^{tree}`]);
@@ -343,7 +384,8 @@ export function createGitHubFake(options) {
       return json(200, { sha: found[1], tree, truncated: false });
     }
     if ((found = /^\/git\/blobs\/([0-9a-f]{40})$/.exec(rest)) && request.method === 'GET') {
-      const bytes = git(['cat-file', 'blob', found[1]]);
+      const [bytes] = readBlobs([found[1]]);
+      if (!bytes) return json(404, { message: 'Not Found' });
       if ((request.headers.get('accept') ?? '').includes('raw')) {
         return new Response(bytes, {
           status: 200,
