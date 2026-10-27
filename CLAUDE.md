@@ -199,6 +199,12 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Studio labels mark what's optional, "(optional)", and say nothing on required fields; required controls carry `aria-required`.** Most schema fields are required, so "(required)" repeated on nearly every label (DECISIONS.md, "The studio marks what's optional"). Public `<Form>`s keep "(required)".
 
+**The editor's bar never wraps: its status has a line of its own, never empty ("No changes", "Read only") and cut short rather than wrapped, and what has no room goes into the "…" menu.** A bar that wrapped as the cloud's statuses came and went moved Save under the editor's thumb on a phone (DECISIONS.md, "The editor's bar keeps one row, and the status has a line of its own").
+
+**A formatting toolbar sticks at `--sticky-top` (the screen's or pane's header, measured), opaque, and its editor scrolls the cursor clear of it with `scrollClearOfToolbar`.** ProseMirror can't see a sticky toolbar, and the cursor went up beneath it out of sight (DECISIONS.md, "The formatting toolbar stays in view").
+
+**Measure an element's size with `useMeasure` (`app/Screen.tsx`) and its callback ref, never a ref object.** The top bar among panes leaves and comes back new as the window crosses 768px, and a ref object kept its last size, 0, so every pane's header sat beneath it (DECISIONS.md, "Sizes are measured through a callback ref").
+
 **Move focus to a field with `focusWhenShown` (`editor/reveal.ts`), never `element.focus()` alone.** A field inside a closed list item, or on a tab that isn't chosen, is in the page but hidden; it asks every item around the field to open first (DECISIONS.md, "Top-level groups are sections, and list items are rows that open in place").
 
 **A drag in the studio carries its own type (`application/x-vesper-…`), never `text/plain`, and its drop target accepts only that type.** A Markdown field takes the plain text of any drag dropped on it, and the outline beside the entry took a list's row for a page (DECISIONS.md, "List rows drag by a handle").

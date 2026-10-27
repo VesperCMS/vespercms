@@ -25,7 +25,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 Phase 4.5, step 7: the real-world check (a Netlify site and an SFTP host, Jeremy's to provide), then the docs page. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, not yet deployed) were built 2026-10-26, with one call open for Jeremy (what an unreadable `schedule.json` does): see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
-Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below.
+Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below. Jeremy's round of editor changes (queued 2026-10-27) was built that day: see "Editor round, 2026-10-27 (outcome)", below.
 
 Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
@@ -700,6 +700,21 @@ Each lands as its own step with an outcome note, as the dogfooding steps do.
   - **`aria-required` on selects.** The kit's Select, tag and reference comboboxes don't carry `aria-required` yet (DECISIONS.md, "The studio marks what's optional").
   - **Moving a YAML list item: done the same day.** The list diff now matches items up and emits an `order` patch. The YAML and JSON writers move each item's text as it is, and fall back to comparing by position when they can't (DECISIONS.md, "A moved list item moves its text as it is"). The studio e2e test moves the About page's first section down and checks the file byte for byte: the block scalar moves as written. Vitest: 4,335 passed. The studio, GitHub and cloud e2e projects: 46 passed and 2 skipped.
   - **Screen reader passes.** With the rest, before launch.
+
+## Editor round, 2026-10-27 (outcome)
+
+Five changes Jeremy asked for, all about editing. Reasons in DECISIONS.md under the same names.
+
+1. **The bar on a phone** ("The editor's bar keeps one row, and the status has a line of its own"). The status has a line of its own under the way back (one screen at a time) or the title (among panes), never empty ("No changes", "Read only"), the buttons never wrap, and the notes' count moves into the "…" menu where the bar has no room for it. The site's name leaves the top bar on a phone.
+2. **The toolbar stays in view** ("The formatting toolbar stays in view"), in the body and in Markdown fields, with the cursor scrolled clear of it.
+3. **Headings down to 6** ("Headings are one Text style menu, from where the collection's headings start"), in one menu that replaces Heading and Subheading, starting at the collection's `headingStart`.
+4. **A closed list row hovers** ("A closed list row answers the pointer").
+5. **No afterglow on Redirects** ("No afterglow on Redirects").
+6. **Panes after a narrow window** ("Sizes are measured through a callback ref"), found by Jeremy while trying the bar: widening from a phone width left every pane's header, Save included, beneath the top bar. Older than this round (since panes scroll beneath glass, 2026-10-26).
+
+Tests: unit tests for the status's "No changes" and "Read only", the Text style menu (it lists the levels from `headingStart`, applies one, gives focus back to the text, and the save writes `####`), the kit's `onClosed`, `scrollClearOfToolbar`, and the notes' count in the "…" menu one screen at a time (the notes drawer's tests now run among panes, where the count is a button). An e2e test at 375px checks that the bar keeps its height and its buttons' places from untouched to unsaved to saved, and passes axe. Unit tests, typecheck, lint and the `studio` and `cloud` e2e projects pass locally (the dev-against-build helpers test once the playground was rebuilt: its `dist` predated `opening-hours`). Committed to `main` 2026-10-27; not yet pushed or run in CI. Checked by hand in the 4402 preview at 375px, 1100px and 1280px, dark: the bar in each state and with a long cloud status, the count from the menu with focus back on "…", the toolbar stuck below the top bar and below a pane's header, the cursor scrolled clear of it, and Heading 4 chosen with the mouse.
+
+Open: a keyboard pass with a screen reader, and a look on a real phone, where iOS Safari moves the layout viewport as the keyboard opens and a sticky toolbar can sit above what's visible.
 
 ## Studio panes and tabs (outcome)
 

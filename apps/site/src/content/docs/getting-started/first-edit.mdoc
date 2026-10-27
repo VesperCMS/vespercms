@@ -23,7 +23,7 @@ New entry starts one. Its file is named after its title the first time you save 
 
 The title field is the page's heading. Below it are tabs: **Content** holds the main fields, in your schema's order, then the body, and **Details** the secondary fields: slugs, dates, tags, `draft`, ordering and SEO. The arrow keys move between tabs. A field's `.meta({ placement: 'details' })` or `'main'` overrides the rule, and a collection can add tabs of its own, such as SEO (see [Fields](/docs/content/fields/)).
 
-The top bar also has the entry's status ("Unsaved changes", "Saved just now"), Save, and a "…" menu:
+The top bar also has the entry's status ("No changes", "Unsaved changes", "Saved just now", or "Read only" for an entry you can't edit), Save, and a "…" menu. The status has a line of its own, under the entry's title, or on a narrow screen under the way back to the list, so the bar keeps its size as the status changes. The menu has:
 
 - **View on site** and **Copy page address**, for a collection with a `url`. The address is the page's full address, on Astro's `site` when your config sets one, so one copied while working locally is the live page's.
 - **Copy editing link**, the studio's address for this entry, to send to a colleague. It opens the entry after a reload, and after signing in.
@@ -51,7 +51,7 @@ The one exception is frontmatter with YAML anchors, aliases or tags, which can't
 
 ## The body editor
 
-Markdown, Markdoc and MDX bodies open in a writing view, with a toolbar for bold, italic, headings, lists, quotes, code, links and images. The link dialog searches your pages by title.
+Markdown, Markdoc and MDX bodies open in a writing view, with a toolbar for bold, italic, headings, lists, quotes, code, links and images. The toolbar's text style menu makes the line a paragraph or a heading, from the level where the collection's headings start (`headingStart`, 2 unless you set it) down to 6; it shows the style where the cursor is. As you scroll a long body, the toolbar stays at the top of the window. The link dialog searches your pages by title.
 
 Markdoc tags from `markdoc.config.mjs`, and MDX components you declare in `vesper.config.ts`, are blocks: a frame with a Settings button, whose form comes from the tag's attributes.
 

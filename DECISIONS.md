@@ -276,7 +276,7 @@ Amended in Phase 2.5: body checks (Markdoc, micromark and the validation around 
 
 ### 2026-10-17: The body editor's keyboard and toolbar
 
-**The formatting toolbar is one Tab stop (React Aria's toolbar pattern) with words, not icons (spec §10.4): Bold, Italic, Heading, Subheading, Bullets, Numbers, Quote, Code, Link, Image. Escape moves focus from the text to the toolbar, so leaving the editor never depends on Tab, which indents list items.** Images inserted into the body go through the same picker and hygiene as image fields, and need alt text (or "decorative") before they're inserted.
+**The formatting toolbar is one Tab stop (React Aria's toolbar pattern) with words, not icons (spec §10.4): Bold, Italic, Heading, Subheading, Bullets, Numbers, Quote, Code, Link, Image. (Since 2026-10-27, Heading and Subheading are one Text style menu: "Headings are one Text style menu, from where the collection's headings start".) Escape moves focus from the text to the toolbar, so leaving the editor never depends on Tab, which indents list items.** Images inserted into the body go through the same picker and hygiene as image fields, and need alt text (or "decorative") before they're inserted.
 
 ### 2026-10-17: Upload hygiene strips metadata losslessly unless the pixels must change
 
@@ -1541,6 +1541,51 @@ Rejected:
 Why: in GitHub mode the studio already talks to GitHub for every read and save, so a picture tells GitHub nothing new. The rule was about the studio's own assets: a studio that loads with no third party in the way, and no font host seeing who opens it. The map's tiles (OpenFreeMap) and GitHub's API were already requests from `/admin` to other hosts.
 
 Rejected: initials only in GitHub mode, which would keep the rule's wording for no gain in privacy. Built 2026-10-25, with CLAUDE.md's rule narrowed in the same change.
+
+### 2026-10-27: The editor's bar keeps one row, and the status has a line of its own
+
+**The entry editor's bar never wraps and keeps one height whatever its status says. On its left, two lines: the way back to the list (one screen at a time) or the entry's title (among panes), and under it the status, cut short rather than wrapped. The status is never empty: with nothing else to say it reads "No changes", or "Read only" for an entry that can't be edited. On its right, the buttons, which never shrink or move. Where the bar has no room for the notes' count as a button (one screen at a time, or a bar under 36rem in a pane), the count is the first item of the "…" menu, with the accessibility icon. One screen at a time, the site's name leaves the top bar on a phone, since the way back takes its place; from 640px it's back.**
+
+Why: Jeremy found the bar "all over the place" on a phone once "Saving draft…" and "Published" came and went. The status sat inline with the buttons in a row that wrapped, so a longer status pushed Save and "…" onto the next line, and the back link onto a line of its own, and the bar's height changed under the editor's thumb. The cloud's statuses are the longest ("Can't reach Vesper. Kept on this device"), and they change by themselves as drafts save.
+
+Notes on how it's built:
+- The bar measures its own width (`useMeasure` in `app/Screen.tsx`). It's drawn afresh when the window crosses the panes' width, from the top bar into a pane's header, and a ref object went on measuring the bar that left, so the hook takes a callback ref. A width of 0 is a bar with no layout (jsdom) and counts as roomy.
+- The status is never empty, so the way back (or the title) and the status always sit as a pair, centred beside the buttons, and nothing moves when the first change comes. Jeremy chose this (2026-10-27) over a blank line kept for it, which left the way back sitting high on an untouched entry, and over centring the way back alone, which moved it as the first status appeared. "Read only" is the entry list's word for the same thing.
+- The count stays outside the live status, as before ("Notes sit under their field; the count opens a drawer"). From the menu, the drawer gives focus back to "…".
+
+Rejected:
+- A status line as a second row of the top bar, always there: 32px more of a phone's height for a line that's often empty.
+- Toasts for the status, which Jeremy asked about. Spec §10.2 ("Calm feedback") puts the save status in the top bar as text, with no toasts. Most of these words are states, not events ("Unsaved changes", "Can't reach Vesper. Kept on this device", "Waiting for review"), and must stay in view while they're true; a toast that fades takes away the only place they're shown, and on a phone it covers the text being typed.
+- Shortening the status on a phone ("Saved"): the cloud's warnings would lose their meaning, and the bar would still wrap with a long count.
+- Leaving the count in the bar with a shorter label ("3 notes"): the visible words would no longer be part of the button's name as screen readers hear it (WCAG 2.5.3) unless the name were rewritten too, and it still didn't fit beside Save draft, Publish and its menu.
+
+### 2026-10-27: Headings are one Text style menu, from where the collection's headings start
+
+**The body's toolbar has one menu, Text style, in place of the Heading and Subheading buttons: Paragraph, then Heading N to Heading 6, where N is the collection's `headingStart` (2 unless set). Its button names the style where the cursor is ("Text style: Heading 2" to a screen reader), at one width (`w-28`), so the tools after it don't move as the cursor does. Choosing a style applies it at once and sends focus back to the text, where the cursor was. In the writing view, `h4` is a step smaller than `h3`, `h5` and `h6` smaller again at the text's own size, and `h6` muted, so the levels can be told apart.** Ctrl+Alt+0 to 6 (⌘⌥ on a Mac) are Tiptap's own shortcuts and still work; they were in the two buttons' tooltips, and the menu doesn't show them.
+
+Why: Jeremy asked for headings down to 6. Six toggles would crowd a toolbar that already wraps on a phone, and a menu that names the current style says what a toggle's pressed state only hinted at.
+
+The kit's `Menu` gained `onClosed` on a choice: it runs once the menu has closed after an option was chosen, the current one included, with focus already back on the menu's button. A choice's `onChange` still runs at once, so Space can try an option while the menu stays open (the user menu's Appearance does). Moving focus to the text in `onChange` didn't hold: React Aria gives focus back to the menu's button as the menu closes.
+
+### 2026-10-27: The formatting toolbar stays in view
+
+**The body's toolbar, and a Markdown field's, stick to the top of what scrolls while their text does: below the top bar one screen at a time, below a pane's header among panes, and at a dialog's top inside one. The screen and the pane set `--sticky-top`, their header's measured height. The toolbar is opaque (`surface-raised`), not glass: it covers text being edited, and glass stays for what floats over the page. Before ProseMirror scrolls the cursor into view, `scrollClearOfToolbar` scrolls a cursor that's beneath the toolbar to 4px below it; ProseMirror can't see a sticky toolbar, and the cursor otherwise went up beneath it, and beneath the glass above it, out of sight.**
+
+Why: Jeremy asked for it on long bodies, where reaching the tools meant scrolling back to the top.
+
+The 4px is less than the text's own padding, so a toolbar in its place above the text never sets the scroll off. A cursor above the text's own top is scrolled away inside an editor someone resized; ProseMirror's own scrolling handles that.
+
+### 2026-10-27: Sizes are measured through a callback ref
+
+**The studio measures an element's width or height with `useMeasure`, which hands back a callback ref, and ignores a measurement of an element no longer in the page. `useHeight`, which took a ref object, is gone.** The pane shell measured the floating top bar through a ref object to set `--studio-bar`. Narrowing the window below 768px unmounts that bar, and its observer reported 0 on the way out; widening again draws a new bar, which a ref object's effect never sees, so `--studio-bar` stayed 0 and every pane's header, Save and Publish included, sat beneath the top bar where nothing could click it. Jeremy found it moving from a phone-sized window back to a wide one. The studio e2e test for panes now widens again at the end and checks that Save is below the bar and takes a click; with the old measuring, it fails.
+
+### 2026-10-27: A closed list row answers the pointer
+
+**A list item's row, while closed, hovers to `surface-sunken`, as a pane's rows do. An open row doesn't: it's a form.** Jeremy asked for a subtle hover in the collapsed state.
+
+### 2026-10-27: No afterglow on Redirects
+
+**Redirects never has the afterglow, even with no redirects yet.** Jeremy asked for it to go. The afterglow is for welcoming screens, and `tokens.css` keeps it from tables and forms; Redirects is a table with an Add redirect form, even when it's empty.
 
 ---
 
