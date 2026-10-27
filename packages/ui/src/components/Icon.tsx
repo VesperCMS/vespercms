@@ -5,6 +5,7 @@
  */
 import { createElement } from 'react';
 import {
+  Accessibility,
   ArrowDown,
   ArrowLeft,
   ArrowRightLeft,
@@ -101,6 +102,7 @@ export const ICONS = {
   'add-child': FilePlus,
   delete: Trash,
   warning: TriangleAlert,
+  accessibility: Accessibility,
   error: CircleAlert,
   search: Search,
   media: Images,
