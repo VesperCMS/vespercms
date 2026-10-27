@@ -1,18 +1,28 @@
 name: CI
 
-# Every publish from vespercms.com's studio is a push to main that changes
-# only its content. Those skip CI, which would spend about 46 billed minutes
-# (Windows counts double) on a one-line edit: Cloudflare Pages still builds
-# them, and a content error fails that build. A push that changes anything
-# else as well runs everything.
+# CI skips a push whose every changed file is one of these, and a push that
+# changes anything else as well runs everything.
+# - vespercms.com's content: every publish from its studio is such a push, and
+#   Cloudflare Pages still builds it, so a content error fails that build.
+# - Prose: the notes at the root (PLAN.md, DECISIONS.md, CLAUDE.md, the spec)
+#   and the READMEs. Nothing builds, lints or formats them. Markdown anywhere
+#   else still runs CI, since the playground's and the corpus's is test data.
 on:
   pull_request:
     paths-ignore:
       - 'apps/site/src/content/**'
+      - '*.md'
+      - 'packages/*/README.md'
+      - 'apps/*/README.md'
+      - 'templates/*/README.md'
   push:
     branches: [main]
     paths-ignore:
       - 'apps/site/src/content/**'
+      - '*.md'
+      - 'packages/*/README.md'
+      - 'apps/*/README.md'
+      - 'templates/*/README.md'
 
 # A newer push to the same branch makes an older run's result irrelevant.
 concurrency:
