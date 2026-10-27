@@ -94,7 +94,7 @@ export function Redirects() {
   };
 
   return (
-    <Screen title="Redirects" afterglow={load.state === 'ready' && rows.length === 0}>
+    <Screen title="Redirects">
       <p className="mb-6 max-w-2xl text-content-muted">
         A redirect sends visitors from an old address to a new one. Moving a page adds them for you.
         Add your own for short links, or import a list when you bring an old site over.
