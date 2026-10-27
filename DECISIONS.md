@@ -1579,6 +1579,10 @@ The 4px is less than the text's own padding, so a toolbar in its place above the
 
 **The studio measures an element's width or height with `useMeasure`, which hands back a callback ref, and ignores a measurement of an element no longer in the page. `useHeight`, which took a ref object, is gone.** The pane shell measured the floating top bar through a ref object to set `--studio-bar`. Narrowing the window below 768px unmounts that bar, and its observer reported 0 on the way out; widening again draws a new bar, which a ref object's effect never sees, so `--studio-bar` stayed 0 and every pane's header, Save and Publish included, sat beneath the top bar where nothing could click it. Jeremy found it moving from a phone-sized window back to a wide one. The studio e2e test for panes now widens again at the end and checks that Save is below the bar and takes a click; with the old measuring, it fails.
 
+### 2026-10-27: One screen at a time, the top bar is the site's line, then its menus
+
+**One screen at a time, on every screen but the editor, the top bar is two lines: the site's name with the user menu at the line's end, then Content, Site and the cloud's Changes, flush with the site's name ("Content" lines up under it). The site's name takes no room of its own in the wrap and grows into what's left, so a long one is cut short rather than pushing the user menu onto a line of its own.** Before, the row wrapped as it pleased: the site's name alone on the first line and every menu pushed right on the second. Jeremy asked for the user menu up beside the name and the site's menus flush left below it. Changes sits with Content and Site because "3 changes, 1 to review" doesn't fit beside a name on a phone. Among panes nothing changes: one line, with Changes and the user menu at its end.
+
 ### 2026-10-27: A closed list row answers the pointer
 
 **A list item's row, while closed, hovers to `surface-sunken`, as a pane's rows do. An open row doesn't: it's a form.** Jeremy asked for a subtle hover in the collapsed state.

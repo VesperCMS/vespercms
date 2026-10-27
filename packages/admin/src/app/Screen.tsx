@@ -317,25 +317,32 @@ export function StudioHeader({
             bar !== undefined && !pane && 'mx-auto max-w-6xl',
           )}
         >
-          <a
-            href={hrefFor({ screen: 'home' })}
-            className={cx(
-              'items-center gap-2 rounded-sm text-heading-3 tracking-tight text-content no-underline',
-              homeLink ? 'inline-flex' : 'hidden sm:inline-flex',
-              // Only Vesper's own name is lowercase; a site's shows as the site writes it.
-              siteName === VESPER_NAME && 'lowercase',
-              'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus',
-              'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
-            )}
-          >
-            {/*
-             * Decorative: the link is named by the site's name beside it. Left
-             * out on a narrow screen, where the editor's bar needs the room
-             * (DECISIONS.md).
-             */}
-            <VesperMark size={20} className="hidden sm:block" />
-            {siteName}
-          </a>
+          {/*
+           * The site's name takes no room of its own in the wrap, then grows into
+           * what's left, so a long one is cut short instead of pushing the
+           * person's menu onto a line of its own. Beside the editor's bar, it's
+           * its own width.
+           */}
+          <div className={cx('min-w-0', homeLink ? 'flex flex-1 basis-0' : 'hidden sm:flex')}>
+            <a
+              href={hrefFor({ screen: 'home' })}
+              className={cx(
+                'inline-flex min-w-0 items-center gap-2 rounded-sm text-heading-3 tracking-tight text-content no-underline',
+                // Only Vesper's own name is lowercase; a site's shows as the site writes it.
+                siteName === VESPER_NAME && 'lowercase',
+                'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus',
+                'focus-visible:ring-6 focus-visible:ring-(color:--glow-focus)',
+              )}
+            >
+              {/*
+               * Decorative: the link is named by the site's name beside it. Left
+               * out on a narrow screen, where the editor's bar needs the room
+               * (DECISIONS.md).
+               */}
+              <VesperMark size={20} className="hidden shrink-0 sm:block" />
+              <span className="truncate">{siteName}</span>
+            </a>
+          </div>
           {bar ?? (
             <div className="ml-auto flex items-center gap-2">
               <ChangesButton />
@@ -348,7 +355,11 @@ export function StudioHeader({
   );
 }
 
-/** The top bar on every screen but the editor: the Content menu and the site menu. */
+/**
+ * The top bar on every screen but the editor, one screen at a time: the
+ * person's menu on the site's line, then the Content menu, the Site menu
+ * and the cloud's Changes on a line of their own.
+ */
 function DefaultBar() {
   const { manifest, siteUrl, cloud } = useStudio();
   const route = parseRoute(window.location.hash);
@@ -364,35 +375,42 @@ function DefaultBar() {
         icon: 'node' in icon ? icon.node : icon.name,
       };
     });
+  // Two lines, the person's menu beside the site's name and the site's menus below, flush
+  // with it: one line wrapped as it pleased, the menus pushed right under the name.
   return (
-    <nav aria-label="Studio" className="ml-auto flex items-center gap-2">
-      <Menu
-        label="Content"
-        triggerText="Content"
-        items={items}
-        onAction={(name) => {
-          navigate({ screen: 'list', collection: name });
-        }}
-      />
-      <Menu
-        label="Site"
-        triggerText="Site"
-        items={[
-          { id: 'media', label: 'Media', icon: 'media' as const },
-          // Redirects belong to the whole site (spec §7.5): a folder grant doesn't reach them.
-          ...(!cloud || cloud.wholeSite
-            ? [{ id: 'redirects', label: 'Redirects', icon: 'redirects' as const }]
-            : []),
-          ...(siteUrl ? [{ id: 'view', label: 'View site', icon: 'view-on-site' as const }] : []),
-        ]}
-        onAction={(id) => {
-          if (id === 'media') navigate({ screen: 'media' });
-          if (id === 'redirects') navigate({ screen: 'redirects' });
-          if (id === 'view' && siteUrl) window.open(siteUrl, '_blank', 'noopener');
-        }}
-      />
-      <ChangesButton />
-      <UserMenu />
-    </nav>
+    <>
+      <div className="ml-auto flex min-w-0">
+        <UserMenu />
+      </div>
+      {/* Pulled out by a trigger's padding, so "Content" lines up with the site's name. */}
+      <nav aria-label="Studio" className="-ml-3 flex basis-full items-center gap-2">
+        <Menu
+          label="Content"
+          triggerText="Content"
+          items={items}
+          onAction={(name) => {
+            navigate({ screen: 'list', collection: name });
+          }}
+        />
+        <Menu
+          label="Site"
+          triggerText="Site"
+          items={[
+            { id: 'media', label: 'Media', icon: 'media' as const },
+            // Redirects belong to the whole site (spec §7.5): a folder grant doesn't reach them.
+            ...(!cloud || cloud.wholeSite
+              ? [{ id: 'redirects', label: 'Redirects', icon: 'redirects' as const }]
+              : []),
+            ...(siteUrl ? [{ id: 'view', label: 'View site', icon: 'view-on-site' as const }] : []),
+          ]}
+          onAction={(id) => {
+            if (id === 'media') navigate({ screen: 'media' });
+            if (id === 'redirects') navigate({ screen: 'redirects' });
+            if (id === 'view' && siteUrl) window.open(siteUrl, '_blank', 'noopener');
+          }}
+        />
+        <ChangesButton />
+      </nav>
+    </>
   );
 }
