@@ -86,6 +86,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 afterAll(() => {
@@ -385,27 +386,34 @@ describe('the studio and the cloud', () => {
   }, 60_000);
 
   it('keeps changes on this device while the cloud can’t be reached, and saves them when it’s back', async () => {
+    // The draft saves a second after typing stops, and tries again 5 s after
+    // that fails. The clock jumps ahead instead of the test waiting it out.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+    const afterTimers = (find: () => HTMLElement) =>
+      vi.waitFor(
+        () => {
+          vi.advanceTimersByTime(500);
+          return find();
+        },
+        { timeout: 10_000, interval: 20 },
+      );
     await returnFromSignIn('u_admin', '#/c/blog/e/harbor-at-dawn');
     let down = false;
     const fetcher: typeof fetch = (input, init) =>
       down ? Promise.reject(new TypeError('Failed to fetch')) : cloud.fetch(input, init);
     render(<CloudGate settings={settings} options={options} fetcher={fetcher} store={store} />);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const title = await screen.findByRole('textbox', { name: 'Title' }, { timeout: 10_000 });
     down = true;
     await user.type(title, ', offline');
     expect(
-      await screen.findByText('Can’t reach Vesper. Kept on this device', undefined, {
-        timeout: 10_000,
-      }),
+      await afterTimers(() => screen.getByText('Can’t reach Vesper. Kept on this device')),
     ).toBeInTheDocument();
     expect(cloud.state.drafts.drafts).toEqual([]);
     down = false;
-    expect(
-      await screen.findByText(/^Draft saved/, undefined, { timeout: 15_000 }),
-    ).toBeInTheDocument();
+    expect(await afterTimers(() => screen.getByText(/^Draft saved/))).toBeInTheDocument();
     expect(cloud.state.drafts.drafts).toHaveLength(1);
-  }, 30_000);
+  });
   it('shows an editor only the collections they edit, and no redirects', async () => {
     await returnFromSignIn('u_editor');
     render(gate());
