@@ -23,7 +23,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5, step 7: the real-world check (a Netlify site and an SFTP host, Jeremy's to provide), then the docs page. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, not yet deployed) were built 2026-10-26, with one call open for Jeremy (what an unreadable `schedule.json` does): see "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
+Phase 4.5, step 7: the real-world check (a Netlify site and an SFTP host, Jeremy's to provide), then the docs page. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, not yet deployed) were built 2026-10-26, and its one open call (what an unreadable `schedule.json` does) was decided and built 2026-10-27: the scheduled run fails without building. See "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below. Jeremy's round of editor changes (queued 2026-10-27) was built that day: see "Editor round, 2026-10-27 (outcome)", below.
 
@@ -1598,8 +1598,8 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
   - Vitest's unit and integration projects pass for these files; typecheck and lint pass.
 - **Not checked here:** a real lftp against a real server, and a real build hook. That's step 7's real-world check, on an SFTP host and on Netlify.
 
-**Open, for Jeremy:**
-- **An unreadable `schedule.json` rebuilds every run,** as the design says, so a scheduled change is never missed. Netlify's free plan has about 20 production deploys a month (300 credits at 15 each). A wrong address, or a site that has never deployed with Vesper, would spend the month's deploys in under a day of hourly runs. The alternative is to fail the scheduled run instead. GitHub then emails whoever last changed its schedule, and a site whose file is briefly unreadable just waits for the next run. Recommended: fail it, with the address it tried in the message.
+**Decided by Jeremy, 2026-10-27:**
+- **A scheduled run that can't read `schedule.json` fails without building,** with the address it tried in the message, as recommended (DECISIONS.md, "A scheduled run that can't read `schedule.json` fails"). The design had it rebuild every run, so a scheduled change was never missed. But Netlify's free plan has about 20 production deploys a month (300 credits at 15 each), and a wrong address, or a site that has never deployed with Vesper, would have spent them in under a day of hourly runs. Built the same day: the due step prints an `::error::` naming the address, exits 1 and writes no `due` output, so the deploy skips the run. GitHub notifies whoever last changed the workflow's schedule, and a site whose file is briefly unreadable waits for the next run. Tests: the due step's script, run as it ships, for a 404, HTML, an unknown version, a time that isn't one, an unreachable host and an address with `%` in it; the workflows' snapshots.
 
 **Step 5, the cloud's half here (2026-10-26),** as designed; DECISIONS.md's "The cloud's schedule in the protocol, the contract and the studio" says how, and where it differs:
 - **The protocol** (`@vesper/core`): `GET /schedule`, `POST /schedule` and `DELETE /schedule/{id}`, with `CloudClient.schedule()`, `hold()` and `release()`, and `Draft.held`.
@@ -1732,7 +1732,7 @@ Scope is the §11 Phase 4.5 entry and §6.17, under D18: scheduling is time-corr
 **The free tier's scheduled rebuild** (calls 2 to 5). `vesper deploy init --target sftp|ftp|hook` writes one GitHub Actions workflow into the repository and lists the secrets to add.
 - **Targets.** `sftp` and `ftp` build on push and upload, as §6.16 says. `hook` is for git-connected hosts, which already build on push: it only calls the site's build hook, kept in a repository secret.
 - **The scheduled run.** With `--rebuild-every 60` (minutes, at least 5), the workflow also runs on `schedule:`.
-  - Its first step fetches the live site's `/_vesper/schedule.json`. It goes on only when `next` has passed, or when the file can't be read.
+  - Its first step fetches the live site's `/_vesper/schedule.json`. It goes on only when `next` has passed. (Also when the file can't be read, as designed; since 2026-10-27, that run fails without building instead. See "Phase 4.5: progress".)
   - A site then rebuilds once per scheduled change, not every hour.
 - **Other triggers.** Every workflow also listens for `repository_dispatch` (type `vesper-rebuild`), the cloud's trigger, and has `workflow_dispatch`, a button for people.
 - **Telling the studio.** `deploy init` prints a `rebuildEvery` line for `vesper.config.ts`, which the studio's accuracy line reads (call 5).

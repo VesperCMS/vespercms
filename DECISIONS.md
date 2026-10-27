@@ -1155,7 +1155,7 @@ Built 2026-10-26. `PageService.unpublishRedirects(at)` lists them in core; the b
 
 ### 2026-10-21: A free site rebuilds on a schedule only when something is due
 
-**Every build writes `dist/_vesper/schedule.json` with the next time the site changes, never what changes. The workflows' scheduled run fetches it from the live site and rebuilds only once that time has passed, or when the file can't be read. `rebuildEvery` (minutes) in `vesper.config.ts` tells the studio how often the run comes, so its line can say "This site rebuilds every hour" (calls 2 and 5; spec §6.17 changed).**
+**Every build writes `dist/_vesper/schedule.json` with the next time the site changes, never what changes. The workflows' scheduled run fetches it from the live site and rebuilds only once that time has passed. When the file can't be read, that run fails without building (changed 2026-10-27; it rebuilt, see "A scheduled run that can't read `schedule.json` fails"). `rebuildEvery` (minutes) in `vesper.config.ts` tells the studio how often the run comes, so its line can say "This site rebuilds every hour" (calls 2 and 5; spec §6.17 changed).**
 - An hourly rebuild regardless is about 720 builds a month: free plans' build counts and Actions minutes, spent mostly on builds that change nothing.
 - The cloud reads the same file's `builtAt` to tell when a scheduled change is live, on any host.
 
@@ -1270,6 +1270,17 @@ The studio, connected (absent otherwise, spec §6.9):
 - **The Scheduled view** gains a State column ("Rebuild at 8:00 AM", "Waiting in Vesper until 8:00 AM", "Next build after 8:00 AM" without a trigger), and above the table, a held change that failed, in words, for whoever may fix it.
 - **Changes** leaves held drafts out of its Publish, and says when each goes out.
 - **Not held:** a draft published from Changes, or approved from a review, isn't held even when its entry has a time still to come, since neither reads the entry's text. On a public repository that can let it be read early.
+
+### 2026-10-27: A scheduled run that can't read `schedule.json` fails
+
+**When the scheduled run can't read the live site's `_vesper/schedule.json` (no answer, a 404, HTML, a version or a time it doesn't know), its `due` step prints an error naming the address it tried, fails, and writes no `due` output, so the deploy skips the run and nothing is built. The next scheduled run tries again.** Jeremy's call, as recommended in "Phase 4.5: progress". Why:
+- Rebuilding instead, as "A free site rebuilds on a schedule only when something is due" first said, builds on every run while the file can't be read. Netlify's free plan is about 20 production deploys a month (300 credits at 15 each), so a wrong address, or a site that has never been built with Vesper, would spend the month's deploys in under a day of hourly runs, and nothing would say why.
+- A failed scheduled run notifies the person who last changed the workflow's schedule (by email or on GitHub, as their settings say; docs.github.com, "Events that trigger workflows", checked 2026-10-27), so a wrong address is found at its first run.
+- What it costs: while the file can't be read, a scheduled change waits. If the file is briefly unreadable, the change goes out at the next run. If the address is wrong, it waits until someone fixes the workflow. A run the cloud starts (`repository_dispatch`) has no `due` job, so a site on the cloud still gets its changes at their times.
+
+The message is a workflow command (`::error::`), escaped as Actions expects, so it shows on the run's summary, not only in its log. The deploy's condition already skipped a scheduled run whose `due` output wasn't `true`, so no job changed.
+
+Rejected: rebuilding while the file can't be read (the first design); rebuilding only on some failures, such as a timeout, which still spends deploys when a host is down for a day.
 
 ## GitHub mode
 

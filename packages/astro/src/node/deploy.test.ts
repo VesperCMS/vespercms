@@ -220,26 +220,27 @@ describe('the due step', () => {
   });
 
   // Asynchronous, so the test's own server can answer while it runs.
-  async function due(siteUrl: string): Promise<{ due: string; log: string }> {
+  async function due(siteUrl: string): Promise<{ due: string; log: string; code: number | null }> {
     const dir = mkdtempSync(join(tmpdir(), 'vesper-due-'));
     const output = join(dir, 'output');
     writeFileSync(output, '');
     try {
-      const log = await new Promise<string>((done, fail) => {
-        const child = spawn(process.execPath, ['--input-type=module'], {
-          env: { ...process.env, VESPER_SITE_URL: siteUrl, GITHUB_OUTPUT: output },
-        });
-        let text = '';
-        child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()));
-        child.stderr.on('data', (chunk: Buffer) => (text += chunk.toString()));
-        child.on('error', fail);
-        child.on('close', (code) => {
-          if (code === 0) done(text);
-          else fail(new Error(text));
-        });
-        child.stdin.end(script);
-      });
-      return { due: readFileSync(output, 'utf8'), log };
+      const { log, code } = await new Promise<{ log: string; code: number | null }>(
+        (done, fail) => {
+          const child = spawn(process.execPath, ['--input-type=module'], {
+            env: { ...process.env, VESPER_SITE_URL: siteUrl, GITHUB_OUTPUT: output },
+          });
+          let text = '';
+          child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()));
+          child.stderr.on('data', (chunk: Buffer) => (text += chunk.toString()));
+          child.on('error', fail);
+          child.on('close', (code) => {
+            done({ log: text, code });
+          });
+          child.stdin.end(script);
+        },
+      );
+      return { due: readFileSync(output, 'utf8'), log, code };
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -249,6 +250,7 @@ describe('the due step', () => {
     const result = await due(`${origin}/passed/`);
     expect(result.due).toBe('due=true\n');
     expect(result.log).toMatch(/^A change was due at /);
+    expect(result.code).toBe(0);
   });
 
   it('waits when the next change is still to come, or nothing is scheduled', async () => {
@@ -256,10 +258,10 @@ describe('the due step', () => {
     expect(later.due).toBe('due=false\n');
     expect(later.log).toMatch(/^Nothing is due until /);
     const none = await due(`${origin}/none/`);
-    expect(none).toEqual({ due: 'due=false\n', log: 'Nothing is scheduled.\n' });
+    expect(none).toEqual({ due: 'due=false\n', log: 'Nothing is scheduled.\n', code: 0 });
   });
 
-  it('rebuilds to be safe when the schedule can’t be read', async () => {
+  it('fails without building when the schedule can’t be read, naming the address', async () => {
     for (const [path, why] of [
       ['missing', 'it answered 404'],
       ['garbled', 'it is not a schedule this workflow knows'],
@@ -267,18 +269,32 @@ describe('the due step', () => {
       ['no-time', 'it is not a schedule this workflow knows'],
     ] as const) {
       const result = await due(`${origin}/${path}/`);
-      expect(result.due).toBe('due=true\n');
-      expect(result.log).toBe(
-        `${origin}/${path}/_vesper/schedule.json could not be read (${why}), so the site is rebuilt to be safe.\n`,
-      );
+      // No output, so the deploy's `needs.due.outputs.due == 'true'` is false.
+      expect(result).toEqual({
+        due: '',
+        log: `::error::${origin}/${path}/_vesper/schedule.json could not be read (${why}), so nothing was built. Check VESPER_SITE_URL in this workflow, and that the live site was built with Vesper. The next scheduled run tries again.\n`,
+        code: 1,
+      });
     }
     const closed = createServer();
     await new Promise<void>((done) => closed.listen(0, '127.0.0.1', done));
     const port = (closed.address() as AddressInfo).port;
     await new Promise((done) => closed.close(done));
     const unreachable = await due(`http://127.0.0.1:${String(port)}/`);
-    expect(unreachable.due).toBe('due=true\n');
-    expect(unreachable.log).toContain('could not be read');
+    expect(unreachable.due).toBe('');
+    expect(unreachable.code).toBe(1);
+    expect(unreachable.log).toMatch(
+      new RegExp(
+        `^::error::http://127\\.0\\.0\\.1:${String(port)}/_vesper/schedule\\.json could not be read`,
+      ),
+    );
+  });
+
+  it('escapes the address for the error annotation', async () => {
+    const result = await due(`${origin}/100%25/`);
+    expect(result.log).toMatch(
+      /^::error::\S+\/100%2525\/_vesper\/schedule\.json could not be read/,
+    );
   });
 
   it('reads the schedule under the site’s base, past any cache', async () => {

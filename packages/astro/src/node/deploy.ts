@@ -84,17 +84,22 @@ export function everyText(minutes: number): string {
 /**
  * The scheduled run's first step, run by the runner's own Node with nothing
  * installed. It reads the live site's `_vesper/schedule.json` and rebuilds
- * only once the next change is due, or when the file can't be read, so a
- * scheduled change is never missed (DECISIONS.md, "A free site rebuilds on a
- * schedule only when something is due"). The query defeats caches in front
- * of the site. Plain JavaScript, and never `${{`, which Actions would expand.
+ * only once the next change is due (DECISIONS.md, "A free site rebuilds on a
+ * schedule only when something is due"). When the file can't be read, the run
+ * fails without building, naming the address it tried: rebuilding instead
+ * would spend a free plan's month of deploys on a wrong address in a day
+ * (DECISIONS.md, "A scheduled run that can't read `schedule.json` fails").
+ * The query defeats caches in front of the site. Plain JavaScript, and never
+ * `${{`, which Actions would expand.
  */
 export const DUE_SCRIPT = `import { appendFileSync } from 'node:fs';
 
 const url = new URL('_vesper/schedule.json', process.env.VESPER_SITE_URL);
 const address = url.href;
 url.searchParams.set('at', String(Date.now()));
-let due = true;
+// Actions reads a workflow command's message with these three escaped.
+const command = (text) => text.replace(/%/g, '%25').replace(/\\r/g, '%0D').replace(/\\n/g, '%0A');
+let due;
 let reason;
 try {
   const response = await fetch(url, {
@@ -115,10 +120,14 @@ try {
   }
 } catch (error) {
   const why = error instanceof Error ? error.message : String(error);
-  reason = \`\${address} could not be read (\${why}), so the site is rebuilt to be safe.\`;
+  reason = \`::error::\${command(
+    \`\${address} could not be read (\${why}), so nothing was built. Check VESPER_SITE_URL in this workflow, and that the live site was built with Vesper. The next scheduled run tries again.\`,
+  )}\`;
+  process.exitCode = 1;
 }
 console.log(reason);
-appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
+// Without an output, the deploy skips a scheduled run.
+if (due !== undefined) appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
 `;
 
 /** The repository secrets each target reads, with what goes in them, for `deploy init` to list. */
@@ -218,7 +227,8 @@ function header(options: WorkflowOptions): string[] {
     ...(options.rebuildEvery !== undefined
       ? [
           `# - ${everyText(options.rebuildEvery)}, but only when a scheduled change is due. It reads`,
-          `#   ${options.siteUrl ?? ''}_vesper/schedule.json first.`,
+          `#   ${options.siteUrl ?? ''}_vesper/schedule.json first, and when it can't, that`,
+          '#   run fails without building.',
         ]
       : []),
     '#',
@@ -265,7 +275,10 @@ function dueJob(): string[] {
   ];
 }
 
-/** Every run builds but a scheduled one with nothing due; a skipped `due` job doesn't stop it. */
+/**
+ * Every run builds but a scheduled one with nothing due, or whose `due` job
+ * failed and so has no output; a skipped `due` job doesn't stop it.
+ */
 function needsDue(scheduled: boolean): string[] {
   return scheduled
     ? [

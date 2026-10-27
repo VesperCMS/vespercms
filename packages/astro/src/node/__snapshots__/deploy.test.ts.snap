@@ -90,7 +90,8 @@ exports[`deployWorkflow > writes each target as it ships > hook, every hour 1`] 
 # - when the Vesper cloud asks, at a scheduled change’s exact time;
 # - when someone runs it from the Actions tab;
 # - every hour, but only when a scheduled change is due. It reads
-#   https://example.com/_vesper/schedule.json first.
+#   https://example.com/_vesper/schedule.json first, and when it can't, that
+#   run fails without building.
 #
 # Its secrets are under Settings > Secrets and variables > Actions:
 # VESPER_BUILD_HOOK.
@@ -128,7 +129,9 @@ jobs:
           const url = new URL('_vesper/schedule.json', process.env.VESPER_SITE_URL);
           const address = url.href;
           url.searchParams.set('at', String(Date.now()));
-          let due = true;
+          // Actions reads a workflow command's message with these three escaped.
+          const command = (text) => text.replace(/%/g, '%25').replace(/\\r/g, '%0D').replace(/\\n/g, '%0A');
+          let due;
           let reason;
           try {
             const response = await fetch(url, {
@@ -149,10 +152,14 @@ jobs:
             }
           } catch (error) {
             const why = error instanceof Error ? error.message : String(error);
-            reason = \`\${address} could not be read (\${why}), so the site is rebuilt to be safe.\`;
+            reason = \`::error::\${command(
+              \`\${address} could not be read (\${why}), so nothing was built. Check VESPER_SITE_URL in this workflow, and that the live site was built with Vesper. The next scheduled run tries again.\`,
+            )}\`;
+            process.exitCode = 1;
           }
           console.log(reason);
-          appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
+          // Without an output, the deploy skips a scheduled run.
+          if (due !== undefined) appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
           EOF
 
   rebuild:
@@ -183,7 +190,8 @@ exports[`deployWorkflow > writes each target as it ships > sftp, scheduled, in a
 # - when the Vesper cloud asks, at a scheduled change’s exact time;
 # - when someone runs it from the Actions tab;
 # - every hour, but only when a scheduled change is due. It reads
-#   https://example.com/_vesper/schedule.json first.
+#   https://example.com/_vesper/schedule.json first, and when it can't, that
+#   run fails without building.
 #
 # Its secrets are under Settings > Secrets and variables > Actions:
 # VESPER_SFTP_HOST, VESPER_SFTP_PORT, VESPER_SFTP_USER, VESPER_SFTP_PASSWORD,
@@ -230,7 +238,9 @@ jobs:
           const url = new URL('_vesper/schedule.json', process.env.VESPER_SITE_URL);
           const address = url.href;
           url.searchParams.set('at', String(Date.now()));
-          let due = true;
+          // Actions reads a workflow command's message with these three escaped.
+          const command = (text) => text.replace(/%/g, '%25').replace(/\\r/g, '%0D').replace(/\\n/g, '%0A');
+          let due;
           let reason;
           try {
             const response = await fetch(url, {
@@ -251,10 +261,14 @@ jobs:
             }
           } catch (error) {
             const why = error instanceof Error ? error.message : String(error);
-            reason = \`\${address} could not be read (\${why}), so the site is rebuilt to be safe.\`;
+            reason = \`::error::\${command(
+              \`\${address} could not be read (\${why}), so nothing was built. Check VESPER_SITE_URL in this workflow, and that the live site was built with Vesper. The next scheduled run tries again.\`,
+            )}\`;
+            process.exitCode = 1;
           }
           console.log(reason);
-          appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
+          // Without an output, the deploy skips a scheduled run.
+          if (due !== undefined) appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
           EOF
 
   deploy:
