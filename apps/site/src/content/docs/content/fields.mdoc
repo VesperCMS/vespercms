@@ -140,7 +140,7 @@ summary: z.string().meta({
 
 `.meta()` works before or after `.optional()` and `.default()`. Values must be plain data: a function in `widgetOptions` is dropped, with a warning.
 
-The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `url`, `slug`, `color`, `file`, `number`, `switch`, `date`, `datetime`, `select`, `radio`, `tags`, `multiselect`, `group`, `union`, `repeater`, `reference`, `references`, `image`, `geo` and `raw`. A name that doesn't exist, or a widget that can't edit the field's type (`color` on a number), falls back to the control the type implies. Vesper warns in the terminal, naming the field and the widget.
+The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `url`, `slug`, `color`, `file`, `number`, `switch`, `date`, `datetime`, `select`, `radio`, `icon`, `tags`, `multiselect`, `group`, `union`, `repeater`, `reference`, `references`, `image`, `geo` and `raw`. A name that doesn't exist, or a widget that can't edit the field's type (`color` on a number), falls back to the control the type implies. Vesper warns in the terminal, naming the field and the widget.
 
 ## Field helpers
 
@@ -166,6 +166,7 @@ const schema = z.object({
 | `fields.email()` | `z.email().meta({ widget: 'email', autocomplete: 'email' })` | `"a@b.com"` |
 | `fields.datetime()` | `z.coerce.date().meta({ widget: 'datetime' })` | ISO 8601, with an offset |
 | `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
+| `fields.icon(names)` | `z.enum([...]).meta({ widget: 'icon' })` | An icon's name, such as `"calendar-days"` |
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | A Markdown string |
 | `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | A path, such as `/files/brochure.pdf` |
 | `fields.image(image, { ratios? })` | See [Images](/docs/content/images/) | `{ src, alt, … }` |
@@ -179,6 +180,7 @@ Options you pass go into `widgetOptions`, as they would in the raw form. What th
 - `datetime()` is entered in the site's time zone (`timeZone` in `vesper.config.ts`, otherwise each editor's own) and stored with that day's offset.
 - `markdown()` is a small editor for bold, italic, code, links, paragraphs and lists. With `inline: true` it leaves out paragraphs and lists.
 - `select()` takes a list of values, an object of values and labels (`{ news: 'News' }`), or `[{ value, label }]`. The file stores the value.
+- `icon()` offers [Lucide](https://lucide.dev/icons) icons by their names on that page, such as `icon(['leaf', 'calendar-days'])`. The studio shows a list you can search, with each icon beside its name, and the chosen icon in the field. The file stores the name, and your site draws the icon. Like `select()`, it also takes names with labels, `{ 'code-xml': 'Code' }`, and the list then shows the labels. Install the `lucide` package: Vesper takes the pictures of the icons you offer from it when it reads your schema, and only those reach the studio. A name Lucide doesn't have is still offered, by name alone, and Vesper warns in the terminal.
 - `hideFromSearch()` keeps the entry's page out of the site's own search: see [Site search](/docs/site/search/).
 
 ## Tabs: Content, Details and your own
