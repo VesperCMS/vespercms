@@ -25,10 +25,10 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | 2.9 Site search | Done (2026-10-19). CI green on GitHub (run 39264241554); outcome and open questions in `PLAN.md` |
 | 3 GitHub mode | Done (2026-10-19). CI green on GitHub (run 39287685831), and the real-world check passed on GitHub and Cloudflare Pages; outcome and open questions in `PLAN.md` |
 | vespercms.com and the docs | Live (2026-10-21), ahead of Phase 9 at Jeremy's request: `apps/site` on Cloudflare Pages, edited with Vesper, with `/admin` for its cloud project; `vesper agents`. CI green on GitHub (run 39636024765). The home page's drawn hero, studio screenshots, icons and theme toggle (2026-10-26). Decisions in `DECISIONS.md` ("Vesper's own site") |
-| thosegeeks.com port (dogfooding) | Started (2026-10-27) at Jeremy's request: ThoseGeeks' own site ported from EmDash in its own repository (`C:\code\thosegeeks-vesper`, this repository as a submodule), running beside the live site at thosegeeks-vesper.jeremy-bise-9bc.workers.dev. **Its gaps are in `PLAN.md` ("Dogfooding thosegeeks.com"): put them to Jeremy whenever studio or cloud work resumes, before choosing what to build.** |
+| thosegeeks.com port (dogfooding) | Started (2026-10-27) at Jeremy's request: ThoseGeeks' own site ported from EmDash in its own repository (`C:\code\thosegeeks-vesper`, this repository as a submodule), running beside the live site at thosegeeks-vesper.jeremy-bise-9bc.workers.dev. Its first nine gaps were decided by Jeremy and built (2026-10-28) but one, an importer from another CMS, which waits for Phase 9: dragging flat collections into order, wrapping titles, notes named by path, `<Img decorative>`, icon fields with pictures, Cloudflare Workers, and prereleases on npm as `vespercms`. **New gaps go into `PLAN.md` ("Dogfooding thosegeeks.com"): put them to Jeremy whenever studio or cloud work resumes, before choosing what to build.** |
 | 4 Cloud foundation | Done (2026-10-26). Both halves built (2026-10-20), CI green on GitHub (run 39438657706), and the cloud on production at vespercms.com; the GitHub App, VesperCMS, is live (2026-10-21). The real-world check passed (2026-10-21) on `vesper-github-test` and on vespercms.com itself. A publish credits every draft's author, on production since 2026-10-22. The studio against the real API under `wrangler dev` passed e2e in vespercms-cloud (2026-10-26, CI green, run 40358823912). Screen reader passes wait until before launch (Jeremy's call). Progress and design in `PLAN.md` (the cloud's own in vespercms-cloud's), decisions in `DECISIONS.md` ("The cloud") |
 | Studio layout, panes and tabs | Done (2026-10-25), at Jeremy's request between Phase 4's steps: fields as sections, Appearance and pictures, Markdoc settings, then the studio as full-width panes with tabs in the editor (merged from `studio-panes`). With nothing chosen, the collections are the page (2026-10-26). Outcome and open questions in `PLAN.md`, decisions in `DECISIONS.md` |
-| 4.5 Scheduled publish and unpublish | In progress (started 2026-10-26, its calls confirmed 2026-10-21). Built: core's `scheduledEvents`, the status words and times in the site's zone, with DST tests; the build's one instant, filtering in `vesper:content`, unpublish redirects, `schedule.json` and the build's warnings; and the studio's Publish ▾, Schedule dialog, schedule in Details, status words, Scheduled filter and view, and the dev marker; `vesper deploy init` with its SFTP, FTP and build-hook workflows; and the cloud's half here: the schedule in the protocol, `runCloudContract` and the fake, and the studio's held drafts, states and cancelling (2026-10-26). The cloud's own half in `vesper-cloud` (step 6), on production since 2026-10-27. Next: the real-world check on Netlify and an SFTP host (step 7), then the docs page. Progress and design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
+| 4.5 Scheduled publish and unpublish | In progress (started 2026-10-26, its calls confirmed 2026-10-21). Built: core's `scheduledEvents`, the status words and times in the site's zone, with DST tests; the build's one instant, filtering in `vesper:content`, unpublish redirects, `schedule.json` and the build's warnings; and the studio's Publish ▾, Schedule dialog, schedule in Details, status words, Scheduled filter and view, and the dev marker; `vesper deploy init` with its SFTP, FTP, Workers (2026-10-28) and build-hook workflows; and the cloud's half here: the schedule in the protocol, `runCloudContract` and the fake, and the studio's held drafts, states and cancelling (2026-10-26). The cloud's own half in `vesper-cloud` (step 6), on production since 2026-10-27. Next: the real-world check on Netlify and an SFTP host (step 7), then the docs page. Progress and design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
 
 `PLAN.md` holds the current phase plan, the next phase's design and the roadmap.
 
@@ -65,7 +65,7 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run lint` | ESLint, including the core package-boundary rules. |
 | `npm run format` / `format:check` | Prettier over code and config (never prose or content). |
 | `npm run a11y:contrast` | Token contrast (WCAG 2.1, both themes) and the §10.4 token budget, parsed from `packages/ui/src/tokens.css`. |
-| `npm run changeset` | Record a release note and bump for changed Vesper's packages (`vespercms` and `@vespercms/*`) (all share one version). |
+| `npm run changeset` | Record a release note and bump for changed published packages (`vespercms`, `@vespercms/core`, `@vespercms/admin`; all share one version). `npm run changeset -- version` makes the next version; the Release workflow publishes it (`.changeset/README.md`). |
 | `npm run build` | `dist/` for every package: tsc for the libraries, Vite for the studio bundle and its CSS. |
 | `npm run build -w @vespercms/playground` | Static build of the playground into `apps/playground/dist/`, and its accessibility report into `apps/playground/.vesper/`. |
 | `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). `github`: a GitHub-mode build, the real relay and a fake GitHub over real git (`scripts/github-site.mjs`). `cloud`: a cloud-mode build and the fake cloud over a fake GitHub (`scripts/cloud-site.mjs`). `site`: vespercms.com, built (build it first). |
@@ -132,6 +132,8 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Change a tree's structure through `PageService` (moves, order, child and section pages), never by renaming files or editing `_order.yaml` yourself.** A move is one change set: its files, both order files, a redirect per page and every rewritten link (spec §6.15.4).
 
+**Change a flat collection's order through `ContentService.reorderEntry` (core's `placeAfter`), never by renumbering its files yourself.** A move writes as few numbers as it can and keeps the ones editors chose by hand, such as a 420 meant to stay last (DECISIONS.md, "Flat collections are put in order by a number").
+
 **Write a redirect's target as the page's exact URL (`formatUrl`: base and trailing slash), never a bare key.** On a plain host a bare path gets the host's own slash redirect first, so every redirect becomes a chain.
 
 **Redirects that need the host's rules before the build runs go into the repository when the studio writes them, not into `dist`.** Vercel reads `vercel.json` before building; everything else is written into `dist` at build.
@@ -143,6 +145,10 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 **Never pass a focal point as Astro's `position`; it goes into `style` as `object-position`.** Sharp takes only its own keywords, and a percentage fails the build (DECISIONS.md, "Astro hands `position` to Sharp unchanged").
 
 **A new option for the crop step goes into its `propertiesToHash`, its `/_image` URL and its HTML filter.** Astro hashes only the properties a service names and passes the rest to the page as attributes.
+
+**`<Img>` and `getImg()` take alt text only from the image field; `decorative` is the one way to `alt=""` there, and an `alt` prop fails the build.** A template's own words would replace the editor's on every page (DECISIONS.md, "`<Img decorative>`, and an `alt` prop fails the build").
+
+**The crop step loads `sharp` from Astro's own Sharp service module, never with an import of its own.** A site's `sharp` can differ from the one Astro brings, and a second libvips in one process fails to load (DECISIONS.md, "The crop step loads the sharp Astro loads").
 
 **A focal-point or crop edit writes only the entry, never the image file.** Edits are non-destructive (spec §6.6); the studio e2e test hashes every file under `src/` to prove it.
 
@@ -191,6 +197,8 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 ### Studio and cloud
 
 **The studio only ever runs from the site itself at `/admin`. `app.{{domain}}` never hosts a second copy of the editor.** Cloud features are reached by signing in to the cloud from the studio (D14).
+
+**An icon field's pictures come only from the manifest's `icons` (`fields.icon`), resolved from the site's own `lucide` at build. Never import Lucide's icons into the studio beyond the kit's own.** The studio would otherwise carry the whole set; collection icons work the same way (DECISIONS.md, "Icon fields show their icons").
 
 **Cloud-only features are absent, not disabled, when the studio isn't connected.** No upsell banners (spec §6.9).
 
@@ -297,6 +305,8 @@ Treat these like lint rules. Breaking one needs a dated note in `DECISIONS.md`.
 **Add no dependency without a one-line justification in the PR or commit message. Prefer platform APIs.** Every dependency is attack surface and upgrade cost.
 
 **Small commits, one concern each, with conventional commit messages.** They are easier to review and to revert.
+
+**Publish to npm only through the Release workflow, from a version commit made with `npm run changeset -- version`; never `npm publish` by hand.** A release is then always a reviewed commit, and npm trusts the workflow rather than a token (DECISIONS.md, "Vesper publishes as `vespercms` and `@vespercms/*`").
 
 **Never commit secrets. Use `.dev.vars` locally and Wrangler secrets in production.** The repo will go public.
 

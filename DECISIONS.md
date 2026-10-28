@@ -171,6 +171,16 @@ Longer timeouts were rejected because slowness wasn't the cause. With nothing ed
 
 **Every built page must have zero axe violations for `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa`. `wcag22aa` findings are attached to the test as annotations but don't fail it.** D11 makes 2.1 AA the floor and 2.2 AA a goal "where it's cheap." Pages that are deliberately broken test fixtures are listed, with the reason, in `AXE_EXCLUDED` in `e2e/static-site.spec.ts`. They still have to load.
 
+### 2026-10-28: Vesper publishes as `vespercms` and `@vespercms/*`, with prereleases under `next`
+
+**Sites install the integration as `vespercms` (`npx astro add vespercms`), and its subpaths are `vespercms/fields`, `vespercms/config`, `vespercms/components` and so on. Core and the studio are `@vespercms/core` and `@vespercms/admin`; the kit (`@vespercms/ui`, bundled into the studio) and the two apps are private. Jeremy registered the `vespercms` npm org and chose the names (2026-10-28).** Entries above this one were written with the old names (`@vesper/core`, `@vesper/astro`); read them as these.
+- One unscoped name for what sites install: it's what `astro add`, the docs and a package.json show. The org holds the rest. The unscoped name isn't the org's, so the first publish is what claims it.
+- The source condition keeps its name, `@vesper/source`. It's internal, and the repositories that run Vesper from source (`vesper-cloud`, thosegeeks.com) set it in their `.npmrc`; renaming it would break them for no reader's gain.
+- **Prereleases before Phase 9 (Jeremy, 2026-10-28):** changesets' prerelease mode with the `next` tag, from `0.1.0-next.0`. Porting thosegeeks.com showed what the submodule costs every site before then: workspaces, the source condition, a read-only token in CI, and no host-side git builds, which can't read a private submodule. This reverses the 2026-10-21 call against prereleases for `vesper-cloud` ("The cloud"), whose reasons were the unclaimed org and a release per studio change; the cloud can keep its submodule.
+- **The Release workflow runs by hand from `main`** (`release.yml`): typecheck, unit tests, `check:dist`, then `changeset publish`, which publishes the versions npm doesn't have. Versions are made locally with `npm run changeset -- version` and committed, so a release is always a reviewed commit. Rejected: changesets' own Action (a third-party Action with write access, opening version PRs) and publishing on every push to `main`.
+- **npm's trusted publishing (OIDC), no stored token**, as `.changeset/README.md` planned. npm can't trust a package that doesn't exist yet, so the first publish of each takes an `NPM_TOKEN` secret, deleted once each package has its trusted publisher. No `--provenance` while the repository is private: npm makes attestations only for public ones.
+- Before the first publish, the three packages were packed and installed into a fresh Astro 7.4 site outside the repository. It built, its studio ran in `astro dev`, and a move in the list wrote its file. That found the crop step's second Sharp ("The crop step loads the sharp Astro loads", Images) and test snapshots and helpers shipped in `src/`, now left out by `files`.
+
 ## Studio
 
 ### 2026-10-17: The UI kit is built on React Aria Components (spec §13.2)
@@ -552,6 +562,21 @@ Built 2026-10-26. jsdom has no drag and drop and no layout, so the widget tests 
 
 **The kit's `Menu` holds the chosen item until the menu has closed, then puts focus on the menu's own button and runs the action. A dialog the action opens then gives focus back to that button when it closes.** Found in a keyboard pass of Duplicate: after Delete… was cancelled, or the copy-by-hand dialog closed, focus fell to the page, and a keyboard or screen reader user started again from the top. The action had run while focus was on the chosen item, so the dialog took that item, gone with the menu by then, as the place to return to. React Aria puts focus back on a menu's button only a frame after the menu closes, by when the dialog had opened. Every dialog opened from a "…" menu had this, Delete… and Discard draft… included. jsdom's frames don't run that way, so the check is in Chromium: the studio e2e test closes both dialogs and expects the "…" button focused, and fails without this. Rejected: focusing the button from inside the action, which does nothing while the menu is open, since the page outside it can't take focus; running the action after a timer, which races React Aria's frame; and returning focus by hand in each dialog, which every new one would have to remember.
 
+### 2026-10-28: Flat collections are put in order by a number
+
+**`orderBy: 'order'` in vesper.config.ts names a collection's top-level number field. The list is sorted by it (lowest first, entries with no number last, ties by title), Order is first in its Sort menu, and while the list is shown that way, whole (no search, no filter, every entry visible to the member), a row drags to a new place, moves with Alt+↑ and Alt+↓, or takes Move up and Move down from its "…" menu. A move writes the numbers through core's `ContentService.reorderEntry`: one change set, each file spliced and checked against the schema as a save is.** Porting thosegeeks.com found services and client quotes shown in a set order kept in a number editors typed, while the list sorted by title and showed the bare number. Jeremy chose dragging (2026-10-28) over a default sort with labelled values.
+- **A move writes as few numbers as it can** (`placeAfter`, `studio/order.ts`): usually only the moved entry's, halfway between its new neighbours (between 10 and 20 it's 15), 10 past the last, and below the first without going under 0. Only when the neighbours leave no room or share a number do the entries from there down move up one, until the order holds again. Rejected: renumbering the whole collection on every move, which would rewrite every file and throw away numbers chosen by hand, such as thosegeeks.com's 420 for a service meant to stay last.
+- **Whole numbers only.** People type them, and a schema may say `.int()`. A value the schema refuses (`.max(100)`, say) refuses the move, in words, before anything is written.
+- **The request says where, not what** (`{ id, after }`): the server reads the collection and works out the numbers, so a list loaded a moment ago can't write stale ones. An entry it can't find is a conflict, said as "The list changed since it was loaded".
+- **An editor open on a rewritten entry reads it again** (`entriesRewritten`), or its next save would find a version it didn't start from. So a move waits, with a message, while the open entry has unsaved changes.
+- **In the cloud, a move is one draft save**, its files together, like any save; a member who can't see every entry of the collection gets no dragging there, since the numbers of entries out of sight would decide where things land.
+- A name that isn't a top-level number field, or `orderBy` on a tree or a singleton, is dropped with a manifest warning saying why. Trees keep `_order.yaml`.
+- The interface budget: the "…" menu on rows is the same overflow the outline has, there only while rows can move, and the drag handle is the outline's.
+
+### 2026-10-28: The title wraps
+
+**The title is a textarea that grows with its text and with the pane, at title size; Enter adds no line break, and a pasted break becomes a space.** As a one-line box it cut "What website accessibility actually means, and who it's for" off at "who it'" in a 718px column, with no sign there was more (found porting thosegeeks.com). Rejected: CSS `field-sizing: content`, which Firefox doesn't support yet; the height is measured in a layout effect, and a `ResizeObserver` on its parent follows the pane's width.
+
 ## Schema introspection
 
 ### 2026-10-17: Walk the Zod schema; don't build the manifest from Astro's JSON Schemas
@@ -613,6 +638,15 @@ The studio needs each of them to render the right control or message. They stay 
 ### 2026-10-17: The manifest is deterministic and hashed by content
 
 **The manifest has no timestamps. It keeps the configs' own order, uses POSIX paths, and carries a SHA-256 of its canonical JSON (sorted keys), excluding the generator version.** The same site must produce the same bytes on Windows and Linux, so the snapshot test is meaningful and the cloud can tell a schema change from a Vesper upgrade. The playground's manifest is committed as a snapshot (`packages/astro/test/__snapshots__/playground.manifest.json`), so schema-mapping changes show up in review as a readable diff.
+
+### 2026-10-28: Icon fields show their icons
+
+**`fields.icon(names)` is `z.enum(names)` with the `icon` widget, and takes `select()`'s label forms. The file stores the name, and the site draws it. When the manifest is built, `vespercms` hands core a lookup into the site's own `lucide`, and the manifest's top-level `icons` holds the drawing of each name an icon field offers, once each, never all of Lucide. In the studio, the field is the kit's searchable Combobox, each icon beside its name, and the chosen icon in the field.** Both of Jeremy's Vesper sites picked Lucide icons from a select of names with no picture (60 on thosegeeks.com, 24 on vespercms.com). Jeremy chose a list with each icon beside its name (2026-10-28) over a grid of icons.
+- One table for the manifest rather than drawings per field: thosegeeks.com offers the same 60 names in more than one field.
+- Only core's walk of the schemas, after widgets are resolved and including forms, Markdoc hints and MDX props, knows which names are offered, so the integration loads `lucide` whenever it's installed (about 40 ms) and core looks names up. Collection icons are looked up there too, with their old messages.
+- A name Lucide doesn't have is still offered by name, with one warning per field listing every such name; no `lucide` at all gives one warning saying to install it.
+- Each picture is `aria-hidden`, and an option's accessible name is its words, so no option is an icon alone (spec §10.4). The kit's Combobox now validates with `aria-required` instead of the browser's own check, which marked a required field invalid on blur.
+- Typing finds an option by its words: a labelled icon ("Code" for `code-xml`) isn't found by its Lucide name.
 
 ## Content files
 
@@ -802,6 +836,11 @@ Parity between dev and build is tested by comparing `/site-tree.json` from both.
 
 **`astro:routes:resolved` (Astro 5 and later, so 6 and 7) gives each route's pattern, regex, parameters, type and origin. Static routes are the project's own pages and endpoints with no parameters; Vesper's injected `/admin` and redirect routes don't count.** In dev the check runs alongside startup rather than holding it up, and logs each message once. At build it records in the manifest, for each collection, the route that renders most of its URLs (`collections[].route`, for previews), and warns about URLs no route can produce. A flat collection kept in folders gets a hint, in dev only, to set `tree: true` (spec §6.15.2, "the editor suggests").
 
+### 2026-10-28: Cloudflare Workers static assets is a host Vesper knows
+
+**Workers Builds' `WORKERS_CI=1` adds the existing `cloudflare` target, as `CF_PAGES=1` does: Workers static assets read `_redirects` and `_headers` from the assets folder as Pages does. A Workers site built anywhere else names it with `redirects: { native: ['cloudflare'] }`. `site/hosting.mdoc` has a Cloudflare Workers section: a `wrangler.jsonc` with `assets.directory`, `not_found_handling: "404-page"` and the `html_handling` that matches the site's `trailingSlash` and `build.format`.** Porting thosegeeks.com, which runs on Workers static assets, found neither. Checked against Cloudflare's docs (2026-10-28): Workers Builds injects `CI`, `WORKERS_CI=1` and `WORKERS_CI_*` by default, though a project can override them (developers.cloudflare.com/workers/ci-cd/builds/configuration/); `_redirects` and `_headers` go in the assets folder, aren't served, and don't apply to responses from Worker code (…/workers/static-assets/redirects/, …/headers/).
+- Rejected: having Vesper's own workflow set `WORKERS_CI`, or a variable of Vesper's, so detection works outside Workers Builds. It would pass for Workers Builds; the config line says what's meant.
+
 ## Images
 
 ### 2026-10-18: Astro hands `position` to Sharp unchanged, so focal points go into `style`
@@ -860,6 +899,14 @@ The component ships as source (`components/Img.astro`, like the `/admin` page) f
 - Alt text is words an editor wrote for this page, and a replacement is often the same subject: a better photo of the same scene. Clearing it would throw good words away. Keeping it silently is how the old description went live, so the note asks for a look.
 - The note is text beside its field and part of that control's description, like the rules' notes, but it isn't a rule. No check can tell whether words still describe a picture, so the note isn't counted, never blocks a save, and stays out of the live status. It lives in the studio, not the file, so it's gone after a reload.
 - A first image (nothing to clear), the same image again (not even how its path is written) and a plain `image()` field, which stores only a path, change nothing.
+
+### 2026-10-28: `<Img decorative>`, and an `alt` prop fails the build
+
+**`decorative` on `<Img>` and `getImg()` renders `alt=""` whatever the field says. An `alt` prop throws, saying to pass `decorative`; alt text otherwise comes only from the field, as spec §6.6.5 has it.** A picture can be content on its own page and repeat the words beside it elsewhere, such as a cover inside a link card whose title follows. `<Img alt="">` silently rendered the field's alt, so thosegeeks.com had to pass `image={{ ...cover, decorative: true }}`. Jeremy chose this over letting `alt` override the field (2026-10-28): a template's own words would replace the editor's on every page, out of the studio's sight. The prop's type is `never`, so `astro check` catches it before the build does.
+
+### 2026-10-28: The crop step loads the sharp Astro loads
+
+**`loadSharp` in the crop step resolves `sharp` from Astro's own Sharp service module (`import.meta.resolve('astro/assets/services/sharp')`), not from `vespercms`.** Installed from npm into a site whose own `sharp` (0.34) wasn't the one Astro 7.4 brings (0.35, under `astro/node_modules`), the crop step loaded one copy and Astro's service the other, and a second libvips in one process fails to load: every image after the first crop failed with Astro's "Could not find Sharp" (ERR_DLOPEN_FAILED on Windows). The workspace has a single `sharp`, so only an install from packed tarballs showed it. Where Astro can't be resolved that way, it falls back to a plain `import('sharp')`.
 
 ## Accessibility checks
 
@@ -933,6 +980,10 @@ Without the shim, jsdom's page-level rules (`landmark-one-main`, `page-has-headi
 ### 2026-10-18: The report lives in `.vesper/`, never in `dist/`
 
 **The report is `.vesper/a11y-report.json` in the project root, and the integration writes `.vesper/.gitignore` (`*`) beside it, so it's never deployed and never committed by accident. If the output folder would contain `.vesper/` (an `outDir` of the project root), nothing is written and the build log says why.** It has no timestamp, so the same build writes the same bytes; a cloud upload (Phase 8.5) adds the time. `failBuildOn` throws after the report is written, so its reasons are there to read. CI checks that the report exists beside `dist/` and that nothing in `dist/` looks like one, and passes it to the e2e job as its own artifact.
+
+### 2026-10-28: The notes drawer names a nested field by its path
+
+**In the drawer, a note's heading is the way to its field: "Block 2 (Figure) › Image, alt", a list item by its place and, in blocks, its kind (`issuePlace`, `editor/target.ts`). Beside the field, its own label is still all a note needs.** On thosegeeks.com's 420 page, a screenshot's note read "Image, alt", like every other image's, so with several images in blocks the notes couldn't be told apart without going to each. The list's own label is left out before an item ("Block 2", not "Blocks › Block 2"), since the item's name says it.
 
 ## Site search
 
@@ -1288,6 +1339,14 @@ The studio, connected (absent otherwise, spec §6.9):
 The message is a workflow command (`::error::`), escaped as Actions expects, so it shows on the run's summary, not only in its log. The deploy's condition already skipped a scheduled run whose `due` output wasn't `true`, so no job changed.
 
 Rejected: rebuilding while the file can't be read (the first design); rebuilding only on some failures, such as a timeout, which still spends deploys when a host is down for a day.
+
+### 2026-10-28: `vesper deploy init --target workers` runs the site's own wrangler
+
+**A fourth target beside SFTP, FTP and a build hook: the workflow builds the site and runs `wrangler deploy` through the site's package manager (`npx wrangler deploy`, `pnpm exec`, `yarn`), on the same triggers and scheduled `due` job as the upload targets, with `concurrency` so an older build never replaces a newer one.** Jeremy chose it for this round (2026-10-28), from thosegeeks.com's port.
+- Not `cloudflare/wrangler-action`, for the reason a third-party Action holding a host's secret was rejected before, and so the site's lockfile pins wrangler's version.
+- `CLOUDFLARE_API_TOKEN` is required: the step fails with a message naming it when it's missing. `CLOUDFLARE_ACCOUNT_ID` is passed through but optional, though Cloudflare's guide lists it: wrangler 4 takes the config's `account_id`, then a non-empty variable, then the token's only account.
+- A missing Wrangler config, or wrangler missing from the site's dependencies, gets a printed note with the command to fix it, not a refusal. It also prints the `redirects.native` line, since a build on GitHub can't be detected, and warns that a site Workers Builds already builds should use `--target hook` (Workers Builds' deploy hooks), or every push deploys twice. Rejected: parsing the Wrangler config's JSONC or TOML to check `assets.directory`, which would need a dependency.
+- Not yet run for real: no Workers Builds build, Actions run with a real token or deploy hook call. Phase 4.5's docs page (step 7) covers the target.
 
 ## GitHub mode
 

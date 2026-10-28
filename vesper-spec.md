@@ -1600,7 +1600,9 @@ Moved after instant previews on October 26, 2026 (it was Phase 6.5).
 - GitLab adapter.
 - Starlight docs site.
 - `create-vesper` starter.
+- An importer from another CMS, beside `create-vesper`: EmDash first, then WordPress (added 2026-10-28, from moving thosegeeks.com off EmDash).
 - Optional pull-request mode.
+- The first release that isn't a prerelease: until then, from 2026-10-28, the packages are prereleases under npm's `next` tag.
 
 ---
 
