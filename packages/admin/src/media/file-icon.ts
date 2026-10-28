@@ -1,4 +1,4 @@
-import type { IconName } from '@vesper/ui';
+import type { IconName } from '@vespercms/ui';
 
 const KINDS: [IconName, string[]][] = [
   [

@@ -1,5 +1,5 @@
 /*
- * `@vesper/core/schedule`: publish windows, the changes still to come and
+ * `@vespercms/core/schedule`: publish windows, the changes still to come and
  * their words in the site's time zone (spec §6.17). Plain functions with no
  * parser dependencies, so `vesper:content` can filter a site's build with
  * them without pulling in the rest of the core.

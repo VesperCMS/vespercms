@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import type { Manifest } from '@vesper/core';
+import type { Manifest } from '@vespercms/core';
 import { agentGuide, withAgentGuide } from './agents.ts';
 import { DEPLOY_TARGETS, type DeployTarget } from './deploy.ts';
 import { DeployInitError, planDeploy } from './deploy-init.ts';

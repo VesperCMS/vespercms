@@ -106,7 +106,7 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 
 **Every package's `exports` lists `"@vesper/source": "./src/index.ts"` first. Node gets the condition from `.npmrc` (`node-options=--conditions=@vesper/source`), Vite and Vitest from `scripts/vite-source-conditions.mjs`, and TypeScript from `customConditions`.** Nothing in the dev loop reads `dist/`, so it can never be stale. Taproot's `pre*` build hooks exist because of exactly that staleness.
 
-Node 22.18+ strips types from `.ts` files whose real path is outside `node_modules`. Workspace symlinks resolve to `packages/*/src`, so this works without a build step. Astro loads `astro.config.mjs` with a plain Node `import()` first, so a site config in this workspace can import `@vesper/astro` from source. `scripts/source-condition.test.mjs` keeps this proven.
+Node 22.18+ strips types from `.ts` files whose real path is outside `node_modules`. Workspace symlinks resolve to `packages/*/src`, so this works without a build step. Astro loads `astro.config.mjs` with a plain Node `import()` first, so a site config in this workspace can import `vespercms` from source. `scripts/source-condition.test.mjs` keeps this proven.
 
 What it costs:
 - Only erasable TypeScript syntax (`erasableSyntaxOnly`).
@@ -119,7 +119,7 @@ The Vite side is a plugin using `configEnvironment`, not plain `resolve.conditio
 - Astro loads `content.config.ts` in its own Vite environments (`astro` for dev and sync, `prerender` for builds), which top-level and `ssr` settings never reach.
 - Vesper's isolated config loader also adds the Node process's own custom `--conditions` to each of its environments. A real site has none, so nothing changes there.
 
-Found when CI's test job, which doesn't build first, failed to resolve `@vesper/astro/fields`. Locally a `dist/` left over from earlier builds had hidden it, so the loop is now verified with every `dist/` deleted.
+Found when CI's test job, which doesn't build first, failed to resolve `vespercms/fields`. Locally a `dist/` left over from earlier builds had hidden it, so the loop is now verified with every `dist/` deleted.
 
 Rejected:
 - `tsc --watch` beside dev: a second process, and still racy.
@@ -131,13 +131,13 @@ Rejected:
 
 ### 2026-10-17: ESLint 9, with the package boundaries as lint rules
 
-**Use ESLint 9.39 with typescript-eslint `strictTypeChecked`, not ESLint 10.** `eslint-plugin-jsx-a11y` 6.10 (needed from Phase 2 for the React packages) supports ESLint up to 9 only. The boundaries in spec §5 and §12 are enforced as lint rules: no Node, framework, Zod or other `@vesper/*` imports in core; Zod only from `astro/zod` in `@vesper/astro`. Patterns use `regex` rather than gitignore-style globs, because a glob like `vite` would also match a relative `./vite` path. `scripts/eslint-boundaries.test.mjs` proves each rule fires: a typo in a rule name or glob would otherwise disable the guard silently.
+**Use ESLint 9.39 with typescript-eslint `strictTypeChecked`, not ESLint 10.** `eslint-plugin-jsx-a11y` 6.10 (needed from Phase 2 for the React packages) supports ESLint up to 9 only. The boundaries in spec §5 and §12 are enforced as lint rules: no Node, framework, Zod or other Vesper package imports in core; Zod only from `astro/zod` in `vespercms`. Patterns use `regex` rather than gitignore-style globs, because a glob like `vite` would also match a relative `./vite` path. `scripts/eslint-boundaries.test.mjs` proves each rule fires: a typo in a rule name or glob would otherwise disable the guard silently.
 
 ### 2026-10-17: Prettier formats code, never prose or content
 
 **`.prettierignore` excludes every `.md`, `.mdx` and `.mdoc` file, the content and fixture folders, and the redirects file.** Content files are test data, and the serializer's job is to preserve their exact bytes, so formatting them would destroy the evidence. Prose (spec, CLAUDE.md, READMEs) keeps its authored formatting, because Prettier re-pads every table and makes doc diffs unreadable.
 
-### 2026-10-17: `@vesper/core` builds without `@types/node`
+### 2026-10-17: `@vespercms/core` builds without `@types/node`
 
 **Core's tsconfig sets `lib: ["ES2023", "DOM"]` and `types: []`.** `DOM` provides the platform APIs shared by browsers, Workers and Node (`TextDecoder`, `crypto.subtle`, `URL`). With no Node types, any use of `process`, `Buffer` or `node:*` fails typecheck, which enforces spec §12's "runs in Node, Workers and the browser" before review has to. The build uses `tsconfig.build.json` (no Node types, tests excluded). The package's `tsconfig.json` covers tests too and adds Node types, since tests read fixtures from disk; editors, ESLint and `npm run typecheck` use it.
 
@@ -213,7 +213,7 @@ Geocoding (cloud address search) is still open. It is decided before Phase 4.
 
 ### 2026-10-17: `/admin` is built by the site's Vite from a precompiled studio
 
-**`@vesper/admin` ships compiled JavaScript and CSS. The integration injects one prerendered `/admin` page whose client script the site's own Vite bundles, together with the site's custom widgets (through a virtual module) and the manifest.**
+**`@vespercms/admin` ships compiled JavaScript and CSS. The integration injects one prerendered `/admin` page whose client script the site's own Vite bundles, together with the site's custom widgets (through a virtual module) and the manifest.**
 - Custom widgets are the site's own components (spec §6.3.3), so only the site's build can bundle them.
 - A studio compiled per site from TypeScript and Tailwind would be slow and fragile, so the heavy part ships ready-made.
 - The site needs no `@astrojs/react` and no Tailwind, and Astro's `base` and `studio.deploy: false` keep working.
@@ -226,7 +226,7 @@ A site on React 18 can't run the studio: it resolves the site's React. Jeremy ch
 
 ### 2026-10-17: The studio's content operations live in core, over the storage adapter
 
-**`ContentService` (`@vesper/core`) lists, reads, creates, saves and deletes entries over any `StorageAdapter`, exactly as Astro's `glob()` and `file()` loaders see them.** Local mode runs it in the dev server. GitHub mode (Phase 3) can run the same code in the browser over the GitHub adapter, so entry IDs, conflict checks and file fidelity can't differ between modes. Validation is injected (`Validator`), because only the site's own Zod schemas can validate, and they live wherever the site's config was loaded.
+**`ContentService` (`@vespercms/core`) lists, reads, creates, saves and deletes entries over any `StorageAdapter`, exactly as Astro's `glob()` and `file()` loaders see them.** Local mode runs it in the dev server. GitHub mode (Phase 3) can run the same code in the browser over the GitHub adapter, so entry IDs, conflict checks and file fidelity can't differ between modes. Validation is injected (`Validator`), because only the site's own Zod schemas can validate, and they live wherever the site's config was loaded.
 
 ### 2026-10-17: The local dev API answers only the studio, on this machine
 
@@ -271,7 +271,7 @@ Amended in Phase 2.5: body checks (Markdoc, micromark and the validation around 
 
 ### 2026-10-17: The integration compiles custom widgets as React, and nothing else
 
-**Astro sites default to `"jsx": "preserve"`, and a site needn't have `@astrojs/react`. So a `pre` Vite plugin compiles the files `vesper.config.ts` imports lazily as widgets, and any JSX files those import in turn, with React's automatic runtime (Oxc on Vite 8, esbuild on Vite 7).** No other file in the site is touched, so sites using Preact, Solid or Astro's own JSX are unaffected. `WidgetProps` lives in `@vesper/core` (it has no React in it), re-exported from `@vesper/astro/config` for sites and from `@vesper/admin`. A widget that throws or fails to load falls back to the built-in control for its field, with a one-line note.
+**Astro sites default to `"jsx": "preserve"`, and a site needn't have `@astrojs/react`. So a `pre` Vite plugin compiles the files `vesper.config.ts` imports lazily as widgets, and any JSX files those import in turn, with React's automatic runtime (Oxc on Vite 8, esbuild on Vite 7).** No other file in the site is touched, so sites using Preact, Solid or Astro's own JSX are unaffected. `WidgetProps` lives in `@vespercms/core` (it has no React in it), re-exported from `vespercms/config` for sites and from `@vespercms/admin`. A widget that throws or fails to load falls back to the built-in control for its field, with a one-line note.
 
 ### 2026-10-17: "Edit this page" separates entries a page shows from ones it lists
 
@@ -303,7 +303,7 @@ Amended in Phase 2.5: body checks (Markdoc, micromark and the validation around 
 
 ### 2026-10-17: In this workspace, the integration compiles the studio's CSS from source
 
-**When `@vesper/admin/studio.css` resolves to `src/` (the `@vesper/source` condition), the integration adds `@tailwindcss/vite` to the site's Vite. Installed from npm, it resolves to the precompiled `dist/studio.css` and Tailwind never loads.** So the playground stays a zero-config site, and the dev loop still never builds `dist/`. `@tailwindcss/vite` is a devDependency of `@vesper/astro` for this reason only.
+**When `@vespercms/admin/studio.css` resolves to `src/` (the `@vesper/source` condition), the integration adds `@tailwindcss/vite` to the site's Vite. Installed from npm, it resolves to the precompiled `dist/studio.css` and Tailwind never loads.** So the playground stays a zero-config site, and the dev loop still never builds `dist/`. `@tailwindcss/vite` is a devDependency of `vespercms` for this reason only.
 
 ### 2026-10-17: Markdoc tags and declared MDX components are nested blocks
 
@@ -372,7 +372,7 @@ Every change is announced in a polite live region: "Nursing moved under Academic
 
 ### 2026-10-19: The studio needs React 19
 
-**When `/admin` is part of the build (always in `astro dev`, and in builds unless `studio.deploy: false`), the integration reads the version of `react` that `@vesper/admin` resolves, and stops with a plain message if it's older than 19 or missing: "Vesper's studio needs React 19, and this site has React 18.3.1. Install React 19 with `npm install react@19 react-dom@19`, then restart."** The studio is bundled by the site's Vite with the site's custom widgets, so it runs on the site's React, and React 18 would fail in the browser instead of at build. npm already refuses the peer conflict at install; pnpm and Yarn only warn, so this is the backstop. Rejected: loading the studio's own React beside the site's. Two Reacts on one page break hooks in custom widgets, which must share the studio's React, and React 19 is nearly two years old.
+**When `/admin` is part of the build (always in `astro dev`, and in builds unless `studio.deploy: false`), the integration reads the version of `react` that `@vespercms/admin` resolves, and stops with a plain message if it's older than 19 or missing: "Vesper's studio needs React 19, and this site has React 18.3.1. Install React 19 with `npm install react@19 react-dom@19`, then restart."** The studio is bundled by the site's Vite with the site's custom widgets, so it runs on the site's React, and React 18 would fail in the browser instead of at build. npm already refuses the peer conflict at install; pnpm and Yarn only warn, so this is the backstop. Rejected: loading the studio's own React beside the site's. Two Reacts on one page break hooks in custom widgets, which must share the studio's React, and React 19 is nearly two years old.
 
 ### 2026-10-19: A chip is non-editable once, on its own element
 
@@ -415,7 +415,7 @@ Rejected: binding Shift-Mod-ArrowLeft and -Right to commands that select to the 
 **Jeremy chose on 2026-10-21 (call H1): an entry's history, viewing an earlier version and restoring it are free in local and GitHub modes, and part of the cloud. In the cloud a restore becomes a draft, as spec §7.4 says. In local and GitHub modes it loads the earlier values as unsaved changes, and Save or Publish writes them through the usual splice and checks. Spec §4 and §7.4 are changed to match.** It's git's own data, read with the editor's own sign-in or the developer's own git, and costs the cloud nothing in those modes. What only the cloud does stays paid: restoring as a draft, and review. Rejected: history in the cloud only, as §7.4 first placed it.
 - **Local mode without git (H2)** has no History item. An Astro site without git is rare, and git is the history. Rejected: copies of each save in `.vesper/history/`, which would duplicate git and need pruning.
 - **An earlier version is shown (H3)** in the entry's own form, read-only, with the fields that differ from now named and marked in words. Editors see content, not file syntax. Rejected: the two files' text side by side, as the cloud's conflict compare shows it (YAML and Markdown source).
-- **The cloud's API** gains a history list and a version's bytes, in `@vesper/core`'s contract first. The API resolves a version's blob itself, from that commit's tree, and refuses a path outside the site's folder. `POST /blobs` is never widened to every blob in the repository.
+- **The cloud's API** gains a history list and a version's bytes, in `@vespercms/core`'s contract first. The API resolves a version's blob itself, from that commit's tree, and refuses a path outside the site's folder. `POST /blobs` is never widened to every blob in the repository.
 
 ### 2026-10-21: One-line Markdown fields have code
 
@@ -560,7 +560,7 @@ Built 2026-10-26. jsdom has no drag and drop and no layout, so the widget tests 
 
 ### 2026-10-17: Site configs are read by the site's own Vite, in an isolated server, with two shims
 
-**`@vesper/astro/node` loads `content.config.ts`, `vesper.config.ts` and `forms.config.ts` through `server.ssrLoadModule` on a throwaway Vite server.**
+**`vespercms/node` loads `content.config.ts`, `vesper.config.ts` and `forms.config.ts` through `server.ssrLoadModule` on a throwaway Vite server.**
 - It uses the site's own Vite, resolved from the site (falling back through its Astro), so it is Vite 8 on Astro 7 and Vite 7 on Astro 6.
 - The server runs with no config file, no env loading, no file watching and no dependency optimization.
 - Vite is needed because content configs use path aliases and extensionless imports that Node's type stripping can't handle.
@@ -651,7 +651,7 @@ The anchors fixture is the one allowed exception, because it takes the flagged r
 
 ### 2026-10-17: A file's version is its git blob SHA, in every storage mode
 
-**`StorageAdapter` versions are git blob SHA-1s, computed with Web Crypto.** Local, GitHub and cloud modes then agree on what "this exact file" means. A cloud draft's `base_sha` (spec §8.2) is just a version, and conflict checks are a string comparison. One shared validator (`storage/validate.ts`) applies the same rules in every adapter, and the contract suite (`@vesper/core/testing`) proves each adapter follows them.
+**`StorageAdapter` versions are git blob SHA-1s, computed with Web Crypto.** Local, GitHub and cloud modes then agree on what "this exact file" means. A cloud draft's `base_sha` (spec §8.2) is just a version, and conflict checks are a string comparison. One shared validator (`storage/validate.ts`) applies the same rules in every adapter, and the contract suite (`@vespercms/core/testing`) proves each adapter follows them.
 
 ### 2026-10-17: A `file()` entry's version is its own, not the file's
 
@@ -725,7 +725,7 @@ Built 2026-10-25. Two of Jazzy's nine FAQs write each question over several line
 
 ### 2026-10-18: One URL module, keys inside, Astro's URLs outside
 
-**Every URL-aware feature goes through `@vesper/core/urls`: "View on site", the link picker, moves, redirects, breadcrumbs and the `vesper:content` helpers, in the studio, the dev server and the build alike.** Inside, a page's address is a *key*: a site path with no base, query, hash or trailing slash (`/academics/nursing`, and `/` for the home page). The redirects file stores keys. Outside, `formatUrl` writes what a browser asks for: Astro's `base` in front, and a trailing slash when `trailingSlash` is `always`, or `ignore` with `build.format: 'directory'` (Astro's defaults).
+**Every URL-aware feature goes through `@vespercms/core/urls`: "View on site", the link picker, moves, redirects, breadcrumbs and the `vesper:content` helpers, in the studio, the dev server and the build alike.** Inside, a page's address is a *key*: a site path with no base, query, hash or trailing slash (`/academics/nursing`, and `/` for the home page). The redirects file stores keys. Outside, `formatUrl` writes what a browser asks for: Astro's `base` in front, and a trailing slash when `trailingSlash` is `always`, or `ignore` with `build.format: 'directory'` (Astro's defaults).
 - `:path` drops a trailing `/index`, and a top-level `index` is the root. Astro's glob loader already gives `foo/index.md` the ID `foo` but keeps a top-level `index.md` as `index`, so both spellings land on the same page (spec §6.15.1, "Index IDs").
 - Date tokens read a date at midnight UTC (YAML's `2026-10-17`) as that calendar day everywhere, and other times in the site's `timeZone`, else UTC, so the studio and the build can't disagree about a post's year.
 - A function-form `url` runs where `vesper.config.ts` is loaded (the dev API, the build, `vesper:content`, and since Phase 3 the browser's services in GitHub mode and the cloud). The studio's own bundle doesn't run it, so until 2026-10-26 those entries had no "View on site" there. Since then the editor finds such an entry's address in the site's page list (`listPages`), which each mode already works out with the site's functions for the link picker ("Duplicate starts an unsaved copy that keeps the original's text").
@@ -822,7 +822,7 @@ What follows for Phase 2.7:
 
 ### 2026-10-18: Crops are cut by a step inside Astro's Sharp service
 
-**`@vesper/astro/image-service` is Astro's own Sharp service plus one transform option, `crop`. It cuts the rectangle out of the upright image (`rotate()` then `extract()`), passes the result as a lossless PNG to Astro's own `transform`, and leaves everything else to it: formats, quality, `srcset`, the build's cache. Images without a crop go straight to Astro's transform, byte for byte.**
+**`vespercms/image-service` is Astro's own Sharp service plus one transform option, `crop`. It cuts the rectangle out of the upright image (`rotate()` then `extract()`), passes the result as a lossless PNG to Astro's own `transform`, and leaves everything else to it: formats, quality, `srcset`, the build's cache. Images without a crop go straight to Astro's transform, byte for byte.**
 - Astro hashes only the properties a service names (above), so `propertiesToHash` is Astro's list plus `crop`. `getURL` adds `crop=x,y,w,h` to `/_image` and `parseURL` reads it back, so dev crops too. `getHTMLAttributes` drops it, or it would reach the page as `crop="[object Object]"`.
 - The rectangle is measured on the image as browsers show it, which is what the studio's previews and dialog measure. An EXIF-rotated photo is turned upright before the cut (tested with the playground's orientation-6 sample).
 - SVG and animated images are never cropped: Astro passes them through or animates them, and Sharp's `extract` would break an animation.
@@ -830,13 +830,13 @@ What follows for Phase 2.7:
 
 **The integration installs it only where the site uses Astro's own Sharp service**: the one service, or either target of Astro 7.4's `{ build, runtime }`, keeping the service's `config`. A host's service (Cloudflare, Netlify, Vercel) or a site's own is left alone. The build log says the step is on and how to turn it off, and `vesper({ imageService: false })` turns it off. It's an integration option, not a `vesper.config.ts` key, because it changes Astro's own config in `astro:config:setup`, beside `image.service`, before Vesper reads `vesper.config.ts` at all.
 
-`sharp` is an optional peer dependency of `@vesper/astro`: the step loads the copy Astro's own service loads (Astro lists it as an optional dependency), and a strict installer such as pnpm only lets a package import what it declares. Confirmed by Jeremy, 2026-10-19.
+`sharp` is an optional peer dependency of `vespercms`: the step loads the copy Astro's own service loads (Astro lists it as an optional dependency), and a strict installer such as pnpm only lets a package import what it declares. Confirmed by Jeremy, 2026-10-19.
 
-In this workspace the Astro 6 fixture's crop step loads the root's Astro 7 Sharp service, because `@vesper/astro` resolves `astro` from its own folder; a published install resolves the site's own Astro. The fixture test still proves what differs between majors: the service swap, Astro 6's hashing and build step calling `transform` with `crop`, and `<Img>` compiled by Astro 6.
+In this workspace the Astro 6 fixture's crop step loads the root's Astro 7 Sharp service, because `vespercms` resolves `astro` from its own folder; a published install resolves the site's own Astro. The fixture test still proves what differs between majors: the service swap, Astro 6's hashing and build step calling `transform` with `crop`, and `<Img>` compiled by Astro 6.
 
 ### 2026-10-18: `<Img>` asks Astro for the crop, never for a percentage
 
-**`<Img>` and `getImg()` (`@vesper/astro/components`) hand Astro's own `<Image>`, `<Picture>` and `getImage()` what each mode needs, worked out by `planImg` and `planArt` (`@vesper/astro/images`), which run in Node without Astro and are unit-tested:**
+**`<Img>` and `getImg()` (`vespercms/components`) hand Astro's own `<Image>`, `<Picture>` and `getImage()` what each mode needs, worked out by `planImg` and `planArt` (`vespercms/images`), which run in Node without Astro and are unit-tested:**
 - A ratio comes from `ratio` (a name from `images.ratios`, or a number) or from a fixed `width` and `height`. Only a named ratio can have a manual crop.
 - With the crop step: the ratio's exact width and height, and `crop`. Without it, on Astro's Sharp service: the same size (Astro's own server crop) and `position` set to the nearest of Sharp's anchors, which `sharpAnchor` picks from the crop Vesper would have cut. On any other service: the size alone. Which service renders the page comes from `imageConfig.service.entrypoint` in `astro:assets`, per environment on Astro 7.4.
 - The focal point always goes into `style` as `object-position`, measured within whatever was actually cut, so a stylesheet that boxes the image differently still keeps the subject in frame. The site's own `style` wins.
@@ -865,7 +865,7 @@ The component ships as source (`components/Img.astro`, like the `/admin` page) f
 
 ### 2026-10-18: One rule set, in core, narrow on purpose
 
-**The studio's accessibility checks (spec §6.18, layer 1) are plain functions in `@vesper/core` (`entryChecker`, `checkFields`, `checkBody`), so local, GitHub and cloud modes find exactly the same things. The spec's twelve rows became seventeen rule IDs (`A11Y_RULE_IDS`), so `a11y.blockPublishOn` names exactly what it blocks.** Each note has a plain message about this case, one sentence on why it matters, a docs slug for the explanation the docs will hold (Phase 9), and its place: a field's value path, or body offsets and a line.
+**The studio's accessibility checks (spec §6.18, layer 1) are plain functions in `@vespercms/core` (`entryChecker`, `checkFields`, `checkBody`), so local, GitHub and cloud modes find exactly the same things. The spec's twelve rows became seventeen rule IDs (`A11Y_RULE_IDS`), so `a11y.blockPublishOn` names exactly what it blocks.** Each note has a plain message about this case, one sentence on why it matters, a docs slug for the explanation the docs will hold (Phase 9), and its place: a field's value path, or body offsets and a line.
 - Bodies are read with the parser the site renders with (micromark with GFM, plus MDX; Markdoc with Astro's tokenizer options) into a short list of facts with offsets, and every rule runs over the facts, so the three formats share every rule. HTML inside a body (and lowercase JSX in MDX) is read with a small tag scanner: core can't have a DOM, since it runs in Workers.
 - The patterns are narrow, because a note that fires on good content teaches people to ignore notes. A file-name alt is an image extension, a camera or screenshot name (`IMG_2041`, `PXL_…`), or one hyphen- or underscore-joined word holding an underscore or a digit. "Image of" counts only at the start. A fake list needs two or more lines starting like list items, so "1999. That was a year." isn't one. A new-tab link is fine when its text, `aria-label` or `title` says "new tab" or "new window".
 - The image widget's own alt-text advice from Phase 2 is gone: its notes now come from these rules, beside the alt text box, in the same words as everywhere else.
@@ -961,7 +961,7 @@ What the script does instead: a native `<dialog>` opened with `showModal()`, who
 
 ### 2026-10-19: The index leaves out entries outside their publish window
 
-**Until Phase 4.5 filters the build itself (D18), the indexer leaves out entries whose `publishAt` is in the future or whose `unpublishAt` has passed, with `isPublished` from `@vesper/core`. Phase 4.5's filtering will use the same function. Jeremy chose this on 2026-10-19 (call 5).** The playground's builds still produce `harvest-concert` before 31 October 2026, and search must never offer it. Because the playground's own dates go by, the integration test adds an event scheduled for 2099, and the e2e tests check only what stays true.
+**Until Phase 4.5 filters the build itself (D18), the indexer leaves out entries whose `publishAt` is in the future or whose `unpublishAt` has passed, with `isPublished` from `@vespercms/core`. Phase 4.5's filtering will use the same function. Jeremy chose this on 2026-10-19 (call 5).** The playground's builds still produce `harvest-concert` before 31 October 2026, and search must never offer it. Because the playground's own dates go by, the integration test adds an event scheduled for 2099, and the e2e tests check only what stays true.
 
 Since 2026-10-26 the build leaves those entries out itself (D18; "Scheduled collections are filtered in `vesper:content`, by one instant per build", below), and the indexer takes the build's instant instead of its own. Its check stays, for sites whose pages read `astro:content`, which isn't filtered.
 
@@ -994,7 +994,7 @@ Rejected: indexing every site, as the code did (it costs build time for a search
 
 ### 2026-10-19: Pagefind is a dependency, and the budget counts uncompressed bytes
 
-**`pagefind` is a regular dependency of `@vesper/astro` (call 9), and the build warns when a first search loads more than 300 KB uncompressed (call 10). Jeremy chose both on 2026-10-19.** Search is on by default (D23), so the indexer must be there; it adds a 58 MB binary for the build machine's platform, as it does for Starlight. The budget counts what a host without compression sends: the script, its worker, and the heaviest language's WebAssembly, metadata and largest index chunk. Pagefind's three bundled interfaces and its highlighter (about 420 KB) are never written to the output, since `<Search>` uses none of them.
+**`pagefind` is a regular dependency of `vespercms` (call 9), and the build warns when a first search loads more than 300 KB uncompressed (call 10). Jeremy chose both on 2026-10-19.** Search is on by default (D23), so the indexer must be there; it adds a 58 MB binary for the build machine's platform, as it does for Starlight. The budget counts what a host without compression sends: the script, its worker, and the heaviest language's WebAssembly, metadata and largest index chunk. Pagefind's three bundled interfaces and its highlighter (about 420 KB) are never written to the output, since `<Search>` uses none of them.
 
 ### 2026-10-19: Vesper writes Pagefind's files itself
 
@@ -1020,7 +1020,7 @@ Phase 4's design is in PLAN.md. Jeremy took every recommendation on 2026-10-20 (
 
 ### 2026-10-20: The split: the studio's half here, the cloud's in a private repository
 
-**Anything that ships in `/admin` or runs on a customer's site is MIT and lives in this repository. Anything that holds a secret, stores customer data or runs at the cloud's domain lives in a private `vesper-cloud` repository (§13.3).** The studio speaks the cloud's API, so that API's types and its contract suite (`runCloudContract`) live here in `@vesper/core`, and the studio is built and tested against a fake cloud (`scripts/cloud-fake.mjs`), never against the private code. Grant evaluation lives in core too, as §7.5 asks: the API and the studio use the same function.
+**Anything that ships in `/admin` or runs on a customer's site is MIT and lives in this repository. Anything that holds a secret, stores customer data or runs at the cloud's domain lives in a private `vesper-cloud` repository (§13.3).** The studio speaks the cloud's API, so that API's types and its contract suite (`runCloudContract`) live here in `@vespercms/core`, and the studio is built and tested against a fake cloud (`scripts/cloud-fake.mjs`), never against the private code. Grant evaluation lives in core too, as §7.5 asks: the API and the studio use the same function.
 
 ### 2026-10-20: The cloud's repository builds on this one as a submodule
 
@@ -1110,7 +1110,7 @@ Hosts that check authors: Netlify holds a private repository's deploys from auth
 
 ### 2026-10-20: The studio is tested against a fake cloud that keeps the contract
 
-**`scripts/cloud-fake.mjs` answers the studio as the cloud does, publishing through `GitHubStorage` to the fake GitHub over real git, and passes `runCloudContract` from `@vesper/core/cloud-testing`, which the real cloud runs too.** The studio's unit tests (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server, ports 4406 and 4407) never touch the private repository. The browser tests found two bugs the jsdom tests didn't: the kept copy cleared before its restore, and a review's confirmation vanishing with it.
+**`scripts/cloud-fake.mjs` answers the studio as the cloud does, publishing through `GitHubStorage` to the fake GitHub over real git, and passes `runCloudContract` from `@vespercms/core/cloud-testing`, which the real cloud runs too.** The studio's unit tests (jsdom) and the `cloud` e2e project (Chromium, a built site on the plain static server, ports 4406 and 4407) never touch the private repository. The browser tests found two bugs the jsdom tests didn't: the kept copy cleared before its restore, and a review's confirmation vanishing with it.
 
 ### 2026-10-21: Page moves stay with whole-site editors
 
@@ -1144,7 +1144,7 @@ Rejected: removing entries in the content loader. That would reach `astro:conten
 
 Built 2026-10-26, as above. How:
 - **The instant** is `buildInstant(process.env.VESPER_BUILD_TIME)`, read once in `astro:config:setup`. A value that isn't a time stops the build and says how to write one, since a silently ignored one would publish the wrong site. A pinned build says so in its log.
-- **The loaders** come from `runtime/schedule.ts`, on a new narrow entry point, `@vesper/core/schedule`, so the site's pages don't import the rest of the core, as `@vesper/core/urls` keeps the helpers light. A site with no scheduled collection still gets the plain re-export.
+- **The loaders** come from `runtime/schedule.ts`, on a new narrow entry point, `@vespercms/core/schedule`, so the site's pages don't import the rest of the core, as `@vespercms/core/urls` keeps the helpers light. A site with no scheduled collection still gets the plain re-export.
 - **The warning about `astro:content`** compares each built page's URL key with the keys of entries outside their window ("/events/harvest-concert/ was built, but it's scheduled for Sat, Oct 31, 8:00 AM…"), skipping Astro's redirect pages, which an unpublished entry with a redirect is meant to have.
 - **A scheduled collection whose schema lacks its time fields** gets one manifest warning naming the lines to add, shown in dev and at build like the manifest's other diagnostics.
 - **The playground builds as of noon on 26 October 2026** (`VESPER_BUILD_TIME`, set in its `astro.config.mjs` unless the environment sets it). Its events are fixtures whose dates would pass, and the e2e and integration tests build copies of it; an integration test builds a copy as of four other instants instead (a minute either side of `harvest-concert`, and inside and at the end of `night-owl-study-hall`'s repeated hour).
@@ -1186,7 +1186,7 @@ Vesper never deploys a site itself. The workflows are plain YAML that run in the
 - **"Only changed files"** (§6.16) can follow with a state file if whole uploads prove slow.
 
 Rejected:
-- an upload command of Vesper's own, with a file of hashes kept on the server (two client dependencies in `@vesper/astro`);
+- an upload command of Vesper's own, with a file of hashes kept on the server (two client dependencies in `vespercms`);
 - a third-party Action, which is someone else's code holding the host's password.
 
 Built 2026-10-26 (Phase 4.5's step 4). The workflow's text comes from `deployWorkflow` (`src/node/deploy.ts`, no file system), and `planDeploy` (`deploy-init.ts`) finds what it needs in the repository: its root (the workflow goes there, with `working-directory` for a site in a subfolder), the default branch (origin's, then the one checked out), the lockfile nearest the site (npm, pnpm or Yarn; Bun is refused for now), `.nvmrc` or `.node-version`, and `site`, `base` and `outDir` from astro.config, read through the site's Vite like the other configs. How:
@@ -1293,7 +1293,7 @@ Rejected: rebuilding while the file can't be read (the first design); rebuilding
 
 ### 2026-10-19: GitHub mode runs core's services in the browser
 
-**In GitHub mode the studio runs the same `ContentService`, `PageService` and `MediaService` that local mode's dev API runs in Node, over `GitHubStorage` (`@vesper/core`) in the browser (`packages/admin/src/github/api.ts`). Every screen, check and splice is the same code; only storage differs.** The dev API was already a thin shell over those services, and the storage interface was built for this from Phase 1: a file's version is its git blob SHA in every mode, a change set is applied whole or not at all, and a stale expected version is a conflict. The five inputs that lived only in Node reach the browser instead:
+**In GitHub mode the studio runs the same `ContentService`, `PageService` and `MediaService` that local mode's dev API runs in Node, over `GitHubStorage` (`@vespercms/core`) in the browser (`packages/admin/src/github/api.ts`). Every screen, check and splice is the same code; only storage differs.** The dev API was already a thin shell over those services, and the storage interface was built for this from Phase 1: a file's version is its git blob SHA in every mode, a change set is applied whole or not at all, and a stale expected version is a conflict. The five inputs that lived only in Node reach the browser instead:
 - the Zod schemas, as a separate bundle (below);
 - the Markdoc config, as the manifest's (custom validators are the build's to check, 2026-10-19);
 - MDX props and function-form URLs, from `vesper.config.ts`, which the studio already loads;
@@ -1394,7 +1394,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 ### 2026-10-18: The studio self-hosts Figtree (a departure from spec §10.5)
 
-**The studio is set in Figtree at 400 and 600, from the `@fontsource/figtree` npm package (OFL-1.1), latin subset, compiled into `@vesper/admin`'s `dist/studio.css`. `/admin` never requests anything from Google or any CDN. Code, slugs and URLs use the system monospace stack, and the system UI stack stays the fallback.** Spec §10.5 says "the system UI stack by default". Jeremy chose Figtree for the direction's warmth. Self-hosting means no third-party request and a studio that works offline, and two weights keep to the §10.4 budget. The design system also names JetBrains Mono for code; it isn't added, because the system monospace stack does the job without another download. The first-load cost is measured in PLAN.md, "Studio design pass: outcome". (Narrowed 2026-10-25 to fonts, scripts and styles: "GitHub mode loads the editor's picture from GitHub", below.)
+**The studio is set in Figtree at 400 and 600, from the `@fontsource/figtree` npm package (OFL-1.1), latin subset, compiled into `@vespercms/admin`'s `dist/studio.css`. `/admin` never requests anything from Google or any CDN. Code, slugs and URLs use the system monospace stack, and the system UI stack stays the fallback.** Spec §10.5 says "the system UI stack by default". Jeremy chose Figtree for the direction's warmth. Self-hosting means no third-party request and a studio that works offline, and two weights keep to the §10.4 budget. The design system also names JetBrains Mono for code; it isn't added, because the system monospace stack does the job without another download. The first-load cost is measured in PLAN.md, "Studio design pass: outcome". (Narrowed 2026-10-25 to fonts, scripts and styles: "GitHub mode loads the editor's picture from GitHub", below.)
 
 ### 2026-10-18: Overlays are 93% glass; the check composites over black and white
 
@@ -1429,7 +1429,7 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 **Jeremy chose the refined "Launch" mark from the design system's Logo card: one rounded V stroke, a long fall and a short rise, with the evening star to the right on the rise's line. Its earlier shortlist sketch, with a shorter rise, was the other candidate. At 24px and below it uses the small cut (a heavier stroke and a bigger star with no halo); larger, the star has a 20% halo. It appears in two places only: as `/admin`'s favicon, and at 20px before the site's name in the top bar, inside the home link.**
 - Under 640px the top bar leaves the mark out, as the editor's bar leaves out the entry's title: at 360px it pushed Save onto a second row.
 - In the top bar the mark is decorative (`aria-hidden`). The link's accessible name stays the site's name, which is the visible text (WCAG 2.5.3) and says where the link goes. Announcing "Vesper logo" on every screen would add nothing.
-- It's drawn inline from the tokens (`VesperMark` in `@vesper/ui`): the stroke is `currentColor` (`content`), the star `accent`, and both follow the theme. In forced colours the star takes `CanvasText`.
+- It's drawn inline from the tokens (`VesperMark` in `@vespercms/ui`): the stroke is `currentColor` (`content`), the star `accent`, and both follow the theme. In forced colours the star takes `CanvasText`.
 - The favicon is an inline `data:image/svg+xml` in the injected `/admin` page, so it costs no request and needs no file in the site. A favicon can't read CSS variables, so it carries Pine's `content` and `accent` values for each theme and switches with `prefers-color-scheme` inside the SVG.
 - The site's own pages keep their own favicon; only `/admin` gets this one. (Vesper's own site, vespercms.com, uses the small cut as its logo and favicon too: "Vesper's own site" below.)
 - White-label (the higher paid tier, Phase 9) replaces both. Keeping the mark in one component and one favicon makes that a single swap.
@@ -1438,14 +1438,14 @@ Why: Jeremy chose glass and glow as part of the direction. Vesper is named for t
 
 **Jeremy chose, after the design pass: the body editor's formatting tools (and the compact Markdown field's) are icons alone, each with an accessible name, `aria-keyshortcuts` where it has a shortcut, and a tooltip with its name and shortcut. Insert keeps its word. Everywhere else an icon sits beside its words: action buttons, the "…" menus' items, back links, the warning mark on accessibility notes, the error mark on the error summary, search fields, and file types in Media and the picker.**
 - Spec §10.4 allows icon-only buttons only for close, overflow ("…") and drag handles, and DECISIONS added the outline's expand toggle. The formatting tools are the fifth exception. Rich-text toolbars are where icons are the convention, the words wrapped the toolbar onto several rows, and the tooltip and accessible name carry the words. "The body editor's keyboard and toolbar" (2026-10-17) chose words; this replaces that part of it.
-- The icons are Lucide's (ISC), drawn by the kit's one `Icon` component at the design system's weight: 1.75px strokes at any size, round caps and joins, `currentColor`. Close, "…", the drag handle, chevrons and the select's tick moved to Lucide too, so the studio has one drawing style. The kit imports only the icons it uses, and `@vesper/admin` bundles them at publish, so sites install nothing for them.
+- The icons are Lucide's (ISC), drawn by the kit's one `Icon` component at the design system's weight: 1.75px strokes at any size, round caps and joins, `currentColor`. Close, "…", the drag handle, chevrons and the select's tick moved to Lucide too, so the studio has one drawing style. The kit imports only the icons it uses, and `@vespercms/admin` bundles them at publish, so sites install nothing for them.
 - An accessibility note now starts with the warning mark instead of a warning hairline on its left, as the design system's InlineStatus shows a field warning. The words still say what it is.
 
 ### 2026-10-18: A collection's icon is named in vesper.config.ts and resolved at build
 
-**`collections.<name>.icon` names a Lucide icon in kebab case, as lucide.dev lists them (`'newspaper'`, `'calendar-days'`). When the site's manifest is built, `@vesper/astro` loads `lucide` from the site's own install, looks the name up and puts that one drawing into the manifest (`presentation.icon`). The studio shows it beside the collection's name on Home, in the Content menu and in the collection's heading. Collections without one get a default: a page for collections, an outline for tree collections, sliders for singletons.**
+**`collections.<name>.icon` names a Lucide icon in kebab case, as lucide.dev lists them (`'newspaper'`, `'calendar-days'`). When the site's manifest is built, `vespercms` loads `lucide` from the site's own install, looks the name up and puts that one drawing into the manifest (`presentation.icon`). The studio shows it beside the collection's name on Home, in the Content menu and in the collection's heading. Collections without one get a default: a page for collections, an outline for tree collections, sliders for singletons.**
 - Jeremy asked for icons per collection. Resolving at build means the studio never carries the whole icon set: `lucide-react` would have shipped every icon to `/admin`, or a separate file per icon.
-- `lucide` is an optional peer dependency of `@vesper/astro`, as `sharp` is. It's 22 MB installed, so a site that names no icon doesn't pay for it. A site that names one without `lucide` installed gets a plain warning saying to install it, and the default icon.
+- `lucide` is an optional peer dependency of `vespercms`, as `sharp` is. It's 22 MB installed, so a site that names no icon doesn't pay for it. A site that names one without `lucide` installed gets a plain warning saying to install it, and the default icon.
 - An unknown name warns once ("collections.blog.icon: \"newspapr\" isn't a Lucide icon name…") and falls back to the default.
 - The kit draws a manifest icon only from Lucide's shapes and geometry attributes (`path`, `circle`, `rect`, `line`, `polyline`, `polygon`, `ellipse`), so manifest data can't put anything else into the page.
 - Free, like every other `vesper.config.ts` presentation setting: it isn't the studio's branding, which is white-label's.
@@ -1624,13 +1624,13 @@ The 4px is less than the text's own padding, so a toolbar in its place above the
 - Rejected: Starlight. Its sidebar comes from `astro.config` or `sidebar` frontmatter, not the studio's tree; its own Pagefind index would have to be turned off for Vesper's; and `docsSchema()`'s unions (`hero`, `prev`, `next`, `sidebar`, `banner`, `head`) show as raw YAML fields in the studio. Starlight 0.42 does support Astro 7, so this was a choice, not a constraint.
 - The schemas avoid unions, so every field gets a real control. At first the home page's inline Markdown fields avoided code formatting, which the studio's compact Markdown editor didn't offer (a code span vanished from the field, text and all; "The compact Markdown editor checks marked's tokens before the round trip"). It has code since 2026-10-21 ("One-line Markdown fields have code").
 - The colours are the studio's Pine tokens, copied into `site.css` as plain custom properties so the site needs no Tailwind. Figtree comes from the same `@fontsource/figtree` the studio bundles, self-hosted. The mark's small cut is the site's logo and favicon.
-- At first `/admin` wasn't deployed (`studio: { deploy: false }`), and the site was edited locally. Since 2026-10-21 the build names its cloud project (`site_3hfhzj0qma9p27ygk422`) and `/admin` deploys with it, so editing vespercms.com becomes a real-world use of the cloud, beside `vesper-github-test`. The site is hosted on Cloudflare Pages, built from this repository's root (`npm run build -w @vesper/site`, output `apps/site/dist`).
+- At first `/admin` wasn't deployed (`studio: { deploy: false }`), and the site was edited locally. Since 2026-10-21 the build names its cloud project (`site_3hfhzj0qma9p27ygk422`) and `/admin` deploys with it, so editing vespercms.com becomes a real-world use of the cloud, beside `vesper-github-test`. The site is hosted on Cloudflare Pages, built from this repository's root (`npm run build -w @vespercms/site`, output `apps/site/dist`).
 - Connecting its repository found a cloud bug: Connect repository needed a first install of the GitHub App, so an account that already had it never came back from GitHub. The fix, a second way in for an installed app ("Choose a repository VesperCMS can reach"), went to production the same day (vesper-cloud 3606146), and the site connects through it, with the folder `apps/site`.
 - e2e: the built site on the plain static host (port 4409; previews of the site use 4408), axe on every page in both colour schemes, the docs menu by keyboard at phone width, and every llms.txt link.
 
 ### 2026-10-21: `vesper agents` writes agent instructions from the manifest
 
-**Jeremy chose generated instructions over a static block on 2026-10-21. `vesper agents` (in `@vesper/astro`'s new `vesper` bin) turns the manifest into a Markdown guide for coding agents and writes it between `<!-- vesper:agents:start -->` and `<!-- vesper:agents:end -->` in the site's `AGENTS.md` (or `--file`), leaving the rest of the file alone. `--check` writes nothing and fails when the file is stale, for CI. Free, like the rest of the integration.**
+**Jeremy chose generated instructions over a static block on 2026-10-21. `vesper agents` (in `vespercms`'s new `vesper` bin) turns the manifest into a Markdown guide for coding agents and writes it between `<!-- vesper:agents:start -->` and `<!-- vesper:agents:end -->` in the site's `AGENTS.md` (or `--file`), leaving the rest of the file alone. `--check` writes nothing and fails when the file is stale, for CI. Free, like the rest of the integration.**
 - The guide is the rules that keep the studio and the build working (the schema is `content.config.ts`, splice don't reformat, raw values not parsed ones, check with `astro build`), then sections that appear only when the site has them (images, page trees, redirects, Markdoc tags, declared MDX components, `blockPublishOn`), then every collection: its files, URL pattern and each field's type, presence, default and help text. The same manifest builds the studio, so the agent and the editor see one schema.
 - It's deterministic (no dates, the manifest's own order), so `--check` can compare bytes. A file's CRLF line endings are kept.
 - `AGENTS.md` because most coding agents read it; Claude Code reads `CLAUDE.md`, which imports it with an `@AGENTS.md` line (`apps/site/CLAUDE.md` does exactly that), or `--file CLAUDE.md` writes there directly.

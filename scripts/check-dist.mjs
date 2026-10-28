@@ -1,5 +1,5 @@
 // Proves every published entry point works from dist/ alone, the way a site
-// that installs @vesper/* from npm will load it. The dev loop never reads
+// that installs Vesper from npm will load it. The dev loop never reads
 // dist/ (see .npmrc and DECISIONS.md), so without this check a broken build
 // could ship unnoticed.
 //

@@ -30,7 +30,7 @@ import {
   type StaticRoutes,
   type StoredEntry,
   type UrlSettings,
-} from '@vesper/core';
+} from '@vespercms/core';
 import type { IndexFile } from 'pagefind';
 import type { SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
@@ -129,7 +129,7 @@ export async function indexSearch(options: {
     // Without an index the page could only say that search failed to load.
     if (injected) removePage(dist, injected.file);
     result.info.push(
-      `Search: no page uses <Search>, so no index was built${injected ? ' and the /search page was left out' : ''}. Add <Search /> from @vesper/astro/components to a layout, or set vesper({ search: false }).`,
+      `Search: no page uses <Search>, so no index was built${injected ? ' and the /search page was left out' : ''}. Add <Search /> from vespercms/components to a layout, or set vesper({ search: false }).`,
     );
     return result;
   }

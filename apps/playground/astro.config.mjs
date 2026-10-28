@@ -1,7 +1,7 @@
 // @ts-check
 import markdoc from '@astrojs/markdoc';
 import mdx from '@astrojs/mdx';
-import vesper from '@vesper/astro';
+import vesper from 'vespercms';
 import { defineConfig } from 'astro/config';
 import { sourceConditions } from '../../scripts/vite-source-conditions.mjs';
 
@@ -25,6 +25,6 @@ export default defineConfig({
   // allowHTML: real Markdoc sites mix in HTML (the jazzy corpus does), so the
   // studio has to handle it, and the accessibility fixtures need it.
   integrations: [mdx(), markdoc({ allowHTML: true }), vesper({ search })],
-  // Resolve workspace @vesper/* packages to source, like the rest of the repo.
+  // Resolve workspace Vesper packages to source, like the rest of the repo.
   vite: sourceConditions(),
 });

@@ -7,7 +7,7 @@ import {
   type DataValue,
   type StaticRoutes,
   type UrlSettings,
-} from '@vesper/core';
+} from '@vespercms/core';
 import {
   isPublished,
   publishWindow,
@@ -16,7 +16,7 @@ import {
   scheduleTime,
   scheduledEvents,
   type ScheduledEntry,
-} from '@vesper/core/schedule';
+} from '@vespercms/core/schedule';
 import type { SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 import { builtPages, skipReason } from './a11y.ts';

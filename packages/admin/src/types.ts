@@ -1,4 +1,4 @@
-import type { Manifest, UrlEntry, WidgetProps } from '@vesper/core';
+import type { Manifest, UrlEntry, WidgetProps } from '@vespercms/core';
 import type { CloudConnection } from './cloud/connection.ts';
 import type { CloudSettings } from './cloud/session.ts';
 import type { GitHubStudioSettings } from './github/session.ts';

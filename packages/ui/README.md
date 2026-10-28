@@ -1,8 +1,8 @@
-# @vesper/ui
+# @vespercms/ui
 
 Vesper's design tokens and, from Phase 2, its accessible component kit: Button, IconButton, Link, TextField, TextArea, Select, Combobox, Checkbox, Switch, RadioGroup, Dialog, Drawer, Menu, Disclosure, Table, InlineStatus, ErrorSummary, a Toolbar with ToggleButton and ToolButton for the body editor, and, from Phase 2.6, Tree, SuggestField and FileButton (spec §10.5). Since the studio design pass, also Icon and Tooltip. Screens compose these and nothing else.
 
-**Status:** Phase 2, v1 of the kit. The kit is built on React Aria Components (DECISIONS.md). The package stays private: `@vesper/admin` compiles it into the studio bundle, and nothing else uses it yet.
+**Status:** Phase 2, v1 of the kit. The kit is built on React Aria Components (DECISIONS.md). The package stays private: `@vespercms/admin` compiles it into the studio bundle, and nothing else uses it yet.
 
 | Group | Components |
 |---|---|
@@ -17,13 +17,13 @@ Vesper's design tokens and, from Phase 2, its accessible component kit: Button, 
 | Tooltips | `Tooltip`: React Aria's, for icon-only tools. It closes when the page scrolls |
 
 
-Each component has axe and keyboard tests in `src/components/ui.test.tsx`. `@vesper/admin`'s `src/budget.test.ts` checks the kit's and the studio's source against the §10.4 design budget. Colour contrast is checked separately, on the tokens.
+Each component has axe and keyboard tests in `src/components/ui.test.tsx`. `@vespercms/admin`'s `src/budget.test.ts` checks the kit's and the studio's source against the §10.4 design budget. Colour contrast is checked separately, on the tokens.
 
 ## Tokens
 
 ```css
 @import 'tailwindcss';
-@import '@vesper/ui/tokens.css';
+@import '@vespercms/ui/tokens.css';
 ```
 
 The values are the Pine direction of Vesper's design system (DECISIONS.md, "Studio design"): warm sand neutrals and a pine-teal accent, fixed for every site. The token file enforces the spec §10.4 design budget:
@@ -42,7 +42,7 @@ The values are the Pine direction of Vesper's design system (DECISIONS.md, "Stud
   - `warning`
 
   There are no status hues: status is text.
-- **Type:** Figtree (self-hosted by `@vesper/admin`) over the system stack, in two weights, `normal` and `semibold`, and one scale: `text-title`, `text-heading-1` to `-3`, `text-body`, `text-label`, `text-small`, `text-caption`. Code, slugs and URLs use the system monospace stack.
+- **Type:** Figtree (self-hosted by `@vespercms/admin`) over the system stack, in two weights, `normal` and `semibold`, and one scale: `text-title`, `text-heading-1` to `-3`, `text-body`, `text-label`, `text-small`, `text-caption`. Code, slugs and URLs use the system monospace stack.
 - **Radii:** `rounded-sm` (6px), `-md` (10px), `-lg` (16px) and `-full`.
 - **Depth:** `shadow-overlay` on overlays, plus four named effects in their named places (DECISIONS.md, "Four named glows"): `shadow-glow-accent` (the primary button), `shadow-glow-selected` (the current item), the focus halo (`ring-6 ring-(color:--glow-focus)`) and `shadow-glass-edge`. Glass utilities for what floats: `glass-bar` (the top bar, 88%), `glass-raised` (overlays, 93%) and `scrim`, each with solid fallbacks; and `afterglow` for welcoming screens.
 - **Theming:** every colour is a `light-dark()` pair, and so is every glow, so `color-scheme` (set through `html[data-theme]`, or the OS) selects the palette.

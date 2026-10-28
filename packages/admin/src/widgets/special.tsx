@@ -6,8 +6,8 @@ import {
   slugify,
   wallTime,
   zoneName,
-} from '@vesper/core';
-import { RadioGroup, cx } from '@vesper/ui';
+} from '@vespercms/core';
+import { RadioGroup, cx } from '@vespercms/ui';
 import { useEffect, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useEditor } from '../editor/context.tsx';

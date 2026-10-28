@@ -10,7 +10,7 @@ import {
   type Manifest,
   type StorageAdapter,
   type UrlEntry,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { ApiError, type StudioApi } from './api.ts';
 
 /*

@@ -1,4 +1,4 @@
-# @vesper/astro
+# vespercms
 
 The Vesper integration for Astro.
 
@@ -8,7 +8,7 @@ The Vesper integration for Astro.
 
 ```js
 // astro.config.mjs
-import vesper from '@vesper/astro';
+import vesper from 'vespercms';
 export default defineConfig({ integrations: [vesper()] });
 ```
 
@@ -34,7 +34,7 @@ Zero config. It:
 | `search` | `{}` | Site search. `filters` and `sort` name each collection's fields, `exclude` leaves pages out by URL, `noJsLink` and `noJsFallback` decide what `/search` offers without JavaScript, `strings` gives other languages' words. `false` turns search off. |
 | `imageService` | `true` | `false` leaves Astro's image service alone. `<Img>` then uses Astro's own server crop for each ratio, with the focal point as `object-position`, and manual crops aren't applied. |
 
-The studio comes precompiled from `@vesper/admin`. React and React DOM are peer dependencies, shared with any custom widgets.
+The studio comes precompiled from `@vespercms/admin`. React and React DOM are peer dependencies, shared with any custom widgets.
 
 ### `vesper:content`
 
@@ -70,9 +70,9 @@ widgets: {
 },
 ```
 
-A widget is a React component that receives `WidgetProps` (`import type { WidgetProps } from '@vesper/astro/config'`). The integration compiles widget files, and the JSX files they import, with React's automatic runtime, so the site needs no `@astrojs/react`; nothing else in the site is affected. Start widget files with `/** @jsxImportSource react */` so TypeScript checks them as React. A widget that fails to load falls back to the built-in control, with a note.
+A widget is a React component that receives `WidgetProps` (`import type { WidgetProps } from 'vespercms/config'`). The integration compiles widget files, and the JSX files they import, with React's automatic runtime, so the site needs no `@astrojs/react`; nothing else in the site is affected. Start widget files with `/** @jsxImportSource react */` so TypeScript checks them as React. A widget that fails to load falls back to the built-in control, with a note.
 
-## Field helpers (`@vesper/astro/fields`)
+## Field helpers (`vespercms/fields`)
 
 Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/zod`, so Astro validates it like any other schema. Content files hold plain values. Drop the import and paste the raw Zod, and the behavior is identical:
 
@@ -109,7 +109,7 @@ It stores `{ src, alt, decorative?, focus?: { x, y }, crops?: { [ratio]: { x, y,
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { fields } from '@vesper/astro/fields';
+import { fields } from 'vespercms/fields';
 
 const settings = defineCollection({
   loader: glob({ pattern: 'site.yaml', base: './src/content/settings' }),
@@ -117,10 +117,10 @@ const settings = defineCollection({
 });
 ```
 
-## `vesper.config.ts` (`@vesper/astro/config`)
+## `vesper.config.ts` (`vespercms/config`)
 
 ```ts
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 export default defineConfig({
   collections: {
     pages: { url: '/:path', tree: true },
@@ -259,13 +259,13 @@ After every `astro build`, each built page is loaded into jsdom (no browser) and
 
 Automated checks find some problems, not all. The report says so, and nothing replaces testing with a keyboard and a screen reader (D19).
 
-## Images (`@vesper/astro/components`)
+## Images (`vespercms/components`)
 
 `<Img>` renders an image field (spec §6.6.5) through Astro's own `<Image>`, `<Picture>` and `getImage()`:
 
 ```astro
 ---
-import { Img, getImg } from '@vesper/astro/components';
+import { Img, getImg } from 'vespercms/components';
 const og = await getImg({ image: post.data.hero, ratio: 'og', width: 1200 }); // for <meta property="og:image">
 ---
 <Img image={post.data.hero} ratio="wide" widths={[480, 960, 1440]} sizes="100vw" />
@@ -280,20 +280,20 @@ const og = await getImg({ image: post.data.hero, ratio: 'og', width: 1200 }); //
 | neither | Fluid: the whole image, no server crop; the focal point becomes `object-position` (`62% 35%`), so CSS cropping keeps the subject in frame. |
 | always | `alt` from the field, `alt=""` when decorative. Every other Astro image prop passes through. `srcset` widths never go past the crop's own width. |
 
-**How crops are cut.** With Astro's default Sharp service, the integration wraps it (`@vesper/astro/image-service`): the stored rectangle is cut from the upright image, then Astro resizes and encodes it as usual. The crops are ordinary files in `dist/`, so they work on every host (D16). `sharp` is an optional peer dependency: the copy Astro's own service already uses.
+**How crops are cut.** With Astro's default Sharp service, the integration wraps it (`vespercms/image-service`): the stored rectangle is cut from the upright image, then Astro resizes and encodes it as usual. The crops are ordinary files in `dist/`, so they work on every host (D16). `sharp` is an optional peer dependency: the copy Astro's own service already uses.
 
 **With the wrapper off** (`vesper({ imageService: false })`) or **with a host's image service** (Cloudflare, Netlify, Vercel), `<Img>` still works: it asks for the ratio's size, which is Astro's own server crop (at the nearest of Sharp's anchors on Astro's Sharp service), and keeps the focal point as `object-position`. Manual crop rectangles are only applied with the wrapper, on Astro's default build-time Sharp service.
 
 Never pass a focal point as Astro's `position`: Sharp accepts only its own keywords there, and `"62% 35%"` fails the build (DECISIONS.md).
 
-## Site search (`@vesper/astro/components`)
+## Site search (`vespercms/components`)
 
 Search is free and static (D23): once a page uses `<Search>`, every build indexes the site with [Pagefind](https://pagefind.app) into `dist/_vesper/search/`. It's plain files, so it works on any host, with no MIME type or rewrite to set. Until then the build writes no index and no `/search` page, and its log says so.
 
 ```astro
 ---
 // In your layout
-import { Search, SearchHead } from '@vesper/astro/components';
+import { Search, SearchHead } from 'vespercms/components';
 ---
 <head>
   <SearchHead />  <!-- opensearch.xml, when Astro's `site` is set -->
@@ -387,4 +387,4 @@ npx vesper deploy init --target sftp --rebuild-every 60   # a deploy workflow fo
   - **`--rebuild-every <minutes>`** (an hour by default for `hook`) adds a scheduled run. It reads the live site's `_vesper/schedule.json` first and rebuilds only once a scheduled change is due. When it can't read the file, that run fails without building and names the address it tried, and the next run tries again. It takes 5, 6, 10, 12, 15, 20 or 30 minutes, or 1, 2, 3, 4, 6, 8, 12 or 24 hours, which a schedule keeps exactly. The site's address comes from `site` and `base` in `astro.config`, or `--url`. The command prints the `rebuildEvery` line for `vesper.config.ts`.
   - Every workflow also runs on the cloud's `repository_dispatch` (`vesper-rebuild`), at a scheduled change's exact time, and from the Actions tab. It installs with the package manager whose lockfile is nearest the site (npm, pnpm or Yarn), with the Node version in `.nvmrc` or `.node-version`, or Node 24. `--branch` names the default branch when git can't.
 
-`agentGuide(manifest)` and `withAgentGuide(file, guide)` do the same as functions, from `@vesper/astro/node`.
+`agentGuide(manifest)` and `withAgentGuide(file, guide)` do the same as functions, from `vespercms/node`.

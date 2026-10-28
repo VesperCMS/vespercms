@@ -44,6 +44,6 @@ describe('the React check', () => {
   });
 
   it('finds React 19 from the studio in this workspace', () => {
-    expect(reactProblem(reactVersionFrom(import.meta.resolve('@vesper/admin')))).toBeNull();
+    expect(reactProblem(reactVersionFrom(import.meta.resolve('@vespercms/admin')))).toBeNull();
   });
 });

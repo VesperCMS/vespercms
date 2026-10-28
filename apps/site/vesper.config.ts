@@ -1,4 +1,4 @@
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 
 // Presentation and URLs; the fields live in src/content.config.ts (spec D2).
 export default defineConfig({

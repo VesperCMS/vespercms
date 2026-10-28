@@ -12,7 +12,7 @@ import {
   type Manifest,
   type ParsedBody,
   type TableValue,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { afterAll, describe, expect, it } from 'vitest';
 import { JAZZY_MARKDOC } from '../../../core/test/helpers/jazzy-markdoc.ts';
 import { playgroundManifest } from '../test/helpers.tsx';

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
-import type { EntryDocument, SaveRequest } from '@vesper/core';
+import type { EntryDocument, SaveRequest } from '@vespercms/core';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';

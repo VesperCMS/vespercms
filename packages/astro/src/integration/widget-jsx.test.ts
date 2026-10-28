@@ -15,7 +15,7 @@ describe('widgetEntries', () => {
     writeFileSync(
       config,
       [
-        "import { defineConfig } from '@vesper/astro/config';",
+        "import { defineConfig } from 'vespercms/config';",
         'export default defineConfig({',
         '  widgets: {',
         "    hours: { component: () => import('./src/cms/StoreHours.tsx') },",

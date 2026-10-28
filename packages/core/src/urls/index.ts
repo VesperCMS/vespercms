@@ -1,5 +1,5 @@
 /*
- * `@vesper/core/urls`: URL patterns, page trees, redirects and host rules
+ * `@vespercms/core/urls`: URL patterns, page trees, redirects and host rules
  * (spec §6.15). Plain functions with no parser dependencies, so a site's own
  * pages can import them through `vesper:content` without pulling in
  * Markdoc, YAML or the rest of the core.

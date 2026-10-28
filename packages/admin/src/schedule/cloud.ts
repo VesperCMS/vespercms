@@ -1,4 +1,4 @@
-import type { CloudScheduledEvent, ScheduleResponse } from '@vesper/core';
+import type { CloudScheduledEvent, ScheduleResponse } from '@vespercms/core';
 
 /*
  * Scheduling connected to the cloud (spec §6.17): exact times, held drafts

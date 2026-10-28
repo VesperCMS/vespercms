@@ -6,8 +6,8 @@ import {
   type DataValue,
   type FieldModel,
   type FieldVariant,
-} from '@vesper/core';
-import { RadioGroup, Select } from '@vesper/ui';
+} from '@vespercms/core';
+import { RadioGroup, Select } from '@vespercms/ui';
 import { useRef } from 'react';
 import { formatCount } from '../app/format.ts';
 import { Field } from '../editor/Field.tsx';

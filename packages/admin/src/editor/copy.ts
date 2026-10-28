@@ -1,4 +1,4 @@
-import type { CollectionManifest, DataObject } from '@vesper/core';
+import type { CollectionManifest, DataObject } from '@vespercms/core';
 import { arrangeFields } from './arrange.ts';
 import { keyOf } from './values.ts';
 

@@ -10,7 +10,7 @@ import {
   type StorageAdapter,
   type StorageEntry,
   type StoredFile,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 /** Folders that are never content. Listing skips them; writing into them is refused. */
 const SKIPPED = new Set(['node_modules', '.git', 'dist', '.astro', '.vesper']);

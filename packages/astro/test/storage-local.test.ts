@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { runStorageContract } from '@vesper/core/testing';
+import { runStorageContract } from '@vespercms/core/testing';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { LocalStorage, renameWithRetry } from '../src/node/storage-local.ts';
 

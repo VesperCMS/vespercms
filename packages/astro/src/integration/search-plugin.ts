@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { extname } from 'node:path';
-import type { UrlSettings } from '@vesper/core';
-import { formatUrl } from '@vesper/core';
+import type { UrlSettings } from '@vespercms/core';
+import { formatUrl } from '@vespercms/core';
 import type { Plugin } from 'vite';
 import type { SiteModelCache } from './site-model.ts';
 import { SEARCH_DIR, searchFile, type SearchOptions } from './search.ts';

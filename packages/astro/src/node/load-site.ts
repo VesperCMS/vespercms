@@ -12,7 +12,7 @@ import {
   type LoaderInfo,
   type ManifestInput,
   type MarkdocConfigLike,
-} from '@vesper/core';
+} from '@vespercms/core';
 import type { Plugin, ViteDevServer } from 'vite';
 import { checkConfig, type VesperConfig } from '../config/index.ts';
 

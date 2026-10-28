@@ -231,7 +231,7 @@ describe('indexing a build', () => {
       built: false,
       warnings: [],
       info: [
-        'Search: no page uses <Search>, so no index was built. Add <Search /> from @vesper/astro/components to a layout, or set vesper({ search: false }).',
+        'Search: no page uses <Search>, so no index was built. Add <Search /> from vespercms/components to a layout, or set vesper({ search: false }).',
       ],
     });
   });
@@ -249,7 +249,7 @@ describe('indexing a build', () => {
       built: false,
       warnings: [],
       info: [
-        'Search: no page uses <Search>, so no index was built and the /search page was left out. Add <Search /> from @vesper/astro/components to a layout, or set vesper({ search: false }).',
+        'Search: no page uses <Search>, so no index was built and the /search page was left out. Add <Search /> from vespercms/components to a layout, or set vesper({ search: false }).',
       ],
     });
     expect(existsSync(join(where.dist, 'search'))).toBe(false);

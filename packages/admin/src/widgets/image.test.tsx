@@ -5,7 +5,7 @@ import {
   type Manifest,
   type MediaItem,
   type SaveRequest,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';

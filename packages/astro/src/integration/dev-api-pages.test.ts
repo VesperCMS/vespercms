@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { Manifest } from '@vesper/core';
+import type { Manifest } from '@vespercms/core';
 import { z } from 'astro/zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevApi } from './dev-api.ts';

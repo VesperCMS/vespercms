@@ -11,8 +11,8 @@ import {
   type FocalPoint,
   type ImageSize,
   type ImageValue,
-} from '@vesper/core';
-import { Button, Dialog, cx, focusRing } from '@vesper/ui';
+} from '@vespercms/core';
+import { Button, Dialog, cx, focusRing } from '@vespercms/ui';
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 /*

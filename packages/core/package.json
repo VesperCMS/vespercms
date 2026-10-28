@@ -1,5 +1,5 @@
 {
-  "name": "@vesper/core",
+  "name": "@vespercms/core",
   "version": "0.0.0",
   "description": "Vesper's framework-free core: schema introspection, manifest, serializers and the storage adapter interface.",
   "license": "MIT",

@@ -1,4 +1,4 @@
-import { entryChecker, type Manifest } from '@vesper/core';
+import { entryChecker, type Manifest } from '@vespercms/core';
 
 /*
  * The accessibility checks themselves (spec §6.18). They read bodies with
@@ -9,4 +9,4 @@ export function a11yChecker(manifest: Manifest): ReturnType<typeof entryChecker>
   return entryChecker(manifest);
 }
 
-export { pdfNotes } from '@vesper/core';
+export { pdfNotes } from '@vespercms/core';

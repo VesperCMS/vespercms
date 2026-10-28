@@ -9,7 +9,7 @@ import {
   type DataValue,
   type Manifest,
   type SchedulePresentation,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 /*
  * An entry's schedule in the studio (spec §6.17): when it goes live, when it

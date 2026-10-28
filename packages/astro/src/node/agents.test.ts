@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { CollectionManifest, FieldModel, Manifest } from '@vesper/core';
+import type { CollectionManifest, FieldModel, Manifest } from '@vespercms/core';
 import { describe, expect, it } from 'vitest';
 import { AGENTS_END, AGENTS_START, agentGuide, withAgentGuide } from './agents.ts';
 

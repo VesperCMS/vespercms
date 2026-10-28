@@ -4,7 +4,7 @@ import {
   type EntryDocument,
   type Manifest,
   type SaveRequest,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent, type UserEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';

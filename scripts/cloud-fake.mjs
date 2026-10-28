@@ -1,5 +1,5 @@
 // A fake Vesper cloud for the studio's tests (spec §6.9, §7.2 to §7.5): the
-// API the studio speaks (`@vesper/core`'s cloud protocol), with sign-in,
+// API the studio speaks (`@vespercms/core`'s cloud protocol), with sign-in,
 // DPoP-bound tokens, drafts, reviews, publishing and deploy status. It
 // publishes through `GitHubStorage` to a fake GitHub over real git, as the
 // real cloud publishes to GitHub with an installation token, so a publish in
@@ -37,7 +37,7 @@ import {
   saveDraft,
   toBase64,
   verifyDpopProof,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 const ACCESS_TTL = 600;
 const REFRESH_IDLE = 12 * 3600;
@@ -46,9 +46,9 @@ const REFRESH_MAX = 7 * 24 * 3600;
 /**
  * @param {{
  *   github: import('./github-fake.mjs').GitHubFake,
- *   manifest: import('@vesper/core').Manifest,
+ *   manifest: import('@vespercms/core').Manifest,
  *   site: { id: string, name: string, origins: string[], root?: string },
- *   people: { id: string, name: string, email: string, role: import('@vesper/core').SiteRole, grants?: import('@vesper/core').Grant[] | null, picture?: boolean }[],
+ *   people: { id: string, name: string, email: string, role: import('@vespercms/core').SiteRole, grants?: import('@vespercms/core').Grant[] | null, picture?: boolean }[],
  *   base?: string,
  * }} options
  */

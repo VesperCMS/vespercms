@@ -7,7 +7,7 @@ import {
   type BodyFormat,
   type FieldModel,
   type Manifest,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 /*
  * What the writing view knows how to show as a block (spec §6.5.1, §6.5.2):

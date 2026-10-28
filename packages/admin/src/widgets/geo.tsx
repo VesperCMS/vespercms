@@ -1,5 +1,5 @@
-import { isPlainObject, type DataValue } from '@vesper/core';
-import { Button, cx } from '@vesper/ui';
+import { isPlainObject, type DataValue } from '@vespercms/core';
+import { Button, cx } from '@vespercms/ui';
 import { Suspense, lazy, useState } from 'react';
 import type { ValuePath } from '../editor/values.ts';
 import type { WidgetProps } from '../types.ts';

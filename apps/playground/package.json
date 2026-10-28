@@ -1,5 +1,5 @@
 {
-  "name": "@vesper/playground",
+  "name": "@vespercms/playground",
   "version": "0.0.0",
   "private": true,
   "description": "An Astro 7 site that exercises every Vesper feature. Its content doubles as test fixtures.",
@@ -14,7 +14,7 @@
   "dependencies": {
     "@astrojs/markdoc": "^2.1.0",
     "@astrojs/mdx": "^8.1.0",
-    "@vesper/astro": "0.0.0",
+    "vespercms": "0.0.0",
     "astro": "^7.4.0",
     "lucide": "^1.59.0"
   },

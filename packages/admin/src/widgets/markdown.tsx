@@ -2,7 +2,7 @@ import { Extension, type JSONContent, type MarkdownToken } from '@tiptap/core';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { ToggleButton, ToolButton, Toolbar, cx } from '@vesper/ui';
+import { ToggleButton, ToolButton, Toolbar, cx } from '@vespercms/ui';
 import { useEffect, useRef, useState } from 'react';
 import { LinkDialog } from '../body/BodyEditor.tsx';
 import { scrollClearOfToolbar, stuckToolbar } from '../body/scroll.ts';

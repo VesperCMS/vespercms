@@ -8,7 +8,7 @@ import {
   type CloudTokens,
   type CloudUser,
   type Member,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { keyValueStore, type KeyValueStore } from '../app/idb.ts';
 
 /*

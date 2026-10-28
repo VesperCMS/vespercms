@@ -1,6 +1,6 @@
-# @vesper/admin
+# @vespercms/admin
 
-The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `@vesper/astro` injects the page that mounts it, so sites never import this package themselves.
+The Vesper studio: the editor served at `/admin`. One bundle for every storage mode. `vespercms` injects the page that mounts it, so sites never import this package themselves.
 
 **Status:** Phases 2 to 3 complete, and Phase 4's half in this repository: the cloud's sign-in, drafts, Changes and review (see "The cloud" below). In place: the shell, Home, the entry list (search, status filter, sortable columns), and the editor (title as heading, fields in schema order, Details, the body in a writing view that splices changed blocks into the original text (plus a source view), save with validation and conflict handling, delete, unsaved-changes guard). Every built-in widget works, including image and file uploads with hygiene, the media browser, the reference pickers, color, geo with an optional map, slug and date-time in the site's time zone. Markdoc tags and declared MDX components are blocks in the body editor, with settings, a "/" insert list, and live validation that stops a save the site couldn't build. Tree collections open as an outline of pages with moves, order, child and section pages; the Redirects screen edits redirects and imports them from CSV; and links can be picked from the site's pages. A `fields.image()` field sets its focal point and crops behind a "Focal point & crops" disclosure. Accessibility notes sit beside the fields they concern, with a count in the top bar that opens a drawer of every note. Since the studio design pass, every screen follows Vesper's design system (Pine), and on wide screens Details opens as a drawer from the top bar.
 
@@ -9,17 +9,17 @@ The Vesper studio: the editor served at `/admin`. One bundle for every storage m
 
 The studio ships as compiled JavaScript and CSS (DECISIONS.md, "Studio"):
 
-- `dist/studio.js`: ES module. React, React DOM, React Aria Components and `@vesper/core` stay external, so the site's Vite bundles **one** React for the studio and the site's custom widgets.
-- `dist/studio.css`: Tailwind 4 plus the `@vesper/ui` tokens, compiled at publish time, with Figtree 400 and 600 (latin, from `@fontsource/figtree`) inlined, so `/admin` requests no font from Google or a CDN. Sites need no Tailwind of their own.
-- `@vesper/ui` is private and is bundled in.
+- `dist/studio.js`: ES module. React, React DOM, React Aria Components and `@vespercms/core` stay external, so the site's Vite bundles **one** React for the studio and the site's custom widgets.
+- `dist/studio.css`: Tailwind 4 plus the `@vespercms/ui` tokens, compiled at publish time, with Figtree 400 and 600 (latin, from `@fontsource/figtree`) inlined, so `/admin` requests no font from Google or a CDN. Sites need no Tailwind of their own.
+- `@vespercms/ui` is private and is bundled in.
 
-`npm run build -w @vesper/admin` runs `vite build` (library mode, entry `src/build.ts`) and then `tsc -p tsconfig.build.json` for type declarations. The root `npm run build` includes it. In this workspace, the `@vesper/source` condition points both exports at `src/`, so dev and tests never read `dist/`.
+`npm run build -w @vespercms/admin` runs `vite build` (library mode, entry `src/build.ts`) and then `tsc -p tsconfig.build.json` for type declarations. The root `npm run build` includes it. In this workspace, the `@vesper/source` condition points both exports at `src/`, so dev and tests never read `dist/`.
 
 ## Mounting
 
 ```ts
-import { createLocalApi, mountStudio } from '@vesper/admin';
-import '@vesper/admin/studio.css';
+import { createLocalApi, mountStudio } from '@vespercms/admin';
+import '@vespercms/admin/studio.css';
 
 mountStudio(document.getElementById('vesper-studio')!, {
   manifest,                              // from virtual:vesper/manifest
@@ -30,7 +30,7 @@ mountStudio(document.getElementById('vesper-studio')!, {
 });
 ```
 
-With `api: null` and `github` set (a built site in GitHub mode), the studio signs the editor in with GitHub first, through the site's relay, and then saves to the repository: `github: { owner, repo, branch, root, relay, apiUrl?, schemas }`, plus `routes` (the site's static routes) and `loadUrlFunctions`. `@vesper/astro` writes all of it into the page.
+With `api: null` and `github` set (a built site in GitHub mode), the studio signs the editor in with GitHub first, through the site's relay, and then saves to the repository: `github: { owner, repo, branch, root, relay, apiUrl?, schemas }`, plus `routes` (the site's static routes) and `loadUrlFunctions`. `vespercms` writes all of it into the page.
 
 ## GitHub mode (spec §6.8)
 
@@ -109,7 +109,7 @@ Keys in the writing view: arrow onto a block to select it, Enter opens its setti
 
 ## Accessibility notes (spec §6.18, layer 1)
 
-- `a11y/useNotes.ts` runs `entryChecker` from `@vesper/core` a moment after typing stops (the same 300 ms as body validation). The checks read bodies with micromark and Markdoc, so `a11y/run.ts` loads on first use, like the body checks.
+- `a11y/useNotes.ts` runs `entryChecker` from `@vespercms/core` a moment after typing stops (the same 300 ms as body validation). The checks read bodies with micromark and Markdoc, so `a11y/run.ts` loads on first use, like the body checks.
 - PDFs (file fields, and site PDFs linked from the body) are read once per session with PDF.js (`a11y/pdf.ts`, `pdfjs-dist`'s legacy build, its worker through a Vite `?url` import). It stays external in `dist/` and loads only when a PDF is checked.
 - Notes render under their field (`a11y/FieldNotes.tsx`) and join the control's description; an image's alt-text notes sit beside the alt text box. The body's notes are listed under the body editor, each with Show (`body/reveal.ts` finds the block by parsing the current text again).
 - The count in the top bar opens `a11y/NotesDrawer.tsx`: every note grouped by field in form order, with Go to field. With `a11y.blockPublishOn`, a listed rule's note refuses the save the way a body the build would fail on is refused, and the error summary links to the field.

@@ -1,4 +1,4 @@
-# @vesper/core test data
+# @vespercms/core test data
 
 Two kinds of byte-exact test data for the serializers. Both folders are marked `-text` in `.gitattributes` and ignored by Prettier, ESLint and `.editorconfig`, so git, editors and formatters never change a byte. **Don't edit these files by hand.**
 

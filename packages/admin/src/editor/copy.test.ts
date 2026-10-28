@@ -1,4 +1,4 @@
-import type { CollectionManifest } from '@vesper/core';
+import type { CollectionManifest } from '@vespercms/core';
 import { describe, expect, it } from 'vitest';
 import { playgroundManifest } from '../test/helpers.tsx';
 import { copiedValues } from './copy.ts';

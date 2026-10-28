@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { extractMarkdocSchema, markdocFields, type Manifest } from '@vesper/core';
+import { extractMarkdocSchema, markdocFields, type Manifest } from '@vespercms/core';
 import { z } from 'astro/zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevApi, gitUserName, refusal } from './dev-api.ts';

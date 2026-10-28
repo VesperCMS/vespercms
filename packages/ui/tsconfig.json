@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "//": "Type-checked only; @vesper/admin's Vite build compiles the kit into the studio bundle.",
+  "//": "Type-checked only; @vespercms/admin's Vite build compiles the kit into the studio bundle.",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": [],

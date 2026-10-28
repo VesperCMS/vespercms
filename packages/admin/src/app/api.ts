@@ -16,7 +16,7 @@ import type {
   SaveRequest,
   SaveResponse,
   UploadResponse,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 /**
  * Everything the studio needs from a storage back end. Local mode talks to

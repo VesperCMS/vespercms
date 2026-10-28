@@ -9,7 +9,7 @@ Search is free and static. Once a page uses `<Search>`, every `astro build` inde
 
 ```astro
 ---
-import { Search, SearchHead } from '@vesper/astro/components';
+import { Search, SearchHead } from 'vespercms/components';
 ---
 <html lang="en">
   <head>
@@ -97,7 +97,7 @@ Add `fields.hideFromSearch()` to the collection's schema:
 
 ```ts
 // src/content.config.ts
-import { fields } from '@vesper/astro/fields';
+import { fields } from 'vespercms/fields';
 
 const blog = defineCollection({
   loader: glob({ pattern: '**/[^_]*.md', base: './src/content/blog' }),
@@ -120,7 +120,7 @@ For a search page in your own layout, add `src/pages/search.astro`. Yours replac
 
 ```astro
 ---
-import { Search } from '@vesper/astro/components';
+import { Search } from 'vespercms/components';
 import Layout from '../layouts/Layout.astro';
 ---
 <Layout title="Search">

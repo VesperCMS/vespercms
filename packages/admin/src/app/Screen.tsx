@@ -7,7 +7,7 @@ import {
   VesperMark,
   type IconName,
   type IconNode,
-} from '@vesper/ui';
+} from '@vespercms/ui';
 import {
   useContext,
   useEffect,

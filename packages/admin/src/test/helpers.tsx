@@ -8,7 +8,7 @@ import type {
   PageTree,
   RedirectsDocument,
   ScheduledChange,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { act, render, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
 import { expect, vi, type Mock } from 'vitest';
@@ -23,7 +23,7 @@ import type { StudioOptions } from '../types.ts';
  */
 export const playgroundManifest = {
   ...snapshot,
-  generator: { name: '@vesper/astro', version: '0.0.0' },
+  generator: { name: 'vespercms', version: '0.0.0' },
   hash: 'test',
 } as Manifest;
 

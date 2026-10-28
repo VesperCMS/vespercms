@@ -1,5 +1,5 @@
-import type { A11yNote } from '@vesper/core';
-import { Icon } from '@vesper/ui';
+import type { A11yNote } from '@vespercms/core';
+import { Icon } from '@vespercms/ui';
 import type { ReactNode } from 'react';
 
 /** A note's words: what it's about, the problem, and why it matters (spec §6.18). */

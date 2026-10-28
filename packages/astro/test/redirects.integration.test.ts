@@ -4,7 +4,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ContentService, PageService, type TreeHooks } from '@vesper/core';
+import { ContentService, PageService, type TreeHooks } from '@vespercms/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { staticRoutesFromFiles } from '../src/integration/routes.ts';
 import { loadSiteModel } from '../src/node/manifest.ts';

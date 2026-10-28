@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
  * every page in both colour schemes passes axe's WCAG 2.1 A/AA rules, the
  * theme toggle and the hero's art work and fall back, the docs menu works by
  * keyboard at phone width, and llms.txt links only to Markdown copies that
- * exist. Build first: `npm run build -w @vesper/site`.
+ * exist. Build first: `npm run build -w @vespercms/site`.
  */
 
 const dist = fileURLToPath(new URL('../../apps/site/dist/', import.meta.url));

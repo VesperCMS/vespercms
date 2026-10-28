@@ -5,7 +5,7 @@
  */
 
 /** The crop step's entrypoint, as Astro's `image.service.entrypoint`. */
-export const VESPER_IMAGE_SERVICE = '@vesper/astro/image-service';
+export const VESPER_IMAGE_SERVICE = 'vespercms/image-service';
 
 /** Astro's default service. */
 export const SHARP_IMAGE_SERVICE = 'astro/assets/services/sharp';

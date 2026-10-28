@@ -6,8 +6,8 @@ import {
   wallTime,
   zoneName,
   type CollectionManifest,
-} from '@vesper/core';
-import { Button, Dialog, TextField, cx } from '@vesper/ui';
+} from '@vespercms/core';
+import { Button, Dialog, TextField, cx } from '@vespercms/ui';
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useDrafts } from '../cloud/editor.tsx';

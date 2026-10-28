@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import type { StaticRoutes } from '@vesper/core';
+import type { StaticRoutes } from '@vespercms/core';
 
 /*
  * The site's own routes, from Astro's resolved route list

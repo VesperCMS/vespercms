@@ -29,7 +29,7 @@ function site(files: Record<string, string>): string {
 
 const report = (errors: number, warnings: number): A11yReport => ({
   version: 1,
-  generator: '@vesper/astro',
+  generator: 'vespercms',
   note: '',
   checked: { pages: 3, skipped: { redirects: 1, studio: 1 }, engine: 'axe', rules: [] },
   summary: { errors, warnings, pages: errors + warnings > 0 ? 1 : 0 },

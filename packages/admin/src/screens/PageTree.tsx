@@ -1,4 +1,4 @@
-import type { CollectionManifest, MoveResult, PageTreeNode, Position } from '@vesper/core';
+import type { CollectionManifest, MoveResult, PageTreeNode, Position } from '@vespercms/core';
 import {
   Button,
   ButtonLink,
@@ -12,7 +12,7 @@ import {
   type Key,
   type MenuItem,
   type Option,
-} from '@vesper/ui';
+} from '@vespercms/ui';
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { onEntriesChanged } from '../app/entries-changed.ts';

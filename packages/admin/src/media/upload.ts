@@ -1,4 +1,4 @@
-import { gitBlobSha, type MediaItem } from '@vesper/core';
+import { gitBlobSha, type MediaItem } from '@vespercms/core';
 import type { StudioApi } from '../app/api.ts';
 import { prepareUpload, type HygieneOptions, type PreparedUpload } from './hygiene.ts';
 

@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Manifest } from '@vesper/core';
+import type { Manifest } from '@vespercms/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { SiteModel } from '../node/manifest.ts';
 import { scheduledLoaders } from '../runtime/schedule.ts';

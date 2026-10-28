@@ -1,5 +1,5 @@
-import { defineConfig } from '@vesper/astro/config';
-import { fields } from '@vesper/astro/fields';
+import { defineConfig } from 'vespercms/config';
+import { fields } from 'vespercms/fields';
 import { z } from 'astro/zod';
 
 // Presentation, URLs, scheduling and custom widgets; field definitions live in

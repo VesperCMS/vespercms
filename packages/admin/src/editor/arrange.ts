@@ -1,4 +1,4 @@
-import type { CollectionManifest, FieldModel } from '@vesper/core';
+import type { CollectionManifest, FieldModel } from '@vespercms/core';
 import { keyOf } from './values.ts';
 
 /*

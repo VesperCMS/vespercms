@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
-import type { EntryDocument } from '@vesper/core';
+import type { EntryDocument } from '@vespercms/core';
 import { act, cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeApi, renderStudio } from '../test/helpers.tsx';

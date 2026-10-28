@@ -1,5 +1,5 @@
-import { CENTER, roundFocus, type FocalPoint, type ImageSize } from '@vesper/core';
-import { Button, cx, focusRing } from '@vesper/ui';
+import { CENTER, roundFocus, type FocalPoint, type ImageSize } from '@vespercms/core';
+import { Button, cx, focusRing } from '@vespercms/ui';
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { inputClass } from './basic.tsx';
 

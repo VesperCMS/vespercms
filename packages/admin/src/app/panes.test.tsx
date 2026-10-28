@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { EntryDocument, EntrySummary } from '@vesper/core';
+import type { EntryDocument, EntrySummary } from '@vespercms/core';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

@@ -144,11 +144,11 @@ The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `
 
 ## Field helpers
 
-`@vesper/astro/fields` has helpers for common fields. Each returns plain Zod from `astro/zod` with `.meta()` attached, so Astro checks it like any other schema. Paste the raw Zod instead and you get the same field: a test keeps the two equal.
+`vespercms/fields` has helpers for common fields. Each returns plain Zod from `astro/zod` with `.meta()` attached, so Astro checks it like any other schema. Paste the raw Zod instead and you get the same field: a test keeps the two equal.
 
 ```ts
 import { z } from 'astro/zod';
-import { fields } from '@vesper/astro/fields';
+import { fields } from 'vespercms/fields';
 
 const schema = z.object({
   brandColor: fields.color({ palette: { Indigo: '#28335f', Pine: '#2f5d50' } }),
@@ -217,7 +217,7 @@ collections: {
 When no built-in control fits, write your own as a React component and register it in `vesper.config.ts`:
 
 ```ts
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 
 export default defineConfig({
   widgets: {
@@ -232,7 +232,7 @@ export default defineConfig({
 
 - A field uses the widget when its `.meta({ widget: 'store-hours' })` names it, or when `match` returns true for it. `accepts` limits which fields it can edit.
 - Vesper picks a control in this order: the widget a field names, then a custom widget whose `match` claims it, then the control its type implies, then a raw YAML field.
-- The file's default export is the component. It receives `WidgetProps` (`import type { WidgetProps } from '@vesper/astro/config'`): `value`, `onChange`, `field`, `id`, `describedBy`, `invalid` and `disabled`.
+- The file's default export is the component. It receives `WidgetProps` (`import type { WidgetProps } from 'vespercms/config'`): `value`, `onChange`, `field`, `id`, `describedBy`, `invalid` and `disabled`.
 - The editor draws the label, help text and errors. Your control takes `id`, passes `describedBy` and `invalid` on to `aria-describedby` and `aria-invalid`, works with the keyboard, and never validates: the schema does.
 - Vesper compiles widget files as React, so your site needs no `@astrojs/react`. Start each file with `/** @jsxImportSource react */` so TypeScript checks it as React.
 - If a widget fails to load, the field falls back to its built-in control, with a note.

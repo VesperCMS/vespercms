@@ -2,7 +2,7 @@
 // resolve workspace packages to TypeScript source under the @vesper/source
 // condition and run them through its built-in type stripping. Astro loads
 // astro.config.mjs with a plain Node import first, so this is the path a
-// site's config takes when it imports @vesper/astro from this workspace.
+// site's config takes when it imports vespercms from this workspace.
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -16,10 +16,10 @@ function runNode(args) {
 }
 
 describe('@vesper/source condition in plain Node', () => {
-  it('resolves @vesper/core to src/index.ts and runs it', () => {
+  it('resolves @vespercms/core to src/index.ts and runs it', () => {
     const script = [
-      "const url = import.meta.resolve('@vesper/core');",
-      "const mod = await import('@vesper/core');",
+      "const url = import.meta.resolve('@vespercms/core');",
+      "const mod = await import('@vespercms/core');",
       'console.log(JSON.stringify({ url, version: mod.MANIFEST_VERSION }));',
     ].join('\n');
     const result = runNode(['--conditions=@vesper/source', '--input-type=module', '-e', script]);

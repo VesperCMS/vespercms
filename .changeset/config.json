@@ -3,7 +3,7 @@
   "baseBranch": "main",
   "access": "public",
   "commit": false,
-  "fixed": [["@vesper/*"]],
+  "fixed": [["vespercms", "@vespercms/*"]],
   "ignore": [],
   "updateInternalDependencies": "patch",
   "privatePackages": { "version": false, "tag": false },

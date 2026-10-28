@@ -17,7 +17,7 @@ import {
   type PublishResponse,
   type Review,
   type ScheduleResponse,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { ApiError, type StudioApi } from '../app/api.ts';
 import { createBrowserApi } from '../app/browser-api.ts';
 import { keyValueStore } from '../app/idb.ts';

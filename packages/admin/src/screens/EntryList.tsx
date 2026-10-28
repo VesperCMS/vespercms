@@ -1,5 +1,5 @@
-import { decodeValue, humanize, type CollectionManifest, type EntrySummary } from '@vesper/core';
-import { ButtonLink, Link, Select, Table, TextField, type TableColumn } from '@vesper/ui';
+import { decodeValue, humanize, type CollectionManifest, type EntrySummary } from '@vespercms/core';
+import { ButtonLink, Link, Select, Table, TextField, type TableColumn } from '@vespercms/ui';
 import { useEffect, useMemo, useState } from 'react';
 import type { SortDescriptor } from 'react-aria-components';
 import { useStudio } from '../app/context.tsx';

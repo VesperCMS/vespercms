@@ -4,8 +4,8 @@ import {
   useEditorState,
   type ReactNodeViewProps,
 } from '@tiptap/react';
-import type { BodyIssue } from '@vesper/core';
-import { Button, cx } from '@vesper/ui';
+import type { BodyIssue } from '@vespercms/core';
+import { Button, cx } from '@vespercms/ui';
 import { useId } from 'react';
 import { fallbackLabel } from './catalog.ts';
 import { chipInfo, tagValues } from './chips.ts';

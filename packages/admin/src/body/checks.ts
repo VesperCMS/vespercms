@@ -8,7 +8,7 @@ import {
   type BodyIssue,
   type Manifest,
   type MdxComponentCheck,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 /*
  * Body validation for the studio (spec §6.5.1, "Validation"): Markdoc with

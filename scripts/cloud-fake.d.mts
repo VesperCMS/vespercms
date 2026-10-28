@@ -11,7 +11,7 @@ import type {
   ScheduledEventState,
   ScheduleTrigger,
   SiteRole,
-} from '@vesper/core';
+} from '@vespercms/core';
 import type { GitHubFake } from './github-fake.mjs';
 
 export type CloudPerson = {

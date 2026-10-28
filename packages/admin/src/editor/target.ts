@@ -1,4 +1,4 @@
-import { fieldChildren, type FieldIssue, type FieldModel } from '@vesper/core';
+import { fieldChildren, type FieldIssue, type FieldModel } from '@vespercms/core';
 import { builtinWidget } from '../widgets/registry.ts';
 import { fieldId, keyOf, type ValuePath } from './values.ts';
 

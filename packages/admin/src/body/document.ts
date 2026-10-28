@@ -10,7 +10,7 @@ import {
   type ParsedBody,
   type TableEdit,
   type TableValue,
-} from '@vesper/core';
+} from '@vespercms/core';
 import type { Catalog } from './catalog.ts';
 import { hasPlaceholderCharacters, restoreChips, withPlaceholders } from './chips.ts';
 import { WRITABLE_NODES, type ContainerTypes } from './nodes.ts';

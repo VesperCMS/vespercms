@@ -65,13 +65,13 @@ Always run tools through `npm run` (or `npm exec`), never a bare `npx tsc` or `n
 | `npm run lint` | ESLint, including the core package-boundary rules. |
 | `npm run format` / `format:check` | Prettier over code and config (never prose or content). |
 | `npm run a11y:contrast` | Token contrast (WCAG 2.1, both themes) and the §10.4 token budget, parsed from `packages/ui/src/tokens.css`. |
-| `npm run changeset` | Record a release note and bump for changed `@vesper/*` packages (all share one version). |
+| `npm run changeset` | Record a release note and bump for changed Vesper's packages (`vespercms` and `@vespercms/*`) (all share one version). |
 | `npm run build` | `dist/` for every package: tsc for the libraries, Vite for the studio bundle and its CSS. |
-| `npm run build -w @vesper/playground` | Static build of the playground into `apps/playground/dist/`, and its accessibility report into `apps/playground/.vesper/`. |
+| `npm run build -w @vespercms/playground` | Static build of the playground into `apps/playground/dist/`, and its accessibility report into `apps/playground/.vesper/`. |
 | `npm run e2e` | Playwright + axe. `static`: the built playground on `scripts/static-server.mjs` (build first). `studio`: `/admin` on `astro dev` over a throwaway copy of the playground (`scripts/studio-site.mjs`). `github`: a GitHub-mode build, the real relay and a fake GitHub over real git (`scripts/github-site.mjs`). `cloud`: a cloud-mode build and the fake cloud over a fake GitHub (`scripts/cloud-site.mjs`). `site`: vespercms.com, built (build it first). |
-| `npm run dev -w @vesper/site` | vespercms.com in `astro dev`, with its studio at `/admin`. `npm run build -w @vesper/site` builds it into `apps/site/dist/`. |
+| `npm run dev -w @vespercms/site` | vespercms.com in `astro dev`, with its studio at `/admin`. `npm run build -w @vespercms/site` builds it into `apps/site/dist/`. |
 | `npm run screens` | Retake vespercms.com's studio screenshots, light and dark, into `apps/site/src/assets/home/`: `astro dev` on port 4410 over its own copy of the playground (`e2e/.screens-site`, `playwright.screens.config.ts`), so it can run beside `npm run e2e`. |
-| `npm run agents -w @vesper/site` | Regenerate `apps/site/AGENTS.md` with `vesper agents` after changing the site's schema or `vesper.config.ts`. CI runs it with `-- --check`. |
+| `npm run agents -w @vespercms/site` | Regenerate `apps/site/AGENTS.md` with `vesper agents` after changing the site's schema or `vesper.config.ts`. CI runs it with `-- --check`. |
 | `npm run manifest` | Print the playground's manifest, generated from source. |
 | `npm run check:dist` | Build `dist/` and import every published entry point with the source condition off. |
 
@@ -106,7 +106,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **Relative imports carry the `.ts` extension.** Node needs real file names, and `rewriteRelativeImportExtensions` turns them into `.js` in `dist/`.
 
-**`packages/core` has no `@types/node`. If code there needs `process`, `Buffer` or `node:*`, it belongs in `@vesper/astro`.** The missing types make typecheck fail before review has to catch it.
+**`packages/core` has no `@types/node`. If code there needs `process`, `Buffer` or `node:*`, it belongs in `vespercms`.** The missing types make typecheck fail before review has to catch it.
 
 ### Content files
 
@@ -128,7 +128,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 ### URLs, hierarchy and redirects
 
-**Compute an entry's URL with `entryUrlKey` and `formatUrl` from `@vesper/core/urls`, never by replacing tokens in a pattern yourself.** The studio, the dev API, the build and `vesper:content` must agree on every address (spec §6.15.1).
+**Compute an entry's URL with `entryUrlKey` and `formatUrl` from `@vespercms/core/urls`, never by replacing tokens in a pattern yourself.** The studio, the dev API, the build and `vesper:content` must agree on every address (spec §6.15.1).
 
 **Change a tree's structure through `PageService` (moves, order, child and section pages), never by renaming files or editing `_order.yaml` yourself.** A move is one change set: its files, both order files, a redirect per page and every rewritten link (spec §6.15.4).
 
@@ -138,7 +138,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 ### Images
 
-**Compute crops with `@vesper/core/images` (`cropForRatio`, `pixelRect`), never by hand.** The studio's previews, `<Img>` and the crop step must cut the same rectangle.
+**Compute crops with `@vespercms/core/images` (`cropForRatio`, `pixelRect`), never by hand.** The studio's previews, `<Img>` and the crop step must cut the same rectangle.
 
 **Never pass a focal point as Astro's `position`; it goes into `style` as `object-position`.** Sharp takes only its own keywords, and a percentage fails the build (DECISIONS.md, "Astro hands `position` to Sharp unchanged").
 
@@ -156,7 +156,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 ### Accessibility checks
 
-**Accessibility rules live in `@vesper/core` (`entryChecker` for the studio, `BUILD_RULES` for the build). The studio, the build and the cloud use them, never their own copies.** Spec §6.18 asks for one rule set and one message style; the image widget's Phase 2 alt advice was folded in for that reason.
+**Accessibility rules live in `@vespercms/core` (`entryChecker` for the studio, `BUILD_RULES` for the build). The studio, the build and the cloud use them, never their own copies.** Spec §6.18 asks for one rule set and one message style; the image widget's Phase 2 alt advice was folded in for that reason.
 
 **The accessibility report goes to `.vesper/` in the project, never into `dist/`.** A report must never be deployed (spec §6.18); the integration refuses to write it inside the output folder, and CI checks `dist/`.
 
@@ -182,7 +182,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **The dialog's live region stays inside the `<dialog>`.** `showModal()` makes everything outside it inert, live regions included, which is how Pagefind's modal lost its announcements.
 
-**Leave entries out of the index with `isPublished` and `isHiddenFromSearch` from `@vesper/core`, never a date check of your own.** Phase 4.5's build filtering uses the same window, so search and the site can't disagree.
+**Leave entries out of the index with `isPublished` and `isHiddenFromSearch` from `@vespercms/core`, never a date check of your own.** Phase 4.5's build filtering uses the same window, so search and the site can't disagree.
 
 **Vesper's injected `/search` page never counts as the site using `<Search>`, and it's found by its route, never its markup.** It renders `<Search variant="inline">` on every site, so counting it indexed every site, and a site's own page copied from it must still count (DECISIONS.md, "Vesper's /search page isn't a use of `<Search>`").
 
@@ -196,7 +196,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **The accent is Pine, and fixed: no picker, setting or config key chooses another.** Choosing an accent is white-label, the higher paid tier, in Phase 9 (DECISIONS.md, 2026-10-18).
 
-**The studio's font is Figtree 400 and 600, self-hosted in `@vesper/admin`; `/admin` loads no font, script or style from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree"). GitHub mode's user picture loads from GitHub's image host, which that mode already talks to for every read and save (DECISIONS.md, "GitHub mode loads the editor's picture from GitHub").
+**The studio's font is Figtree 400 and 600, self-hosted in `@vespercms/admin`; `/admin` loads no font, script or style from Google or a CDN.** Code, slugs and URLs use the system monospace stack (DECISIONS.md, "The studio self-hosts Figtree"). GitHub mode's user picture loads from GitHub's image host, which that mode already talks to for every read and save (DECISIONS.md, "GitHub mode loads the editor's picture from GitHub").
 
 **Studio labels mark what's optional, "(optional)", and say nothing on required fields; required controls carry `aria-required`.** Most schema fields are required, so "(required)" repeated on nearly every label (DECISIONS.md, "The studio marks what's optional"). Public `<Form>`s keep "(required)".
 
@@ -238,7 +238,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **The studio's half of the cloud lives here, under MIT; anything that holds a secret, stores customer data or runs at the cloud's domain lives in the private `vespercms-cloud` repository, never this one.** Spec §13.3; the API the studio speaks is public by nature (DECISIONS.md, "The split").
 
-**The studio talks to the cloud only through `@vesper/core`'s protocol and `CloudClient`, and is tested against `scripts/cloud-fake.mjs`.** The fake and the real cloud both pass `runCloudContract`; a behaviour the studio needs goes into the contract first.
+**The studio talks to the cloud only through `@vespercms/core`'s protocol and `CloudClient`, and is tested against `scripts/cloud-fake.mjs`.** The fake and the real cloud both pass `runCloudContract`; a behaviour the studio needs goes into the contract first.
 
 **Evaluate grants with core's `fileAccess` / `changeAccess`, matched on file paths, never entry IDs.** The API and the studio must refuse and hide the same things, and an ID can come from a `slug` field the editor controls.
 

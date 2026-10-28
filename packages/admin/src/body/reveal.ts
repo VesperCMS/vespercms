@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import type { Node as PmNode } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type Selection } from '@tiptap/pm/state';
-import { parseBody, type BodyBlock, type BodyFormat, type MarkdocParseOptions } from '@vesper/core';
+import { parseBody, type BodyBlock, type BodyFormat, type MarkdocParseOptions } from '@vespercms/core';
 import { isManaged } from './commands.ts';
 import type { ContainerTypes } from './nodes.ts';
 

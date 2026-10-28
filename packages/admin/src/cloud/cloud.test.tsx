@@ -2,7 +2,7 @@
 import { cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CloudClient, authorizeUrl, createDpopKey, createPkce, encodeChange } from '@vesper/core';
+import { CloudClient, authorizeUrl, createDpopKey, createPkce, encodeChange } from '@vespercms/core';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';

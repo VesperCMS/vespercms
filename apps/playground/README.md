@@ -9,7 +9,7 @@ An Astro 7 site that exercises every Vesper feature (spec §11, Phase 0). It sta
 
 ## Schemas and config
 
-- `src/content.config.ts` uses every `fields.*` helper from `@vesper/astro/fields`:
+- `src/content.config.ts` uses every `fields.*` helper from `vespercms/fields`:
   - `select`, `email`, `url`, `slug`, `markdown`, `file`, `datetime`, `color`, `geo` and `image`;
   - `locations` keeps the raw Zod equivalents of `geo` and `color` on purpose.
 - `vesper.config.ts` sets presentation only: labels, URL patterns, `tree` for pages, `singleton` for settings, `schedule` for events, `search: false` for the fixtures, the site's `timeZone`, `placement` to keep event times in the main column, the image ratios `wide`, `square` and `portrait` (spec D2, §6.6.3), and the two page backgrounds (`a11y.backgrounds`, light and dark) text colours are checked against (spec §6.18).
@@ -23,10 +23,10 @@ An Astro 7 site that exercises every Vesper feature (spec §11, Phase 0). It sta
 From the repository root:
 
 ```bash
-npm run dev -w @vesper/playground      # astro dev
-npm run build -w @vesper/playground    # static build into dist/
-npm run preview -w @vesper/playground  # serve dist/ with the no-rewrite static server
-npm run check -w @vesper/playground    # astro check
+npm run dev -w @vespercms/playground      # astro dev
+npm run build -w @vespercms/playground    # static build into dist/
+npm run preview -w @vespercms/playground  # serve dist/ with the no-rewrite static server
+npm run check -w @vespercms/playground    # astro check
 ```
 
 ## What each collection covers

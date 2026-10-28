@@ -255,7 +255,7 @@ export {
 } from './studio/media.ts';
 export type { WidgetProps } from './studio/widget.ts';
 
-// URLs, page trees and redirects (spec §6.15). Also `@vesper/core/urls`, without the parsers.
+// URLs, page trees and redirects (spec §6.15). Also `@vespercms/core/urls`, without the parsers.
 export * from './urls/index.ts';
 export {
   PageService,
@@ -284,7 +284,7 @@ export {
   type RewriteCount,
 } from './studio/links.ts';
 
-// Aspect ratios, focal points and crops (spec §6.6). Also `@vesper/core/images`.
+// Aspect ratios, focal points and crops (spec §6.6). Also `@vespercms/core/images`.
 export * from './images/index.ts';
 
 // Accessibility checks (spec §6.18): layer-1 content rules, shared by every mode.

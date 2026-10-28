@@ -1,5 +1,5 @@
-import { scheduleTime, type CollectionManifest, type DataObject } from '@vesper/core';
-import { Button } from '@vesper/ui';
+import { scheduleTime, type CollectionManifest, type DataObject } from '@vespercms/core';
+import { Button } from '@vespercms/ui';
 import { useId } from 'react';
 import { useEditor } from '../editor/context.tsx';
 import { fieldId, pathKey } from '../editor/values.ts';

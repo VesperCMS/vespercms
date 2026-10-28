@@ -1,4 +1,4 @@
-import type { CollectionManifest, FieldModel } from '@vesper/core';
+import type { CollectionManifest, FieldModel } from '@vespercms/core';
 import { describe, expect, it } from 'vitest';
 import { arrangeFields } from './arrange.ts';
 

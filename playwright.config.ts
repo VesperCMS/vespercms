@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
  * Two kinds of end-to-end test, each against its own server:
  * - `static`: the built playground served by scripts/static-server.mjs, with
  *   no rewrites, no headers and no functions: the spec §6.16 test matrix's
- *   "plain static host". Build first: `npm run build -w @vesper/playground`.
+ *   "plain static host". Build first: `npm run build -w @vespercms/playground`.
  * - `studio`: the studio at /admin in local mode, on `astro dev` over a fresh
  *   copy of the playground (scripts/studio-site.mjs), because these tests
  *   save, upload and delete files.
@@ -76,7 +76,7 @@ export default defineConfig({
       },
     },
     {
-      // vespercms.com, built: build first with `npm run build -w @vesper/site`.
+      // vespercms.com, built: build first with `npm run build -w @vespercms/site`.
       name: 'site',
       testMatch: 'site/*.spec.ts',
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${String(SITE_PORT)}` },

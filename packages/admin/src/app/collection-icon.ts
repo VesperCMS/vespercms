@@ -1,5 +1,5 @@
-import type { CollectionManifest } from '@vesper/core';
-import type { IconName, IconNode } from '@vesper/ui';
+import type { CollectionManifest } from '@vespercms/core';
+import type { IconName, IconNode } from '@vespercms/ui';
 
 /**
  * A collection's icon: the Lucide icon vesper.config.ts names for it,

@@ -1,4 +1,4 @@
-import { parseBody } from '@vesper/core';
+import { parseBody } from '@vespercms/core';
 import { describe, expect, it } from 'vitest';
 import { blockPathAt } from './reveal.ts';
 

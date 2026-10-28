@@ -1,6 +1,6 @@
 /*
- * `@vesper/astro/images`: what `<Img>` asks Astro for, as plain functions
- * (spec §6.6.5). `<Img>` and `getImg()` live in `@vesper/astro/components`;
+ * `vespercms/images`: what `<Img>` asks Astro for, as plain functions
+ * (spec §6.6.5). `<Img>` and `getImg()` live in `vespercms/components`;
  * this is their planning, importable anywhere, plus the types.
  */
 export {

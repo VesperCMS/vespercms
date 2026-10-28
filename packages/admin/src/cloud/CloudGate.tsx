@@ -1,4 +1,4 @@
-import { Button } from '@vesper/ui';
+import { Button } from '@vespercms/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App } from '../app/App.tsx';
 import { startSignIn as startGitHubSignIn, type GitHubStudioSettings } from '../github/session.ts';

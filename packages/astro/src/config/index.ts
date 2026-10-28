@@ -11,10 +11,10 @@ import {
   type MarkdocTagHint,
   type MdxComponentConfig,
   type NativeTarget,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 /** What a custom widget component receives (spec §6.3.3). */
-export type { WidgetProps } from '@vesper/core';
+export type { WidgetProps } from '@vespercms/core';
 
 /*
  * `vesper.config.ts` (spec §6.4): presentation, URLs, widgets and permissions.

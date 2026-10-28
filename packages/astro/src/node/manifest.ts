@@ -12,7 +12,7 @@ import {
   type MdxComponentCheck,
   type UrlEntry,
   type Validator,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { loadSite, packageVersion, type LoadSiteOptions } from './load-site.ts';
 
 /** A site as the studio's back end sees it: the manifest, plus the real schemas to validate saves with. */
@@ -39,7 +39,7 @@ export async function loadSiteModel(options: LoadSiteOptions): Promise<SiteModel
   const { root: _root, ...input } = await loadSite(options);
   const manifest = await buildManifest({
     ...input,
-    generator: { name: '@vesper/astro', version: packageVersion() },
+    generator: { name: 'vespercms', version: packageVersion() },
   });
   const components = input.config?.mdx?.components ?? {};
   return {

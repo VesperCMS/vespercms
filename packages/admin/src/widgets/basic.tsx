@@ -4,8 +4,8 @@ import {
   type DataValue,
   type FieldModel,
   type FieldOption,
-} from '@vesper/core';
-import { MultiCombobox, RadioGroup, Select, Switch, cx } from '@vesper/ui';
+} from '@vespercms/core';
+import { MultiCombobox, RadioGroup, Select, Switch, cx } from '@vespercms/ui';
 import { useState } from 'react';
 import type { WidgetProps } from '../types.ts';
 

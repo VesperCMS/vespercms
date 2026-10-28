@@ -1,6 +1,6 @@
 // Proves the package-boundary lint rules in eslint.config.js actually fire.
 // A misspelled rule name or glob would otherwise fail silently and let
-// Node or framework imports into @vesper/core.
+// Node or framework imports into @vespercms/core.
 import { ESLint } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { describe, expect, it } from 'vitest';
@@ -16,7 +16,7 @@ async function ruleIdsFor(code, filePath) {
 
 const CORE_FILE = 'packages/core/src/__boundary-probe.ts';
 
-describe('@vesper/core import boundary', () => {
+describe('@vespercms/core import boundary', () => {
   it.each([
     ["import { readFile } from 'node:fs/promises';", 'node: builtins'],
     ["import path from 'path';", 'bare Node builtins'],
@@ -26,7 +26,8 @@ describe('@vesper/core import boundary', () => {
     ["import mdx from '@astrojs/mdx';", '@astrojs packages'],
     ["import { createServer } from 'vite';", 'vite'],
     ["import { useState } from 'react';", 'react'],
-    ["import { x } from '@vesper/astro';", 'other @vesper packages'],
+    ["import { x } from 'vespercms';", 'the integration'],
+    ["import { x } from '@vespercms/admin';", 'other scoped packages'],
   ])('rejects %s (%s)', async (code) => {
     const ruleIds = await ruleIdsFor(`${code}\nexport {};\n`, CORE_FILE);
     expect(ruleIds).toContain('@typescript-eslint/no-restricted-imports');
@@ -60,7 +61,7 @@ describe('@vesper/core import boundary', () => {
   });
 });
 
-describe('@vesper/astro Zod import', () => {
+describe('vespercms Zod import', () => {
   it('rejects zod and allows astro/zod', async () => {
     const file = 'packages/astro/src/__boundary-probe.ts';
     expect(await ruleIdsFor("import { z } from 'zod';\nexport { z };\n", file)).toContain(

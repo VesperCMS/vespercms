@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { WidgetProps } from '@vesper/astro/config';
+import type { WidgetProps } from 'vespercms/config';
 import { useRef } from 'react';
 
 /*

@@ -10,7 +10,7 @@ import {
   urlKey,
   type StaticRoutes,
   type UrlSettings,
-} from '@vesper/core';
+} from '@vespercms/core';
 import type { SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 
@@ -246,7 +246,7 @@ export async function checkBuild(options: {
   const all = pages.flatMap((p) => p.issues);
   const report: A11yReport = {
     version: 1,
-    generator: '@vesper/astro',
+    generator: 'vespercms',
     note: 'Automated checks find some problems, not all. Colour contrast and other visual checks need a rendered page, and nothing replaces testing with a keyboard and a screen reader.',
     checked: { pages: checked, skipped, engine, rules: [...BUILD_RULE_IDS] },
     summary: {

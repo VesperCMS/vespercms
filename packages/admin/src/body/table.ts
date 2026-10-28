@@ -7,7 +7,7 @@ import {
   type BodyTable,
   type TableAlign,
   type TableValue,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { restoreChips, withPlaceholders } from './chips.ts';
 
 /*

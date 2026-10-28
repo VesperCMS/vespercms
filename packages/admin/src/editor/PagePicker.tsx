@@ -1,5 +1,5 @@
-import type { PageLink } from '@vesper/core';
-import { Button, Combobox, Dialog } from '@vesper/ui';
+import type { PageLink } from '@vespercms/core';
+import { Button, Combobox, Dialog } from '@vespercms/ui';
 import { useEffect, useMemo, useState } from 'react';
 import type { StudioApi } from '../app/api.ts';
 import { useStudio } from '../app/context.tsx';

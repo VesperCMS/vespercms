@@ -1,4 +1,4 @@
-import { jsxTagLayout, markdocTags, type InlineChip } from '@vesper/core';
+import { jsxTagLayout, markdocTags, type InlineChip } from '@vespercms/core';
 
 /*
  * Inline chips (an inline tag, a variable, an annotation, inline JSX) inside

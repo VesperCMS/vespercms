@@ -5,9 +5,9 @@ Vesper's own site: the marketing pages and the docs, edited with Vesper. It's a 
 ## Working on it
 
 ```sh
-npm run dev -w @vesper/site      # http://localhost:4321/, the studio at /admin/
-npm run build -w @vesper/site    # dist/, plus .vesper/a11y-report.json beside it
-npm run agents -w @vesper/site   # regenerate AGENTS.md after a schema change
+npm run dev -w @vespercms/site      # http://localhost:4321/, the studio at /admin/
+npm run build -w @vespercms/site    # dist/, plus .vesper/a11y-report.json beside it
+npm run agents -w @vespercms/site   # regenerate AGENTS.md after a schema change
 ```
 
 Previews from Claude Code use port 4408 (`.claude/launch.json`), and the e2e tests serve the built site on 4409 (`e2e/site/`).
@@ -29,7 +29,7 @@ Plain language, second person, short sentences. Describe only what's built today
 
 Live at vespercms.com, on Cloudflare Pages (the cloud is on `app.` and `api.`). The Pages project builds from the repository's root, because the site needs the whole workspace installed:
 
-- Build command: `npm run build -w @vesper/site`
+- Build command: `npm run build -w @vespercms/site`
 - Build output directory: `apps/site/dist`
 - Environment variable: `NODE_VERSION` = `24` (Astro 7.4 needs Node 22.22 or later)
 

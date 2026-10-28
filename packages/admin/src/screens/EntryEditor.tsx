@@ -22,7 +22,7 @@ import {
   type PageTreeNode,
   type Review,
   type SaveRequest,
-} from '@vesper/core';
+} from '@vespercms/core';
 import {
   Button,
   Dialog,
@@ -35,7 +35,7 @@ import {
   TextArea,
   TextField,
   type MenuItem,
-} from '@vesper/ui';
+} from '@vespercms/ui';
 import {
   Suspense,
   lazy,

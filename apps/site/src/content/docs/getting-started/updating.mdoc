@@ -3,7 +3,7 @@ title: Updating Vesper
 summary: Update one package, check the build, refresh your agent instructions and deploy, so editors get the new studio.
 ---
 
-Vesper's packages share one version number, so there's one thing to update: `@vesper/astro`. It brings the studio and the rest of Vesper with it, always at the same version.
+Vesper's packages share one version number, so there's one thing to update: `vespercms`. It brings the studio and the rest of Vesper with it, always at the same version.
 
 {% callout type="note" %}
 Vesper isn't on npm yet. This is how updating works once it is.
@@ -14,7 +14,7 @@ Vesper isn't on npm yet. This is how updating works once it is.
 In your site's folder:
 
 ```sh
-npm install @vesper/astro@latest
+npm install vespercms@latest
 ```
 
 Each release's changes are in the package's `CHANGELOG.md`, one plain sentence per change. Read them before you deploy, especially after a jump of more than one version.
@@ -43,7 +43,7 @@ A new release can describe fields, tags or rules differently, so the section in 
 
 The studio at `/admin` is built with your site. Editors keep the studio they have until you deploy: on GitHub mode and the cloud, after your next push and build; for a site edited only locally, the next time you run `astro dev`.
 
-The cloud itself is updated by Vesper, not by you. The relay you deployed for GitHub mode is your own copy of `templates/oauth-relay`, and updating `@vesper/astro` doesn't change it.
+The cloud itself is updated by Vesper, not by you. The relay you deployed for GitHub mode is your own copy of `templates/oauth-relay`, and updating `vespercms` doesn't change it.
 
 ## Astro and React
 

@@ -129,7 +129,7 @@ describe('buildManifest', () => {
     const a = await buildManifest(input);
     const b = await buildManifest({
       ...input,
-      generator: { name: '@vesper/core', version: '9.9.9' },
+      generator: { name: '@vespercms/core', version: '9.9.9' },
     });
     expect(JSON.parse(JSON.stringify(a))).toEqual(a);
     expect(a.hash).toBe(b.hash);

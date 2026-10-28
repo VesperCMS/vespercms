@@ -1,5 +1,5 @@
-import { collectionOf, defaultEntryId, scheduleTime, type Draft, type Review } from '@vesper/core';
-import { Button, Checkbox, Dialog, Drawer, Link, TextArea } from '@vesper/ui';
+import { collectionOf, defaultEntryId, scheduleTime, type Draft, type Review } from '@vespercms/core';
+import { Button, Checkbox, Dialog, Drawer, Link, TextArea } from '@vespercms/ui';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';

@@ -11,8 +11,8 @@ import {
   type StorageAdapter,
   type StorageEntry,
   type StoredFile,
-} from '@vesper/core';
-import { gitBlobSha } from '@vesper/core';
+} from '@vespercms/core';
+import { gitBlobSha } from '@vespercms/core';
 
 /*
  * The cloud's storage (spec §7.4): the site as its drafts show it, read

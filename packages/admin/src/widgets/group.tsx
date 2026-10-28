@@ -6,8 +6,8 @@ import {
   type DataValue,
   type FieldModel,
   type FieldVariant,
-} from '@vesper/core';
-import { Button, Chevron, cx, Dialog, focusRing, Icon, Menu, type MenuItem } from '@vesper/ui';
+} from '@vespercms/core';
+import { Button, Chevron, cx, Dialog, focusRing, Icon, Menu, type MenuItem } from '@vespercms/ui';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode, type RefObject } from 'react';
 import {
   Button as RACButton,

@@ -1,7 +1,7 @@
 import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { useEditorState } from '@tiptap/react';
-import { Menu, cx, popoverClass } from '@vesper/ui';
+import { Menu, cx, popoverClass } from '@vespercms/ui';
 import { useId } from 'react';
 import { insertable, type BlockKind, type BlockShape, type Catalog } from './catalog.ts';
 import { placementAt } from './commands.ts';

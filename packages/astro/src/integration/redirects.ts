@@ -22,7 +22,7 @@ import {
   type RedirectWarning,
   type StaticRoutes,
   type UrlSettings,
-} from '@vesper/core';
+} from '@vespercms/core';
 import type { SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 

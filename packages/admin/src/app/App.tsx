@@ -1,5 +1,5 @@
-import type { CollectionManifest } from '@vesper/core';
-import { Button, Dialog } from '@vesper/ui';
+import type { CollectionManifest } from '@vespercms/core';
+import { Button, Dialog } from '@vespercms/ui';
 import { lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Unavailable } from '../screens/Unavailable.tsx';
 import { ChangesProvider } from '../cloud/changes.tsx';

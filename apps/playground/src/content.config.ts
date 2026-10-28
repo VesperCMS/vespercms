@@ -1,7 +1,7 @@
 import { defineCollection, reference } from 'astro:content';
 import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { fields } from '@vesper/astro/fields';
+import { fields } from 'vespercms/fields';
 
 /*
  * The playground's schemas exercise every field mapping in spec §6.2 and

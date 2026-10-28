@@ -1,5 +1,5 @@
-import type { FieldModel } from '@vesper/core';
-import { cx, OptionalMark } from '@vesper/ui';
+import type { FieldModel } from '@vespercms/core';
+import { cx, OptionalMark } from '@vespercms/ui';
 import { Component, Suspense, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
 import type { WidgetProps } from '../types.ts';

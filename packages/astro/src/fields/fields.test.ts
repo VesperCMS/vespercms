@@ -1,4 +1,4 @@
-import { IMAGE_MARKER, VESPER_META_KEY, walkSchema } from '@vesper/core';
+import { IMAGE_MARKER, VESPER_META_KEY, walkSchema } from '@vespercms/core';
 import { z } from 'astro/zod';
 import { describe, expect, it } from 'vitest';
 import {

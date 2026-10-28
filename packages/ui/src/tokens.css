@@ -2,7 +2,7 @@
  * Vesper design tokens (spec §10), in the Pine direction of Vesper's design
  * system (DECISIONS.md, "Studio design").
  *
- * Use after Tailwind: `@import 'tailwindcss'; @import '@vesper/ui/tokens.css';`
+ * Use after Tailwind: `@import 'tailwindcss'; @import '@vespercms/ui/tokens.css';`
  *
  * The design budget (spec §10.4) is enforced here, not by reviewers:
  *
@@ -54,7 +54,7 @@
   --color-focus: light-dark(oklch(52% 0.14 250), oklch(75% 0.12 250));
   --color-warning: light-dark(oklch(62% 0.13 70), oklch(80% 0.13 78));
 
-  /* Figtree is self-hosted by @vesper/admin; the system stack is the fallback. */
+  /* Figtree is self-hosted by @vespercms/admin; the system stack is the fallback. */
   --font-sans: Figtree, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 

@@ -5,7 +5,7 @@ import {
   objectPosition,
   roundRect,
   sharpAnchor,
-} from '@vesper/core/images';
+} from '@vespercms/core/images';
 import { describe, expect, it } from 'vitest';
 import { imageContext, mimeType, planArt, planImg, type ImageContext } from './plan.ts';
 import { SHARP_IMAGE_SERVICE, VESPER_IMAGE_SERVICE } from './register.ts';

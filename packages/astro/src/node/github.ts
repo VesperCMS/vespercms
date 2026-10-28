@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { builtinModules } from 'node:module';
 import { statSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
-import { parseRepo } from '@vesper/core';
+import { parseRepo } from '@vespercms/core';
 import type { Plugin } from 'vite';
 import { importSiteVite, processConditions } from './load-site.ts';
 

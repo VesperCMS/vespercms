@@ -1,5 +1,5 @@
-import type { CollectionManifest, CollectionSummary } from '@vesper/core';
-import { Icon, InlineStatus, Link } from '@vesper/ui';
+import type { CollectionManifest, CollectionSummary } from '@vespercms/core';
+import { Icon, InlineStatus, Link } from '@vespercms/ui';
 import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';

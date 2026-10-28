@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { GitHubError, GitHubStorage, gitBlobSha, type BlobCache } from '@vesper/core';
-import { runStorageContract } from '@vesper/core/testing';
+import { GitHubError, GitHubStorage, gitBlobSha, type BlobCache } from '@vespercms/core';
+import { runStorageContract } from '@vespercms/core/testing';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createGitHubFake, type GitHubFake } from '../../../scripts/github-fake.mjs';
 

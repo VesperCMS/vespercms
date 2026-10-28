@@ -288,7 +288,7 @@ vesper({ search: { filters: { blog: ['tags', 'author'] }, sort: { blog: ['publis
 
 ```astro
 ---
-import { Search } from '@vesper/astro/components';
+import { Search } from 'vespercms/components';
 ---
 <Search />                      <!-- a search button that opens a search dialog -->
 <Search variant="inline" />     <!-- an inline search box with results below -->

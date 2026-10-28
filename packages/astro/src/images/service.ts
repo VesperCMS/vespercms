@@ -1,7 +1,7 @@
 import type { LocalImageService } from 'astro';
 import { baseService } from 'astro/assets';
 import sharpService from 'astro/assets/services/sharp';
-import { isCropRect, pixelRect, type CropRect } from '@vesper/core/images';
+import { isCropRect, pixelRect, type CropRect } from '@vespercms/core/images';
 import type { Sharp, SharpOptions } from 'sharp';
 
 /*

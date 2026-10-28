@@ -195,7 +195,7 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
   };
   return {
     ...content,
-    generator: input.generator ?? { name: '@vesper/core', version: '0.0.0' },
+    generator: input.generator ?? { name: '@vespercms/core', version: '0.0.0' },
     hash: await manifestHash(content),
   };
 }

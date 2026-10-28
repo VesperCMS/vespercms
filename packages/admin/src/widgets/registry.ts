@@ -1,4 +1,4 @@
-import type { FieldKind, FieldModel } from '@vesper/core';
+import type { FieldKind, FieldModel } from '@vespercms/core';
 import type { ComponentType } from 'react';
 import type { ValuePath } from '../editor/values.ts';
 import type { WidgetProps } from '../types.ts';

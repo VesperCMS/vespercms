@@ -1,5 +1,5 @@
-import type { A11yNote } from '@vesper/core';
-import { Button, Drawer, Icon } from '@vesper/ui';
+import type { A11yNote } from '@vespercms/core';
+import { Button, Drawer, Icon } from '@vespercms/ui';
 import { NoteText } from './FieldNotes.tsx';
 
 /** The notes about one field (or the body), under its name. */

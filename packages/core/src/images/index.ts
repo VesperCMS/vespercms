@@ -1,5 +1,5 @@
 /*
- * `@vesper/core/images`: aspect ratios, focal points and crops (spec §6.6).
+ * `@vespercms/core/images`: aspect ratios, focal points and crops (spec §6.6).
  * Plain arithmetic with no dependencies, shared by the studio's previews and
  * crop dialog, `<Img>` and the build's crop step, so all three cut the same
  * rectangle.

@@ -11,7 +11,7 @@ import {
   sharpAnchor,
   type CropRect,
   type FocalPoint,
-} from '@vesper/core/images';
+} from '@vespercms/core/images';
 import { serviceKind, type ServiceKind } from './register.ts';
 
 /*

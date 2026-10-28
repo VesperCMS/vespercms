@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FAIR_AT, eventFile, runCloudContract } from '@vesper/core/cloud-testing';
+import { FAIR_AT, eventFile, runCloudContract } from '@vespercms/core/cloud-testing';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createCloudFake } from './cloud-fake.mjs';
 import { createGitHubFake } from './github-fake.mjs';
@@ -114,7 +114,7 @@ describe('the fake cloud', () => {
   it('commits as the app’s bot, naming the editor in trailers', async () => {
     const { github, cloud } = setup();
     const { CloudClient, authorizeUrl, createDpopKey, createPkce, encodeChange } =
-      await import('@vesper/core');
+      await import('@vespercms/core');
     cloud.state.signedIn = 'u_editor';
     const { verifier, challenge } = await createPkce();
     const redirectUri = `${ORIGIN}/admin/`;
@@ -150,7 +150,7 @@ describe('the fake cloud', () => {
 
   /** A client signed in as `id`, through the fake app. */
   async function clientFor(cloud, id) {
-    const { CloudClient, authorizeUrl, createDpopKey, createPkce } = await import('@vesper/core');
+    const { CloudClient, authorizeUrl, createDpopKey, createPkce } = await import('@vespercms/core');
     cloud.state.signedIn = id;
     const { verifier, challenge } = await createPkce();
     const redirectUri = `${ORIGIN}/admin/`;
@@ -170,7 +170,7 @@ describe('the fake cloud', () => {
 
   it('sends its rebuild to the repository as repository_dispatch', async () => {
     const { github, cloud } = setup();
-    const { encodeChange } = await import('@vesper/core');
+    const { encodeChange } = await import('@vespercms/core');
     cloud.setSchedule({ trigger: 'dispatch' });
     const client = await clientFor(cloud, 'u_admin');
     const at = new Date(Date.now() + 5 * 60_000).toISOString();
@@ -194,7 +194,7 @@ describe('the fake cloud', () => {
 
   it('keeps a held draft whose scheduler can no longer publish, and emails them', async () => {
     const { github, cloud } = setup();
-    const { encodeChange } = await import('@vesper/core');
+    const { encodeChange } = await import('@vespercms/core');
     cloud.setSchedule({ holdScheduledDrafts: true });
     const client = await clientFor(cloud, 'u_admin');
     const at = new Date(Date.now() + 5 * 60_000).toISOString();

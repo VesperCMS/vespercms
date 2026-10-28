@@ -4,7 +4,7 @@ import {
   type BlobCache,
   type Manifest,
   type UrlEntry,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { ApiError, type StudioApi } from '../app/api.ts';
 import { createBrowserApi } from '../app/browser-api.ts';
 import type { GitHubStudioSettings } from './session.ts';

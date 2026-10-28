@@ -1,4 +1,4 @@
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 
 export default defineConfig({
   collections: {

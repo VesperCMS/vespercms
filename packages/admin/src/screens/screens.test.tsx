@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import type { EntryDocument, EntrySummary, SaveRequest } from '@vesper/core';
+import type { EntryDocument, EntrySummary, SaveRequest } from '@vespercms/core';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
-import { Icon } from '@vesper/ui';
+import { Icon } from '@vespercms/ui';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';

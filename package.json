@@ -14,9 +14,9 @@
   ],
   "scripts": {
     "//dev": "The playground in astro dev. Workspace packages load from source, so there is nothing to prebuild.",
-    "dev": "npm run dev -w @vesper/playground",
+    "dev": "npm run dev -w @vespercms/playground",
     "//build": "Emits dist/ for every package: tsc for the libraries, Vite for the studio bundle and its CSS. Only publishing and check:dist read it; dev and tests run from source.",
-    "build": "tsc -b && npm run build -w @vesper/admin",
+    "build": "tsc -b && npm run build -w @vespercms/admin",
     "//check:dist": "Imports every published entry point from dist/ with the source condition off.",
     "check:dist": "npm run build && node scripts/check-dist.mjs",
     "//typecheck": "Package build configs through project references, then each package tsconfig (which includes tests), the e2e specs, and root tool configs.",
@@ -29,14 +29,14 @@
     "screens": "playwright test -c playwright.screens.config.ts",
     "//manifest": "Prints the playground's manifest, generated from source by the vesper CLI.",
     "manifest": "node packages/astro/src/node/cli.ts manifest --root apps/playground",
-    "//lint": "ESLint over the whole repo, including the package-boundary rules for @vesper/core.",
+    "//lint": "ESLint over the whole repo, including the package-boundary rules for @vespercms/core.",
     "lint": "eslint .",
     "//format": "Prettier formats code and config only; prose and content files are ignored on purpose (.prettierignore).",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "//a11y:contrast": "Parses packages/ui/src/tokens.css and checks every colour pair against WCAG 2.1 in both themes, plus the spec §10.4 token budget.",
     "a11y:contrast": "node scripts/a11y-contrast.mjs",
-    "//changeset": "Record a release note and version bump for changed @vesper/* packages (see .changeset/README.md).",
+    "//changeset": "Record a release note and version bump for changed Vesper packages (see .changeset/README.md).",
     "changeset": "changeset"
   },
   "devDependencies": {

@@ -7,7 +7,7 @@ import {
   type Manifest,
   type PdfFacts,
   type PdfTarget,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { a11yChecker } from './run.ts';
 

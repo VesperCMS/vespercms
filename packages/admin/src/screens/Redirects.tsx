@@ -8,7 +8,7 @@ import {
   type PageLink,
   type RedirectsDocument,
   type RedirectStatus,
-} from '@vesper/core';
+} from '@vespercms/core';
 import {
   Button,
   Dialog,
@@ -19,7 +19,7 @@ import {
   Table,
   TextField,
   type TableColumn,
-} from '@vesper/ui';
+} from '@vespercms/ui';
 import { useMemo, useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';

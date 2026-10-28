@@ -10,8 +10,8 @@ import {
   type DataObject,
   type DataValue,
   type FieldModel,
-} from '@vesper/core';
-import { Button, Dialog, Select, TextArea, TextField } from '@vesper/ui';
+} from '@vespercms/core';
+import { Button, Dialog, Select, TextArea, TextField } from '@vespercms/ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';

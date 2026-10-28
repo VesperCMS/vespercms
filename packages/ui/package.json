@@ -1,11 +1,11 @@
 {
-  "name": "@vesper/ui",
+  "name": "@vespercms/ui",
   "version": "0.0.0",
   "private": true,
   "description": "Vesper's design tokens and its small kit of accessible components (spec §10.5), built on React Aria Components.",
   "license": "MIT",
   "type": "module",
-  "//private": "Private for now: the kit is compiled into @vesper/admin and has no other consumers yet. Publish it when Taproot or another package needs it.",
+  "//private": "Private for now: the kit is compiled into @vespercms/admin and has no other consumers yet. Publish it when Taproot or another package needs it.",
   "exports": {
     ".": {
       "@vesper/source": "./src/index.ts",

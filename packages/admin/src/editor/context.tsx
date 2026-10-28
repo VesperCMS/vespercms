@@ -1,4 +1,4 @@
-import type { A11yNote, CollectionManifest, DataObject, DataValue } from '@vesper/core';
+import type { A11yNote, CollectionManifest, DataObject, DataValue } from '@vespercms/core';
 import { createContext, useContext } from 'react';
 import type { ValuePath } from './values.ts';
 

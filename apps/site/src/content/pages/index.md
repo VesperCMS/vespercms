@@ -130,7 +130,7 @@ sections:
 closing:
   heading: Add Vesper to your site
   lead: One command installs it. Then run `npm run dev`, open `/admin/` and make your first edit.
-  command: npx astro add @vesper/astro
+  command: npx astro add vespercms
   actions:
     - label: Get started
       href: /docs/getting-started/

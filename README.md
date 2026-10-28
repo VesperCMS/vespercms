@@ -2,7 +2,7 @@
 
 A git-based CMS for Astro sites.
 
-- Installs with one command (`npx astro add @vesper/astro`).
+- Installs with one command (`npx astro add vespercms`).
 - Builds its editor from the site's existing content collections, so there is no second schema to write.
 - Keeps content as files in the repo, and keeps the built site plain static output that runs on any host.
 

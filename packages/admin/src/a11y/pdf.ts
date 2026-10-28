@@ -1,4 +1,4 @@
-import type { PdfFacts } from '@vesper/core';
+import type { PdfFacts } from '@vespercms/core';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 

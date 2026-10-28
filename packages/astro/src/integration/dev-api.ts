@@ -13,7 +13,7 @@ import {
   type SaveRequest,
   type StaticRoutes,
   type TreeHooks,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { bodyValidator, schemaValidator, type SiteModel } from '../node/manifest.ts';
 import { LocalStorage } from '../node/storage-local.ts';
 

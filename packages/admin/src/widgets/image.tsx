@@ -9,8 +9,8 @@ import {
   type DataValue,
   type FieldModel,
   type ImageSize,
-} from '@vesper/core';
-import { Button, Checkbox, Disclosure, cx } from '@vesper/ui';
+} from '@vespercms/core';
+import { Button, Checkbox, Disclosure, cx } from '@vespercms/ui';
 import { useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useFileUrl } from '../app/file-url.tsx';

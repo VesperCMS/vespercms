@@ -1,5 +1,5 @@
-import { dirOf, extensionOf, isImagePath, type MediaItem } from '@vesper/core';
-import { Button, Dialog, Icon, Select, TextField } from '@vesper/ui';
+import { dirOf, extensionOf, isImagePath, type MediaItem } from '@vespercms/core';
+import { Button, Dialog, Icon, Select, TextField } from '@vespercms/ui';
 import { useMemo, useRef, useState } from 'react';
 import { FileImage } from '../app/file-url.tsx';
 import { useStudio } from '../app/context.tsx';

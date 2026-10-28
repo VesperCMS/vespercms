@@ -6,10 +6,10 @@ import {
   readDataFile,
   resolveTimeZone,
   siteRatios,
-} from '@vesper/core';
+} from '@vespercms/core';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createDevApi } from './dev-api.ts';
-import type { CloudStudioSettings, StaticRoutes } from '@vesper/core';
+import type { CloudStudioSettings, StaticRoutes } from '@vespercms/core';
 import type { SiteModel } from '../node/manifest.ts';
 import type { HelperData } from '../runtime/helpers.ts';
 import type { ScheduleData } from '../runtime/schedule.ts';
@@ -41,10 +41,10 @@ export type StudioPluginOptions = {
   siteUrl: string;
   /** `dev` records which entries each page reads (spec §6.10); builds re-export astro:content as is. */
   command: 'dev' | 'build' | 'preview' | 'sync';
-  /** Resolved `@vesper/admin` and its stylesheet: dist/ when installed, src/ in this workspace. */
+  /** Resolved `@vespercms/admin` and its stylesheet: dist/ when installed, src/ in this workspace. */
   adminEntry: string;
   adminCss: string;
-  /** True in this workspace, where @vesper/admin resolves to its TypeScript source. */
+  /** True in this workspace, where @vespercms/admin resolves to its TypeScript source. */
   studioFromSource: boolean;
   /** GitHub mode's settings in a built site, or null (spec §6.8). */
   github?: () => GitHubSettings | null;
@@ -60,7 +60,7 @@ export type StudioPluginOptions = {
   instant: Date;
 };
 
-/** @vesper/core's runtime packages, which the browser loads through the studio. */
+/** @vespercms/core's runtime packages, which the browser loads through the studio. */
 const CORE_DEPENDENCIES = [
   '@markdoc/markdoc',
   'github-slugger',
@@ -94,7 +94,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       // The studio is imported from a virtual module, so Vite's dependency
       // scan can't see its packages and would re-optimize (and reload the
       // page) on the first visit to /admin. Name them up front. The `>`
-      // form finds packages that are only installed under @vesper/admin.
+      // form finds packages that are only installed under @vespercms/admin.
       return {
         optimizeDeps: {
           include: [
@@ -103,9 +103,9 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             'react-dom/client',
             // Declared MDX components' props schemas reach the studio through vesper.config.ts.
             'astro/zod',
-            '@vesper/astro > @vesper/admin > react-aria-components',
+            'vespercms > @vespercms/admin > react-aria-components',
             // The geo field's map, loaded on demand.
-            '@vesper/astro > @vesper/admin > maplibre-gl',
+            'vespercms > @vespercms/admin > maplibre-gl',
             // The body editor, and SVG sanitizing for uploads.
             ...[
               '@tiptap/core',
@@ -116,15 +116,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               '@tiptap/markdown',
               '@tiptap/extension-image',
               'dompurify',
-            ].map((dep) => `@vesper/astro > @vesper/admin > ${dep}`),
+            ].map((dep) => `vespercms > @vespercms/admin > ${dep}`),
             ...(options.studioFromSource
               ? // This workspace: the studio is TSX compiled in dev mode, and
-                // @vesper/core is linked source, so its own packages are named.
+                // @vespercms/core is linked source, so its own packages are named.
                 [
                   'react/jsx-dev-runtime',
-                  ...CORE_DEPENDENCIES.map((dep) => `@vesper/astro > @vesper/core > ${dep}`),
+                  ...CORE_DEPENDENCIES.map((dep) => `vespercms > @vespercms/core > ${dep}`),
                 ]
-              : ['@vesper/astro > @vesper/admin > @vesper/core']),
+              : ['vespercms > @vespercms/admin > @vespercms/core']),
           ],
         },
       };

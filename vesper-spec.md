@@ -1,6 +1,6 @@
 # Vesper: Product & Build Spec
 
-> **Name:** Vesper (the evening star). Code, package and path forms are lowercase (`vesper`, `@vesper/astro`, `vesper.config.ts`, `/_vesper`); environment variables are uppercase (`VESPER_PROJECT`). `{{domain}}` stands for the cloud service's domain, vespercms.com (registered 2026-10-20).
+> **Name:** Vesper (the evening star). Code, package and path forms are lowercase (`vesper`, `vespercms`, `vesper.config.ts`, `/_vesper`); environment variables are uppercase (`VESPER_PROJECT`). `{{domain}}` stands for the cloud service's domain, vespercms.com (registered 2026-10-20).
 > **Written:** October 17, 2026. **Targets:** Astro 7.x, Zod 4, Cloudflare Workers.
 > **Amended:** Addendum 1 (D18–D23) applied October 17, 2026.
 > **Sibling project:** Taproot (`jeremybise/taproot`), the database-backed CMS. Vesper is the git-based, static-site counterpart. It is not a storage mode inside Taproot.
@@ -140,11 +140,11 @@ templates/
 
 ### 6.1 Install and config
 
-`npx astro add @vesper/astro` registers the integration. Zero config is the goal:
+`npx astro add vespercms` registers the integration. Zero config is the goal:
 
 ```js
 // astro.config.mjs
-import vesper from '@vesper/astro';
+import vesper from 'vespercms';
 export default defineConfig({ integrations: [vesper()] });
 ```
 
@@ -271,7 +271,7 @@ type FieldModel = {
 
 Validation always runs against the real Zod schema, through the same code path Astro uses. The model is only for building the UI.
 
-#### 6.3.2 Built-in field helpers (`@vesper/astro/fields`)
+#### 6.3.2 Built-in field helpers (`vespercms/fields`)
 
 Each helper returns **plain Zod with meta attached**. Astro validates it like any other schema. The docs show the raw Zod equivalent for every helper, so a site can drop the import and keep identical behavior.
 
@@ -299,7 +299,7 @@ Each helper returns **plain Zod with meta attached**. Astro validates it like an
 Agencies can register their own controls in `vesper.config.ts`:
 
 ```ts
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 export default defineConfig({
   widgets: {
     'store-hours': {
@@ -330,7 +330,7 @@ It must not validate. The editor validates with the Zod schema and shows errors 
 ### 6.4 Optional `vesper.config.ts` (presentation and URLs; never field definitions or permissions)
 
 ```ts
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 export default defineConfig({
   collections: {
     pages:   { label: 'Pages', url: '/:path', tree: true },                       // §6.15
@@ -535,7 +535,7 @@ The ratios drive the editor's crop previews and the `<Img>` component's `ratio` 
 
 #### 6.6.5 Rendering on the site
 
-**`<Img>` component** (`@vesper/astro/components`), a thin wrapper over Astro's `<Image>` and `<Picture>`:
+**`<Img>` component** (`vespercms/components`), a thin wrapper over Astro's `<Image>` and `<Picture>`:
 
 ```astro
 <Img image={post.data.hero} ratio="wide" widths={[480, 960, 1440]} sizes="100vw" />
@@ -653,7 +653,7 @@ import { getCollection, getEntry, render } from 'vesper:content';
 
 ```ts
 // src/forms.config.ts
-import { defineForm } from '@vesper/astro/forms';
+import { defineForm } from 'vespercms/forms';
 import { z } from 'astro/zod';
 export const forms = {
   contact: defineForm({
@@ -669,7 +669,7 @@ export const forms = {
 
 ```astro
 ---
-import { Form } from '@vesper/astro/components';
+import { Form } from 'vespercms/components';
 ---
 <Form name="contact" />
 ```
@@ -1005,7 +1005,7 @@ vesper({ search: { filters: { blog: ['tags', 'author'] }, sort: { blog: ['publis
 
 ```astro
 ---
-import { Search } from '@vesper/astro/components';
+import { Search } from 'vespercms/components';
 ---
 <Search />                      <!-- a search button that opens a search dialog -->
 <Search variant="inline" />     <!-- an inline search box with results below -->

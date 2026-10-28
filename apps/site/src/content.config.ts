@@ -1,7 +1,7 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { fields } from '@vesper/astro/fields';
+import { fields } from 'vespercms/fields';
 
 /*
  * vespercms.com's content, edited in Vesper's own studio at /admin. The

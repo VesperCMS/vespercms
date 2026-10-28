@@ -1,4 +1,4 @@
-import type { BodyIssue, TableEdit, TableValue } from '@vesper/core';
+import type { BodyIssue, TableEdit, TableValue } from '@vespercms/core';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { BlockKind, Catalog } from './catalog.ts';
 import type { BodyChecks } from './checks.ts';

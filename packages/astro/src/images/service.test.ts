@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import type { ImageMetadata, LocalImageService } from 'astro';
 import { baseService, hashTransform } from 'astro/assets';
 import sharpService from 'astro/assets/services/sharp';
-import { pixelRect } from '@vesper/core/images';
+import { pixelRect } from '@vespercms/core/images';
 import sharp from 'sharp';
 import { describe, expect, it, vi } from 'vitest';
 import vesperService, { extractCrop, formatCrop, parseCrop } from './service.ts';
@@ -24,7 +24,7 @@ const rotated = new Uint8Array(
 type Config = Parameters<LocalImageService['transform']>[2];
 const config = {
   endpoint: { route: '/_image' },
-  service: { entrypoint: '@vesper/astro/image-service', config: {} },
+  service: { entrypoint: 'vespercms/image-service', config: {} },
   domains: [],
   remotePatterns: [],
 } as unknown as Config;

@@ -1,5 +1,5 @@
-import type { SchedulePresentation } from '@vesper/core';
-import { isPublished, scheduleStatus } from '@vesper/core/schedule';
+import type { SchedulePresentation } from '@vespercms/core';
+import { isPublished, scheduleStatus } from '@vespercms/core/schedule';
 
 /*
  * `vesper:content`'s loaders in a build (spec §6.17, D18): an entry of a

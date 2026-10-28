@@ -1,5 +1,5 @@
-import type { CollectionManifest } from '@vesper/core';
-import { cx, focusRing, Icon } from '@vesper/ui';
+import type { CollectionManifest } from '@vespercms/core';
+import { cx, focusRing, Icon } from '@vespercms/ui';
 import {
   useCallback,
   useEffect,

@@ -5,7 +5,7 @@ import {
   type Manifest,
   type MarkdocAttributeManifest,
   type MarkdocTagManifest,
-} from '@vesper/core';
+} from '@vespercms/core';
 
 /*
  * Instructions for coding agents, generated from the manifest: the rules that

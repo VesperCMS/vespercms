@@ -1,5 +1,5 @@
 {
-  "name": "@vesper/admin",
+  "name": "@vespercms/admin",
   "version": "0.0.0",
   "description": "The Vesper studio: the editor UI served at /admin, one bundle for every storage mode.",
   "license": "MIT",
@@ -36,7 +36,7 @@
     "@tiptap/pm": "^3.32.0",
     "@tiptap/react": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
-    "@vesper/core": "0.0.0",
+    "@vespercms/core": "0.0.0",
     "dompurify": "^3.4.17",
     "maplibre-gl": "^6.14.0",
     "pdfjs-dist": "^6.4.299",
@@ -50,7 +50,7 @@
   "devDependencies": {
     "@fontsource/figtree": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
-    "@vesper/ui": "0.0.0",
+    "@vespercms/ui": "0.0.0",
     "tailwindcss": "^4.3.3"
   }
 }

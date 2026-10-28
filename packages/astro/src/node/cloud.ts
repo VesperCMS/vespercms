@@ -1,4 +1,4 @@
-import type { CloudStudioSettings } from '@vesper/core';
+import type { CloudStudioSettings } from '@vespercms/core';
 
 /*
  * The cloud at build (spec §6.9): the site's public project ID and the

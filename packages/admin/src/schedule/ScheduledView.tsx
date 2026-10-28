@@ -5,8 +5,8 @@ import {
   zoneName,
   type EntryDocument,
   type ScheduledChange,
-} from '@vesper/core';
-import { Link, Menu, Table, cx, type TableColumn } from '@vesper/ui';
+} from '@vespercms/core';
+import { Link, Menu, Table, cx, type TableColumn } from '@vespercms/ui';
 import { useState } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';

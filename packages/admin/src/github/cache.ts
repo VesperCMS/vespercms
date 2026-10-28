@@ -1,4 +1,4 @@
-import type { BlobCache } from '@vesper/core';
+import type { BlobCache } from '@vespercms/core';
 
 /*
  * File bytes by git blob SHA, kept in IndexedDB between visits. A SHA always

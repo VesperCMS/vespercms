@@ -1,5 +1,5 @@
-import type { CollectionManifest, EntrySummary } from '@vesper/core';
-import { ButtonLink, Link, Menu, TextField, Tree, type TreeNode } from '@vesper/ui';
+import type { CollectionManifest, EntrySummary } from '@vespercms/core';
+import { ButtonLink, Link, Menu, TextField, Tree, type TreeNode } from '@vespercms/ui';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { SortDescriptor } from 'react-aria-components';
 import type { StudioApi } from '../app/api.ts';

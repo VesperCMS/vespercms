@@ -237,7 +237,7 @@ describe('a site with no <Search> of its own', () => {
     const layout = join(site, 'src/layouts/BaseLayout.astro');
     const text = readFileSync(layout, 'utf8');
     const uses = [
-      "import { Search, SearchHead } from '@vesper/astro/components';\n",
+      "import { Search, SearchHead } from 'vespercms/components';\n",
       '<SearchHead />',
       '<Search />',
     ];

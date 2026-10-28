@@ -12,14 +12,14 @@ You need an Astro 6 or 7 site with its content collections in `src/content.confi
 Run this in your site's folder:
 
 ```sh
-npx astro add @vesper/astro
+npx astro add vespercms
 ```
 
-It installs `@vesper/astro` and adds it to the integrations in `astro.config.mjs`:
+It installs `vespercms` and adds it to the integrations in `astro.config.mjs`:
 
 ```js
 import { defineConfig } from 'astro/config';
-import vesper from '@vesper/astro';
+import vesper from 'vespercms';
 
 export default defineConfig({
   integrations: [vesper()],

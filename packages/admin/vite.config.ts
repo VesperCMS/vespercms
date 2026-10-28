@@ -6,7 +6,7 @@ import manifest from './package.json' with { type: 'json' };
 
 // The published studio: ESM with every real dependency left external, so the
 // site's Vite bundles one copy of React for the studio and the site's custom
-// widgets. Private workspace code (@vesper/ui) is bundled in. Tailwind runs
+// widgets. Private workspace code (@vespercms/ui) is bundled in. Tailwind runs
 // here, at publish time, so sites never need it.
 const external = [...Object.keys(manifest.dependencies), ...Object.keys(manifest.peerDependencies)];
 

@@ -1,4 +1,4 @@
-import { UPLOAD_MAX_BYTES, UPLOAD_WARN_BYTES } from '@vesper/core';
+import { UPLOAD_MAX_BYTES, UPLOAD_WARN_BYTES } from '@vespercms/core';
 import DOMPurify from 'dompurify';
 import {
   detectType,

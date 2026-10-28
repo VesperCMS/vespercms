@@ -18,7 +18,7 @@ import {
   type BodyFormat,
   type BodyIssue,
   type TableValue,
-} from '@vesper/core';
+} from '@vespercms/core';
 import {
   Button,
   Checkbox,
@@ -33,7 +33,7 @@ import {
   ToolButton,
   Toolbar,
   cx,
-} from '@vesper/ui';
+} from '@vespercms/ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { NoteText } from '../a11y/FieldNotes.tsx';
 import { useStudio } from '../app/context.tsx';

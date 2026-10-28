@@ -11,7 +11,7 @@ Use `fields.image()` and pass it Astro's `image` helper from the schema function
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { fields } from '@vesper/astro/fields';
+import { fields } from 'vespercms/fields';
 
 const blog = defineCollection({
   loader: glob({ pattern: '**/[^_]*.md', base: './src/content/blog' }),
@@ -93,7 +93,7 @@ Image fields accept JPEG, PNG, WebP, AVIF, GIF and SVG, checked by the file's co
 
 ```astro
 ---
-import { Img } from '@vesper/astro/components';
+import { Img } from 'vespercms/components';
 const { post } = Astro.props;
 ---
 <Img image={post.data.hero} ratio="wide" widths={[480, 960, 1440]} sizes="100vw" />
@@ -115,7 +115,7 @@ For places an `<img>` can't go, such as `og:image`, `getImg()` returns Astro's `
 
 ```astro
 ---
-import { getImg } from '@vesper/astro/components';
+import { getImg } from 'vespercms/components';
 const og = await getImg({ image: post.data.hero, ratio: 'og', width: 1200 });
 ---
 <meta property="og:image" content={new URL(og.src, Astro.site)} />

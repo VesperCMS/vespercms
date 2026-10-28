@@ -22,7 +22,7 @@ const route = (
 });
 
 const routes: ResolvedRoute[] = [
-  route('/admin', 'node_modules/@vesper/astro/pages/admin.astro', /^\/admin\/?$/, [], {
+  route('/admin', 'node_modules/vespercms/pages/admin.astro', /^\/admin\/?$/, [], {
     origin: 'external',
   }),
   route('/contact', 'src/pages/contact.astro', /^\/contact\/?$/),

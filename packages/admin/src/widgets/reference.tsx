@@ -1,5 +1,5 @@
-import { isPlainObject, type DataValue, type EntrySummary, type FieldModel } from '@vesper/core';
-import { Button, Combobox, type Option } from '@vesper/ui';
+import { isPlainObject, type DataValue, type EntrySummary, type FieldModel } from '@vespercms/core';
+import { Button, Combobox, type Option } from '@vespercms/ui';
 import { useMemo, useRef } from 'react';
 import { useStudio } from '../app/context.tsx';
 import { useLoad } from '../app/load.ts';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { A11Y_RULE_IDS, entryUrlKey } from '@vesper/core';
+import { A11Y_RULE_IDS, entryUrlKey } from '@vespercms/core';
 import { checkConfig, defineConfig } from './index.ts';
 
 describe('defineConfig', () => {

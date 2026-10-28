@@ -3,7 +3,7 @@ import { Editor } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
-import { assembleBody, type BodyFormat, type TableValue } from '@vesper/core';
+import { assembleBody, type BodyFormat, type TableValue } from '@vespercms/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { playgroundManifest } from '../test/helpers.tsx';
 import { catalogOf } from './catalog.ts';

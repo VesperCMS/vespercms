@@ -1,4 +1,4 @@
-import { isPlainObject, type DataObject, type DataValue, type FieldModel } from '@vesper/core';
+import { isPlainObject, type DataObject, type DataValue, type FieldModel } from '@vespercms/core';
 
 /** A concrete path into an entry's values: keys and array indexes. */
 export type ValuePath = readonly (string | number)[];

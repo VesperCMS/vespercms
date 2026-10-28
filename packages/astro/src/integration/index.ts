@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { humanize, type CloudStudioSettings } from '@vesper/core';
+import { humanize, type CloudStudioSettings } from '@vespercms/core';
 import type { AstroIntegration } from 'astro';
 import type { PluginOption } from 'vite';
 import { withCropStep } from '../images/register.ts';
@@ -22,7 +22,7 @@ import { buildRedirects, urlSettings, writeHostRules, type BuildRedirects } from
 import { SCHEDULE_PATH, buildInstant, unfilteredPages, writeSchedule } from './schedule.ts';
 import { staticRoutesFromFiles, staticRoutesOf, type ResolvedRoute } from './routes.ts';
 import { checkSite, withRoutes } from './site-check.ts';
-import { formatUrl } from '@vesper/core';
+import { formatUrl } from '@vespercms/core';
 import { SiteModelCache } from './site-model.ts';
 import { studioPlugin } from './vite-plugin.ts';
 import { widgetJsxPlugin } from './widget-jsx.ts';
@@ -103,7 +103,7 @@ const SEARCH_PAGE = new URL('../../pages/search.astro', import.meta.url);
  * The Vesper integration (spec §6.1). Zero config:
  *
  * ```js
- * import vesper from '@vesper/astro';
+ * import vesper from 'vespercms';
  * export default defineConfig({ integrations: [vesper()] });
  * ```
  */
@@ -131,7 +131,7 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
     resolved ? staticRoutesOf(resolved, root) : staticRoutesFromFiles(root, srcDir);
 
   return {
-    name: '@vesper/astro',
+    name: 'vespercms',
     hooks: {
       'astro:config:setup': async ({
         config,
@@ -202,13 +202,13 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         // Widgets come from vesper.config.ts, so a change to it restarts the dev server.
         if (files.vesperConfig) addWatchFile(files.vesperConfig);
 
-        const adminEntry = fileURLToPath(import.meta.resolve('@vesper/admin'));
+        const adminEntry = fileURLToPath(import.meta.resolve('@vespercms/admin'));
         // The studio runs on the React its own package resolves, which is the site's.
         if (command === 'dev' || options.studio?.deploy !== false) {
           const problem = reactProblem(reactVersionFrom(adminEntry));
           if (problem) throw new Error(problem);
         }
-        const adminCss = fileURLToPath(import.meta.resolve('@vesper/admin/studio.css'));
+        const adminCss = fileURLToPath(import.meta.resolve('@vespercms/admin/studio.css'));
         const studioFromSource = adminCss.endsWith(`${sep}src${sep}studio.css`);
         const plugins: PluginOption[] = [
           widgetJsxPlugin(files.vesperConfig),
@@ -457,7 +457,7 @@ const VESPER_CONTENT_TYPES = `declare module 'vesper:content' {
   /** The entry's URL from its collection's url pattern, or undefined for a collection without one. */
   export function getUrl(entry: { collection: string; id: string; data?: unknown }): string | undefined;
 }
-/** Internal: the site's aspect ratios, for <Img> in @vesper/astro/components. */
+/** Internal: the site's aspect ratios, for <Img> in vespercms/components. */
 declare module 'virtual:vesper/images' {
   export const ratios: Record<string, number>;
 }

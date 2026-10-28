@@ -1,4 +1,4 @@
-import { Link } from '@vesper/ui';
+import { Link } from '@vespercms/ui';
 import { hrefFor } from '../app/router.ts';
 import { Screen } from '../app/Screen.tsx';
 

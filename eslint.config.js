@@ -17,13 +17,13 @@ export const coreBoundaryRules = {
       paths: nodeBuiltins.map((name) => ({
         name,
         message:
-          'core runs in browsers and Workers too (spec §12). Use a platform API, or move this code to @vesper/astro.',
+          'core runs in browsers and Workers too (spec §12). Use a platform API, or move this code to vespercms.',
       })),
       patterns: [
         {
           regex: '^node:',
           message:
-            'core runs in browsers and Workers too (spec §12). Use a platform API, or move this code to @vesper/astro.',
+            'core runs in browsers and Workers too (spec §12). Use a platform API, or move this code to vespercms.',
         },
         {
           regex: '^(astro|vite|react|react-dom)(/.*)?$|^astro:|^@astrojs/',
@@ -35,8 +35,8 @@ export const coreBoundaryRules = {
             "core reads site schemas structurally and never loads a second Zod (spec §6.3). Use the structural types in core's schema module.",
         },
         {
-          regex: '^@vesper/',
-          message: 'core is the bottom of the package graph; it imports no other @vesper package.',
+          regex: '^(@vespercms/|vespercms(/|$))',
+          message: 'core is the bottom of the package graph; it imports no other Vesper package.',
         },
       ],
     },

@@ -11,7 +11,7 @@ Vesper reads two files, and neither is required. `vesper()` with no options and 
 ```js
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
-import vesper from '@vesper/astro';
+import vesper from 'vespercms';
 
 export default defineConfig({
   site: 'https://www.example.edu',
@@ -100,7 +100,7 @@ vesper({ cloud: { project: 'site_…' } });
 
 ```ts
 // vesper.config.ts
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 
 export default defineConfig({
   timeZone: 'America/New_York',
@@ -234,7 +234,7 @@ MDX components declare their props nowhere the studio can read, so they're edite
 
 ```ts
 import { z } from 'astro/zod';
-import { defineConfig } from '@vesper/astro/config';
+import { defineConfig } from 'vespercms/config';
 
 export default defineConfig({
   mdx: {
@@ -273,7 +273,7 @@ widgets: {
 
 | Key | Default | What it does |
 |---|---|---|
-| `component` | Required | Loads the component, which receives `WidgetProps` from `@vesper/astro/config`. |
+| `component` | Required | Loads the component, which receives `WidgetProps` from `vespercms/config`. |
 | `accepts` | Any field | Which fields it may be used on. |
 | `match` | None | Claims fields on its own. Without it, a field asks for the widget with `.meta({ widget: 'store-hours' })`. |
 

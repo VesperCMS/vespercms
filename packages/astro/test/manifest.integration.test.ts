@@ -9,7 +9,7 @@ import {
   type CollectionManifest,
   type FieldModel,
   type Manifest,
-} from '@vesper/core';
+} from '@vespercms/core';
 import { parse as parseDevalue } from 'devalue';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { generateManifest } from '../src/node/manifest.ts';

@@ -1,4 +1,4 @@
-import { editsInCollection, grantMatches, type CollectionManifest } from '@vesper/core';
+import { editsInCollection, grantMatches, type CollectionManifest } from '@vespercms/core';
 import type { CloudConnection } from './connection.ts';
 
 /*

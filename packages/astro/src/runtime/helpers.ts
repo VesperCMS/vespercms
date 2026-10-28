@@ -9,7 +9,7 @@ import {
   type PageNode,
   type UrlPattern,
   type UrlSettings,
-} from '@vesper/core/urls';
+} from '@vespercms/core/urls';
 
 /*
  * The site helpers in `vesper:content` (spec §6.15.7): `getTree`,

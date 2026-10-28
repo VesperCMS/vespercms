@@ -1,4 +1,4 @@
-import type { CollectionManifest, Manifest } from '@vesper/core';
+import type { CollectionManifest, Manifest } from '@vespercms/core';
 import { createContext, useContext } from 'react';
 import type { Account, WidgetComponent } from '../types.ts';
 import type { CloudConnection } from '../cloud/connection.ts';

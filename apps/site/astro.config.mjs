@@ -1,6 +1,6 @@
 // @ts-check
 import markdoc from '@astrojs/markdoc';
-import vesper from '@vesper/astro';
+import vesper from 'vespercms';
 import { defineConfig } from 'astro/config';
 import { sourceConditions } from '../../scripts/vite-source-conditions.mjs';
 
@@ -15,6 +15,6 @@ export default defineConfig({
     markdoc(),
     vesper({ siteName: 'Vesper', cloud: { project: 'site_3hfhzj0qma9p27ygk422' } }),
   ],
-  // Resolve workspace @vesper/* packages to source, like the playground.
+  // Resolve workspace Vesper packages to source, like the playground.
   vite: sourceConditions(),
 });

@@ -1,4 +1,4 @@
-import { Avatar, Button, Menu, type MenuItem } from '@vesper/ui';
+import { Avatar, Button, Menu, type MenuItem } from '@vespercms/ui';
 import { useEffect, useState } from 'react';
 import type { StudioApi } from './api.ts';
 import { APPEARANCES, useAppearance, type Appearance } from './appearance.ts';
