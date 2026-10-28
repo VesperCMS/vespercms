@@ -162,6 +162,7 @@ Markdown (`.md`) files in `src/content/events/`, matching `**/[^_]*.md`. Fields 
 
 - `title`: text. Required.
 - `summary`: text. Required.
+- `icon`: the name of a Lucide icon (lucide.dev/icons), one of `calendar`, `graduation-cap`, `heart-handshake`, `mic`, `music`, `palette`, `presentation`, `tent`, `trophy`, `utensils`. Optional.
 - `startsAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Required.
 - `endsAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Optional.
 - `location`: the ID of an entry in `locations`. Optional.
