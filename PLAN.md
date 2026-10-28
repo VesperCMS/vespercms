@@ -29,11 +29,11 @@ Before that, nothing was queued. The last item, the pane beside the collections 
 
 Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
-**Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9), and the packages are on npm as `vespercms@next`. Jeremy asked that new gaps come up whenever this work resumes.
+**Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9), and the packages are on npm as `vespercms@next`. One more is open (10, GitHub mode's message when the app isn't installed). Jeremy asked that new gaps come up whenever this work resumes.
 
 ## Dogfooding thosegeeks.com
 
-Started 2026-10-27, at Jeremy's request: thosegeeks.com, ThoseGeeks' own site, ported from EmDash to Vesper as a second real site beside vespercms.com. It lives in its own repository, `C:\code\thosegeeks-vesper`, with this repository as a git submodule at `vesper/` (as `vesper-cloud` has it), and runs beside the live EmDash site at https://thosegeeks-vesper.jeremy-bise-9bc.workers.dev until the domains move. Forms and comments wait for Phases 6 and 8: the contact form is an interim route in the site's own Worker, and comments are off (EmDash held none).
+Started 2026-10-27, at Jeremy's request: thosegeeks.com, ThoseGeeks' own site, ported from EmDash to Vesper as a second real site beside vespercms.com. It lives in its own repository, `C:\code\thosegeeks-vesper`, installs `vespercms@next` from npm (it began with this repository as a submodule, until 2026-10-28), is edited on the deployed site in GitHub mode with its own relay (2026-10-28), and runs beside the live EmDash site at https://thosegeeks-vesper.jeremy-bise-9bc.workers.dev until the domains move. Forms and comments wait for Phases 6 and 8: the contact form is an interim route in the site's own Worker, and comments are off (EmDash held none).
 
 The port: seven collections (fixed pages, services, projects, posts, client quotes, authors, settings), eleven kinds of blocks, references in both directions, 18 images, Markdoc bodies converted from Portable Text, `_redirects` on Workers static assets, and posts with `schedule: true`. Every page's text matches the live site's, word for word; the build's accessibility check passed 31 pages, and a studio save of a 120-line YAML entry changed exactly one line.
 
@@ -54,6 +54,10 @@ The site keeps its own list, `docs/vesper-gaps.md`, for gaps found as it's edite
 **Follow-ups, once this is on `main`:**
 - Done 2026-10-28: thosegeeks.com installs `vespercms@next` from npm (no submodule, source condition or token in CI), with `orderBy` on services and client quotes, `<Img decorative>` on its link cards and `fields.icon` for its 60 icons; it builds clean and its studio shows them.
 - `vesper-cloud` renames its imports when it next moves its submodule: it imports `@vesper/core` and `@vesper/admin`, which are now `@vespercms/core` and `@vespercms/admin`. Its `.npmrc` condition is unchanged.
+
+**Open, each a product call for Jeremy:**
+
+10. **GitHub mode blames the editor's access when the app isn't installed** (2026-10-28). Setting up GitHub mode on thosegeeks.com, the GitHub App was created but not yet installed on the repository. Signing in on the deployed `/admin` then told the repository's owner "Your GitHub account can't change this site … Ask the site's owner to give your account write access". A GitHub App's sign-in reaches only repositories the app is installed on, so GitHub answered 404 for the repository, and `GitHubGate.tsx` treats any answer without `permissions.push` as no access. Installing the app and signing in again fixed it. The studio could tell the cases apart: a 404 means this sign-in can't see the repository at all, most often because the app isn't installed there ("The site's GitHub App isn't installed on owner/name, or your account can't see it. Its owner installs it from the app's settings on GitHub"); a repository it can see without push permission is the person's access, as the message says now. The relay's README could also say plainly that the app does nothing until it's installed on the repository.
 
 ## vespercms.com and the docs
 
