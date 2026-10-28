@@ -29,7 +29,7 @@ Before that, nothing was queued. The last item, the pane beside the collections 
 
 Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
-**Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9); the first npm publish waits for Jeremy's token. Jeremy asked that new gaps come up whenever this work resumes.
+**Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9), and the packages are on npm as `vespercms@next`. Jeremy asked that new gaps come up whenever this work resumes.
 
 ## Dogfooding thosegeeks.com
 
@@ -47,12 +47,12 @@ The site keeps its own list, `docs/vesper-gaps.md`, for gaps found as it's edite
 4. **Notes by path: built.** The drawer names a note "Block 2 (Figure) › Image, alt" ("The notes drawer names a nested field by its path").
 5. **`<Img>` and `alt`: built, as a `decorative` prop, with an `alt` prop failing the build (Jeremy's call, over letting `alt` override the field)** ("`<Img decorative>`, and an `alt` prop fails the build").
 6. **Cloudflare Workers: built.** `WORKERS_CI` is detected, `site/hosting.mdoc` has a Workers section, and `vesper deploy init --target workers` builds and runs the site's own wrangler ("Cloudflare Workers static assets is a host Vesper knows", and in Scheduling, "`vesper deploy init --target workers` runs the site's own wrangler"). Not yet run for real: a Workers Builds build, a `--target workers` run with a real token, a Workers Builds deploy hook.
-7. **Installing outside this repository: prereleases on npm (Jeremy's call), as `vespercms`, `@vespercms/core` and `@vespercms/admin` under the `next` tag.** The packages were renamed for the `vespercms` npm org Jeremy registered, versioned `0.1.0-next.0`, and a Release workflow publishes by hand from `main` ("Vesper publishes as `vespercms` and `@vespercms/*`"). Packed and installed into a fresh Astro 7.4 site outside the repository, they built, the studio ran, and a move wrote its file; that check found the crop step's second Sharp ("The crop step loads the sharp Astro loads"), now fixed. **Not yet published:** the first publish needs Jeremy's `NPM_TOKEN` secret (`.changeset/README.md`). `npx astro add vespercms@next` is timed then, as Phase 2 asked.
+7. **Installing outside this repository: prereleases on npm (Jeremy's call), as `vespercms`, `@vespercms/core` and `@vespercms/admin` under the `next` tag.** The packages were renamed for the `vespercms` npm org Jeremy registered, versioned `0.1.0-next.0`, and a Release workflow publishes by hand from `main` ("Vesper publishes as `vespercms` and `@vespercms/*`"). Packed and installed into a fresh Astro 7.4 site outside the repository, they built, the studio ran, and a move wrote its file; that check found the crop step's second Sharp ("The crop step loads the sharp Astro loads"), now fixed. **Published 2026-10-28** (Release run 40696467747): all three at `0.1.0-next.0`, under `next` and also `latest`, which npm gives every package's first version. For a few minutes the two scoped packages answered 404 to anyone not signed in, though public: npm's registry had cached their "not found" from before. In a fresh Astro 7.4 site, `npx astro add vespercms@next` took 30 seconds (it adds `vespercms()` and installs React, its peer) and `astro build` 9, with `/admin` and the manifest.
 8. **An importer from another CMS: queued for Phase 9 (Jeremy, 2026-10-28)**, in spec §11, beside `create-vesper`: EmDash first, then WordPress.
 9. **The scheduling docs line: fixed.** `reference/integration.mdoc` describes `schedule` and `rebuildEvery` as built.
 
 **Follow-ups, once this is on `main`:**
-- thosegeeks.com moves to the new names (`vespercms`, `vespercms/fields` and so on), `orderBy` on services and client quotes (and `order` out of their `listFields`), `<Img decorative>` and `fields.icon` (installing `lucide`, which the manifest draws icons from; the site has `lucide-static`), and leaves the submodule for `vespercms@next` once it's published.
+- Done 2026-10-28: thosegeeks.com installs `vespercms@next` from npm (no submodule, source condition or token in CI), with `orderBy` on services and client quotes, `<Img decorative>` on its link cards and `fields.icon` for its 60 icons; it builds clean and its studio shows them.
 - `vesper-cloud` renames its imports when it next moves its submodule: it imports `@vesper/core` and `@vesper/admin`, which are now `@vespercms/core` and `@vespercms/admin`. Its `.npmrc` condition is unchanged.
 
 ## vespercms.com and the docs
@@ -960,7 +960,7 @@ The spec's three "Done when" criteria, with evidence:
 
 | Criterion | Evidence |
 |---|---|
-| A fresh Astro 7 site goes from `npx astro add` to editing content in under two minutes, with zero config | `vesper()` needs no options and no `vesper.config.ts`: `fixtures/astro6-site` uses exactly what `astro add` writes, and builds with `/admin` and the manifest (CI job `astro6`). From `astro dev` starting to a working `/admin` and a successful save on that site took 4.2 seconds. The package has the `astro-integration` keyword and a default export, which `astro add` requires. **Not yet measured:** the `npx astro add` install itself, which needs the packages on npm. Check it at the first publish. |
+| A fresh Astro 7 site goes from `npx astro add` to editing content in under two minutes, with zero config | `vesper()` needs no options and no `vesper.config.ts`: `fixtures/astro6-site` uses exactly what `astro add` writes, and builds with `/admin` and the manifest (CI job `astro6`). From `astro dev` starting to a working `/admin` and a successful save on that site took 4.2 seconds. The package has the `astro-integration` keyword and a default export, which `astro add` requires. At the first publish (2026-10-28), `npx astro add vespercms@next` in a fresh Astro 7.4 site took 30 seconds, installing React with it, and the build 9 more. |
 | Every §10.4 rule holds on every screen | One primary action per screen (Home none, list "New entry", editor "Save", media "Upload"). Status is always words. The toolbar uses words. The only icon-only buttons are close, the "…" menu and the map pin (a drag handle), all named. `packages/admin/src/budget.test.ts` fails on thick borders, extra font weights, ad hoc shadows or raw colours in the studio's source, and `tokens.css` removes off-budget utilities. Contrast is checked by `npm run a11y:contrast`. |
 | Each built-in widget meets its §6.3.2 accessibility requirements; colour and geo can be set by keyboard alone and with a screen reader | The colour hex field is the primary control, and palettes are named radio swatches (`widgets.test.tsx`). Latitude and longitude are always-visible number fields. The map pin moves with the arrow keys and announces each move (checked in Chromium). axe runs in jsdom per widget, and in Chromium on every screen (`e2e/studio`). |
 
@@ -1059,7 +1059,7 @@ The spec's five "Done when" criteria, with evidence:
   - block in the dev API only, which has the site's complete config, and keep warning in the browser;
   - block everywhere, which would refuse saves whenever the studio's copy of the config is incomplete.
 - **Custom attribute types and `validate` functions run only in the dev API.** They're code, so the browser can't run them. In GitHub mode (Phase 3) the site's build is the last check for them. Decide in Phase 3 whether that's enough.
-- Still open from Phase 2: HEIC conversion licensing, React 18 sites, and timing `npx astro add` at the first npm publish.
+- Still open from Phase 2: HEIC conversion licensing and React 18 sites. (`npx astro add` was timed at the first npm publish, 2026-10-28: 30 seconds.)
 
 **Follow-ups noted, not blocking:**
 - Tables stay protected source blocks, edited as text.
@@ -1138,8 +1138,8 @@ The spec's five "Done when" criteria, with evidence:
 **Open, for Jeremy** (decided 2026-10-19; see "Calls of 2026-10-19"):
 - **A screen reader pass.** The focal point and the crop dialog were driven by keys and checked with axe, not heard. Worth ten minutes with NVDA in Chrome: the focal point's description and announcements, the number fields, the crop box (`role="application"`, so NVDA should switch to focus mode on it) and its announcements.
 - **`role="application"` on the crop box** (DECISIONS.md) needs a lint exception. Confirm, or prefer number fields for the crop as well.
-- **`sharp` as an optional peer dependency of `vespercms`** (DECISIONS.md). Confirm before the first publish.
-- **`<Img>` from an npm install** isn't tested: like the `/admin` page it ships as source, and only workspace builds load it. Check at the first publish, with the `npx astro add` timing.
+- **`sharp` as an optional peer dependency of `vespercms`** (DECISIONS.md). Confirmed at the first publish (2026-10-28): Astro brings its own `sharp`, and the crop step loads that copy (DECISIONS.md, "The crop step loads the sharp Astro loads"), so a site needn't install one.
+- **`<Img>` from an npm install**: checked at the first publish (2026-10-28), from packed tarballs and then from npm, building and in `astro dev`. It found the crop step's second Sharp, fixed before publishing.
 - Still open from earlier phases: the 2.6 items (screen reader pass, Vercel redirects in `vercel.json`, the treegrid's icon-only toggle, the skipped internal-link build check), HEIC licensing, React 18 sites, and unknown Markdoc tags.
 
 **Follow-ups noted, not blocking:**
