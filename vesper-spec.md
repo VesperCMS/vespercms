@@ -550,7 +550,7 @@ How it behaves:
 | `ratio` | Uses the stored crop for that ratio if one exists, otherwise a crop computed from `focus`. Output at that exact ratio. |
 | `art` | Art direction: renders `<picture>` with a `<source media>` per breakpoint, each using its own crop (Astro's `<Picture>` handles formats, not per-breakpoint crops). Built with `getImage()`. |
 | No ratio (fluid layouts) | No server crop. The focal point becomes `object-position` (for example `62% 35%`), so CSS cropping keeps the subject in frame. |
-| Always | `alt` from the field. `decorative` renders `alt=""`. Every other Astro image prop passes through. |
+| Always | `alt` from the field. `decorative`, the field's or `<Img decorative>` where the picture repeats the words beside it, renders `alt=""`. An `alt` prop fails the build. Every other Astro image prop passes through. |
 
 **Crop step (image service wrapper)**
 - The integration registers a thin wrapper around Astro's default Sharp image service. It adds one optional transform parameter: a normalized crop rectangle.

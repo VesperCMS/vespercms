@@ -7,7 +7,14 @@ import {
   sharpAnchor,
 } from '@vespercms/core/images';
 import { describe, expect, it } from 'vitest';
-import { imageContext, mimeType, planArt, planImg, type ImageContext } from './plan.ts';
+import {
+  imageContext,
+  mimeType,
+  planArt,
+  planImg,
+  type CroppedImageProps,
+  type ImageContext,
+} from './plan.ts';
 import { SHARP_IMAGE_SERVICE, VESPER_IMAGE_SERVICE } from './register.ts';
 
 /*
@@ -118,6 +125,27 @@ describe('<Img ratio> with Vesper’s crop step', () => {
     expect(
       planImg({ image: { ...hero, alt: '', decorative: true }, ratio: 'wide' }, ctx('vesper')).alt,
     ).toBe('');
+  });
+
+  it('renders alt="" where the template says the picture is decorative', () => {
+    const plan = planImg({ image: hero, ratio: 'wide', decorative: true }, ctx('vesper'));
+    expect(plan.alt).toBe('');
+    // Not an attribute of its own on the page.
+    expect(plan).not.toHaveProperty('decorative');
+    const art = planArt(
+      { image: hero, art: { base: 'square', '(min-width: 48rem)': 'wide' }, decorative: true },
+      ctx('vesper'),
+    );
+    expect([art.base.alt, ...art.sources.map((s) => s.options.alt)]).toEqual(['', '']);
+  });
+
+  it('refuses an alt prop, which would override the editor’s words', () => {
+    // A template's own alt, even an empty one, is what `decorative` is for.
+    const props = { image: hero, ratio: 'wide', alt: '' } as unknown as CroppedImageProps;
+    expect(() => planImg(props, ctx('vesper'))).toThrow(
+      /^<Img> takes its alt text from the image field, .* pass decorative for alt=""\.$/,
+    );
+    expect(() => planImg(props, ctx('vesper'), 'getImg()')).toThrow(/^getImg\(\) takes/);
   });
 });
 

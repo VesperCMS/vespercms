@@ -62,6 +62,14 @@ export type CroppedImageProps = ImageProps & {
   image: ImageFieldValue;
   /** Crop to this ratio: a name from `images.ratios` in vesper.config.ts, or a number. */
   ratio?: RatioInput;
+  /**
+   * Render `alt=""` here, whatever the field says: for a picture that's
+   * content on its own page but repeats the words beside it here, such as a
+   * cover inside a link card whose title follows.
+   */
+  decorative?: boolean;
+  /** Never set: alt text comes from the image field. Pass `decorative` for `alt=""`. */
+  alt?: never;
 };
 
 export type ImgProps = CroppedImageProps & {
@@ -189,10 +197,11 @@ function planOne(
   rest: ImageProps,
   ctx: ImageContext,
   where: string,
+  decorative: boolean,
 ): Record<string, unknown> {
   const { src } = image;
   const value = imageValueOf(image);
-  const alt = image.decorative === true ? '' : (image.alt ?? '');
+  const alt = decorative || image.decorative === true ? '' : (image.alt ?? '');
   const width = toNumber(rest.width);
   const height = toNumber(rest.height);
 
@@ -268,7 +277,14 @@ function planOne(
   };
 }
 
-function imageOf(props: { image?: unknown }, where: string): ImageFieldValue {
+function imageOf(props: { image?: unknown; alt?: unknown }, where: string): ImageFieldValue {
+  // The field's alt text is the editor's, and a template that typed its own
+  // would quietly override it on every page; `decorative` is the one way out.
+  if ('alt' in props) {
+    throw new Error(
+      `${where} takes its alt text from the image field, so it doesn't take alt. Where the picture repeats the words beside it, pass decorative for alt="".`,
+    );
+  }
   const { image } = props;
   if (typeof image !== 'object' || image === null || !('src' in image)) {
     throw new Error(
@@ -282,18 +298,20 @@ function imageOf(props: { image?: unknown }, where: string): ImageFieldValue {
 export function planImg(
   props: ImgProps | CroppedImageProps,
   ctx: ImageContext,
+  where = '<Img>',
 ): Record<string, unknown> {
-  const image = imageOf(props, '<Img>');
+  const image = imageOf(props, where);
   const {
     image: _image,
     ratio,
+    decorative,
     art: _art,
     formats: _formats,
     fallbackFormat: _fallback,
     pictureAttributes: _picture,
     ...rest
   } = props;
-  return planOne(image, ratio, rest, ctx, '<Img>');
+  return planOne(image, ratio, rest, ctx, where, decorative === true);
 }
 
 export type ArtPlan = {
@@ -314,6 +332,7 @@ export function planArt(props: ImgProps, ctx: ImageContext): ArtPlan {
   const {
     image: _image,
     ratio: _ratio,
+    decorative,
     art,
     formats,
     fallbackFormat,
@@ -328,11 +347,14 @@ export function planArt(props: ImgProps, ctx: ImageContext): ArtPlan {
   const where = (media: string) => `<Img art> (${media})`;
   const sources = Object.entries(art)
     .filter(([media]) => media !== 'base')
-    .map(([media, ratio]) => ({ media, options: planOne(image, ratio, rest, ctx, where(media)) }));
+    .map(([media, ratio]) => ({
+      media,
+      options: planOne(image, ratio, rest, ctx, where(media), decorative === true),
+    }));
   const srcFormat = isMetadata(image.src) ? image.src.format : undefined;
   return {
     sources,
-    base: planOne(image, art.base, rest, ctx, where('base')),
+    base: planOne(image, art.base, rest, ctx, where('base'), decorative === true),
     formats: formats ?? ['webp'],
     fallbackFormat:
       fallbackFormat ?? (srcFormat && KEEP_FORMAT.includes(srcFormat) ? srcFormat : 'png'),

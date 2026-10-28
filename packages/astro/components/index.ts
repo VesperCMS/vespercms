@@ -29,6 +29,6 @@ export type {
  * ```
  */
 export async function getImg(props: CroppedImageProps): Promise<GetImageResult> {
-  const options = planImg(props, imageContext(imageConfig, ratios));
+  const options = planImg(props, imageContext(imageConfig, ratios), 'getImg()');
   return getImage(options as Parameters<typeof getImage>[0]);
 }

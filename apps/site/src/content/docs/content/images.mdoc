@@ -109,6 +109,17 @@ const { post } = Astro.props;
 
 Alt text always comes from the field, and a decorative image gets `alt=""`. Every other Astro image prop passes through, and `srcset` never offers a width larger than the crop.
 
+A picture can be content on its own page and only repeat the words beside it somewhere else, such as a cover inside a card whose title follows. There, pass `decorative` for `alt=""`, whatever the field says:
+
+```astro
+<a href={getUrl(post)}>
+  <Img image={post.data.hero} ratio="wide" decorative />
+  <h3>{post.data.title}</h3>
+</a>
+```
+
+`<Img>` and `getImg()` don't take `alt`: the build stops with a message saying to pass `decorative` instead, so the editor's words are never overridden by a template's.
+
 ## Social images
 
 For places an `<img>` can't go, such as `og:image`, `getImg()` returns Astro's `getImage()` result for the same crop:
