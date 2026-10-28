@@ -113,6 +113,7 @@ True 301s need the host's own rules. Vesper writes them when it detects the host
 |---|---|---|
 | Netlify | `NETLIFY` | `_redirects` in `dist`, forced (`301!`), with Vesper's rules first |
 | Cloudflare Pages | `CF_PAGES` | `_redirects` in `dist` |
+| Cloudflare Workers static assets | `WORKERS_CI`, in Workers Builds | `_redirects` in `dist` |
 | Vercel | `VERCEL` | `redirects` in the site's `vercel.json`, kept in step by the studio, since Vercel reads the file before it builds |
 | Apache or LiteSpeed | `native: ['apache']` | Lines in `dist/.htaccess` between `# BEGIN vesper` and `# END vesper` |
 | nginx | `native: ['nginx']` | `dist/_vesper/nginx-redirects.conf`, for the server's admin to include |

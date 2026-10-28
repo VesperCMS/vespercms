@@ -42,6 +42,7 @@ Real 301 redirects need the host's own rules. Vesper writes them for these hosts
 |---|---|---|
 | Netlify | The `NETLIFY` build variable | `_redirects` in `dist/`, with Vesper's rules first |
 | Cloudflare Pages | The `CF_PAGES` build variable | `_redirects` in `dist/` |
+| Cloudflare Workers static assets | The `WORKERS_CI` build variable, in Workers Builds | `_redirects` in `dist/` |
 | Vercel | The `VERCEL` build variable | Nothing at build: the studio keeps the `redirects` in your site's `vercel.json` up to date |
 | Apache, LiteSpeed | `native: ['apache']` | Rules in `dist/.htaccess`, between `# BEGIN vesper` and `# END vesper` |
 | nginx | `native: ['nginx']` | `dist/_vesper/nginx-redirects.conf`, for your server's admin to include |

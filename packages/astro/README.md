@@ -166,6 +166,7 @@ At build, the cleaned redirects go to Astro's `redirects`, so static output gets
 |---|---|---|
 | Netlify | `NETLIFY` | `_redirects` in `dist`, forced (`301!`), Vesper's block first |
 | Cloudflare Pages | `CF_PAGES` | `_redirects` in `dist` |
+| Cloudflare Workers static assets | `WORKERS_CI` (Workers Builds) | `_redirects` in `dist` |
 | Vercel | `VERCEL` | `redirects` in the site's `vercel.json`, kept in step by the studio whenever it writes redirects (Vercel reads the file before the build) |
 | Apache / LiteSpeed | `native: ['apache']` | `RedirectMatch` lines in `dist/.htaccess` between `# BEGIN vesper` and `# END vesper` |
 | nginx | `native: ['nginx']` | `dist/_vesper/nginx-redirects.conf`, for the server admin to include |
