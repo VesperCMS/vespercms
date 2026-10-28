@@ -334,3 +334,124 @@ jobs:
           lftp -c "$settings; open --env-password -u '$LOGIN' 'sftp://$HOST:\${PORT:-22}'; $mirror"
 "
 `;
+
+exports[`deployWorkflow > writes each target as it ships > workers, every 30 minutes, in a monorepo 1`] = `
+"# Written by \`vesper deploy init --target workers --rebuild-every 30\`.
+# It’s yours to read and change: Vesper never deploys a site itself.
+#
+# It builds the site and deploys it to Cloudflare Workers with wrangler:
+# - on every push to main, which includes each publish from the studio;
+# - when the Vesper cloud asks, at a scheduled change’s exact time;
+# - when someone runs it from the Actions tab;
+# - every 30 minutes, but only when a scheduled change is due. It reads
+#   https://example.com/_vesper/schedule.json first, and when it can't, that
+#   run fails without building.
+#
+# Its secrets are under Settings > Secrets and variables > Actions:
+# CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
+
+name: Vesper deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '7-59/30 * * * *'
+  repository_dispatch:
+    types: [vesper-rebuild]
+  workflow_dispatch:
+
+# One deploy at a time, so an older build never replaces a newer one.
+# A newer run waits for the one deploying; it never cancels it.
+concurrency:
+  group: vesper-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  VESPER_SITE_URL: 'https://example.com/'
+
+jobs:
+  # Scheduled runs only: every other run builds.
+  due:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      due: \${{ steps.check.outputs.due }}
+    steps:
+      - name: Check whether a scheduled change is due
+        id: check
+        run: |
+          node --input-type=module <<'EOF'
+          import { appendFileSync } from 'node:fs';
+
+          const url = new URL('_vesper/schedule.json', process.env.VESPER_SITE_URL);
+          const address = url.href;
+          url.searchParams.set('at', String(Date.now()));
+          // Actions reads a workflow command's message with these three escaped.
+          const command = (text) => text.replace(/%/g, '%25').replace(/\\r/g, '%0D').replace(/\\n/g, '%0A');
+          let due;
+          let reason;
+          try {
+            const response = await fetch(url, {
+              headers: { 'cache-control': 'no-cache' },
+              signal: AbortSignal.timeout(20000),
+            });
+            if (!response.ok) throw new Error(\`it answered \${response.status}\`);
+            const schedule = await response.json().catch(() => null);
+            const next = schedule && schedule.version === 1 ? schedule.next : undefined;
+            if (next === null) {
+              due = false;
+              reason = 'Nothing is scheduled.';
+            } else if (typeof next === 'string' && !Number.isNaN(Date.parse(next))) {
+              due = Date.parse(next) <= Date.now();
+              reason = due ? \`A change was due at \${next}.\` : \`Nothing is due until \${next}.\`;
+            } else {
+              throw new Error('it is not a schedule this workflow knows');
+            }
+          } catch (error) {
+            const why = error instanceof Error ? error.message : String(error);
+            reason = \`::error::\${command(
+              \`\${address} could not be read (\${why}), so nothing was built. Check VESPER_SITE_URL in this workflow, and that the live site was built with Vesper. The next scheduled run tries again.\`,
+            )}\`;
+            process.exitCode = 1;
+          }
+          console.log(reason);
+          // Without an output, the deploy skips a scheduled run.
+          if (due !== undefined) appendFileSync(process.env.GITHUB_OUTPUT, \`due=\${due}\\n\`);
+          EOF
+
+  deploy:
+    needs: due
+    if: \${{ !cancelled() && (github.event_name != 'schedule' || needs.due.outputs.due == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Build
+        working-directory: apps/site
+        run: npm run build
+      - name: Deploy with Wrangler
+        working-directory: apps/site
+        env:
+          CLOUDFLARE_API_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Optional when the Wrangler config has account_id, or the token
+          # reaches only one account.
+          CLOUDFLARE_ACCOUNT_ID: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Add the repository secret CLOUDFLARE_API_TOKEN (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          npx wrangler deploy
+"
+`;

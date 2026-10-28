@@ -130,6 +130,62 @@ describe('planDeploy', () => {
     expect(daily.contents).toContain("- cron: '7 0 * * *'");
   });
 
+  it('deploys to Cloudflare Workers, saying what the site still needs', async () => {
+    const ready = repo({
+      '.git/': '',
+      'package-lock.json': '{}',
+      'package.json': JSON.stringify({ devDependencies: { wrangler: '^4.0.0' } }),
+      'wrangler.jsonc': '{}',
+    });
+    const workers = await plan(ready, { target: 'workers' });
+    expect(named(workers.contents, 'Deploy with Wrangler')?.run).toContain('npx wrangler deploy');
+    expect(workers.contents).not.toContain('schedule:');
+    expect(workers.next).toContain(
+      'It builds the site on every push to main and deploys it to Cloudflare Workers with wrangler. It also runs',
+    );
+    expect(workers.next).toContain('  CLOUDFLARE_API_TOKEN   a Cloudflare API token');
+    expect(workers.next).toContain(
+      'wrangler deploy reads wrangler.jsonc, whose assets.directory should be ./dist, where Astro builds.',
+    );
+    expect(workers.next).toContain(
+      "add `redirects: { native: ['cloudflare'] }` to vesper.config.ts",
+    );
+    expect(workers.next).toContain('use --target hook instead');
+    expect(workers.next).not.toContain('dependencies');
+    expect(workers.next).not.toContain('deleted');
+
+    // A site in a subfolder, with neither a Wrangler config nor wrangler yet.
+    const bare = repo({ '.git/': '', 'pnpm-lock.yaml': '', 'apps/web/package.json': '{}' });
+    const fresh = await plan(
+      join(bare, 'apps', 'web'),
+      { target: 'workers' },
+      { outDir: './build' },
+    );
+    expect(named(fresh.contents, 'Deploy with Wrangler')).toMatchObject({
+      'working-directory': 'apps/web',
+    });
+    expect(fresh.next).toContain(
+      'There’s no Wrangler config yet. Add a wrangler.jsonc beside astro.config, with assets.directory set to ./build, where Astro builds.',
+    );
+    expect(fresh.next).toContain(
+      'wrangler isn’t among the site’s dependencies. Add it in the site’s folder, so each deploy runs the version in the lockfile: pnpm add --save-dev wrangler',
+    );
+
+    // Found as wrangler finds them: a config and a dependency further up count.
+    const monorepo = repo({
+      '.git/': '',
+      'package-lock.json': '{}',
+      'package.json': JSON.stringify({ dependencies: { wrangler: '4.154.0' } }),
+      'wrangler.toml': '',
+      'apps/web/package.json': '{}',
+    });
+    const above = await plan(join(monorepo, 'apps', 'web'), { target: 'workers' });
+    expect(above.next).toContain(
+      'wrangler deploy reads wrangler.toml, whose assets.directory should be ./apps/web/dist,',
+    );
+    expect(above.next).not.toContain('dependencies');
+  });
+
   it('says what it needs, in words', async () => {
     const root = repo({ '.git/': '', 'package-lock.json': '{}' });
     const cases: [Partial<DeployInitOptions>, AstroSettings, RegExp][] = [
@@ -218,6 +274,9 @@ describe('vesper deploy init', () => {
     const none = vesper(root);
     expect(none.status).toBe(1);
     expect(none.stderr).toContain('Choose where the site goes with --target');
+    const unknown = vesper(root, '--target', 'pages');
+    expect(unknown.status).toBe(1);
+    expect(unknown.stderr).toContain('workers for Cloudflare Workers, deployed with wrangler');
     const odd = vesper(root, '--target', 'hook', '--rebuild-every', 'hourly');
     expect(odd.status).toBe(1);
     expect(odd.stderr).toContain('--rebuild-every takes whole minutes, not hourly.');
