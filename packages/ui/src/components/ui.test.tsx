@@ -150,6 +150,33 @@ describe('Select, Combobox and MultiCombobox', () => {
     expect(onChange).toHaveBeenCalledWith('stories');
   });
 
+  it('Combobox draws each option’s prefix before its words, and the chosen one’s in the field', async () => {
+    const drawn = options.map((option) => ({
+      ...option,
+      prefix: <Icon node={[['circle', { cx: 12, cy: 12, r: 4 }]]} />,
+    }));
+    function Harness() {
+      const [value, setValue] = useState<string | null>(null);
+      return <Combobox label="Icon" options={drawn} value={value} onChange={setValue} />;
+    }
+    render(<Harness />);
+    const field = screen.getByRole('combobox', { name: 'Icon' });
+    const inField = () =>
+      field.parentElement?.querySelector(':scope > span[aria-hidden="true"] svg');
+    expect(inField()).toBeFalsy();
+    const user = userEvent.setup();
+    await user.click(field);
+    const listed = await screen.findAllByRole('option');
+    // Named by their words alone: the picture is hidden from assistive tech.
+    expect(listed.map((o) => o.textContent)).toEqual(options.map((o) => o.label));
+    expect(listed.map((o) => o.querySelector('[aria-hidden="true"] svg'))).not.toContain(null);
+    await expectNoViolations();
+    await user.click(screen.getByRole('option', { name: 'Guides' }));
+    expect(field).toHaveValue('Guides');
+    expect(inField()).toBeTruthy();
+    await expectNoViolations();
+  });
+
   it('MultiCombobox adds free-text tags with Enter and removes them by name', async () => {
     function Harness() {
       const [values, setValues] = useState<string[]>(['harbor']);
