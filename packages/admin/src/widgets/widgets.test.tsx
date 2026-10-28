@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { CollectionManifest, EntryDocument, Manifest, SaveRequest } from '@vespercms/core';
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
@@ -199,6 +199,131 @@ describe('references', () => {
     await user.keyboard('{Escape}');
     await user.click(within(related).getByRole('button', { name: 'Move Notes from the field up' }));
     expect((await save(user, api)).data.related).toEqual(['notes-from-the-field', 'welcome']);
+  });
+});
+
+describe('icon', () => {
+  const concert = (data: Record<string, unknown> = {}) =>
+    fakeApi({
+      documents: {
+        'events/concert': doc('events', 'concert', {
+          title: 'Harvest concert',
+          summary: 'Music.',
+          startsAt: { $date: '2026-10-24T14:00:00.000Z' },
+          ...data,
+        }),
+      },
+    });
+  /** The picture drawn before an option's words, or in the field before the chosen one's. */
+  const picture = (element: Element | null | undefined) =>
+    element?.querySelector(':scope > span[aria-hidden="true"] svg') ?? null;
+
+  it('lists each icon beside its name, and chooses one by keyboard', async () => {
+    const api = concert();
+    renderStudio('#/c/events/e/concert', { api });
+    const user = userEvent.setup();
+    const field = await screen.findByRole('combobox', { name: 'Icon (optional)' });
+    expect(field).toHaveAttribute('placeholder', 'Search icons');
+    expect(picture(field.parentElement)).toBeNull();
+
+    act(() => {
+      field.focus();
+    });
+    await user.keyboard('{ArrowDown}');
+    const options = await screen.findAllByRole('option');
+    // Named by the icon's name alone; the picture beside it is decorative.
+    expect(options.map((o) => o.textContent)).toEqual([
+      'calendar',
+      'graduation-cap',
+      'heart-handshake',
+      'mic',
+      'music',
+      'palette',
+      'presentation',
+      'tent',
+      'trophy',
+      'utensils',
+    ]);
+    for (const option of options) expect(picture(option)).not.toBeNull();
+
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
+    expect(field).toHaveValue('music');
+    // The chosen icon shows in the field, drawn from the manifest.
+    expect(picture(field.parentElement)?.innerHTML).toBe(picture(options[4])?.innerHTML);
+    // Checked closed: an open list sits outside the page's landmarks, as every popover does.
+    await expectNoViolations();
+    expect((await save(user, api)).data.icon).toBe('music');
+  });
+
+  it('filters as you type', async () => {
+    renderStudio('#/c/events/e/concert', { api: concert() });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('combobox', { name: 'Icon (optional)' }));
+    await user.keyboard('mu');
+    await waitFor(() => {
+      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['music']);
+    });
+    await user.keyboard('{Backspace}{Backspace}ent');
+    await waitFor(() => {
+      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+        'presentation',
+        'tent',
+      ]);
+    });
+  });
+
+  it('shows the stored icon, and takes it out when the field is cleared', async () => {
+    const api = concert({ icon: 'trophy' });
+    renderStudio('#/c/events/e/concert', { api });
+    const user = userEvent.setup();
+    const field = await screen.findByRole('combobox', { name: 'Icon (optional)' });
+    expect(field).toHaveValue('trophy');
+    expect(picture(field.parentElement)).not.toBeNull();
+    await user.clear(field);
+    await user.keyboard('{Escape}');
+    await user.tab();
+    expect((await save(user, api)).data).not.toHaveProperty('icon');
+  });
+
+  it('lists a name it has no picture for by name alone, in line with the rest', async () => {
+    const { tent: _missing, ...drawings } = playgroundManifest.icons ?? {};
+    renderStudio('#/c/events/e/concert', {
+      api: concert({ icon: 'tent' }),
+      manifest: { ...playgroundManifest, icons: drawings },
+    });
+    const user = userEvent.setup();
+    const field = await screen.findByRole('combobox', { name: 'Icon (optional)' });
+    expect(field).toHaveValue('tent');
+    expect(picture(field.parentElement)).toBeNull();
+    await user.click(field);
+    const tent = await screen.findByRole('option', { name: 'tent' });
+    expect(picture(tent)).toBeNull();
+    expect(tent.querySelector(':scope > span[aria-hidden="true"]')).not.toBeNull();
+    expect(picture(screen.getByRole('option', { name: 'trophy' }))).not.toBeNull();
+  });
+
+  it('is read only when the field is, still showing its icon', async () => {
+    renderStudio('#/c/events/e/concert', {
+      api: concert({ icon: 'palette' }),
+      manifest: withField('events', 'icon', { readOnly: true }),
+    });
+    // A field that can't change isn't marked optional.
+    const field = await screen.findByRole('combobox', { name: 'Icon' });
+    expect(field).toBeDisabled();
+    expect(field).toHaveValue('palette');
+    expect(picture(field.parentElement)).not.toBeNull();
+    await expectNoViolations();
+  });
+
+  it('is marked required for assistive tech when the schema requires it', async () => {
+    renderStudio('#/c/events/e/concert', {
+      api: concert(),
+      manifest: withField('events', 'icon', { required: true }),
+    });
+    const field = await screen.findByRole('combobox', { name: 'Icon' });
+    expect(field).toHaveAttribute('aria-required', 'true');
+    expect(field).not.toHaveAttribute('required');
+    expect(field).not.toHaveAttribute('aria-invalid');
   });
 });
 

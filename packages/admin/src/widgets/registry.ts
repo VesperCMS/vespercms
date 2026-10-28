@@ -16,6 +16,7 @@ import {
 } from './basic.tsx';
 import { GeoWidget } from './geo.tsx';
 import { GroupWidget, RepeaterWidget } from './group.tsx';
+import { IconWidget } from './icon.tsx';
 import { FileWidget, ImageWidget } from './image.tsx';
 import { ReferencesWidget, ReferenceWidget } from './reference.tsx';
 import { LazyMarkdownWidget } from './markdown-lazy.tsx';
@@ -60,6 +61,7 @@ const BUILTIN: Record<string, BuiltinWidget> = {
   datetime: { component: DateTimeWidget },
   select: { component: SelectWidget },
   radio: { component: RadioWidget, group: true },
+  icon: { component: IconWidget },
   tags: { component: TagsWidget },
   multiselect: { component: TagsWidget },
   group: { component: GroupWidget, group: true, rendersChildren: true, section: true },
