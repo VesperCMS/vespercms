@@ -120,6 +120,7 @@ export {
   type CollectionConfig,
   type ScheduleConfig,
   type LoaderInfo,
+  type IconSet,
 } from './manifest/build.ts';
 export { canonicalJson, manifestHash } from './manifest/hash.ts';
 export type {

@@ -32,6 +32,12 @@ import type {
   SchedulePresentation,
 } from './types.ts';
 
+/**
+ * Draws an icon by its Lucide name, as lucide.dev lists it ("calendar-days"),
+ * or returns undefined for a name the icon set doesn't have.
+ */
+export type IconSet = (name: string) => IconNode | undefined;
+
 /** How a collection's entries are loaded, as Vesper's config loader observed it. */
 export type LoaderInfo =
   | { kind: 'glob'; base: string; pattern: string | string[]; customId: boolean }
@@ -116,10 +122,12 @@ export type ManifestInput = {
   };
   forms?: { name: string; schema: unknown; options?: Record<string, unknown> }[];
   /**
-   * The drawings of the icons collections name, by name, resolved by whoever
-   * loaded the config (core imports no icon set). A name missing here gets no icon.
+   * The site's icon set, which draws the icons the site names: a lookup, or
+   * the drawings by name. Whoever loaded the config supplies it from the
+   * site's own `lucide` (core imports no icon set). Without one, nothing has
+   * a drawing, and the manifest warns where one was wanted.
    */
-  icons?: Record<string, IconNode>;
+  icons?: IconSet | Readonly<Record<string, IconNode>>;
   /** Problems found while loading the site's configs. */
   diagnostics?: Diagnostic[];
   generator?: { name: string; version: string };
@@ -142,7 +150,15 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
     }
   }
 
-  const icons = input.icons ?? {};
+  const icons = iconSetOf(input.icons);
+  if (!icons && Object.values(configured).some((c) => typeof c.icon === 'string')) {
+    diagnostics.push({
+      level: 'warning',
+      code: 'vesper-config',
+      message:
+        'Collection icons need the lucide package: run "npm install lucide". Until then each collection shows its default icon.',
+    });
+  }
   const collections = input.collections.map((collection) =>
     buildCollection(collection, configured[collection.name] ?? {}, widgets, diagnostics, icons),
   );
@@ -170,6 +186,16 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
 
   const markdoc = input.markdoc ? markdocOf(input, widgets, diagnostics) : undefined;
   const mdx = mdxOf(input.config?.mdx?.components, widgets, diagnostics);
+  const offered = fieldIcons(
+    [
+      ...collections.map((c) => ({ owner: c.name, fields: c.fields ?? [] })),
+      ...forms.map((f) => ({ owner: `form:${f.name}`, fields: f.fields ?? [] })),
+      ...(markdoc?.tags ?? []).map((t) => ({ owner: `markdoc:${t.name}`, fields: t.fields })),
+      ...(mdx?.components ?? []).map((c) => ({ owner: `mdx:${c.name}`, fields: c.fields ?? [] })),
+    ],
+    icons,
+    diagnostics,
+  );
 
   const content = {
     manifestVersion: 1 as const,
@@ -191,6 +217,7 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
     forms,
     ...(markdoc ? { markdoc } : {}),
     ...(mdx ? { mdx } : {}),
+    ...(offered.size > 0 ? { icons: Object.fromEntries(offered) } : {}),
     diagnostics,
   };
   return {
@@ -341,12 +368,74 @@ function contrastDiagnostics(
   return found;
 }
 
+/**
+ * The drawings of the icons icon fields offer (`fields.icon`), by name, for
+ * the manifest's `icons`: only those names, so the studio shows each beside
+ * its name without carrying an icon set. A name the set lacks is still
+ * offered, by name alone, and its field warns.
+ */
+function fieldIcons(
+  owners: { owner: string; fields: readonly FieldModel[] }[],
+  icons: IconSet | null,
+  diagnostics: Diagnostic[],
+): Map<string, IconNode> {
+  // A Map, so a name such as "__proto__" stays a name.
+  const drawn = new Map<string, IconNode>();
+  const iconFields = (fields: readonly FieldModel[]): FieldModel[] =>
+    fields.flatMap((field) => [
+      ...(field.widget === 'icon' ? [field] : []),
+      ...iconFields(fieldChildren(field)),
+    ]);
+  const found = owners.flatMap(({ owner, fields }) =>
+    iconFields(fields).map((field) => ({ owner, field })),
+  );
+  if (found.length === 0) return drawn;
+  if (!icons) {
+    diagnostics.push({
+      level: 'warning',
+      code: 'icons-unavailable',
+      message:
+        'Icon fields need the lucide package: run "npm install lucide". Until then the studio lists their icons by name, without pictures.',
+    });
+    return drawn;
+  }
+  for (const { owner, field } of found) {
+    const missing: string[] = [];
+    for (const { value } of field.constraints?.options ?? []) {
+      if (drawn.has(value)) continue;
+      const node = icons(value);
+      if (node) drawn.set(value, copyIcon(node));
+      else missing.push(value);
+    }
+    if (missing.length === 0) continue;
+    const names = listed(missing.map((name) => `"${name}"`));
+    diagnostics.push({
+      level: 'warning',
+      code: 'unknown-icon',
+      message:
+        missing.length === 1
+          ? `${field.path.join('.')} offers ${names}, which isn't a Lucide icon name, so the studio lists it by name, without a picture. Names are as lucide.dev/icons lists them, such as "newspaper".`
+          : `${field.path.join('.')} offers ${names}, which aren't Lucide icon names, so the studio lists them by name, without pictures. Names are as lucide.dev/icons lists them, such as "newspaper".`,
+      collection: owner,
+      path: field.path.map(String),
+    });
+  }
+  return drawn;
+}
+
+/** "a", "a and b", "a, b and c". */
+function listed(items: string[]): string {
+  return items.length < 2
+    ? (items[0] ?? '')
+    : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`;
+}
+
 function buildCollection(
   input: CollectionInput,
   config: CollectionConfig,
   widgets: Record<string, WidgetDefinition>,
   diagnostics: Diagnostic[],
-  icons: Record<string, IconNode>,
+  icons: IconSet | null,
 ): CollectionManifest {
   const source = sourceOf(input.loader);
   const formats =
@@ -397,6 +486,14 @@ function buildCollection(
 
   diagnostics.push(...urlDiagnostics(input.name, source, config));
   const presentation = presentationOf(config, icons);
+  if (icons && typeof config.icon === 'string' && !presentation.icon) {
+    diagnostics.push({
+      level: 'warning',
+      code: 'vesper-config',
+      message: `collections.${input.name}.icon: "${config.icon}" isn't a Lucide icon name, so the collection shows its default icon. Names are as lucide.dev/icons lists them, such as "newspaper".`,
+      collection: input.name,
+    });
+  }
   diagnostics.push(...scheduleDiagnostics(input.name, presentation.schedule, fields));
   // A page that isn't searched, or an entry with no page, has nothing to hide.
   const searchHidden =
@@ -516,10 +613,7 @@ function sourceOf(loader: LoaderInfo): CollectionSource {
   return loader.name ? { loader: 'other', name: loader.name } : { loader: 'other' };
 }
 
-function presentationOf(
-  config: CollectionConfig,
-  icons: Record<string, IconNode>,
-): CollectionPresentation {
+function presentationOf(config: CollectionConfig, icons: IconSet | null): CollectionPresentation {
   const presentation: CollectionPresentation = {};
   if (config.singleton !== undefined) presentation.singleton = config.singleton;
   if (config.tree !== undefined) presentation.tree = config.tree;
@@ -537,18 +631,22 @@ function presentationOf(
   const start = config.headingStart;
   if (typeof start === 'number' && Number.isInteger(start) && start >= 1 && start <= 6)
     presentation.headingStart = start;
-  // Own keys only: a name such as "constructor" mustn't reach Object.prototype.
-  const node =
-    typeof config.icon === 'string' && Object.hasOwn(icons, config.icon)
-      ? icons[config.icon]
-      : undefined;
-  if (config.icon && node) {
-    presentation.icon = {
-      name: config.icon,
-      node: node.map(([tag, attributes]) => [tag, { ...attributes }]),
-    };
-  }
+  const node = typeof config.icon === 'string' && config.icon ? icons?.(config.icon) : undefined;
+  if (config.icon && node) presentation.icon = { name: config.icon, node: copyIcon(node) };
   return presentation;
+}
+
+/** The icon set as a lookup; null when there's none. */
+function iconSetOf(icons: ManifestInput['icons']): IconSet | null {
+  if (icons === undefined) return null;
+  if (typeof icons === 'function') return icons;
+  // Own keys only: a name such as "constructor" mustn't reach Object.prototype.
+  return (name) => (Object.hasOwn(icons, name) ? icons[name] : undefined);
+}
+
+/** A drawing of the manifest's own, so nothing the icon set holds is shared with it. */
+function copyIcon(node: IconNode): IconNode {
+  return node.map(([tag, attributes]) => [tag, { ...attributes }]);
 }
 
 function scheduleOf(schedule: true | ScheduleConfig): SchedulePresentation {

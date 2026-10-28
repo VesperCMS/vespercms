@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { IMAGE_MARKER, VESPER_META_KEY } from '../schema/walk.ts';
 import { buildManifest, type ManifestInput } from './build.ts';
 import { canonicalJson } from './hash.ts';
+import type { IconNode } from './types.ts';
 
 const image = () => z.string().meta({ [VESPER_META_KEY]: IMAGE_MARKER });
 
@@ -322,7 +323,7 @@ describe('buildManifest: collection icons', () => {
     loader: { kind: 'glob', base: './src/content/blog', pattern: '**/*.md', customId: false },
     schema: z.object({ title: z.string() }),
   };
-  const newspaper: NonNullable<ManifestInput['icons']>[string] = [
+  const newspaper: IconNode = [
     ['path', { d: 'M15 18h-5' }],
     ['rect', { width: 8, height: 4, x: 10, y: 6, rx: 1 }],
   ];
@@ -352,6 +353,171 @@ describe('buildManifest: collection icons', () => {
       });
       expect(manifest.collections[0]?.presentation.icon).toBeUndefined();
     }
+  });
+
+  it('looks names up in the icon set it’s handed, and warns about one the set lacks', async () => {
+    const asked: string[] = [];
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [blog, { ...blog, name: 'news' }] as ManifestInput['collections'],
+      config: { collections: { blog: { icon: 'newspaper' }, news: { icon: 'newspapr' } } },
+      icons: (name) => {
+        asked.push(name);
+        return name === 'newspaper' ? newspaper : undefined;
+      },
+    });
+    expect(asked).toEqual(['newspaper', 'newspapr']);
+    expect(manifest.collections.map((c) => c.presentation.icon?.name)).toEqual([
+      'newspaper',
+      undefined,
+    ]);
+    expect(manifest.diagnostics).toEqual([
+      {
+        level: 'warning',
+        code: 'vesper-config',
+        message:
+          'collections.news.icon: "newspapr" isn\'t a Lucide icon name, so the collection shows its default icon. Names are as lucide.dev/icons lists them, such as "newspaper".',
+        collection: 'news',
+      },
+    ]);
+  });
+
+  it('says to install lucide, once, when there’s no icon set', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [blog, { ...blog, name: 'news' }] as ManifestInput['collections'],
+      config: { collections: { blog: { icon: 'newspaper' }, news: { icon: 'rss' } } },
+    });
+    expect(manifest.collections.map((c) => c.presentation.icon)).toEqual([undefined, undefined]);
+    expect(manifest.diagnostics.map((d) => d.message)).toEqual([
+      'Collection icons need the lucide package: run "npm install lucide". Until then each collection shows its default icon.',
+    ]);
+  });
+});
+
+describe('buildManifest: icon fields (fields.icon)', () => {
+  const drawings: Record<string, IconNode> = {
+    leaf: [['path', { d: 'M11 20A7 7 0 0 1 9.8 6.1' }]],
+    layers: [['path', { d: 'm12.83 2.18-8.58 3.91' }]],
+    rocket: [['circle', { cx: 12, cy: 12, r: 3 }]],
+  };
+  const icons = (name: string) => (Object.hasOwn(drawings, name) ? drawings[name] : undefined);
+  const icon = (names: [string, ...string[]]) => z.enum(names).meta({ widget: 'icon' });
+  const collection = (schema: unknown) =>
+    ({
+      name: 'pages',
+      loader: { kind: 'glob', base: './src/content/pages', pattern: '**/*.md', customId: false },
+      schema,
+    }) as ManifestInput['collections'][number];
+
+  it('resolves to the icon widget, and carries only the drawings of the names fields offer', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [
+        collection(
+          z.object({
+            icon: icon(['rocket', 'leaf']).optional(),
+            points: z.array(z.object({ icon: icon(['leaf', 'layers']) })),
+          }),
+        ),
+      ],
+      icons,
+    });
+    expect(manifest.collections[0]?.fields?.[0]).toMatchObject({ kind: 'enum', widget: 'icon' });
+    // In the order fields first offer them, each once.
+    expect(manifest.icons).toEqual({
+      rocket: drawings.rocket,
+      leaf: drawings.leaf,
+      layers: drawings.layers,
+    });
+    expect(manifest.icons?.leaf).not.toBe(drawings.leaf);
+    expect(manifest.diagnostics).toEqual([]);
+  });
+
+  it('finds icon fields in forms, Markdoc tags and MDX components too', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [],
+      forms: [{ name: 'contact', schema: z.object({ topic: icon(['rocket']) }) }],
+      markdoc: {
+        config: {
+          tags: {
+            feature: { attributes: { icon: { type: String, matches: ['layers'] } } },
+          },
+        },
+        options: {},
+      },
+      config: {
+        markdoc: { tags: { feature: { attributes: { icon: { widget: 'icon' } } } } },
+        mdx: { components: { Badge: { props: z.object({ icon: icon(['leaf']) }) } } },
+      },
+      icons,
+    });
+    expect(Object.keys(manifest.icons ?? {})).toEqual(['rocket', 'layers', 'leaf']);
+  });
+
+  it('still offers a name the icon set lacks, by name, and its field warns', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [
+        collection(
+          z.object({
+            points: z.array(z.object({ icon: icon(['leaf', 'leef', 'constructor', '__proto__']) })),
+            badge: icon(['rokcet']),
+          }),
+        ),
+      ],
+      icons,
+    });
+    const points = manifest.collections[0]?.fields?.[0]?.children?.[0]?.children?.[0];
+    expect(points?.constraints?.options?.map((o) => o.value)).toEqual([
+      'leaf',
+      'leef',
+      'constructor',
+      '__proto__',
+    ]);
+    expect(manifest.icons).toEqual({ leaf: drawings.leaf });
+    expect(manifest.diagnostics).toEqual([
+      {
+        level: 'warning',
+        code: 'unknown-icon',
+        message:
+          'points.[].icon offers "leef", "constructor" and "__proto__", which aren\'t Lucide icon names, so the studio lists them by name, without pictures. Names are as lucide.dev/icons lists them, such as "newspaper".',
+        collection: 'pages',
+        path: ['points', '[]', 'icon'],
+      },
+      {
+        level: 'warning',
+        code: 'unknown-icon',
+        message:
+          'badge offers "rokcet", which isn\'t a Lucide icon name, so the studio lists it by name, without a picture. Names are as lucide.dev/icons lists them, such as "newspaper".',
+        collection: 'pages',
+        path: ['badge'],
+      },
+    ]);
+  });
+
+  it('says to install lucide, once, when there’s no icon set', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [collection(z.object({ a: icon(['leaf']), b: icon(['rocket']) }))],
+    });
+    expect(manifest.icons).toBeUndefined();
+    expect(manifest.diagnostics.map((d) => [d.code, d.message])).toEqual([
+      [
+        'icons-unavailable',
+        'Icon fields need the lucide package: run "npm install lucide". Until then the studio lists their icons by name, without pictures.',
+      ],
+    ]);
+  });
+
+  it('has no icons when no field offers one, whatever the icon set holds', async () => {
+    const manifest = await buildManifest({
+      site: { srcDir: 'src' },
+      collections: [collection(z.object({ kind: z.enum(['leaf', 'rocket']) }))],
+      icons,
+    });
+    expect(manifest).not.toHaveProperty('icons');
   });
 });
 

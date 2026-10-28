@@ -43,6 +43,8 @@ export const BUILTIN_WIDGETS: Record<string, WidgetCheck> = {
   datetime: (f) => f.kind === 'date' || isString(f),
   select: (f) => f.kind === 'enum',
   radio: (f) => f.kind === 'enum',
+  // An enum of Lucide names (`fields.icon`), each drawn beside its name.
+  icon: (f) => f.kind === 'enum',
   multiselect: (f) => f.kind === 'array' && childKinds(f)[0] === 'enum',
   tags: (f) => f.kind === 'array' && childKinds(f)[0] === 'string',
   group: (f) => f.kind === 'object',

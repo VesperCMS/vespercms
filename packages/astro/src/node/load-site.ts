@@ -8,6 +8,7 @@ import {
   type CollectionInput,
   type Diagnostic,
   type IconNode,
+  type IconSet,
   patternExtensions,
   type LoaderInfo,
   type ManifestInput,
@@ -188,7 +189,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
       }
     }
 
-    const icons = await loadIcons(server, config, diagnostics);
+    const icons = await loadIconSet(server);
 
     const usesMarkdoc = collections.some(
       (c) => c.loader.kind === 'glob' && patternExtensions(c.loader.pattern).includes('mdoc'),
@@ -222,7 +223,7 @@ export async function loadSite(options: LoadSiteOptions): Promise<LoadedSite> {
           }
         : {}),
       ...(markdoc ? { markdoc } : {}),
-      ...(Object.keys(icons).length > 0 ? { icons } : {}),
+      ...(icons ? { icons } : {}),
       forms,
       diagnostics,
     };
@@ -279,47 +280,29 @@ export async function loadAstroSettings(siteRoot: string): Promise<AstroSettings
 }
 
 /**
- * The drawings of the Lucide icons collections name (DECISIONS.md, "A
- * collection's icon is named in vesper.config.ts"), from the site's own
- * `lucide`, an optional peer: a site that names no icon needn't install it.
- * A name that can't be resolved warns, and its collection keeps its default.
+ * A lookup into the site's own `lucide`, an optional peer (DECISIONS.md, "A
+ * collection's icon is named in vesper.config.ts"): the manifest takes from
+ * it only the drawings of the icons the site names, and warns about names it
+ * lacks. Undefined when `lucide` isn't installed; the manifest then says to
+ * install it wherever an icon was wanted. It's loaded whether or not the site
+ * names an icon, because only the manifest's walk of the schemas finds the
+ * names icon fields offer; it's one file, which Node reads in about 40ms.
  */
-async function loadIcons(
-  server: ViteDevServer,
-  config: VesperConfig | undefined,
-  diagnostics: Diagnostic[],
-): Promise<Record<string, IconNode>> {
-  const wanted = Object.entries(config?.collections ?? {}).flatMap(([collection, settings]) =>
-    typeof settings.icon === 'string' ? [{ collection, name: settings.icon }] : [],
-  );
-  if (wanted.length === 0) return {};
-  let icons: Record<string, unknown>;
+async function loadIconSet(server: ViteDevServer): Promise<IconSet | undefined> {
+  let icons: unknown;
   try {
-    ({ icons } = (await server.ssrLoadModule('lucide')) as { icons: Record<string, unknown> });
+    ({ icons } = (await server.ssrLoadModule('lucide')) as { icons?: unknown });
   } catch {
-    diagnostics.push({
-      level: 'warning',
-      code: 'vesper-config',
-      message:
-        'Collection icons need the lucide package: run "npm install lucide". Until then each collection shows its default icon.',
-    });
-    return {};
+    return undefined;
   }
-  const found: Record<string, IconNode> = {};
-  for (const { collection, name } of wanted) {
-    const node = icons[pascalCase(name)];
-    if (isIconNode(node)) {
-      found[name] = node;
-    } else {
-      diagnostics.push({
-        level: 'warning',
-        code: 'vesper-config',
-        message: `collections.${collection}.icon: "${name}" isn't a Lucide icon name, so the collection shows its default icon. Names are as lucide.dev/icons lists them, such as "newspaper".`,
-        collection,
-      });
-    }
-  }
-  return found;
+  if (typeof icons !== 'object' || icons === null) return undefined;
+  const set = icons as Record<string, unknown>;
+  return (name) => {
+    const key = pascalCase(name);
+    // Own keys only: a name such as "constructor" mustn't reach Object.prototype.
+    const node = Object.hasOwn(set, key) ? set[key] : undefined;
+    return isIconNode(node) ? node : undefined;
+  };
 }
 
 /** "calendar-days" → "CalendarDays", as lucide names its exports. */
