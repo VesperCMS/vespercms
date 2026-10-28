@@ -23,6 +23,8 @@ Then:
 - under **Client secrets**, click **Generate a new client secret** and copy it;
 - click **Install App** and install it on the site's repository only.
 
+The app does nothing until it's installed on the repository. Until then GitHub doesn't show the repository to anyone signing in through it, and `/admin` says "GitHub can't find this site's repository". Install it, then choose **Try again** there.
+
 Editors also need write access to the repository: add them as collaborators. Vesper's tokens reach only repositories where the app is installed, and only what each editor could already change.
 
 ## 2. Configure the relay

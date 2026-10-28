@@ -35,7 +35,7 @@ With `api: null` and `github` set (a built site in GitHub mode), the studio sign
 ## GitHub mode (spec §6.8)
 
 - `github/session.ts`: the sign-in. The studio keeps a state and a PKCE verifier in `sessionStorage`, goes to the relay's `/authorize`, and on the way back posts the code and verifier to `/token`. Only the 8-hour access token is kept, in `sessionStorage`.
-- `github/GitHubGate.tsx`: before the studio. It finishes a sign-in, checks the editor can push, and shows "Sign in with GitHub", "Your GitHub account can't change this site" or "GitHub couldn't be reached".
+- `github/GitHubGate.tsx`: before the studio. It finishes a sign-in, checks the editor can push, and shows "Sign in with GitHub", "Your GitHub account can't change this site", "GitHub can't find this site's repository" (a 404, most often the app not yet installed there) or "GitHub couldn't be reached".
 - `github/api.ts`: `createGitHubApi`, the same core services local mode's dev API runs, over `GitHubStorage`. It validates with the site's schemas built for the browser (`_vesper/schemas.js`), or the field model's checks when those can't load. Files come back as object URLs, and GitHub's errors are put in plain words.
 - `github/cache.ts`: file bytes by git blob SHA in IndexedDB, so a later visit reads only what changed.
 - Signed in, the top bar has the user menu (`@login`, Sign out of GitHub). The editor's button reads Publish, and an expired sign-in keeps the open entry's unsaved changes across the sign-in.

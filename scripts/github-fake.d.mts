@@ -6,6 +6,8 @@ export type GitHubFakeState = {
   push: boolean;
   /** Whether the repository is private; tests flip it to see a public one. */
   private: boolean;
+  /** Off, the repository answers 404, as before the site's GitHub App is installed there. */
+  installed: boolean;
   protected: boolean;
   rateLimited: boolean;
   truncate: boolean;
