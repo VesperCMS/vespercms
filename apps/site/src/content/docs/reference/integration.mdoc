@@ -120,6 +120,7 @@ export default defineConfig({
 | `a11y` | The rules that block a save, and the colours your site draws text on. |
 | `redirects` | Hosts to write native redirect rules for. |
 | `timeZone` | The site's time zone. |
+| `rebuildEvery` | How often, in minutes, the site is rebuilt on a schedule, so the studio can say when a scheduled entry goes live. |
 | `markdoc` | Labels and help text for your Markdoc tags. |
 | `mdx` | MDX components the body editor shows as blocks. |
 | `widgets` | Your own editor controls. |
@@ -144,7 +145,7 @@ Keyed by the collection's name in `src/content.config.ts`. A name that isn't a c
 | `tabs` | None | Editor tabs between Content and Details, by id with their labels, in order: `{ seo: 'SEO' }`. |
 | `headingStart` | `2` | The level the body's top headings should have, from 1 to 6. Set `1` when the body holds the page's h1. |
 | `search` | `true` | `false` leaves the collection's pages out of site search. |
-| `schedule` | None | Reserved for scheduled publishing, which isn't available yet. |
+| `schedule` | `false` | `true` lets editors schedule the collection's entries. An entry is on the site from its `publishAt` date until its `unpublishAt`, fields the collection's schema defines, and an optional `unpublishRedirect` page picker sends visitors elsewhere once it's gone. Each build decides once, so a time takes effect at the first build after it; set `rebuildEvery` so the studio can say when that is. An object renames the fields (`{ publishAt: 'goesLive' }`) or leaves out unpublishing (`{ unpublish: false }`). |
 
 A `url` pattern is built from tokens:
 

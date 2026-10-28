@@ -12,12 +12,7 @@ import { ratios } from 'virtual:vesper/images';
 export { default as Img } from './Img.astro';
 export { default as Search } from './Search.astro';
 export { default as SearchHead } from './SearchHead.astro';
-export type {
-  CroppedImageProps,
-  ImageFieldValue,
-  ImgProps,
-  RatioInput,
-} from 'vespercms/images';
+export type { CroppedImageProps, ImageFieldValue, ImgProps, RatioInput } from 'vespercms/images';
 
 /**
  * One image field's image, cropped like `<Img>` would crop it, as Astro's
