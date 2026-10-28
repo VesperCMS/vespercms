@@ -75,7 +75,7 @@ Markdown (`.md`) files in `src/content/pages/`, matching `**/[^_]*.md`. Fields g
   - `points`: a list of objects with the fields below. Default `[]`.
     - `title`: text. Required.
     - `body`: Markdown on one line (bold, italic, code and links). Required.
-    - `icon`: one of `accessibility`, `blocks`, `bot`, `code-xml` (Code), `crop`, `file-check` (File with a check), `file-diff` (File with changes), `file-text` (Document), `folder-lock` (Locked folder), `globe`, `images`, `keyboard`, `laptop`, `layout-template` (Layout), `list-tree` (Outline), `mail`, `rocket`, `search`, `shield-check` (Shield), `signpost`, `sliders-horizontal` (Settings), `sun-moon` (Sun and moon), `table`, `text-cursor-input` (Text field). Optional.
+    - `icon`: the name of a Lucide icon (lucide.dev/icons), one of `accessibility`, `blocks`, `bot`, `code-xml` (Code), `crop`, `file-check` (File with a check), `file-diff` (File with changes), `file-text` (Document), `folder-lock` (Locked folder), `globe`, `images`, `keyboard`, `laptop`, `layout-template` (Layout), `list-tree` (Outline), `mail`, `rocket`, `search`, `shield-check` (Shield), `signpost`, `sliders-horizontal` (Settings), `sun-moon` (Sun and moon), `table`, `text-cursor-input` (Text field). Optional.
     - `image`: an image (see Images). Optional. A screenshot or picture, shown in the light theme.
     - `imageDark` (Image, dark theme): an image path, relative to the entry’s file. Optional. The same picture in the dark theme. It shares the alt text above.
 - `closing`: an object with the fields below. Optional. The last word, after the sections.
