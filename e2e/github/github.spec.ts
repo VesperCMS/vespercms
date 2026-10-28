@@ -70,6 +70,36 @@ test('signs in through the relay, and every screen on the way passes axe', async
   await expect(page.getByRole('button', { name: 'Sign in with GitHub' })).toBeVisible();
 });
 
+test('says the app may not be installed when GitHub can’t find the repository', async ({
+  page,
+}) => {
+  // GitHub answers a GitHub App's sign-in 404 for a repository the app isn't installed on.
+  const repo = (url: URL) => url.pathname.endsWith('/repos/vesper/site');
+  await page.route(repo, (route) =>
+    route.fulfill({
+      status: 404,
+      json: { message: 'Not Found' },
+      headers: { 'Access-Control-Allow-Origin': '*' },
+    }),
+  );
+  await page.goto('/admin/');
+  await page.getByRole('button', { name: 'Sign in with GitHub' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'GitHub can’t find this site’s repository' }),
+  ).toBeVisible();
+  await expect(page.getByText(/can’t change this site/)).toHaveCount(0);
+  await axe(page);
+  // The owner installs the app, then tries again by keyboard.
+  await page.unroute(repo);
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Sign out of GitHub' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('link', { name: 'Skip to content' })).toBeAttached();
+});
+
 test('a deep link survives a reload while signed in', async ({ page }) => {
   await signIn(page, '#/c/blog');
   await expect(page.getByRole('button', { name: '@editor' })).toBeVisible();

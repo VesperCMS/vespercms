@@ -29,7 +29,7 @@ Before that, nothing was queued. The last item, the pane beside the collections 
 
 Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
-**Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9), and the packages are on npm as `vespercms@next`. One more is open (10, GitHub mode's message when the app isn't installed). Jeremy asked that new gaps come up whenever this work resumes.
+**Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9), and the packages are on npm as `vespercms@next`. The tenth (GitHub mode's message when the app isn't installed) was built 2026-10-28, so none is open. Jeremy asked that new gaps come up whenever this work resumes.
 
 ## Dogfooding thosegeeks.com
 
@@ -55,7 +55,12 @@ The site keeps its own list, `docs/vesper-gaps.md`, for gaps found as it's edite
 - Done 2026-10-28: thosegeeks.com installs `vespercms@next` from npm (no submodule, source condition or token in CI), with `orderBy` on services and client quotes, `<Img decorative>` on its link cards and `fields.icon` for its 60 icons; it builds clean and its studio shows them.
 - `vesper-cloud` renames its imports when it next moves its submodule: it imports `@vesper/core` and `@vesper/admin`, which are now `@vespercms/core` and `@vespercms/admin`. Its `.npmrc` condition is unchanged.
 
-**Open, each a product call for Jeremy:**
+**The tenth (2026-10-28): built the same day, at Jeremy's request, as proposed below** ("GitHub mode tells a missing install apart from missing access"):
+- A 404 for the repository is its own screen, "GitHub can't find this site's repository": the app may not be installed on owner/name, or the account may not see it; the owner installs it under Install App and tries again; if it's installed, ask for write access. Try again reruns the check with the same sign-in, and Sign out of GitHub is beside it.
+- Beyond the proposal: any other failed answer (a 502, a rate limit) is "GitHub couldn't be reached", with Try again, instead of blaming the editor's access too. Only a repository GitHub shows without push permission says "Your GitHub account can't change this site".
+- The relay's README and the docs' Publishing page say the app does nothing until it's installed, and what `/admin` says until then.
+- Tests: the fake GitHub's `installed: false` answers 404 for the repository; a unit test (axe in jsdom, then Try again once it's installed) and the `github` e2e project (axe in Chromium, then Try again by keyboard).
+- Not checked on real GitHub: that Try again reaches the repository after installing without a new sign-in. GitHub evaluates a GitHub App's user token against its installations on each request, so it should; Sign out of GitHub, then signing in, covers it if not. Nor what a public repository without the app shows: GitHub may answer it with the account's own `push` permission, so the studio would open and the first publish would fail.
 
 10. **GitHub mode blames the editor's access when the app isn't installed** (2026-10-28). Setting up GitHub mode on thosegeeks.com, the GitHub App was created but not yet installed on the repository. Signing in on the deployed `/admin` then told the repository's owner "Your GitHub account can't change this site … Ask the site's owner to give your account write access". A GitHub App's sign-in reaches only repositories the app is installed on, so GitHub answered 404 for the repository, and `GitHubGate.tsx` treats any answer without `permissions.push` as no access. Installing the app and signing in again fixed it. The studio could tell the cases apart: a 404 means this sign-in can't see the repository at all, most often because the app isn't installed there ("The site's GitHub App isn't installed on owner/name, or your account can't see it. Its owner installs it from the app's settings on GitHub"); a repository it can see without push permission is the person's access, as the message says now. The relay's README could also say plainly that the app does nothing until it's installed on the repository.
 

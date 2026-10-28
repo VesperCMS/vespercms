@@ -49,6 +49,8 @@ export function createGitHubFake(options) {
     token: options.token ?? 'gho_test-token',
     push: options.push ?? true,
     private: options.private !== false,
+    /** Off, the repository answers 404, as it does to a GitHub App's sign-in before the app is installed there. */
+    installed: true,
     protected: false,
     rateLimited: false,
     truncate: false,
@@ -344,7 +346,7 @@ export function createGitHubFake(options) {
     }
 
     const match = new RegExp(`^/repos/${owner}/${repo}(/.*)?$`).exec(path);
-    if (!match) return json(404, { message: 'Not Found' });
+    if (!match || !state.installed) return json(404, { message: 'Not Found' });
     const rest = match[1] ?? '';
 
     if (rest === '' && request.method === 'GET') {

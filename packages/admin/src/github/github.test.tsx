@@ -136,6 +136,50 @@ describe('GitHub mode in the studio', () => {
     expect(sessionStorage.getItem('vesper.github.session')).toBeNull();
   });
 
+  it('says the app may not be installed when GitHub can’t find the repository, and opens once it is', async () => {
+    fake.state.installed = false;
+    signedIn();
+    render(<GitHubGate settings={settings} options={options} fetcher={fetcher} />);
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'GitHub can’t find this site’s repository',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'You’re signed in to GitHub as @editor. The site’s GitHub App may not be installed on vesper/site, or your account may not be able to see it.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/can’t change this site/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Sign out of GitHub' })).toBeInTheDocument();
+    await expectNoViolations();
+    // The owner installs the app; the same sign-in then reaches the repository.
+    fake.state.installed = true;
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }));
+    expect(
+      await screen.findByRole('button', { name: '@editor' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+  });
+
+  it('doesn’t blame the editor’s access when GitHub fails', async () => {
+    signedIn();
+    const failing: typeof fetch = async (input, init) => {
+      const request = input instanceof Request ? input : new Request(input, init);
+      if (new URL(request.url).pathname === '/repos/vesper/site') {
+        return Response.json({ message: 'Server Error' }, { status: 502 });
+      }
+      return fetcher(request);
+    };
+    render(<GitHubGate settings={settings} options={options} fetcher={failing} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'GitHub couldn’t open vesper/site just now. Try again in a few minutes.',
+    );
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'GitHub couldn’t be reached' }),
+    ).toBeInTheDocument();
+  });
+
   it('says, when scheduling a publish, that a public repository shows it early', async () => {
     // Before harvest-concert goes live, on 31 October 2026. Only Date is faked.
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-26T16:00:00Z') });

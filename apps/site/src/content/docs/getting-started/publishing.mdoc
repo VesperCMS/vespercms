@@ -39,6 +39,8 @@ npx wrangler secret put GITHUB_CLIENT_SECRET
 npx wrangler deploy
 ```
 
+The app does nothing until it's installed on the repository: until then, `/admin` says GitHub can't find the site's repository. Install it, then choose Try again.
+
 Editors need write access to the repository too. Their sign-in never reaches more than they could already change there.
 
 ### Turn it on

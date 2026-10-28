@@ -29,6 +29,8 @@ type State =
   | { kind: 'checking' }
   | { kind: 'signed-out'; message?: string }
   | { kind: 'no-access'; login: string }
+  /** GitHub answered 404: most often the site's GitHub App isn't installed on the repository. */
+  | { kind: 'not-found'; login: string }
   | { kind: 'error'; message: string }
   | {
       kind: 'ready';
@@ -89,9 +91,25 @@ export function GitHubGate({
           ? ((await user.json()) as { login?: string; name?: string | null; avatar_url?: string })
           : {};
         const login = profile.login ?? '';
-        const details = repo.ok
-          ? ((await repo.json()) as { permissions?: { push?: boolean }; private?: boolean })
-          : {};
+        // A GitHub App's sign-in sees only repositories the app is installed on,
+        // so a 404 isn't the editor's access: blaming it sent an owner to ask
+        // themselves for write access (DECISIONS.md, "GitHub mode tells a missing
+        // install apart from missing access").
+        if (repo.status === 404) {
+          set({ kind: 'not-found', login });
+          return;
+        }
+        if (!repo.ok) {
+          set({
+            kind: 'error',
+            message: `GitHub couldn’t open ${settings.owner}/${settings.repo} just now. Try again in a few minutes.`,
+          });
+          return;
+        }
+        const details = (await repo.json()) as {
+          permissions?: { push?: boolean };
+          private?: boolean;
+        };
         const permissions = details.permissions;
         if (!permissions?.push) {
           set({ kind: 'no-access', login });
@@ -121,6 +139,10 @@ export function GitHubGate({
   const signIn = useCallback(() => {
     void startSignIn(settings, window.location.hash);
   }, [settings]);
+  const tryAgain = useCallback(() => {
+    setState({ kind: 'checking' });
+    setAttempt((n) => n + 1);
+  }, []);
   const leave = useCallback(() => {
     signOut();
     setExpired(false);
@@ -210,17 +232,30 @@ export function GitHubGate({
             </div>
           </>
         )}
+        {state.kind === 'not-found' && (
+          <>
+            <p>
+              {state.login ? `You’re signed in to GitHub as @${state.login}. ` : ''}The site’s
+              GitHub App may not be installed on {repo}, or your account may not be able to see it.
+            </p>
+            <p>
+              The site’s owner installs the app from its settings on GitHub, under Install App, then
+              tries again here. If it’s installed already, ask the owner to give your account write
+              access to {repo}.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="primary" onPress={tryAgain}>
+                Try again
+              </Button>
+              <Button onPress={leave}>Sign out of GitHub</Button>
+            </div>
+          </>
+        )}
         {state.kind === 'error' && (
           <>
             <p role="alert">{state.message}</p>
             <div>
-              <Button
-                variant="primary"
-                onPress={() => {
-                  setState({ kind: 'checking' });
-                  setAttempt((n) => n + 1);
-                }}
-              >
+              <Button variant="primary" onPress={tryAgain}>
                 Try again
               </Button>
             </div>
@@ -237,6 +272,8 @@ function titleOf(state: State): string {
       return 'Opening the studio';
     case 'no-access':
       return 'Your GitHub account can’t change this site';
+    case 'not-found':
+      return 'GitHub can’t find this site’s repository';
     case 'error':
       return 'GitHub couldn’t be reached';
     default:
