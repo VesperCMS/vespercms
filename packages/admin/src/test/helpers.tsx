@@ -23,6 +23,8 @@ import type { StudioOptions } from '../types.ts';
  */
 export const playgroundManifest = {
   ...snapshot,
+  // JSON's types read each drawing as an array, not IconNode's [tag, attributes] pairs.
+  icons: snapshot.icons as unknown as Manifest['icons'],
   generator: { name: 'vespercms', version: '0.0.0' },
   hash: 'test',
 } as Manifest;
