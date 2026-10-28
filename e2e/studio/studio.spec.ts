@@ -704,6 +704,46 @@ test('a custom widget edits its field', async ({ page }) => {
   expect(read('src/data/locations.yaml')).toMatch(/days: Holidays/);
 });
 
+test('by keyboard: an icon field lists each icon beside its name; choosing one writes one line', async ({
+  page,
+}) => {
+  const path = 'src/content/events/harvest-concert.md';
+  touches(path);
+  const before = read(path);
+  await page.goto('/admin/#/c/events/e/harvest-concert');
+  const icon = page.getByRole('combobox', { name: 'Icon (optional)' });
+  await expect(icon).toHaveValue('');
+  // The chosen icon's picture sits before its name, inside the field.
+  const chosen = icon.locator('xpath=preceding-sibling::span[@aria-hidden="true"]');
+  await expect(chosen).toHaveCount(0);
+
+  // Typing filters the list. Each icon is beside its name, and only the name is read.
+  await icon.focus();
+  await page.keyboard.type('mu');
+  const options = page.getByRole('listbox').getByRole('option');
+  await expect(options).toHaveText(['music']);
+  await expect(options.first()).toHaveAccessibleName('music');
+  await expect(options.first().locator('span[aria-hidden="true"] svg')).toBeVisible();
+  await expectAccessible(page);
+
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(icon).toHaveValue('music');
+  await expect(icon).toBeFocused();
+  await expect(chosen.locator('svg')).toBeVisible();
+  await expectAccessible(page);
+
+  await page.keyboard.press(keys.save);
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText(/Saved/);
+  // The new key goes at the end of the frontmatter; nothing else changes.
+  expect(read(path)).toBe(
+    before.replace(
+      'publishAt: 2026-10-31T08:00:00-04:00\n',
+      'publishAt: 2026-10-31T08:00:00-04:00\nicon: music\n',
+    ),
+  );
+});
+
 test('"Edit this page" knows which entries a page shows', async ({ page }) => {
   await page.goto('/blog/harbor-at-dawn/');
   const entries = JSON.parse(

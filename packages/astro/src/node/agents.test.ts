@@ -82,6 +82,27 @@ describe('agentGuide', () => {
             },
           }),
           field('rating', { kind: 'number', constraints: { integer: true, min: 1, max: 5 } }),
+          field('icon', {
+            kind: 'enum',
+            required: false,
+            widget: 'icon',
+            constraints: {
+              options: [
+                { value: 'leaf', label: 'leaf' },
+                { value: 'code-xml', label: 'Code' },
+              ],
+            },
+          }),
+          field('badges', {
+            kind: 'array',
+            children: [
+              field('badges.[]', {
+                kind: 'enum',
+                widget: 'icon',
+                constraints: { options: [{ value: 'leaf', label: 'leaf' }] },
+              }),
+            ],
+          }),
         ]),
       ]),
     );
@@ -90,7 +111,47 @@ describe('agentGuide', () => {
     expect(guide).toContain('- `tags`: a list of strings. Default `[]`.');
     expect(guide).toContain('- `author`: the ID of an entry in `people`. Required.');
     expect(guide).toContain('- `level`: one of `a`, `pro` (Professional). Required.');
+    expect(guide).toContain(
+      '- `icon`: the name of a Lucide icon (lucide.dev/icons), one of `leaf`, `code-xml` (Code). Optional.',
+    );
+    expect(guide).toContain(
+      '- `badges`: a list of values, each the name of a Lucide icon (lucide.dev/icons), one of `leaf`. Required.',
+    );
     expect(guide).toContain('- `rating`: a whole number from 1 to 5. Required.');
+  });
+
+  it('says a Markdoc attribute with the icon widget holds a Lucide icon’s name', () => {
+    const docs = {
+      loader: 'glob' as const,
+      base: 'src/content/docs',
+      pattern: '**/*.mdoc',
+      generateId: 'default' as const,
+    };
+    const guide = agentGuide(
+      site([{ ...notes([field('title', {})]), source: { ...docs, formats: ['mdoc'] } }], {
+        markdoc: {
+          options: { allowHTML: false, ignoreIndentation: false },
+          tags: [
+            {
+              name: 'feature',
+              label: 'Feature',
+              selfClosing: true,
+              attributes: [
+                { name: 'icon', types: ['String'], required: true, matches: { values: ['leaf'] } },
+              ],
+              fields: [field('icon', { kind: 'enum', widget: 'icon' })],
+            },
+          ],
+          nodes: [],
+          variables: {},
+          functions: [],
+          partials: [],
+        },
+      }),
+    );
+    expect(guide).toContain(
+      '  - `icon`: the name of a Lucide icon (lucide.dev/icons), one of `leaf`. Required.',
+    );
   });
 
   it('nests an object’s fields under it', () => {

@@ -98,14 +98,55 @@ type SelectOptions =
  * @param options Values (`['news', 'events']`), `{ value: label }`, or `[{ value, label }]`.
  */
 export function select(options: SelectOptions) {
-  const pairs: [string, string][] = Array.isArray(options)
+  const pairs = optionPairs(options);
+  const [first, ...rest] = pairs.map(([value]) => value);
+  if (first === undefined) throw new Error('fields.select() needs at least one option.');
+  return z.enum([first, ...rest]).meta({ widgetOptions: { labels: Object.fromEntries(pairs) } });
+}
+
+/** `[value, label]` for each option, in order, from any of select's three forms. */
+function optionPairs(options: SelectOptions): [string, string][] {
+  return Array.isArray(options)
     ? (options as readonly (string | { value: string; label: string })[]).map((option) =>
         typeof option === 'string' ? [option, option] : [option.value, option.label],
       )
     : Object.entries(options as Record<string, string>);
-  const [first, ...rest] = pairs.map(([value]) => value);
-  if (first === undefined) throw new Error('fields.select() needs at least one option.');
-  return z.enum([first, ...rest]).meta({ widgetOptions: { labels: Object.fromEntries(pairs) } });
+}
+
+/** The names in any of select's three forms, so a site's data is typed by them. */
+type NamesOf<Options> = Options extends readonly (infer Name extends string)[]
+  ? Name
+  : Options extends readonly { value: infer Name extends string }[]
+    ? Name
+    : Extract<keyof Options, string>;
+
+/**
+ * A Lucide icon, chosen from the names offered, as lucide.dev/icons lists
+ * them (`'calendar-days'`). The editor shows a searchable list with each
+ * icon beside its name, and the file stores the name, for the site to draw.
+ * The manifest takes the offered icons' drawings from the site's own
+ * `lucide` (install it), and only those, so the studio never carries all
+ * of Lucide.
+ *
+ * Raw equivalent: `z.enum(['leaf', 'layers']).meta({ widget: 'icon' })`, with
+ * `widgetOptions: { labels: { leaf: 'Growth', layers: 'Layers' } }` when
+ * they're given labels.
+ *
+ * @param names Lucide names (`['leaf', 'layers']`), `{ name: label }`, or `[{ value, label }]`.
+ */
+export function icon<const Options extends SelectOptions>(names: Options) {
+  const pairs = optionPairs(names);
+  const [first, ...rest] = pairs.map(([value]) => value as NamesOf<Options>);
+  if (first === undefined) throw new Error('fields.icon() needs at least one icon name.');
+  // Without labels, each icon is listed by its own name.
+  const labelled = pairs.some(([value, label]) => label !== value);
+  return z
+    .enum([first, ...rest])
+    .meta(
+      labelled
+        ? { widget: 'icon', widgetOptions: { labels: Object.fromEntries(pairs) } }
+        : { widget: 'icon' },
+    );
 }
 
 /**
@@ -228,6 +269,7 @@ export const fields = {
   email,
   datetime,
   select,
+  icon,
   markdown,
   file,
   image,

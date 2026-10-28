@@ -15,8 +15,9 @@ const link = z.object({
 });
 
 // Lucide's names (lucide.dev), chosen from a short list so the page stays one
-// family of pictures. Add a name here to offer it in the studio.
-const icon = fields.select({
+// family of pictures. Add a name here to offer it in the studio, which shows
+// each beside its picture.
+const icon = fields.icon({
   accessibility: 'Accessibility',
   blocks: 'Blocks',
   bot: 'Bot',

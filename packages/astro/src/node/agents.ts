@@ -323,6 +323,12 @@ function kindLines(field: FieldModel, indent: string): string[] {
   });
 }
 
+/**
+ * What an icon field (`fields.icon`) holds: without it, its names read as
+ * any other enum's, and an agent can't tell they're Lucide's, from one set.
+ */
+const ICON = 'the name of a Lucide icon (lucide.dev/icons)';
+
 function describe(field: FieldModel): string {
   if (isImage(field)) {
     const ratios = field.widgetOptions?.ratios;
@@ -368,11 +374,12 @@ function describe(field: FieldModel): string {
         : 'a date, such as `2026-01-31`';
     case 'enum': {
       const options = c.options ?? [];
-      return `one of ${options
+      const one = `one of ${options
         .map((o) =>
           humanEqual(o.label, o.value) ? code(o.value) : `${code(o.value)} (${o.label})`,
         )
         .join(', ')}`;
+      return field.widget === 'icon' ? `${ICON}, ${one}` : one;
     }
     case 'reference':
       return field.reference
@@ -435,7 +442,7 @@ function attributeLine(attribute: MarkdocAttributeManifest, hint: FieldModel | u
   let what: string;
   if (matches && 'values' in matches) {
     const labels = new Map(hint?.constraints?.options?.map((o) => [o.value, o.label]));
-    what = `one of ${matches.values
+    what = `${hint?.widget === 'icon' ? `${ICON}, ` : ''}one of ${matches.values
       .map((v) => {
         const label = typeof v === 'string' ? labels.get(v) : undefined;
         return label && !humanEqual(label, String(v))

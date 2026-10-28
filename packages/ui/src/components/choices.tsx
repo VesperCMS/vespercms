@@ -133,7 +133,11 @@ export type ComboboxProps = ChoiceProps & {
   placeholder?: string;
 };
 
-/** Search plus single selection (references). Filters as the person types. */
+/**
+ * Search plus single selection (references, icons). Filters as the person
+ * types. An option's `prefix` sits before its words in the list, and the
+ * chosen option's before its words in the field.
+ */
 export function Combobox({
   label,
   description,
@@ -145,6 +149,7 @@ export function Combobox({
   className,
   ...props
 }: ComboboxProps) {
+  const chosen = options.find((option) => option.value === value)?.prefix;
   return (
     <RACComboBox
       {...props}
@@ -154,11 +159,25 @@ export function Combobox({
         onChange(key === null ? null : String(key));
       }}
       menuTrigger="focus"
-      className={cx('flex flex-col gap-2', className)}
+      // `isRequired` is said with aria-required only: the browser's own check
+      // would mark the field invalid on blur, before the schema has a say.
+      validationBehavior="aria"
+      className={cx('group/combobox flex flex-col gap-2', className)}
     >
       <FieldLabel label={label} />
       <div className="relative">
-        <Input placeholder={placeholder} className={cx(fieldControl, 'pr-10')} />
+        {chosen && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 group-data-[disabled]/combobox:opacity-60"
+          >
+            {chosen}
+          </span>
+        )}
+        <Input
+          placeholder={placeholder}
+          className={cx(fieldControl, 'pr-10', chosen ? 'pl-10' : undefined)}
+        />
         <RACButton
           aria-label="Show options"
           className={cx(
@@ -174,6 +193,11 @@ export function Combobox({
         <ListBox className="max-h-72 overflow-auto outline-none">
           {(option: Option) => (
             <ListBoxItem id={option.value} textValue={option.label} className={listBoxItem}>
+              {option.prefix && (
+                <span aria-hidden="true" className="flex shrink-0">
+                  {option.prefix}
+                </span>
+              )}
               {option.label}
               <Tick />
             </ListBoxItem>

@@ -57,6 +57,14 @@ export type Manifest = {
   markdoc?: MarkdocManifest;
   /** Components declared for MDX bodies in vesper.config.ts (spec §6.5.2). */
   mdx?: MdxManifest;
+  /**
+   * The drawings of the icons the site's icon fields offer (`fields.icon`),
+   * by name, in the order fields first offer them: only those, never the
+   * whole icon set, so the studio carries none. A name Lucide doesn't have
+   * has no drawing, and the studio lists it by name alone. Absent when no
+   * field offers an icon.
+   */
+  icons?: Record<string, IconNode>;
   diagnostics: Diagnostic[];
 };
 

@@ -267,6 +267,17 @@ describe('edge cases never crash and are explained', () => {
     expect(field(notes, 'summary').widget).toBe('text');
     expect(field(notes, 'hours').widget).toBe('store-hours');
     expect(field(notes, 'related')).toMatchObject({ widget: 'references' });
+    // The site's own lucide draws the name it has; the other is offered by name.
+    expect(field(notes, 'icon')).toMatchObject({ kind: 'enum', widget: 'icon' });
+    expect(Object.keys(manifest.icons ?? {})).toEqual(['leaf']);
+    expect(manifest.icons?.leaf?.map(([tag]) => tag)).toContain('path');
+    expect(manifest.diagnostics.find((d) => d.code === 'unknown-icon')).toMatchObject({
+      collection: 'notes',
+      path: ['icon'],
+      message: expect.stringContaining(
+        `icon offers "leef", which isn't a Lucide icon name`,
+      ) as string,
+    });
     expect(collection(manifest, 'people')).toMatchObject({
       editable: false,
       readOnlyReason: 'unsupported-format',
@@ -282,6 +293,7 @@ describe('edge cases never crash and are explained', () => {
       'custom-loader',
       'schema-not-object',
       'unknown-collection',
+      'unknown-icon',
       'unknown-widget',
       'vesper-config',
     ]);

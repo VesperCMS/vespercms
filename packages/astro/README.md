@@ -85,6 +85,7 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 | `fields.email()` | `z.email().meta({ widget: 'email', autocomplete: 'email' })` | `"a@b.com"` |
 | `fields.datetime()` | `z.coerce.date().meta({ widget: 'datetime' })` | ISO 8601 |
 | `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
+| `fields.icon(names)` | `z.enum([...]).meta({ widget: 'icon' })` | `"calendar-days"` |
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | Markdown string |
 | `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | `"/files/brochure.pdf"` |
 | `fields.hideFromSearch()` | `z.boolean().default(false).meta({ label: 'Hide from site search', description, placement: 'details', search: 'hide' })` | `true` / `false` |
@@ -94,6 +95,7 @@ A test checks that each helper equals its raw equivalent, so this table can't dr
 - `fields.color({ contrast: 'text' })` (or `'large-text'`, `'graphic'`) adds `widgetOptions: { contrast }`: the studio then checks the colour against the site's `a11y.backgrounds`, at 4.5:1 for text and 3:1 otherwise.
 - `fields.geo({ defaultCenter: { lat, lng }, zoom })` adds `widgetOptions: { defaultCenter, zoom }`: where the map starts when the field is empty.
 - `fields.markdown({ inline: true })` adds `widgetOptions: { inline: true }`: a single paragraph with bold, italic, code and links, and no lists.
+- `fields.icon(['leaf', 'calendar-days'])` offers [Lucide](https://lucide.dev/icons) icons by name, in kebab case. The studio shows a searchable list with each icon beside its name, and the file stores the name for the site to draw. Like `select()`, it also takes `{ name: label }` or `[{ value, label }]`, which adds `widgetOptions: { labels }`. When the manifest is built, the site's own `lucide` (an optional peer, as for collection icons) draws the offered names, and only those go into the studio. A name Lucide doesn't have is still offered, by name alone, and the build warns.
 
 `fields.file()` uploads go to `public/files/` (or beside the file they replace) and store the public path, `/files/brochure.pdf`. A file chosen from under `src/` is stored relative to the entry instead, such as `./brochure.pdf`.
 

@@ -185,6 +185,21 @@ const events = defineCollection({
   schema: z.object({
     title: z.string(),
     summary: z.string(),
+    // A Lucide icon by name: the studio lists each beside its picture.
+    icon: fields
+      .icon([
+        'calendar',
+        'graduation-cap',
+        'heart-handshake',
+        'mic',
+        'music',
+        'palette',
+        'presentation',
+        'tent',
+        'trophy',
+        'utensils',
+      ])
+      .optional(),
     startsAt: fields.datetime(),
     endsAt: fields.datetime().optional(),
     location: reference('locations').optional(),
