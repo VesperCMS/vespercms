@@ -159,6 +159,9 @@ export function Combobox({
         onChange(key === null ? null : String(key));
       }}
       menuTrigger="focus"
+      // `isRequired` is said with aria-required only: the browser's own check
+      // would mark the field invalid on blur, before the schema has a say.
+      validationBehavior="aria"
       className={cx('group/combobox flex flex-col gap-2', className)}
     >
       <FieldLabel label={label} />
