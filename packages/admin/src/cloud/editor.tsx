@@ -1,4 +1,10 @@
-import { decodeUtf8, fromBase64, type DeployStatus, type Draft, type Review } from '@vespercms/core';
+import {
+  decodeUtf8,
+  fromBase64,
+  type DeployStatus,
+  type Draft,
+  type Review,
+} from '@vespercms/core';
 import { Button, Dialog, Link, TextArea } from '@vespercms/ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useStudio } from '../app/context.tsx';

@@ -150,7 +150,8 @@ describe('the fake cloud', () => {
 
   /** A client signed in as `id`, through the fake app. */
   async function clientFor(cloud, id) {
-    const { CloudClient, authorizeUrl, createDpopKey, createPkce } = await import('@vespercms/core');
+    const { CloudClient, authorizeUrl, createDpopKey, createPkce } =
+      await import('@vespercms/core');
     cloud.state.signedIn = id;
     const { verifier, challenge } = await createPkce();
     const redirectUri = `${ORIGIN}/admin/`;
