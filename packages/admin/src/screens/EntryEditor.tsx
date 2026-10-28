@@ -60,7 +60,7 @@ import { copiedValues } from '../editor/copy.ts';
 import { EditorContext, useEditor, type EditorState } from '../editor/context.tsx';
 import { Field } from '../editor/Field.tsx';
 import { focusWhenShown, REVEAL_EVENT } from '../editor/reveal.ts';
-import { issueTarget } from '../editor/target.ts';
+import { issuePlace, issueTarget } from '../editor/target.ts';
 import {
   fieldId,
   getIn,
@@ -379,12 +379,12 @@ function EntryForm({
       const target = issueTarget(collection.fields ?? [], note.target.path);
       return {
         key: pathKey(target.path) || 'entry',
-        label: target.label,
+        label: issuePlace(collection.fields ?? [], note.target.path, values),
         focusId: target.focusId,
         top: String(note.target.path[0] ?? ''),
       };
     },
-    [collection.fields],
+    [collection.fields, values],
   );
   // Grouped under each field in the order the form shows them: title, main fields, body, Details.
   const noteGroups = useMemo<NoteGroup[]>(() => {
@@ -1567,6 +1567,28 @@ function TitleField({ field }: { field: FieldModel }) {
   const id = fieldId(path);
   const errors = editor.issues.get(pathKey(path)) ?? [];
   const value = getIn(editor.values, path);
+  const text = typeof value === 'string' ? value : '';
+  // A title wraps rather than being cut off mid-word with no sign there's
+  // more: a one-line box at title size showed "…and who it'" of a 59-character
+  // title in a 718px column. The box grows with its text and with the pane.
+  const area = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const element = area.current;
+    if (!element) return;
+    const fit = () => {
+      element.style.height = 'auto';
+      element.style.height = `${String(element.scrollHeight)}px`;
+    };
+    fit();
+    // The width it wraps at, never its own height, which fitting changes.
+    const frame = element.parentElement;
+    if (!frame || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(fit);
+    observer.observe(frame);
+    return () => {
+      observer.disconnect();
+    };
+  }, [text]);
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-small font-semibold text-content-muted">
@@ -1578,22 +1600,26 @@ function TitleField({ field }: { field: FieldModel }) {
           </>
         )}
       </label>
-      <input
+      <textarea
+        ref={area}
         id={id}
-        type="text"
-        value={typeof value === 'string' ? value : ''}
+        rows={1}
+        value={text}
+        onKeyDown={(event) => {
+          // Still one line of text: Enter adds no line break.
+          if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.preventDefault();
+        }}
         onChange={(event) => {
-          editor.setValue(
-            path,
-            event.target.value === '' && !field.required ? undefined : event.target.value,
-          );
+          // A pasted line break becomes a space, as a one-line box would have it.
+          const next = event.target.value.replace(/[^\S\r\n]*[\r\n]+[^\S\r\n]*/g, ' ');
+          editor.setValue(path, next === '' && !field.required ? undefined : next);
         }}
         aria-invalid={errors.length > 0 || undefined}
         aria-required={field.required || undefined}
         aria-describedby={errors.length > 0 ? `${id}-error` : undefined}
         disabled={editor.disabled || field.readOnly === true}
         placeholder={field.placeholder ?? 'Untitled'}
-        className="w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-title text-content outline-none placeholder:text-content-muted focus-visible:border-border-strong focus-visible:px-2 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus) aria-[invalid=true]:border-danger aria-[invalid=true]:px-2"
+        className="block w-full resize-none overflow-hidden rounded-md border border-transparent bg-transparent px-0 py-1 text-title text-content outline-none placeholder:text-content-muted focus-visible:border-border-strong focus-visible:px-2 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-6 focus-visible:ring-(color:--glow-focus) aria-[invalid=true]:border-danger aria-[invalid=true]:px-2"
       />
       {errors.length > 0 && (
         <p id={`${id}-error`} className="text-small text-danger">
