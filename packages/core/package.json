@@ -1,8 +1,14 @@
 {
   "name": "@vespercms/core",
-  "version": "0.0.0",
+  "version": "0.1.0-next.0",
   "description": "Vesper's framework-free core: schema introspection, manifest, serializers and the storage adapter interface.",
   "license": "MIT",
+  "homepage": "https://vespercms.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vespercms/vespercms.git",
+    "directory": "packages/core"
+  },
   "type": "module",
   "sideEffects": false,
   "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/. ./testing is the storage contract suite other adapters run; ./cloud-testing is the cloud API's contract suite, which the fake and the real cloud run. ./urls is URL patterns, page trees and redirects without the parsers, for a site's own pages. ./images is aspect ratios, focal points and crops, shared by the studio, <Img> and the build.",

@@ -14,7 +14,7 @@
   "dependencies": {
     "@astrojs/markdoc": "^2.1.0",
     "@astrojs/mdx": "^8.1.0",
-    "vespercms": "0.0.0",
+    "vespercms": "0.1.0-next.0",
     "astro": "^7.4.0",
     "lucide": "^1.59.0"
   },

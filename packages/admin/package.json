@@ -1,8 +1,14 @@
 {
   "name": "@vespercms/admin",
-  "version": "0.0.0",
+  "version": "0.1.0-next.0",
   "description": "The Vesper studio: the editor UI served at /admin, one bundle for every storage mode.",
   "license": "MIT",
+  "homepage": "https://vespercms.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vespercms/vespercms.git",
+    "directory": "packages/admin"
+  },
   "type": "module",
   "sideEffects": [
     "*.css"
@@ -36,7 +42,7 @@
     "@tiptap/pm": "^3.32.0",
     "@tiptap/react": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
-    "@vespercms/core": "0.0.0",
+    "@vespercms/core": "0.1.0-next.0",
     "dompurify": "^3.4.17",
     "maplibre-gl": "^6.14.0",
     "pdfjs-dist": "^6.4.299",

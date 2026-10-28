@@ -1,0 +1,41 @@
+name: Release
+
+# Publishes Vesper's packages (vespercms, @vespercms/core, @vespercms/admin)
+# to npm, by hand from main: whatever version npm doesn't have yet, under the
+# `next` tag while .changeset/pre.json is there. Versions come from
+# `npm run changeset -- version`, committed first (.changeset/README.md).
+on:
+  workflow_dispatch:
+
+# Two releases at once would race for the same versions.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # npm's trusted publishing: npm checks this workflow's OIDC token instead of an npm token.
+  id-token: write
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # Builds dist/ for every package and imports each published entry point
+      # without the source condition, as a site installing from npm would.
+      - run: npm run check:dist
+      - run: npm exec -- changeset publish
+        env:
+          # Only for a package npm doesn't have yet, which can't be trusted by
+          # OIDC; empty once every package has its trusted publisher.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
