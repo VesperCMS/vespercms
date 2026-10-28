@@ -79,6 +79,12 @@ export type CollectionConfig = {
   headingStart?: number;
   /** A Lucide icon name, in kebab case as lucide.dev lists them ("newspaper"). */
   icon?: string;
+  /**
+   * For flat collections: the top-level number field that puts entries in
+   * order, lowest first. The studio lists them that way and writes the
+   * numbers when an editor drags an entry to a new place.
+   */
+  orderBy?: string;
 };
 
 export type ManifestInput = {
@@ -398,6 +404,9 @@ function buildCollection(
   diagnostics.push(...urlDiagnostics(input.name, source, config));
   const presentation = presentationOf(config, icons);
   diagnostics.push(...scheduleDiagnostics(input.name, presentation.schedule, fields));
+  const order = orderOf(input.name, config, presentation, fields);
+  diagnostics.push(...order.diagnostics);
+  if (order.field) presentation.orderBy = order.field;
   // A page that isn't searched, or an entry with no page, has nothing to hide.
   const searchHidden =
     presentation.url !== undefined && presentation.search !== false
@@ -588,6 +597,43 @@ function scheduleDiagnostics(
       collection,
     },
   ];
+}
+
+/**
+ * The field `orderBy` names, if the studio can order by it: a top-level
+ * number. Anything else would leave the list in one order and the site in
+ * another, so it's dropped with a warning that says why.
+ */
+function orderOf(
+  collection: string,
+  config: CollectionConfig,
+  presentation: CollectionPresentation,
+  fields: FieldModel[] | null,
+): { field?: string; diagnostics: Diagnostic[] } {
+  const key = config.orderBy;
+  if (typeof key !== 'string' || key === '') return { diagnostics: [] };
+  const warn = (message: string) => ({
+    diagnostics: [{ level: 'warning' as const, code: 'order-field', message, collection }],
+  });
+  if (presentation.tree) {
+    return warn(
+      `orderBy is for flat collections. A tree's pages are put in order by the _order.yaml in each folder, so "${key}" is ignored.`,
+    );
+  }
+  if (presentation.singleton) return warn(`A singleton has one entry, so orderBy is ignored.`);
+  if (fields === null) return { diagnostics: [] };
+  const field = fields.find((f) => f.path.length === 1 && f.path[0] === key);
+  if (!field) {
+    return warn(
+      `orderBy names "${key}", which isn't a top-level field in this collection's schema, so entries aren't put in order. Add \`${key}: z.number().optional(),\` to its schema.`,
+    );
+  }
+  if (field.kind !== 'number') {
+    return warn(
+      `orderBy names "${key}", which isn't a number field, so entries aren't put in order. Make it \`z.number()\`.`,
+    );
+  }
+  return { field: key, diagnostics: [] };
 }
 
 const toPosix = (path: string) => path.replaceAll('\\', '/').replace(/^\.\//, '');

@@ -127,6 +127,7 @@ const KNOWN_COLLECTION = new Set([
   'maxDepth',
   'headingStart',
   'icon',
+  'orderBy',
 ]);
 
 /**
@@ -181,12 +182,19 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
             });
           }
         }
-        const { url, maxDepth, headingStart, icon } = value as {
+        const { url, maxDepth, headingStart, icon, orderBy } = value as {
           url?: unknown;
           maxDepth?: unknown;
           headingStart?: unknown;
           icon?: unknown;
+          orderBy?: unknown;
         };
+        if (orderBy !== undefined && !(typeof orderBy === 'string' && orderBy !== '')) {
+          problems.push({
+            level: 'error',
+            message: `collections.${name}.orderBy must be the name of a number field, such as "order".`,
+          });
+        }
         if (icon !== undefined && !(typeof icon === 'string' && ICON_NAME.test(icon))) {
           problems.push({
             level: 'error',

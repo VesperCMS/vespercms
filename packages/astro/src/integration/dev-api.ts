@@ -8,6 +8,7 @@ import {
   extensionOf,
   normalizePath,
   type MoveRequest,
+  type ReorderEntryRequest,
   type ReorderRequest,
   type SaveRedirectsRequest,
   type SaveRequest,
@@ -132,6 +133,9 @@ export function createDevApi(options: DevApiOptions): Handler {
       send(res, statusOf(result), result);
     } else if (route === 'reorder' && method === 'POST') {
       const result = await pages.reorder((await readJson(req)) as ReorderRequest);
+      send(res, statusOf(result), result);
+    } else if (route === 'reorder-entry' && method === 'POST') {
+      const result = await service.reorderEntry((await readJson(req)) as ReorderEntryRequest);
       send(res, statusOf(result), result);
     } else if (route === 'section' && method === 'POST') {
       const request = (await readJson(req)) as { collection?: string; path?: string };

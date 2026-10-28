@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CollectionManifest, Manifest } from '../manifest/types.ts';
 import { MemoryStorage } from '../storage/memory.ts';
-import { decodeData, encodeValue } from './protocol.ts';
+import { decodeData, encodeValue, type FieldIssue } from './protocol.ts';
 import { ContentService, expandNewEntryPath, slugify } from './service.ts';
 
 const blog: CollectionManifest = {
@@ -563,5 +563,145 @@ describe('helpers', () => {
     const now = new Date(2026, 9, 7);
     expect(expandNewEntryPath(':year/:month/:slug', 'hi', now)).toBe('2026/10/hi');
     expect(expandNewEntryPath(undefined, 'hi', now)).toBe('hi');
+  });
+});
+
+describe('ContentService: putting a flat collection in order', () => {
+  const services: CollectionManifest = {
+    name: 'services',
+    label: 'Services',
+    editable: true,
+    source: {
+      loader: 'glob',
+      base: 'src/content/services',
+      pattern: '*.yaml',
+      generateId: 'default',
+      formats: ['yaml'],
+    },
+    entryKind: 'data',
+    fields: [
+      { path: ['title'], kind: 'string', required: true, label: 'Title' },
+      { path: ['order'], kind: 'number', required: false, label: 'Order' },
+    ],
+    presentation: { orderBy: 'order' },
+  };
+  const docs: CollectionManifest = {
+    ...blog,
+    name: 'docs',
+    label: 'Docs',
+    source: { ...blog.source, base: 'src/content/docs' } as CollectionManifest['source'],
+    presentation: { orderBy: 'order' },
+  };
+  const people: CollectionManifest = { ...authors, presentation: { orderBy: 'order' } };
+
+  async function ordered(validate?: (data: Record<string, unknown>) => FieldIssue[]) {
+    const storage = await MemoryStorage.create({
+      'src/content/services/design.yaml': 'title: Design\norder: 0 # always first\n',
+      'src/content/services/wordpress.yaml': 'title: WordPress\norder: 10\n',
+      'src/content/services/cannabis.yaml': '# The 420 page\ntitle: 420-friendly\norder: 420\n',
+      'src/content/docs/start.md': '---\ntitle: Start\norder: 1\n---\nHello.\n',
+      'src/content/docs/callouts.md': '---\ntitle: Callouts\norder: 2\n---\n',
+      'src/content/docs/conditional.md': '---\ntitle: Conditional\norder: 3\n---\n',
+      'src/content/docs/hours.md': '---\ntitle: Hours\norder: 3\n---\nOpen.\n',
+      'src/data/authors.json':
+        '[\n  { "id": "ana", "name": "Ana", "order": 1 },\n  { "id": "ben", "name": "Ben" }\n]\n',
+    });
+    const service = new ContentService(
+      storage,
+      { ...manifest, collections: [services, docs, people] },
+      { validate: (_collection, data) => Promise.resolve(validate?.(data) ?? []) },
+    );
+    return { storage, service };
+  }
+  const text = async (storage: MemoryStorage, path: string) =>
+    new TextDecoder().decode((await storage.read(path))?.bytes);
+
+  it('writes only the moved entry’s number, spliced into its file', async () => {
+    const { storage, service } = await ordered();
+    const result = await service.reorderEntry({
+      collection: 'services',
+      id: 'cannabis',
+      after: 'design',
+    });
+    expect(result).toEqual({ ok: true, position: { index: 2, of: 3 }, changed: ['cannabis'] });
+    expect(await text(storage, 'src/content/services/cannabis.yaml')).toBe(
+      '# The 420 page\ntitle: 420-friendly\norder: 5\n',
+    );
+    expect(storage.commits).toHaveLength(1);
+    expect(storage.commits[0]?.changes.map((c) => ('path' in c ? c.path : c.to))).toEqual([
+      'src/content/services/cannabis.yaml',
+    ]);
+    expect(storage.commits[0]?.message.summary).toBe(
+      'Move “420-friendly” to a new place in Services',
+    );
+  });
+
+  it('moves the entries below up one, in one change set, when there’s no room', async () => {
+    const { storage, service } = await ordered();
+    expect(
+      await service.reorderEntry({ collection: 'docs', id: 'hours', after: 'callouts' }),
+    ).toEqual({ ok: true, position: { index: 3, of: 4 }, changed: ['hours', 'conditional'] });
+    expect(storage.commits).toHaveLength(1);
+    expect(await text(storage, 'src/content/docs/hours.md')).toBe(
+      '---\ntitle: Hours\norder: 3\n---\nOpen.\n',
+    );
+    expect(await text(storage, 'src/content/docs/conditional.md')).toBe(
+      '---\ntitle: Conditional\norder: 4\n---\n',
+    );
+    const list = await service.listEntries('docs');
+    expect(list.map((entry) => entry.id).sort()).toHaveLength(4);
+  });
+
+  it('adds the number to an entry that had none, in a shared file', async () => {
+    const { storage, service } = await ordered();
+    const result = await service.reorderEntry({ collection: 'authors', id: 'ana', after: 'ben' });
+    expect(result.ok).toBe(true);
+    const saved = JSON.parse(await text(storage, 'src/data/authors.json')) as {
+      id: string;
+      order?: number;
+    }[];
+    expect(saved.map((p) => [p.id, p.order])).toEqual([
+      ['ana', 1],
+      ['ben', 0],
+    ]);
+    expect(storage.commits).toHaveLength(1);
+  });
+
+  it('writes nothing when the entry is already there', async () => {
+    const { storage, service } = await ordered();
+    expect(
+      await service.reorderEntry({ collection: 'services', id: 'design', after: null }),
+    ).toEqual({ ok: true, position: { index: 1, of: 3 }, changed: [] });
+    expect(storage.commits).toHaveLength(0);
+  });
+
+  it('refuses a number the schema won’t take, and an out-of-date list', async () => {
+    const { storage, service } = await ordered((data) =>
+      typeof data.order === 'number' && data.order > 100
+        ? [{ path: ['order'], message: 'Too big.' }]
+        : [],
+    );
+    expect(
+      await service.reorderEntry({ collection: 'services', id: 'design', after: 'cannabis' }),
+    ).toEqual({
+      ok: false,
+      reason: 'error',
+      message: '“Design” can’t take 430 as its order, so the order wasn’t changed: Too big.',
+    });
+    expect(
+      await service.reorderEntry({ collection: 'services', id: 'design', after: 'gone' }),
+    ).toMatchObject({ ok: false, reason: 'conflict' });
+    const unordered = new ContentService(storage, {
+      ...manifest,
+      collections: [{ ...services, label: 'Services', presentation: {} }],
+    });
+    expect(
+      await unordered.reorderEntry({ collection: 'services', id: 'design', after: null }),
+    ).toEqual({
+      ok: false,
+      reason: 'error',
+      message: 'Services isn’t put in order by a field.',
+    });
+    expect(storage.commits).toHaveLength(0);
   });
 });

@@ -126,6 +126,12 @@ export type CollectionPresentation = {
   icon?: { name: string; node: IconNode };
   /** Editor tabs vesper.config.ts declares beside Content and Details, in order ("SEO"). */
   tabs?: { id: string; label: string }[];
+  /**
+   * The top-level number field that puts a flat collection in order, lowest
+   * first (vesper.config.ts's `orderBy`). The studio sorts by it and writes
+   * it when an entry is dragged to a new place.
+   */
+  orderBy?: string;
 };
 
 export type CollectionManifest = {

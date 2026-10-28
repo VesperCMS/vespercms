@@ -56,7 +56,7 @@ export type EntrySummary = {
   path: string;
   title: string;
   status: EntryStatus;
-  /** Encoded values of the collection's list fields (`presentation.listFields`). */
+  /** Encoded values of the collection's list fields (`presentation.listFields`) and its `orderBy` field. */
   fields: Record<string, unknown>;
   /** Last change time of the file, ISO 8601, when the back end knows it. */
   updatedAt?: string;
@@ -134,6 +134,23 @@ export type SaveRequest = {
    */
   copyOf?: { id: string };
 };
+
+/**
+ * Puts an entry of a flat collection with an `orderBy` field right after
+ * another (first when `after` is null), by writing the collection's order
+ * numbers (DECISIONS.md, "Flat collections are put in order by a number").
+ */
+export type ReorderEntryRequest = { collection: string; id: string; after: string | null };
+
+export type ReorderEntryResult =
+  | {
+      ok: true;
+      /** The entry's place now, from 1. */
+      position: { index: number; of: number };
+      /** Every entry whose file was rewritten, so an editor open on one can read it again. */
+      changed: string[];
+    }
+  | { ok: false; reason: 'conflict' | 'error'; message: string };
 
 export type FieldIssue = { path: (string | number)[]; message: string };
 

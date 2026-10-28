@@ -214,6 +214,8 @@ export {
   type EntryDocument,
   type SaveRequest,
   type SaveResponse,
+  type ReorderEntryRequest,
+  type ReorderEntryResult,
   type FieldIssue,
   type MediaItem,
   type UploadResponse,
@@ -232,6 +234,7 @@ export {
   type BodyValidator,
 } from './studio/service.ts';
 export { issuesFromZod } from './studio/issues.ts';
+export { compareOrder, orderValue, placeAfter, type OrderedEntry } from './studio/order.ts';
 export { formatYamlSnippet, parseYamlSnippet, type YamlSnippetParse } from './files/yaml/text.ts';
 export {
   withOffset,

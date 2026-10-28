@@ -93,6 +93,9 @@ export function fakeApi(data: FakeData = {}): {
       Promise.resolve({ ok: false, reason: 'error', message: 'Not set up in this test.' }),
     ),
     reorderPage: vi.fn(() => Promise.resolve({ ok: true, position: { index: 1, of: 1 } })),
+    reorderEntry: vi.fn(() =>
+      Promise.resolve({ ok: true, position: { index: 1, of: 1 }, changed: [] }),
+    ),
     createSection: vi.fn(() =>
       Promise.resolve({ ok: true, id: 'x', path: 'x', version: 'v1', reformatted: false }),
     ),

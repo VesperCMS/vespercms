@@ -306,3 +306,188 @@ describe('on a narrow screen', () => {
     expect(await screen.findByText(/^2 entries/)).toBeInTheDocument();
   });
 });
+
+describe('a collection in a set order', () => {
+  beforeEach(() => {
+    media(true);
+    windowWidth(1440);
+  });
+
+  const doc = (id: string, title: string, order?: number): EntrySummary => ({
+    id,
+    path: `src/content/docs/${id}.mdoc`,
+    title,
+    status: 'editable',
+    fields: order === undefined ? {} : { order },
+  });
+  // The playground's docs: two share 3, and one has no number.
+  const docs = [
+    doc('guides/opening-hours', 'Opening hours', 3),
+    doc('getting-started', 'Getting started', 1),
+    doc('guides/conditional-content', 'Conditional content', 3),
+    doc('unnumbered', 'A page with no number'),
+    doc('guides/writing-callouts', 'Writing callouts', 2),
+  ];
+
+  function openDocs() {
+    const api = fakeApi({ summary: [{ collection: 'docs', count: 5 }], entries: { docs } });
+    renderStudio('#/c/docs', { api });
+    return { api, user: userEvent.setup() };
+  }
+  const titles = (main: HTMLElement) =>
+    within(main)
+      .getAllByRole('row')
+      .map((row) => row.textContent.split(/\d|·/)[0]?.trim());
+
+  it('lists entries by their number, those without one last, and sorts by Order first', async () => {
+    const { user } = openDocs();
+    const main = await screen.findByRole('main', { name: 'Docs' });
+    await within(main).findByRole('row', { name: /Getting started/ });
+    expect(titles(main)).toEqual([
+      'Getting started',
+      'Writing callouts',
+      'Conditional content',
+      'Opening hours',
+      'A page with no number',
+    ]);
+    await user.click(within(main).getByRole('button', { name: 'Sort: Order' }));
+    const options = await screen.findAllByRole('menuitemradio');
+    expect(options.map((o) => o.textContent)).toEqual(['Order', 'Title', 'Last edited']);
+  });
+
+  it('moves a row with Alt+arrow keys and its menu, and says where it went', async () => {
+    const { api, user } = openDocs();
+    vi.mocked(api.reorderEntry).mockResolvedValue({
+      ok: true,
+      position: { index: 3, of: 5 },
+      changed: ['guides/opening-hours', 'guides/conditional-content'],
+    });
+    const main = await screen.findByRole('main', { name: 'Docs' });
+    const row = await within(main).findByRole('row', { name: /^Opening hours/ });
+    act(() => {
+      row.focus();
+    });
+    await user.keyboard('{Alt>}{ArrowUp}{/Alt}');
+    expect(api.reorderEntry).toHaveBeenLastCalledWith({
+      collection: 'docs',
+      id: 'guides/opening-hours',
+      after: 'guides/writing-callouts',
+    });
+    await waitFor(() => {
+      expect(within(main).getByRole('status')).toHaveTextContent(
+        'Opening hours moved up, position 3 of 5.',
+      );
+    });
+    // The list reads the collection again once the numbers are written.
+    await waitFor(() => {
+      expect(api.listEntries.mock.calls.filter(([name]) => name === 'docs').length).toBe(2);
+    });
+
+    await user.click(
+      within(main).getByRole('button', { name: 'More actions for Getting started' }),
+    );
+    expect(await screen.findByRole('menuitem', { name: 'Move up' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await user.click(screen.getByRole('menuitem', { name: 'Move down' }));
+    expect(api.reorderEntry).toHaveBeenLastCalledWith({
+      collection: 'docs',
+      id: 'getting-started',
+      after: 'guides/writing-callouts',
+    });
+    await expectNoViolations();
+  });
+
+  it('says why a move was refused', async () => {
+    const { api, user } = openDocs();
+    vi.mocked(api.reorderEntry).mockResolvedValue({
+      ok: false,
+      reason: 'error',
+      message: '“Writing callouts” can’t be changed in the studio, so the order wasn’t changed.',
+    });
+    const main = await screen.findByRole('main', { name: 'Docs' });
+    const row = await within(main).findByRole('row', { name: /^Writing callouts/ });
+    act(() => {
+      row.focus();
+    });
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    expect(await within(main).findByRole('alert')).toHaveTextContent(
+      '“Writing callouts” can’t be changed in the studio, so the order wasn’t changed.',
+    );
+  });
+
+  it('moves nothing while the list is searched or sorted another way', async () => {
+    const { api, user } = openDocs();
+    const main = await screen.findByRole('main', { name: 'Docs' });
+    await within(main).findByRole('row', { name: /^Opening hours/ });
+    await user.type(within(main).getByRole('searchbox', { name: 'Search' }), 'o');
+    expect(within(main).queryByRole('button', { name: /^More actions/ })).toBeNull();
+    const row = within(main).getByRole('row', { name: /^Opening hours/ });
+    act(() => {
+      row.focus();
+    });
+    await user.keyboard('{Alt>}{ArrowUp}{/Alt}');
+    expect(api.reorderEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe('an open entry its list rewrites', () => {
+  beforeEach(() => {
+    media(true);
+    windowWidth(1440);
+  });
+
+  it('is read again when a move writes its number, so its next save starts from the file', async () => {
+    const api = fakeApi({
+      summary: [{ collection: 'docs', count: 2 }],
+      entries: {
+        docs: [
+          {
+            id: 'a',
+            path: 'src/content/docs/a.mdoc',
+            title: 'A',
+            status: 'editable',
+            fields: { order: 1 },
+          },
+          {
+            id: 'b',
+            path: 'src/content/docs/b.mdoc',
+            title: 'B',
+            status: 'editable',
+            fields: { order: 2 },
+          },
+        ],
+      },
+      documents: {
+        'docs/a': {
+          collection: 'docs',
+          id: 'a',
+          path: 'src/content/docs/a.mdoc',
+          version: 'v1',
+          format: 'mdoc',
+          status: 'editable',
+          data: { title: 'A', summary: 'First.', order: 1 },
+          body: '\nText.\n',
+        },
+      },
+    });
+    vi.mocked(api.reorderEntry).mockResolvedValue({
+      ok: true,
+      position: { index: 2, of: 2 },
+      changed: ['a'],
+    });
+    renderStudio('#/c/docs/e/a', { api });
+    const user = userEvent.setup();
+    const list = await screen.findByRole('treegrid', { name: 'Docs' });
+    await screen.findByRole('heading', { level: 1, name: 'A' });
+    const row = within(list).getByRole('row', { name: /^A/ });
+    act(() => {
+      row.focus();
+    });
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    await waitFor(() => {
+      expect(api.readEntry.mock.calls.filter(([, id]) => id === 'a')).toHaveLength(2);
+    });
+  });
+});

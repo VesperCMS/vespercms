@@ -251,6 +251,7 @@ collections: {
 - `label` is the collection's name in the studio. Without one, it's the collection's key in sentence case.
 - `singleton: true` is for a collection with one entry, such as site settings. Home lists it on its own, and it opens straight into its editor.
 - `listFields` names the fields the entry list shows beside each title.
+- `orderBy: 'order'` puts the entries in a set order by a number field, such as services shown in the order you choose. The list is sorted by it, and editors drag an entry to a new place, move it with Alt+↑ and Alt+↓, or use Move up and Move down in its “…” menu. Each move writes the number into the entry's file, so sort by the same field on your pages.
 - `icon` names a [Lucide](https://lucide.dev/icons) icon. Install the `lucide` package to use one.
 
 Every option is on [vesper() and vesper.config.ts](/docs/reference/integration/).

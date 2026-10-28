@@ -239,6 +239,9 @@ export function labelFor(collection: CollectionManifest, key: string): string {
 }
 
 export function defaultSort(collection: CollectionManifest): SortDescriptor {
+  // A collection in a set order is listed in that order.
+  const { orderBy } = collection.presentation;
+  if (orderBy) return { column: `field:${orderBy}`, direction: 'ascending' };
   const dateKey = (collection.presentation.listFields ?? []).find((key) =>
     collection.fields?.some((f) => f.path[0] === key && f.path.length === 1 && f.kind === 'date'),
   );
@@ -263,6 +266,9 @@ export function compareBy(sort: SortDescriptor) {
     const x = sortValue(a, column);
     const y = sortValue(b, column);
     if (x === y) return a.title.localeCompare(b.title);
+    // Entries without the value come last either way, as an ordered collection's do.
+    if (x === '') return 1;
+    if (y === '') return -1;
     return (x < y ? -1 : 1) * direction;
   };
 }

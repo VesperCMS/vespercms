@@ -83,7 +83,8 @@ export default defineConfig({
     },
     authors: { label: 'People', icon: 'users' },
     pages: { label: 'Pages', url: '/:path', tree: true },
-    docs: { label: 'Docs', url: '/docs/:id', icon: 'book-open' },
+    // In a set order, by a number field: the list drags to reorder (two share 3, on purpose).
+    docs: { label: 'Docs', url: '/docs/:id', icon: 'book-open', orderBy: 'order' },
     settings: { label: 'Site settings', singleton: true, icon: 'settings' },
     locations: { label: 'Locations', icon: 'map-pin' },
     events: {

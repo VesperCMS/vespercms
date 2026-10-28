@@ -164,6 +164,7 @@ export function createBrowserApi(options: BrowserApiOptions): StudioApi {
         return moveOptions?.dryRun ? pages.planMove(request) : pages.move(request);
       }),
     reorderPage: (request) => call(async () => (await services()).pages.reorder(request)),
+    reorderEntry: (request) => call(async () => (await services()).content.reorderEntry(request)),
     createSection: (collection, path) =>
       call(async () => (await services()).pages.createSection(collection, path)),
     readRedirects: () => call(async () => (await services()).pages.redirects()),

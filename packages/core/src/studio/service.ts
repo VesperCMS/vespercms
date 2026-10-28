@@ -32,10 +32,13 @@ import {
   type EntryStatus,
   type EntrySummary,
   type FieldIssue,
+  type ReorderEntryRequest,
+  type ReorderEntryResult,
   type SaveRequest,
   type SaveResponse,
   type ScheduledChange,
 } from './protocol.ts';
+import { orderValue, placeAfter } from './order.ts';
 import { scheduledEvents } from '../schedule/events.ts';
 import { publishWindow } from '../schedule/window.ts';
 
@@ -301,6 +304,85 @@ export class ContentService {
       { id, path: entry.path, version: '', reformatted: false },
       collection.name,
     );
+  }
+
+  /**
+   * Moves an entry of a flat collection to a new place by writing its
+   * `orderBy` numbers: usually only its own, sometimes a few below it
+   * (`placeAfter`). One change set, each file spliced as a save would be and
+   * checked against the schema first.
+   */
+  async reorderEntry(request: ReorderEntryRequest): Promise<ReorderEntryResult> {
+    const collection = this.collections.get(request.collection);
+    if (!collection) return refused(`There's no collection called "${request.collection}".`);
+    if (!collection.editable) return refused(readOnlyMessage(collection));
+    const key = collection.presentation.orderBy;
+    if (!key) return refused(`${collection.label} isn’t put in order by a field.`);
+
+    const entries = await this.locateAll(collection);
+    const titled = entries.map((entry) => ({
+      entry,
+      title: titleOf(collection, entry.data, entry.id),
+    }));
+    const plan = placeAfter(
+      titled.map(({ entry, title }) => ({
+        id: entry.id,
+        title,
+        value: orderValue(isPlainObject(entry.data) ? entry.data[key] : undefined),
+      })),
+      request.id,
+      request.after,
+    );
+    if (!plan) return { ok: false, reason: 'conflict', message: ORDER_CHANGED };
+    const position = { index: plan.index + 1, of: plan.order.length };
+    if (plan.changes.length === 0) return { ok: true, position, changed: [] };
+
+    // Several entries can share a file (a `file()` collection): each edit builds on the last.
+    const files = new Map<string, { entry: Located; bytes: Uint8Array }>();
+    for (const change of plan.changes) {
+      const found = titled.find(({ entry }) => entry.id === change.id);
+      if (!found) return { ok: false, reason: 'conflict', message: ORDER_CHANGED };
+      const { entry, title } = found;
+      if (entry.status !== 'editable' || !isPlainObject(entry.data)) {
+        return refused(
+          `“${title}” can’t be changed in the studio, so the order wasn’t changed. A developer needs to fix it.`,
+        );
+      }
+      const data = { ...entry.data, [key]: change.value };
+      const issues = this.validate ? await this.validate(collection.name, data) : [];
+      if (issues.length > 0) {
+        return refused(
+          `“${title}” can’t take ${String(change.value)} as its ${key}, so the order wasn’t changed: ${issues.map((i) => i.message).join(' ')}`,
+        );
+      }
+      const bytes = files.get(entry.path)?.bytes ?? entry.file.bytes;
+      const { source } = collection;
+      const result =
+        source.loader === 'file'
+          ? writeCollectionEntry(bytes, dataFormat(source), entry.id, data)
+          : entry.format === 'json' || entry.format === 'yaml'
+            ? writeDataFile(bytes, entry.format, data)
+            : writeEntryFile(bytes, { data });
+      files.set(entry.path, { entry, bytes: result.bytes });
+    }
+
+    const moved = titled.find(({ entry }) => entry.id === request.id);
+    const response = await this.commit(
+      [...files.values()].map(({ entry, bytes }) => ({
+        op: 'put' as const,
+        path: entry.path,
+        bytes,
+        expectedVersion: entry.file.version,
+      })),
+      `Move “${moved?.title ?? request.id}” to a new place in ${collection.label}`,
+      { id: request.id, path: moved?.entry.path ?? '', version: '', reformatted: false },
+      collection.name,
+    );
+    if (response.ok) return { ok: true, position, changed: plan.changes.map((c) => c.id) };
+    if (response.reason === 'invalid') return refused(ORDER_CHANGED);
+    return response.reason === 'conflict'
+      ? { ok: false, reason: 'conflict', message: ORDER_CHANGED }
+      : response;
   }
 
   // --- Saves -----------------------------------------------------------
@@ -663,7 +745,9 @@ export class ContentService {
   private summarize(collection: CollectionManifest, entry: Located): EntrySummary {
     const data = isPlainObject(entry.data) ? entry.data : {};
     const fields: Record<string, unknown> = {};
-    for (const key of collection.presentation.listFields ?? []) {
+    // The order field too, which the list sorts by even when it doesn't show it.
+    const { listFields = [], orderBy } = collection.presentation;
+    for (const key of orderBy ? [...listFields, orderBy] : listFields) {
       if (data[key] !== undefined) fields[key] = encodeValue(data[key]);
     }
     const { publishAt, unpublishAt } = publishWindow(collection.presentation.schedule, data);
@@ -717,8 +801,14 @@ export class ContentService {
 const CHANGED =
   'This entry changed since you opened it. Copy your edits somewhere safe, then reload to see the new version.';
 const GONE = 'This entry was deleted or renamed since you opened it.';
+const ORDER_CHANGED =
+  'The list changed since it was loaded, so the order wasn’t changed. Try again in the list as it is now.';
 
 function failure(message: string): SaveResponse {
+  return { ok: false, reason: 'error', message };
+}
+
+function refused(message: string): ReorderEntryResult {
   return { ok: false, reason: 'error', message };
 }
 

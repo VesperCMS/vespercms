@@ -140,6 +140,7 @@ Keyed by the collection's name in `src/content.config.ts`. A name that isn't a c
 | `maxDepth` | No limit | For a tree: how many levels deep a page may be, 1 or more. |
 | `singleton` | `false` | The collection holds one entry, and the studio opens it directly. |
 | `listFields` | None | Top-level fields shown as columns in the entry list. The first date field among them sorts the list, newest first. |
+| `orderBy` | None | For a collection that isn't a tree: a top-level number field that puts its entries in order, lowest first, then by title, with entries that have no number last. The list sorts that way, and editors drag an entry to a new place, which writes the number: usually only that entry's, halfway between its new neighbours'. Sort your pages by the same field so the site agrees. |
 | `newEntryPath` | `:slug` | Where new entries are saved, inside the collection's folder, with `:slug`, `:year`, `:month` and `:day`. Trees place new pages under their parent instead. |
 | `placement` | Each field's own `.meta({ placement })` | Per top-level field, the editor tab it's on: `'main'` for Content, `'details'` for Details, or a tab from `tabs`. |
 | `tabs` | None | Editor tabs between Content and Details, by id with their labels, in order: `{ seo: 'SEO' }`. |

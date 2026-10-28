@@ -110,6 +110,58 @@ describe('buildManifest', () => {
     });
   });
 
+  it('orders a flat collection by a top-level number field, and explains anything else', async () => {
+    const services = (orderBy: string, extra: { tree?: boolean } = {}) =>
+      buildManifest({
+        site: input.site,
+        collections: [
+          {
+            name: 'services',
+            loader: {
+              kind: 'glob',
+              base: './src/content/services',
+              pattern: '[^_]*.yaml',
+              customId: false,
+            },
+            schema: z.object({
+              title: z.string(),
+              order: z.number().optional(),
+              group: z.string(),
+            }),
+          },
+        ],
+        config: { collections: { services: { orderBy, ...extra } } },
+      });
+    const ordered = await services('order');
+    expect(ordered.collections[0]?.presentation.orderBy).toBe('order');
+    expect(ordered.diagnostics).toEqual([]);
+
+    const cases: [string, { tree?: boolean }, string][] = [
+      [
+        'position',
+        {},
+        "orderBy names \"position\", which isn't a top-level field in this collection's schema, so entries aren't put in order. Add `position: z.number().optional(),` to its schema.",
+      ],
+      [
+        'group',
+        {},
+        'orderBy names "group", which isn\'t a number field, so entries aren\'t put in order. Make it `z.number()`.',
+      ],
+      [
+        'order',
+        { tree: true },
+        'orderBy is for flat collections. A tree\'s pages are put in order by the _order.yaml in each folder, so "order" is ignored.',
+      ],
+    ];
+    for (const [orderBy, extra, message] of cases) {
+      const manifest = await services(orderBy, extra);
+      expect(manifest.collections[0]?.presentation.orderBy).toBeUndefined();
+      expect(manifest.diagnostics).toEqual([
+        { level: 'warning', code: 'order-field', collection: 'services', message },
+      ]);
+    }
+  });
+
   it('includes forms with plain-data options only', async () => {
     const manifest = await buildManifest(input);
     expect(manifest.forms).toEqual([

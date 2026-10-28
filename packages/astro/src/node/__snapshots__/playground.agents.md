@@ -121,7 +121,7 @@ Markdown (`.md`) or MDX (`.mdx`) files in `src/content/pages/`, matching `**/[^_
 
 #### Docs (`docs`)
 
-Markdoc (`.mdoc`) files in `src/content/docs/`, matching `**/[^_]*.mdoc`. Fields go in the frontmatter; the rest of the file is the body. URL: `/docs/:id`.
+Markdoc (`.mdoc`) files in `src/content/docs/`, matching `**/[^_]*.mdoc`. Fields go in the frontmatter; the rest of the file is the body. URL: `/docs/:id`. In order by `order`, lowest first, then by title. To place an entry, give it a number between its neighbours’; the studio does the same when an entry is dragged.
 
 - `title`: text. Required.
 - `summary`: text. Required.

@@ -9,6 +9,8 @@ import type {
   ScheduledChange,
   PageTree,
   RedirectsDocument,
+  ReorderEntryRequest,
+  ReorderEntryResult,
   ReorderRequest,
   ReorderResult,
   SaveRedirectsRequest,
@@ -58,6 +60,8 @@ export interface StudioApi {
   /** Moves a page and everything under it; `dryRun` only describes what would happen. */
   movePage(request: MoveRequest, options?: { dryRun?: boolean }): Promise<MoveResult>;
   reorderPage(request: ReorderRequest): Promise<ReorderResult>;
+  /** Puts an entry of a collection with `orderBy` in a new place, by writing its order numbers. */
+  reorderEntry(request: ReorderEntryRequest): Promise<ReorderEntryResult>;
   /** Creates the missing section page of a folder in the tree. */
   createSection(collection: string, path: string): Promise<SaveResponse>;
   readRedirects(): Promise<RedirectsDocument>;
@@ -161,6 +165,8 @@ export function createLocalApi(base: string, fetcher: typeof fetch = fetch): Stu
         body: JSON.stringify(request),
       }),
     reorderPage: (request) => call('/reorder', { method: 'POST', body: JSON.stringify(request) }),
+    reorderEntry: (request) =>
+      call('/reorder-entry', { method: 'POST', body: JSON.stringify(request) }),
     createSection: (collection, path) =>
       call('/section', { method: 'POST', body: JSON.stringify({ collection, path }) }),
     readRedirects: () => call('/redirects'),

@@ -253,6 +253,11 @@ function collectionLines(collection: CollectionManifest): string[] {
     about.push('URL: computed by a function in `vesper.config.ts`.');
   }
   if (presentation.search === false) about.push('Left out of site search.');
+  if (presentation.orderBy) {
+    about.push(
+      `In order by ${code(presentation.orderBy)}, lowest first, then by title. To place an entry, give it a number between its neighbours’; the studio does the same when an entry is dragged.`,
+    );
+  }
 
   lines.push(about.join(' '), '');
   if (collection.fields === null) {

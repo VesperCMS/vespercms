@@ -52,8 +52,8 @@ import { useStudio } from '../app/context.tsx';
 import { formatCount, formatRelative } from '../app/format.ts';
 import { useLoad } from '../app/load.ts';
 import { usePane } from '../app/pane-context.ts';
-import { entriesChanged } from '../app/entries-changed.ts';
-import { hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
+import { entriesChanged, onEntriesRewritten } from '../app/entries-changed.ts';
+import { hasUnsavedChanges, hrefFor, navigate, setLeaveGuard } from '../app/router.ts';
 import { Screen, useMeasure } from '../app/Screen.tsx';
 import { arrangeFields } from '../editor/arrange.ts';
 import { copiedValues } from '../editor/copy.ts';
@@ -116,6 +116,15 @@ export function EntryEditor({
   const [load, reload] = useLoad<EntryDocument | null>(
     () => (id === null ? Promise.resolve(null) : api.readEntry(collection.name, id)),
     id ?? '',
+  );
+  // A move in the list beside it can write this entry's order number. Read
+  // it again, or the next save would find a version it didn't start from.
+  useEffect(
+    () =>
+      onEntriesRewritten(collection.name, (ids) => {
+        if (id !== null && ids.includes(id) && !hasUnsavedChanges()) reload();
+      }),
+    [collection.name, id, reload],
   );
 
   if (load.state === 'loading') {

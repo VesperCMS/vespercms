@@ -96,6 +96,11 @@ export function setLeaveGuard(hasUnsavedChanges: () => boolean): () => void {
   };
 }
 
+/** Whether the open screen has unsaved changes. */
+export function hasUnsavedChanges(): boolean {
+  return leaveGuard?.() ?? false;
+}
+
 export type RouterState = {
   route: Route;
   /** A navigation held back because the open screen has unsaved changes. */
