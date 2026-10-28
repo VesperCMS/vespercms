@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import {
   cronFor,
+  DEPLOY_TARGETS,
   deployWorkflow,
   DUE_SCRIPT,
   REBUILD_INTERVALS,
@@ -32,6 +33,7 @@ const base: WorkflowOptions = {
 type Step = { name?: string; uses?: string; run?: string; env?: Record<string, string> };
 type Workflow = {
   on: Record<string, unknown>;
+  concurrency?: { group: string; 'cancel-in-progress': boolean };
   env?: Record<string, string>;
   jobs: Record<string, { needs?: string; if?: string; steps: Step[] }>;
 };
@@ -78,6 +80,14 @@ describe('deployWorkflow', () => {
     expect(
       deployWorkflow({ ...base, target: 'hook', command: 'vesper deploy init --target hook' }),
     ).toMatchSnapshot('hook, every hour');
+    expect(
+      deployWorkflow({
+        ...base,
+        target: 'workers',
+        command: 'vesper deploy init --target workers --rebuild-every 30',
+        rebuildEvery: 30,
+      }),
+    ).toMatchSnapshot('workers, every 30 minutes, in a monorepo');
   });
 
   it('builds on push, on the cloud’s dispatch, by hand and on the schedule', () => {
@@ -99,6 +109,16 @@ describe('deployWorkflow', () => {
     const hook = read({ ...base, target: 'hook' });
     expect(Object.keys(hook.on)).toEqual(['schedule', 'repository_dispatch', 'workflow_dispatch']);
     expect(Object.keys(hook.jobs)).toEqual(['due', 'rebuild']);
+    expect(hook.concurrency).toBeUndefined();
+
+    // Workers deploys as the uploads do: on push, one run at a time.
+    const workers = read({ ...base, target: 'workers' });
+    expect(workers.on).toEqual(sftp.on);
+    expect(workers.env).toEqual(sftp.env);
+    expect(workers.concurrency).toEqual({ group: 'vesper-deploy', 'cancel-in-progress': false });
+    expect(Object.keys(workers.jobs)).toEqual(['due', 'deploy']);
+    expect(workers.jobs.deploy?.needs).toBe('due');
+    expect(workers.jobs.deploy?.if).toBe(sftp.jobs.deploy?.if);
 
     const unscheduled = read({ ...base, rebuildEvery: undefined });
     expect(Object.keys(unscheduled.on)).toEqual([
@@ -146,8 +166,35 @@ describe('deployWorkflow', () => {
     );
   });
 
+  it('deploys with the site’s own wrangler, from the site’s folder', () => {
+    const wrangler = (packageManager: WorkflowOptions['packageManager']) => {
+      const workers = read({ ...base, target: 'workers', packageManager });
+      const steps = workers.jobs.deploy?.steps ?? [];
+      expect(steps.map((s) => s.name ?? s.uses)).toEqual([
+        'actions/checkout@v7',
+        'actions/setup-node@v7',
+        ...(packageManager === 'npm' ? [] : ['Turn on Corepack']),
+        'Install',
+        'Build',
+        'Deploy with Wrangler',
+      ]);
+      const deploy = step(workers, 'deploy', 'Deploy with Wrangler');
+      expect(deploy).toMatchObject({ 'working-directory': 'apps/site' });
+      expect(deploy.env).toEqual({
+        CLOUDFLARE_API_TOKEN: '${{ secrets.CLOUDFLARE_API_TOKEN }}',
+        CLOUDFLARE_ACCOUNT_ID: '${{ secrets.CLOUDFLARE_ACCOUNT_ID }}',
+      });
+      return (deploy.run ?? '').trimEnd().split('\n').at(-1);
+    };
+    expect(wrangler('npm')).toBe('npx wrangler deploy');
+    expect(wrangler('pnpm')).toBe('pnpm exec wrangler deploy');
+    expect(wrangler('yarn')).toBe('yarn wrangler deploy');
+    expect(wrangler('yarn-classic')).toBe('yarn wrangler deploy');
+    expect(deployWorkflow({ ...base, target: 'workers' })).not.toContain('lftp');
+  });
+
   it('reads only the secrets it lists', () => {
-    for (const target of ['sftp', 'ftp', 'hook'] as const) {
+    for (const target of DEPLOY_TARGETS) {
       const text = deployWorkflow({ ...base, target });
       const used = [...text.matchAll(/\$\{\{ secrets\.(\w+) \}\}/g)].map((m) => m[1]);
       expect(new Set(used)).toEqual(new Set(secretsFor(target).map((s) => s.name)));
@@ -320,7 +367,7 @@ describe.skipIf(process.platform === 'win32')('the upload and hook steps', () =>
   mkdirSync(bin);
   mkdirSync(home);
   mkdirSync(join(site, 'dist'), { recursive: true });
-  for (const tool of ['lftp', 'curl']) {
+  for (const tool of ['lftp', 'curl', 'npx']) {
     writeFileSync(join(bin, tool), `#!/bin/sh\nprintf '%s\\n' "${tool} $*" >> "${calls}"\n`);
     chmodSync(join(bin, tool), 0o755);
   }
@@ -430,5 +477,20 @@ describe.skipIf(process.platform === 'win32')('the upload and hook steps', () =>
     const missing = run(hook.run ?? '', { BUILD_HOOK: '' });
     expect(missing.status).toBe(1);
     expect(missing.stdout).toContain('::error::Add the repository secret VESPER_BUILD_HOOK');
+  });
+
+  it('deploys with wrangler once the token is set', () => {
+    const deploy = step(read({ ...base, target: 'workers' }), 'deploy', 'Deploy with Wrangler');
+    expect(spawnSync('bash', ['-n', '-c', deploy.run ?? '']).status).toBe(0);
+    const result = run(deploy.run ?? '', {
+      CLOUDFLARE_API_TOKEN: 'token',
+      CLOUDFLARE_ACCOUNT_ID: '',
+    });
+    expect(result.status).toBe(0);
+    expect(result.called).toBe('npx wrangler deploy\n');
+    const missing = run(deploy.run ?? '', { CLOUDFLARE_API_TOKEN: '' });
+    expect(missing.status).toBe(1);
+    expect(missing.stdout).toContain('::error::Add the repository secret CLOUDFLARE_API_TOKEN');
+    expect(missing.called).toBe('');
   });
 });

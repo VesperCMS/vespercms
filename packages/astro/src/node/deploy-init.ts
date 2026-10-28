@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
   type DeployTarget,
@@ -116,7 +116,9 @@ export async function planDeploy(
             : 'It asks the host to build the site through its build hook.',
         ]
       : [
-          `It builds the site on every push to ${branch} and uploads ${fromRepo(join(siteRoot, outDir))}/ by ${options.target.toUpperCase()}.`,
+          options.target === 'workers'
+            ? `It builds the site on every push to ${branch} and deploys it to Cloudflare Workers with wrangler.`
+            : `It builds the site on every push to ${branch} and uploads ${fromRepo(join(siteRoot, outDir))}/ by ${options.target.toUpperCase()}.`,
           ...(every
             ? [
                 `${every} it reads ${siteUrl ?? ''}_vesper/schedule.json and rebuilds when a scheduled change is due.`,
@@ -130,12 +132,15 @@ export async function planDeploy(
     '',
     'Add these repository secrets (Settings > Secrets and variables > Actions):',
     ...secrets.map((secret) => `  ${secret.name.padEnd(width)}  ${secret.what}`),
-    ...(options.target === 'hook'
-      ? []
-      : [
+    ...(options.target === 'sftp' || options.target === 'ftp'
+      ? [
           '',
           'Files in that folder that the build doesn’t have are deleted, so it should hold only this site.',
-        ]),
+        ]
+      : []),
+    ...(options.target === 'workers'
+      ? ['', ...workersNotes(siteRoot, repoRoot, dirname(lock.path), outDir, lock.manager)]
+      : []),
     ...(rebuildEvery === undefined
       ? []
       : [
@@ -152,6 +157,73 @@ export async function planDeploy(
   ].join('\n');
 
   return { file: join(repoRoot, ...WORKFLOW_PATH.split('/')), contents, next };
+}
+
+/**
+ * What a Workers deploy needs that the workflow can't hold: a Wrangler config
+ * whose assets are Astro's output, wrangler itself, and the host named for
+ * redirects, since a build on GitHub sets none of Cloudflare's variables.
+ */
+function workersNotes(
+  siteRoot: string,
+  repoRoot: string,
+  installDir: string,
+  outDir: string,
+  manager: PackageManager,
+): string[] {
+  const config = wranglerConfig(siteRoot, repoRoot);
+  const assets = (from: string) => {
+    const path = toPosix(relative(from, join(siteRoot, outDir)));
+    return path.startsWith('..') ? path : `./${path}`;
+  };
+  const add: Record<PackageManager, string> = {
+    npm: 'npm install --save-dev wrangler',
+    pnpm: 'pnpm add --save-dev wrangler',
+    yarn: 'yarn add --dev wrangler',
+    'yarn-classic': 'yarn add --dev wrangler',
+  };
+  return [
+    config
+      ? `wrangler deploy reads ${toPosix(relative(repoRoot, config))}, whose assets.directory should be ${assets(dirname(config))}, where Astro builds.`
+      : `There’s no Wrangler config yet. Add a wrangler.jsonc beside astro.config, with assets.directory set to ${assets(siteRoot)}, where Astro builds. Vesper’s hosting docs show one.`,
+    ...(dependsOnWrangler(siteRoot, installDir)
+      ? []
+      : [
+          `wrangler isn’t among the site’s dependencies. Add it in the site’s folder, so each deploy runs the version in the lockfile: ${add[manager]}`,
+        ]),
+    "Vesper can’t tell the host from a build on GitHub, so for real 301 redirects add `redirects: { native: ['cloudflare'] }` to vesper.config.ts.",
+    'If Cloudflare also builds this site from the repository (Workers Builds), use --target hook instead, or every push deploys twice.',
+  ];
+}
+
+/** The config `wrangler deploy` reads from the site's folder: each name in wrangler's order, searched upwards. */
+function wranglerConfig(siteRoot: string, repoRoot: string): string | undefined {
+  for (const name of ['wrangler.json', 'wrangler.jsonc', 'wrangler.toml']) {
+    const dir = findUp(siteRoot, (d) => existsSync(join(d, name)), repoRoot);
+    if (dir) return join(dir, name);
+  }
+  return undefined;
+}
+
+/** Whether a package.json from the site's folder up to the lockfile's lists wrangler. */
+function dependsOnWrangler(siteRoot: string, installDir: string): boolean {
+  return (
+    findUp(
+      siteRoot,
+      (dir) => {
+        try {
+          const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
+            dependencies?: Record<string, unknown>;
+            devDependencies?: Record<string, unknown>;
+          };
+          return Boolean(pkg.dependencies?.wrangler ?? pkg.devDependencies?.wrangler);
+        } catch {
+          return false;
+        }
+      },
+      installDir,
+    ) !== undefined
+  );
 }
 
 /** The live site's address, ending in `/`: `--url`, or astro.config's `site` and `base`. */

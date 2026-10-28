@@ -7,7 +7,7 @@ summary: The built site and the studio are plain static files, so they work on a
 
 ## Any host
 
-The built site and the studio work on Netlify, Cloudflare Pages, Vercel, Amazon S3 (with or without CloudFront), GitHub Pages, and a shared host you upload to by FTP or SFTP.
+The built site and the studio work on Netlify, Cloudflare Pages, Cloudflare Workers, Vercel, Amazon S3 (with or without CloudFront), GitHub Pages, and a shared host you upload to by FTP or SFTP.
 
 No feature depends on a host's rewrites, headers, functions or image service. Where a host has something better, such as its own redirect rules, Vesper uses it as an extra, and the plain version still works everywhere else.
 
@@ -42,6 +42,7 @@ Real 301 redirects need the host's own rules. Vesper writes them for these hosts
 |---|---|---|
 | Netlify | The `NETLIFY` build variable | `_redirects` in `dist/`, with Vesper's rules first |
 | Cloudflare Pages | The `CF_PAGES` build variable | `_redirects` in `dist/` |
+| Cloudflare Workers static assets | The `WORKERS_CI` build variable, in Workers Builds | `_redirects` in `dist/` |
 | Vercel | The `VERCEL` build variable | Nothing at build: the studio keeps the `redirects` in your site's `vercel.json` up to date |
 | Apache, LiteSpeed | `native: ['apache']` | Rules in `dist/.htaccess`, between `# BEGIN vesper` and `# END vesper` |
 | nginx | `native: ['nginx']` | `dist/_vesper/nginx-redirects.conf`, for your server's admin to include |
@@ -59,9 +60,43 @@ export default defineConfig({
 
 An address a host rule covers gets no HTML page. Vercel reads `vercel.json` before it builds, so the file can't be written at build. Instead, the studio updates it whenever it writes redirects, if the site has a `vercel.json` or `native` lists `vercel`.
 
+## Cloudflare Workers
+
+A Cloudflare Worker can serve `dist/` as static assets, with no code of its own. The site needs only a `wrangler.jsonc` beside `astro.config`:
+
+```jsonc
+// wrangler.jsonc
+{
+  "name": "my-site",
+  "compatibility_date": "2026-10-28",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  }
+}
+```
+
+- `directory` is Astro's output folder: `./dist`, unless you changed `outDir`.
+- `not_found_handling: "404-page"` answers an address with no page with your site's `404.html`, and a 404 status.
+- `html_handling` decides the address each page answers at, and the other one redirects to it. `auto-trailing-slash`, the default, serves `about/index.html` at `/about/` and `about.html` at `/about`. With `trailingSlash: 'never'` and the default `build.format`, use `drop-trailing-slash`, and with `trailingSlash: 'always'` and `build.format: 'file'`, `force-trailing-slash`. Each page then answers at the address Vesper links to, with no redirect first.
+
+Workers static assets read `_redirects` (and `_headers`) from `dist/` as Cloudflare Pages does. When Cloudflare builds the site from your repository, in Workers Builds, Vesper knows by the `WORKERS_CI` build variable and writes `_redirects`. When it's built anywhere else, such as GitHub Actions or your own computer, name the host:
+
+```ts
+// vesper.config.ts
+import { defineConfig } from 'vespercms/config';
+
+export default defineConfig({
+  redirects: { native: ['cloudflare'] },
+});
+```
+
+The studio is files in `dist/` like the rest of the site, so `/admin` needs nothing more: no Worker script and no other setting.
+
 ## How a publish goes live
 
-In GitHub mode and the cloud, a publish is a commit to your repository. A host connected to the repository, such as Netlify, Cloudflare Pages or Vercel, or a GitHub Actions workflow, builds on every commit, so there's nothing to set up. On a host you upload to yourself, the change goes live after your next build and upload, and the studio says so: "Published. It will be live after the site is next built."
+In GitHub mode and the cloud, a publish is a commit to your repository. A host connected to the repository, such as Netlify, Cloudflare Pages, Cloudflare Workers Builds or Vercel, or a GitHub Actions workflow, builds on every commit, so there's nothing to set up. On a host you upload to yourself, the change goes live after your next build and upload, and the studio says so: "Published. It will be live after the site is next built."
 
 ## Notes for GitHub mode
 

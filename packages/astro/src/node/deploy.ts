@@ -6,9 +6,9 @@
  * tested as it ships.
  */
 
-export type DeployTarget = 'sftp' | 'ftp' | 'hook';
+export type DeployTarget = 'sftp' | 'ftp' | 'workers' | 'hook';
 
-export const DEPLOY_TARGETS: readonly DeployTarget[] = ['sftp', 'ftp', 'hook'];
+export const DEPLOY_TARGETS: readonly DeployTarget[] = ['sftp', 'ftp', 'workers', 'hook'];
 
 /** `yarn` is Yarn 2 and later (a `.yarnrc.yml`), `yarn-classic` is Yarn 1. */
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'yarn-classic';
@@ -136,7 +136,19 @@ export function secretsFor(target: DeployTarget): { name: string; what: string }
     return [
       {
         name: 'VESPER_BUILD_HOOK',
-        what: 'the host’s build hook URL (Netlify: build hooks; Cloudflare Pages: deploy hooks; Vercel: deploy hooks)',
+        what: 'the host’s build hook URL (Netlify: build hooks; Cloudflare Pages and Workers Builds: deploy hooks; Vercel: deploy hooks)',
+      },
+    ];
+  }
+  if (target === 'workers') {
+    return [
+      {
+        name: 'CLOUDFLARE_API_TOKEN',
+        what: 'a Cloudflare API token from the “Edit Cloudflare Workers” template',
+      },
+      {
+        name: 'CLOUDFLARE_ACCOUNT_ID',
+        what: 'optional; the account’s ID, needed when the Wrangler config has no account_id and the token reaches more than one account',
       },
     ];
   }
@@ -188,8 +200,15 @@ export function deployWorkflow(options: WorkflowOptions): string {
     ...(options.target === 'hook'
       ? []
       : [
-          '# One deploy at a time, so two uploads never mix. A newer run waits for',
-          '# the one copying files; it never cancels it.',
+          ...(options.target === 'workers'
+            ? [
+                '# One deploy at a time, so an older build never replaces a newer one.',
+                '# A newer run waits for the one deploying; it never cancels it.',
+              ]
+            : [
+                '# One deploy at a time, so two uploads never mix. A newer run waits for',
+                '# the one copying files; it never cancels it.',
+              ]),
           'concurrency:',
           '  group: vesper-deploy',
           '  cancel-in-progress: false',
@@ -214,7 +233,9 @@ function header(options: WorkflowOptions): string[] {
           'builds on every push already, so this runs only:',
         ]
       : [
-          `It builds the site and copies it to the server by ${options.target.toUpperCase()}:`,
+          options.target === 'workers'
+            ? 'It builds the site and deploys it to Cloudflare Workers with wrangler:'
+            : `It builds the site and copies it to the server by ${options.target.toUpperCase()}:`,
           `- on every push to ${options.branch}, which includes each publish from the studio;`,
         ];
   return [
@@ -344,20 +365,70 @@ function deployJob(options: WorkflowOptions, scheduled: boolean): string[] {
     '      - name: Build',
     ...at(options.siteDir),
     `        run: ${run.build}`,
-    '      - name: Install lftp',
-    '        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp',
-    `      - name: Upload by ${options.target.toUpperCase()}`,
-    ...at(options.siteDir),
-    ...(options.target === 'sftp' ? sftpUpload(options.outDir) : ftpUpload(options.outDir)),
+    ...(options.target === 'workers'
+      ? [
+          '      - name: Deploy with Wrangler',
+          // From the site's folder, where wrangler looks for its config first.
+          ...at(options.siteDir),
+          ...wranglerDeploy(run.wrangler),
+        ]
+      : [
+          '      - name: Install lftp',
+          '        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp',
+          `      - name: Upload by ${options.target.toUpperCase()}`,
+          ...at(options.siteDir),
+          ...(options.target === 'sftp' ? sftpUpload(options.outDir) : ftpUpload(options.outDir)),
+        ]),
   ];
 }
 
-const RUN: Record<PackageManager, { install: string; build: string }> = {
-  npm: { install: 'npm ci', build: 'npm run build' },
-  pnpm: { install: 'pnpm install --frozen-lockfile', build: 'pnpm run build' },
-  yarn: { install: 'yarn install --immutable', build: 'yarn run build' },
-  'yarn-classic': { install: 'yarn install --frozen-lockfile', build: 'yarn run build' },
+/**
+ * Wrangler runs from the site's own dependencies, at the version its
+ * lockfile holds, not through cloudflare/wrangler-action, which installs one
+ * of its own choosing: the uploads keep third-party Actions away from a
+ * host's secrets too (DECISIONS.md, "`vesper deploy init` writes SFTP, FTP
+ * and build-hook workflows").
+ */
+const RUN: Record<PackageManager, { install: string; build: string; wrangler: string }> = {
+  npm: { install: 'npm ci', build: 'npm run build', wrangler: 'npx wrangler deploy' },
+  pnpm: {
+    install: 'pnpm install --frozen-lockfile',
+    build: 'pnpm run build',
+    wrangler: 'pnpm exec wrangler deploy',
+  },
+  yarn: {
+    install: 'yarn install --immutable',
+    build: 'yarn run build',
+    wrangler: 'yarn wrangler deploy',
+  },
+  'yarn-classic': {
+    install: 'yarn install --frozen-lockfile',
+    build: 'yarn run build',
+    wrangler: 'yarn wrangler deploy',
+  },
 };
+
+/**
+ * `wrangler deploy` uploads the folder the Wrangler config's
+ * `assets.directory` names. Wrangler 4 takes the account from the config's
+ * `account_id`, then a non-empty CLOUDFLARE_ACCOUNT_ID, then the one account
+ * the token reaches, so the secret can be left unset.
+ */
+function wranglerDeploy(command: string): string[] {
+  return [
+    '        env:',
+    '          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}',
+    '          # Optional when the Wrangler config has account_id, or the token',
+    '          # reaches only one account.',
+    '          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}',
+    '        run: |',
+    '          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then',
+    '            echo "::error::Add the repository secret CLOUDFLARE_API_TOKEN (Settings > Secrets and variables > Actions)."',
+    '            exit 1',
+    '          fi',
+    `          ${command}`,
+  ];
+}
 
 /** The shell that checks a secret is set, naming it when it isn't. */
 const NEED = [

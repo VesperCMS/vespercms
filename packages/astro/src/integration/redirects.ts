@@ -55,7 +55,9 @@ export function nativeTargets(
 ): NativeTarget[] {
   const found = new Set<NativeTarget>(configured);
   if (env.NETLIFY === 'true') found.add('netlify');
-  if (env.CF_PAGES === '1') found.add('cloudflare');
+  // Pages sets CF_PAGES and Workers Builds WORKERS_CI. Workers static assets
+  // read `_redirects` from the assets folder as Pages does, so both are one target.
+  if (env.CF_PAGES === '1' || env.WORKERS_CI === '1') found.add('cloudflare');
   if (env.VERCEL === '1') found.add('vercel');
   return [...found];
 }

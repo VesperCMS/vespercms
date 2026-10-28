@@ -10,7 +10,7 @@ import { generateManifest, writeManifest } from './manifest.ts';
 
 const HELP = `Usage: vesper manifest [--root <site>] [--src-dir <dir>] [--out <file>]
        vesper agents [--root <site>] [--src-dir <dir>] [--file <file>] [--check]
-       vesper deploy init --target sftp|ftp|hook [--rebuild-every <minutes>]
+       vesper deploy init --target sftp|ftp|workers|hook [--rebuild-every <minutes>]
                           [--url <live site>] [--branch <name>] [--root <site>] [--force]
 
 manifest     Reads the site's content.config.ts, vesper.config.ts and forms.config.ts
@@ -22,11 +22,12 @@ agents       Writes instructions for coding agents, generated from the same conf
              and fails when the file is out of date.
 
 deploy init  Writes a GitHub Actions workflow, .github/workflows/vesper-deploy.yml,
-             that builds the site on every push and uploads it by SFTP or FTP, or,
-             for a host that builds from git, calls its build hook. With
-             --rebuild-every (minutes; an hour for hook) it also rebuilds on a
-             schedule, whenever a scheduled change is due. It lists the secrets to
-             add, and never replaces a workflow without --force.`;
+             that builds the site on every push and uploads it by SFTP or FTP or
+             deploys it to Cloudflare Workers with wrangler, or, for a host that
+             builds from git, calls its build hook. With --rebuild-every (minutes;
+             an hour for hook) it also rebuilds on a schedule, whenever a scheduled
+             change is due. It lists the secrets to add, and never replaces a
+             workflow without --force.`;
 
 async function main(argv: string[]): Promise<number> {
   const { positionals, values } = parseArgs({
@@ -103,7 +104,7 @@ async function deployInit(values: {
   const target = values.target as DeployTarget | undefined;
   if (!target || !DEPLOY_TARGETS.includes(target)) {
     console.error(
-      'Choose where the site goes with --target: sftp or ftp for a server the workflow uploads to, hook for a host that builds from git (Netlify, Cloudflare Pages, Vercel).',
+      'Choose where the site goes with --target: sftp or ftp for a server the workflow uploads to; workers for Cloudflare Workers, deployed with wrangler; hook for a host that builds from git (Netlify, Cloudflare Pages or Workers Builds, Vercel).',
     );
     return 1;
   }

@@ -238,6 +238,14 @@ describe('nativeTargets', () => {
     expect(nativeTargets({ VERCEL: '1', NETLIFY: 'false' })).toEqual(['vercel']);
     expect(nativeTargets({})).toEqual([]);
   });
+
+  it('detects Cloudflare Workers Builds, whose static assets read `_redirects` as Pages does', () => {
+    expect(nativeTargets({ WORKERS_CI: '1', CI: 'true' })).toEqual(['cloudflare']);
+    expect(nativeTargets({ WORKERS_CI: '1' }, ['cloudflare'])).toEqual(['cloudflare']);
+    expect(nativeTargets({ WORKERS_CI: '1', CF_PAGES: '1' })).toEqual(['cloudflare']);
+    // GitHub Actions and other CI set CI alone, which says nothing of the host.
+    expect(nativeTargets({ CI: 'true', WORKERS_CI: '' })).toEqual([]);
+  });
 });
 
 describe('writeHostRules', () => {
