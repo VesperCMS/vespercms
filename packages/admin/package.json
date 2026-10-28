@@ -29,7 +29,10 @@
     "dist",
     "src",
     "!src/**/*.test.ts",
-    "!src/**/*.test.tsx"
+    "!src/**/*.test.tsx",
+    "!src/**/__snapshots__",
+    "!src/test",
+    "!src/test-env.d.ts"
   ],
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",

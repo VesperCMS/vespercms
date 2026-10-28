@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import type { LocalImageService } from 'astro';
 import { baseService } from 'astro/assets';
 import sharpService from 'astro/assets/services/sharp';
@@ -50,10 +52,31 @@ const describe = (src: unknown) =>
 type SharpModule = (input: Uint8Array, options?: SharpOptions) => Sharp;
 let loaded: SharpModule | undefined;
 
+/**
+ * The sharp Astro's own service loads, never a copy of the site's own: a
+ * site can depend on another sharp than Astro does (Astro 7.4 brings 0.35
+ * beside a site's 0.34), and a second libvips in one process fails to load,
+ * so Astro's service broke as soon as the crop step had run (on Windows,
+ * ERR_DLOPEN_FAILED). Found installing the packages from npm.
+ */
+async function importSharp(): Promise<typeof import('sharp')> {
+  let astroSharp: string | undefined;
+  try {
+    astroSharp = import.meta.resolve('astro/assets/services/sharp');
+  } catch {
+    // Where Astro can't be resolved from here, sharp is found the usual way.
+  }
+  if (astroSharp?.startsWith('file:')) {
+    const resolved = createRequire(astroSharp).resolve('sharp');
+    return (await import(pathToFileURL(resolved).href)) as typeof import('sharp');
+  }
+  return import('sharp');
+}
+
 async function loadSharp(): Promise<SharpModule> {
   if (loaded) return loaded;
   try {
-    const module = (await import('sharp')).default;
+    const module = (await importSharp()).default;
     // As Astro does: libvips' cache races when small files are processed quickly.
     module.cache(false);
     loaded = module;

@@ -63,7 +63,8 @@
     "src",
     "pages",
     "components",
-    "!src/**/*.test.ts"
+    "!src/**/*.test.ts",
+    "!src/**/__snapshots__"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
