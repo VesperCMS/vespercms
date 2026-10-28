@@ -8,6 +8,7 @@ import {
   file,
   geo,
   hideFromSearch,
+  icon,
   image,
   markdown,
   select,
@@ -26,6 +27,7 @@ describe('fields helpers: values', () => {
     ['url', url(), ['https://example.com/a'], ['not a url']],
     ['email', email(), ['a@b.com'], ['nope']],
     ['select', select(['news', 'events']), ['news'], ['other']],
+    ['icon', icon(['leaf', 'calendar-days']), ['leaf', 'calendar-days'], ['Leaf', 'rocket', 1]],
     ['markdown', markdown({ inline: true }), ['*hi*'], [1]],
     ['file', file({ accept: 'application/pdf' }), ['../files/a.pdf'], [null]],
   ] as [string, z.ZodType, unknown[], unknown[]][])(
@@ -86,6 +88,14 @@ describe('fields helpers: each equals its documented raw Zod', () => {
       select({ a: 'Alpha', b: 'Beta' }),
       z.enum(['a', 'b']).meta({ widgetOptions: { labels: { a: 'Alpha', b: 'Beta' } } }),
     ],
+    ['icon', icon(['leaf', 'layers']), z.enum(['leaf', 'layers']).meta({ widget: 'icon' })],
+    [
+      'icon with labels',
+      icon({ leaf: 'Growth', layers: 'Layers' }),
+      z
+        .enum(['leaf', 'layers'])
+        .meta({ widget: 'icon', widgetOptions: { labels: { leaf: 'Growth', layers: 'Layers' } } }),
+    ],
     [
       'markdown',
       markdown({ inline: true }),
@@ -127,6 +137,42 @@ describe('fields helpers: field models', () => {
 
   it('refuses an empty select', () => {
     expect(() => select([])).toThrow(/at least one option/);
+  });
+
+  it('icon is an enum of names with the icon widget, listed by name unless labelled', () => {
+    expect(model(icon(['leaf', 'calendar-days']))).toMatchObject({
+      kind: 'enum',
+      widget: 'icon',
+      constraints: {
+        options: [
+          { value: 'leaf', label: 'leaf' },
+          { value: 'calendar-days', label: 'calendar-days' },
+        ],
+      },
+    });
+    expect(model(icon(['leaf']))).not.toHaveProperty('widgetOptions');
+    expect(
+      model(
+        icon([
+          { value: 'code-xml', label: 'Code' },
+          { value: 'leaf', label: 'leaf' },
+        ]),
+      )?.constraints?.options,
+    ).toEqual([
+      { value: 'code-xml', label: 'Code' },
+      { value: 'leaf', label: 'leaf' },
+    ]);
+    expect(() => icon([])).toThrow(/at least one icon name/);
+  });
+
+  it('icon keeps the names’ types, so a site’s data is typed by them', () => {
+    const value: 'leaf' | 'layers' = icon(['leaf', 'layers']).parse('leaf');
+    const labelled: 'code-xml' = icon({ 'code-xml': 'Code' }).parse('code-xml');
+    const listed: 'code-xml' | 'leaf' = icon([
+      { value: 'code-xml', label: 'Code' },
+      { value: 'leaf', label: 'Leaf' },
+    ]).parse('leaf');
+    expect([value, labelled, listed]).toEqual(['leaf', 'code-xml', 'leaf']);
   });
 });
 
