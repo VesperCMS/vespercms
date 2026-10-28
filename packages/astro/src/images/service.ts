@@ -1,5 +1,4 @@
 import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
 import type { LocalImageService } from 'astro';
 import { baseService } from 'astro/assets';
 import sharpService from 'astro/assets/services/sharp';
@@ -58,8 +57,13 @@ let loaded: SharpModule | undefined;
  * beside a site's 0.34), and a second libvips in one process fails to load,
  * so Astro's service broke as soon as the crop step had run (on Windows,
  * ERR_DLOPEN_FAILED). Found installing the packages from npm.
+ *
+ * Through Node's own `require`, never an `import()` of its path: in
+ * `astro dev`, Vite's module runner would transform the file instead of
+ * handing it to Node, and sharp is CommonJS. Node's ESM import of it, which
+ * Astro's service makes, shares the same module.
  */
-async function importSharp(): Promise<typeof import('sharp')> {
+async function importSharp(): Promise<(typeof import('sharp'))['default']> {
   let astroSharp: string | undefined;
   try {
     astroSharp = import.meta.resolve('astro/assets/services/sharp');
@@ -67,16 +71,15 @@ async function importSharp(): Promise<typeof import('sharp')> {
     // Where Astro can't be resolved from here, sharp is found the usual way.
   }
   if (astroSharp?.startsWith('file:')) {
-    const resolved = createRequire(astroSharp).resolve('sharp');
-    return (await import(pathToFileURL(resolved).href)) as typeof import('sharp');
+    return createRequire(astroSharp)('sharp') as (typeof import('sharp'))['default'];
   }
-  return import('sharp');
+  return (await import('sharp')).default;
 }
 
 async function loadSharp(): Promise<SharpModule> {
   if (loaded) return loaded;
   try {
-    const module = (await importSharp()).default;
+    const module = await importSharp();
     // As Astro does: libvips' cache races when small files are processed quickly.
     module.cache(false);
     loaded = module;

@@ -724,7 +724,16 @@ test('by keyboard: an icon field lists each icon beside its name; choosing one w
   await expect(options).toHaveText(['music']);
   await expect(options.first()).toHaveAccessibleName('music');
   await expect(options.first().locator('span[aria-hidden="true"] svg')).toBeVisible();
-  await expectAccessible(page);
+  // While the list is open, React Aria's combobox hides the rest of the page with
+  // aria-hidden (not inert), which axe reports as hidden focusable content, so the
+  // open list is checked alone and the whole page once it's closed.
+  const { violations } = await new AxeBuilder({ page })
+    .withTags(WCAG21_AA)
+    .include('[role="listbox"]')
+    .analyze();
+  expect(violations.map(({ id, nodes }) => ({ id, targets: nodes.map((n) => n.target) }))).toEqual(
+    [],
+  );
 
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
@@ -752,4 +761,17 @@ test('"Edit this page" knows which entries a page shows', async ({ page }) => {
   expect(entries).toContainEqual(
     expect.objectContaining({ collection: 'blog', id: 'harbor-at-dawn', kind: 'shown' }),
   );
+  // The hero comes through the crop step's /_image in astro dev, and a request
+  // it can't serve leaves the picture with no width.
+  const hero = page.locator('main img').first();
+  await expect
+    .poll(() =>
+      hero.evaluate((img: HTMLImageElement) =>
+        img.decode().then(
+          () => img.naturalWidth,
+          () => 0,
+        ),
+      ),
+    )
+    .toBeGreaterThan(0);
 });

@@ -43,10 +43,9 @@ async function openDocs(page: Page): Promise<Locator> {
   return grid;
 }
 
-const titles = (grid: Locator) =>
-  grid
-    .getByRole('row')
-    .evaluateAll((rows) => rows.map((row) => row.textContent.split(' · ')[0]?.trim()));
+/** Each row's title: the first line of what it shows. */
+const titles = async (grid: Locator) =>
+  (await grid.getByRole('row').allInnerTexts()).map((text) => text.split('\n')[0]?.trim());
 
 test('the list is in order, and Alt+arrows move a row, announced and written', async ({ page }) => {
   const grid = await openDocs(page);
@@ -92,10 +91,10 @@ test('drag and drop by React Aria’s keyboard mode, and the row’s menu, pass 
   await page.keyboard.press('Enter');
   for (let i = 0; i < 8; i++) {
     const label = await page.locator(':focus').getAttribute('aria-label');
-    if (label === 'Insert after Opening hours') break;
+    if (label?.startsWith('Insert after Opening hours')) break;
     await page.keyboard.press('ArrowDown');
   }
-  await expect(page.locator(':focus')).toHaveAttribute('aria-label', 'Insert after Opening hours');
+  await expect(page.locator(':focus')).toHaveAttribute('aria-label', /^Insert after Opening hours/);
   await page.keyboard.press('Enter');
   const status = page.getByRole('main', { name: 'Docs' }).getByRole('status');
   await expect(status).toHaveText('Getting started moved, position 4 of 4.');
