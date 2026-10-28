@@ -29,6 +29,26 @@ Before that, nothing was queued. The last item, the pane beside the collections 
 
 Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
+**Before choosing the next studio or cloud work, put the open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Porting thosegeeks.com (2026-10-27) found nine gaps, each a product call; Jeremy asked that they come up whenever this work resumes.
+
+## Dogfooding thosegeeks.com
+
+Started 2026-10-27, at Jeremy's request: thosegeeks.com, ThoseGeeks' own site, ported from EmDash to Vesper as a second real site beside vespercms.com. It lives in its own repository, `C:\code\thosegeeks-vesper`, with this repository as a git submodule at `vesper/` (as `vesper-cloud` has it), and runs beside the live EmDash site at https://thosegeeks-vesper.jeremy-bise-9bc.workers.dev until the domains move. Forms and comments wait for Phases 6 and 8: the contact form is an interim route in the site's own Worker, and comments are off (EmDash held none).
+
+The port: seven collections (fixed pages, services, projects, posts, client quotes, authors, settings), eleven kinds of blocks, references in both directions, 18 images, Markdoc bodies converted from Portable Text, `_redirects` on Workers static assets, and posts with `schedule: true`. Every page's text matches the live site's, word for word; the build's accessibility check passed 31 pages, and a studio save of a 120-line YAML entry changed exactly one line.
+
+The site keeps its own list, `docs/vesper-gaps.md`, for gaps found as it's edited; add each here too. **Open, each a product call for Jeremy:**
+
+1. **A long title is cut off in the editor.** The title is a one-line `<input>` at title size, so "What website accessibility actually means, and who it's for" (59 characters) is clipped mid-word at "who it'" in a 718px column, with no sign there's more. A title that wraps (a textarea that grows with its text, Enter still blocked) would show it all.
+2. **Flat collections can't be put in order.** Services and client quotes are shown in a set order, so each has an `order` number editors type. The entry list sorts by Title by default (Order is in the menu, but a collection can't make it the default), and rows show the bare number: "420 · edited 4 minutes ago". Trees get `_order.yaml` and dragging; a flat collection gets neither. Options: a default sort in `vesper.config.ts`, labels on `listFields` values, or drag-to-order that writes the number field.
+3. **Icon fields are a list of names.** Both of Jeremy's Vesper sites pick Lucide icons from a select of names (60 on thosegeeks.com, 24 here), with no picture. A searchable icon grid in the kit, for an enum whose values are Lucide names, would show the choice.
+4. **Accessibility notes don't say where a nested field is.** The drawer calls a note on the screenshot inside a service's second section "Image, alt". "Go to field" finds it (it opened the closed block and focused the alt text), but with several images in blocks the notes can't be told apart. Naming them by path ("Sections › Showcase › Image, alt") would.
+5. **`<Img>` ignores an `alt` prop without a word.** A picture that's content on its own page is redundant in a link card whose title follows, where it should be `alt=""`. `planImg` always takes alt from the field (`packages/astro/src/images/plan.ts`), so `<Img alt="">` renders the field's alt. The site passes `image={{ ...cover, decorative: true }}`. A `decorative` prop, or a warning when `alt` is passed, would make the right thing findable.
+6. **Cloudflare Workers static assets isn't a known host.** Native redirects are detected for Pages (`CF_PAGES`, `integration/redirects.ts`) but not Workers Builds (`WORKERS_CI`), and `site/hosting.mdoc` doesn't mention Workers static assets, where Cloudflare now sends new static sites. They read `_redirects` as Pages does, so `redirects: { native: ['cloudflare'] }` works once named. Detecting `WORKERS_CI`, a hosting note, and a `vesper deploy init` choice for it would cover it.
+7. **No way to install Vesper outside this repository but a submodule.** Every site ported before the first npm publish pays the `vesper-cloud` setup (submodule, workspaces, the source condition, a read-only token in CI), and a host's own git builds can't read a private submodule. Publishing is Phase 9; a prerelease channel before then would end it.
+8. **No importer from another CMS.** EmDash's content took a one-off script (`scripts/migrate-emdash.mjs` in the site): Portable Text to Markdown, media from R2 into `src/assets/`, taxonomies and relations to references. WordPress, EmDash and Directus are what agencies would bring; an import path could sit in Phase 9 beside `create-vesper`.
+9. **The docs say scheduling isn't available.** `reference/integration.mdoc` describes `schedule` as "Reserved for scheduled publishing, which isn't available yet". It should change with Phase 4.5's docs page (step 7).
+
 ## vespercms.com and the docs
 
 Started 2026-10-21, ahead of Phase 9, because Jeremy asked for it: the marketing site and the user docs as one Astro site, `apps/site`, edited with Vesper itself, plus `vesper agents`. The reasons are in DECISIONS.md ("Vesper's own site").
