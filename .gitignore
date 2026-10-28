@@ -36,3 +36,6 @@ e2e/.cloud-site-repo.git/
 *.log
 .DS_Store
 Thumbs.db
+
+# The schedule integration test's throwaway build (packages/astro/test/schedule.integration.test.ts).
+e2e/.schedule-site/
