@@ -21,7 +21,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 /**
  * The spec §10.4 budget. Neutrals are unlimited in principle but listed, so a new token is
  * always a deliberate change to this file. Beyond neutrals: accent (+hover), accent-subtle
- * (+hover), danger, focus, warning.
+ * (+hover), danger, focus, warning, and the two status hues a status pill's word takes, each with
+ * its fill (DECISIONS.md, "Status words have colour").
  */
 export const ALLOWED_TOKENS = {
   neutral: [
@@ -42,6 +43,10 @@ export const ALLOWED_TOKENS = {
     'danger',
     'focus',
     'warning',
+    'live',
+    'live-subtle',
+    'scheduled',
+    'scheduled-subtle',
   ],
 };
 
@@ -77,6 +82,8 @@ export const PAIRS = [
   ['warning', 'surface', 3, 'warning marker beside a field'],
   ['warning', 'surface-raised', 3, 'warning marker in overlays'],
   ['warning', 'glass-raised', 3, 'warning mark in the notes drawer, over any backdrop'],
+  ['live', 'live-subtle', 4.5, 'the Live status pill'],
+  ['scheduled', 'scheduled-subtle', 4.5, 'the Scheduled status pill'],
 
   ['content-muted', 'accent-subtle', 4.5, 'secondary text on the current item'],
   ['accent', 'accent-subtle', 4.5, 'a link or quiet button on the current item'],

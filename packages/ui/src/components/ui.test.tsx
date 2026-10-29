@@ -18,6 +18,7 @@ import {
   MultiCombobox,
   RadioGroup,
   Select,
+  StatusPill,
   Switch,
   Table,
   TextArea,
@@ -520,6 +521,30 @@ describe('Table, InlineStatus and ErrorSummary', () => {
   it('InlineStatus is a polite status in words', () => {
     render(<InlineStatus dot>Draft · saved just now</InlineStatus>);
     expect(screen.getByRole('status').textContent).toBe('Draft · saved just now');
+  });
+
+  it('InlineStatus’s dot pulses only while something is under way', () => {
+    const { rerender, container } = render(<InlineStatus dot>Saved</InlineStatus>);
+    const dot = () => container.querySelector('[aria-hidden="true"]');
+    expect(dot()?.className).not.toMatch(/animate-/);
+    rerender(
+      <InlineStatus dot busy>
+        Saving…
+      </InlineStatus>,
+    );
+    expect(dot()?.className).toMatch(/\banimate-status-pulse\b/);
+    expect(screen.getByRole('status').textContent).toBe('Saving…');
+  });
+
+  it('StatusPill keeps its word as text, beside the words after it', async () => {
+    render(
+      <InlineStatus>
+        <StatusPill tone="scheduled">Scheduled</StatusPill> · Sat, Oct 31, 8:00 AM
+      </InlineStatus>,
+    );
+    expect(screen.getByRole('status').textContent).toBe('Scheduled · Sat, Oct 31, 8:00 AM');
+    expect(screen.getByText('Scheduled').className).toMatch(/\btext-scheduled\b/);
+    await expectNoViolations();
   });
 
   it('ErrorSummary takes focus and links each error to its field', async () => {

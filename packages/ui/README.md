@@ -11,7 +11,7 @@ Vesper's design tokens and, from Phase 2, its accessible component kit: Button, 
 | Choices | `Select`, `Combobox` (an option's `prefix`, such as an icon, sits before its words in the list and, once chosen, in the field; it's hidden from assistive tech), `MultiCombobox` (tags and multi-references, with named remove buttons), `SuggestField` (a text field that suggests values: the link picker), `Checkbox`, `Switch` (state also in words), `RadioGroup` |
 | Overlays | `Dialog` (focus trap, Escape, focus returns to the trigger; `size="wide"` for work on an image; scrolls inside itself on a short screen), `Drawer`, `Menu` (the "…" menu), `Disclosure` |
 | Outlines | `Tree`: React Aria's single-column treegrid. Arrow keys move and expand, Home/End jump, typing finds a row, rows hold buttons, and `useDragAndDrop` adds drag and drop with its keyboard mode. The expand toggle is a named button outside the Tab order (DECISIONS.md). |
-| Data and feedback | `Table` (rows can be links), `InlineStatus` (status in words), `ErrorSummary` (takes focus, links to fields; `focusKey` moves focus only on a new failed save, never while errors update as people type) |
+| Data and feedback | `Table` (rows can be links), `InlineStatus` (status in words; its dot pulses while `busy`), `StatusPill` (a status word on its colour: `live`, `scheduled` or `neutral`), `ErrorSummary` (takes focus, links to fields; `focusKey` moves focus only on a new failed save, never while errors update as people type) |
 | Toolbars | `Toolbar` (one Tab stop, arrow keys inside), `ToggleButton` (pressed shown as a fill and semibold text, and announced as pressed), `ToolButton`. A tool given `icon`, `label` and `shortcut` instead of children is icon-only: the label is its accessible name, and a `Tooltip` shows the label and shortcut on hover and keyboard focus, with the shortcut in `aria-keyshortcuts` |
 | Icons | `Icon`: a [Lucide](https://lucide.dev) icon by name from the kit's set (`ICONS`), or a drawing from the manifest (`node`, a collection's icon or an icon field's), always `aria-hidden`. A manifest drawing keeps only Lucide's shapes and geometry attributes. `TextField`'s `icon` and `Menu` items' `icon` use it too |
 | Tooltips | `Tooltip`: React Aria's, for icon-only tools. It closes when the page scrolls |
@@ -41,7 +41,7 @@ The values are the Pine direction of Vesper's design system (DECISIONS.md, "Stud
   - `focus`
   - `warning`
 
-  There are no status hues: status is text.
+  Two status hues, `live` and `scheduled`, each with its `-subtle` fill, colour only a `StatusPill`'s word; the word still says it (DECISIONS.md, "Status words have colour").
 - **Type:** Figtree (self-hosted by `@vespercms/admin`) over the system stack, in two weights, `normal` and `semibold`, and one scale: `text-title`, `text-heading-1` to `-3`, `text-body`, `text-label`, `text-small`, `text-caption`. Code, slugs and URLs use the system monospace stack.
 - **Radii:** `rounded-sm` (6px), `-md` (10px), `-lg` (16px) and `-full`.
 - **Depth:** `shadow-overlay` on overlays, plus four named effects in their named places (DECISIONS.md, "Four named glows"): `shadow-glow-accent` (the primary button), `shadow-glow-selected` (the current item), the focus halo (`ring-6 ring-(color:--glow-focus)`) and `shadow-glass-edge`. Glass utilities for what floats: `glass-bar` (the top bar, 88%), `glass-raised` (overlays, 93%) and `scrim`, each with solid fallbacks; and `afterglow` for welcoming screens.
