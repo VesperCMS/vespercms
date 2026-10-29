@@ -141,6 +141,40 @@ describe('the schedule in words', () => {
   });
 });
 
+describe('an empty time', () => {
+  it('is blank until it’s used, so Safari’s grey “today” doesn’t read as a time', async () => {
+    const { user } = setup('#/c/events/e/spring-commencement');
+    await screen.findByRole('textbox', { name: 'Title' });
+    await user.click(screen.getByRole('button', { name: 'More ways to publish' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Schedule…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Schedule' });
+    const down = within(dialog).getByLabelText('Comes down (optional)');
+    expect(down).toHaveValue('');
+    expect(down).toHaveAttribute('data-blank');
+    // Focus alone, as the dialog opens, keeps it blank; typing shows the parts.
+    fireEvent.keyDown(down, { key: 'Tab' });
+    expect(down).toHaveAttribute('data-blank');
+    fireEvent.keyDown(down, { key: '1' });
+    expect(down).not.toHaveAttribute('data-blank');
+    // Left empty, it's blank again; with a time, it never is.
+    fireEvent.blur(down);
+    expect(down).toHaveAttribute('data-blank');
+    setTime(down, '2026-11-20T17:00');
+    expect(down).not.toHaveAttribute('data-blank');
+  });
+
+  it('shows a time the entry already has', async () => {
+    const { user } = setup('#/c/events/e/nursing-info-session');
+    await screen.findByRole('textbox', { name: 'Title' });
+    await user.click(screen.getByRole('button', { name: 'More ways to publish' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Schedule…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Schedule' });
+    const down = within(dialog).getByLabelText('Comes down (optional)');
+    expect(down).toHaveValue('2026-11-13T00:00');
+    expect(down).not.toHaveAttribute('data-blank');
+  });
+});
+
 describe('the Scheduled view', () => {
   it('is linked from the collections, and lists every change soonest first', async () => {
     const { user } = setup('#/');
