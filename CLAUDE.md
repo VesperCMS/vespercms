@@ -168,7 +168,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **A rule joins `BUILD_RULES` only once its result in jsdom has been checked against Chromium.** jsdom has no layout, so visual rules give wrong answers there; a snapshot pins the list (DECISIONS.md, "The build checks with axe-core in jsdom").
 
-**A built page is traced to its entry only through the collection's `url`, never by recording reads at build.** Production `vesper:content` re-exports `astro:content`, filters only scheduled collections, and never records reads (spec §6.10, §6.11, §6.17).
+**A built page is traced to its entry only through the collection's `url`, never by recording reads at build.** Production `vesper:content` re-exports `astro:content`, filters only scheduled collections and drafts, and never records reads (spec §6.10, §6.11, §6.17).
 
 **Notes are text beside their field: no badges, no panel, and the count stays outside the live status.** Spec §10.4; an announcement on every keystroke would drown the editor.
 
@@ -188,7 +188,7 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **The dialog's live region stays inside the `<dialog>`.** `showModal()` makes everything outside it inert, live regions included, which is how Pagefind's modal lost its announcements.
 
-**Leave entries out of the index with `isPublished` and `isHiddenFromSearch` from `@vespercms/core`, never a date check of your own.** Phase 4.5's build filtering uses the same window, so search and the site can't disagree.
+**Leave entries out of the index with `isPublished`, `isDraft` and `isHiddenFromSearch` from `@vespercms/core`, never a date or `draft` check of your own.** The build's filtering uses the same checks, so search and the site can't disagree; a draft is `draft: true` only where the collection's schema has a true-or-false `draft` field (DECISIONS.md, "Unpublishing is `draft: true`").
 
 **Vesper's injected `/search` page never counts as the site using `<Search>`, and it's found by its route, never its markup.** It renders `<Search variant="inline">` on every site, so counting it indexed every site, and a site's own page copied from it must still count (DECISIONS.md, "Vesper's /search page isn't a use of `<Search>`").
 

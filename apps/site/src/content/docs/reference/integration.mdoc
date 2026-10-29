@@ -146,7 +146,7 @@ Keyed by the collection's name in `src/content.config.ts`. A name that isn't a c
 | `tabs` | None | Editor tabs between Content and Details, by id with their labels, in order: `{ seo: 'SEO' }`. |
 | `headingStart` | `2` | The level the body's top headings should have, from 1 to 6. Set `1` when the body holds the page's h1. |
 | `search` | `true` | `false` leaves the collection's pages out of site search. |
-| `schedule` | `false` | `true` lets editors schedule the collection's entries. An entry is on the site from its `publishAt` date until its `unpublishAt`, fields the collection's schema defines, and an optional `unpublishRedirect` page picker sends visitors elsewhere once it's gone. Each build decides once, so a time takes effect at the first build after it; set `rebuildEvery` so the studio can say when that is. An object renames the fields (`{ publishAt: 'goesLive' }`) or leaves out unpublishing (`{ unpublish: false }`). |
+| `schedule` | `false` | `true` lets editors schedule the collection's entries. An entry is on the site from its `publishAt` date until its `unpublishAt`, fields the collection's schema defines, and an optional `unpublishRedirect` page picker sends visitors elsewhere once it's gone. Each build decides once, so a time takes effect at the first build after it; set `rebuildEvery` so the studio can say when that is. An object renames the fields (`{ publishAt: 'goesLive' }`) or leaves out unpublishing (`{ unpublish: false }`). Without a schedule, a collection with a true-or-false `draft` field is unpublished by hand: a draft is left out of the build. |
 
 A `url` pattern is built from tokens:
 
