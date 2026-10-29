@@ -1398,7 +1398,7 @@ Treat these like lint rules. Breaking one requires a note in `DECISIONS.md`.
 
 - At most **one** primary (accent-filled) button per screen.
 - At most **two** levels of navigation visible at once.
-- **No colored status badges.** Status is text.
+- **No colored status badges.** Status is text. (Since October 29, 2026, the state's first word takes its colour on a pill, Live, Scheduled or Draft, and the rest stays text: `DECISIONS.md`, "Status words have colour".)
 - **No icon-only buttons** except close, overflow ("…") and drag handles, plus the few `DECISIONS.md` records (among them the outline's expand toggle, the body editor's formatting tools and the panes' collapse button), and all of them have accessible names.
 - No more than **five** color tokens in use on any screen, beyond neutrals: accent, accent-subtle, danger, focus, plus one optional warning.
 - **No tabs inside the editor but Content, Details and the collection's own** (decided October 25, 2026). Group everything else with sections.

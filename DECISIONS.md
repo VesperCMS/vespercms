@@ -1676,6 +1676,28 @@ The 4px is less than the text's own padding, so a toolbar in its place above the
 
 **Redirects never has the afterglow, even with no redirects yet.** Jeremy asked for it to go. The afterglow is for welcoming screens, and `tokens.css` keeps it from tables and forms; Redirects is a table with an Add redirect form, even when it's empty.
 
+### 2026-10-29: Status words have colour (an exception to spec §10.4)
+
+**Jeremy asked, dogfooding, for colour on the status: live in a green bubble, scheduled in a violet that suits Pine, drafts grey, and the save in the top bar animated. An entry's state is now its first status word on a pill of its colour (`StatusPill`): Live green, Scheduled violet, Draft and Unpublished neutral. The words are the ones the studio already said, and only the first is coloured, so "Scheduled · Sat, Oct 31, 8:00 AM" reads, and is heard, exactly as before. While a save or publish runs, the status dot takes the accent and pulses.** Spec §10.4 says "No colored status badges. Status is text", and §10.1 counts "five status hues on colored badges" among what made Taproot's admin busy; this entry is the dated note that rule asks for.
+
+How it's held to the rest of the budget:
+- Two hues and their fills join the tokens, `live`/`live-subtle` and `scheduled`/`scheduled-subtle`, used only by `StatusPill` (`budget.test.ts` allows them in `data.tsx` alone, beside the pulse). Their words pass 6.2:1 to 8.6:1 on their fills in both themes, in `npm run a11y:contrast`. They're extra to the five colour roles a screen may show, inside pills only.
+- The word always says it, so colour is never the only way to tell (SC 1.4.1), and nothing else changes colour: the save's words stay muted text after the pill ("Live · Saved just now"), and "Read only" and "Edit as YAML" stay words.
+- Live is said only where an entry could be something else: a collection with a schedule or a `draft` field, or any collection in the cloud, where a new entry starts as a draft. A list of authors or locations in local or GitHub mode says nothing, as before, rather than "Live" on every row. In the cloud, an entry only in a draft (a file the draft would create) is Draft; a published one with a draft waiting is Live, and the bar goes on to say "Draft saved …". A page tree's rows know no schedule times, so a scheduled tree collection's rows don't say Live.
+- The pill's edge is an outline, so it's one caption line tall and the bar's status line and the list's rows keep their heights; forced colours draw it, transparent or not, when they drop the fill.
+- The pulse is 1.6 seconds, an opacity and size swell, well under three flashes a second (SC 2.3.1), and runs only while something is under way. Under reduced motion the dot holds still in the accent. It's an animation, not a transition, so React Aria's wait for transitions before moving focus isn't touched ("Transitions never touch focus").
+- Where it shows: the editor's status line, the entry list's Status column, a list pane's rows and the page tree. The Scheduled view lists changes ("Goes live", "Comes down"), not states, and stays text.
+
+Rejected: colouring the whole status line (the save's words would change colour as they change, and the muted text is what passes on glass); a coloured dot alone (too small to tell a hue apart, and colour would be the only signal); Live on every row of every collection; a pill for "Read only" and "Edit as YAML", which say what can be done, not where the entry stands.
+
+### 2026-10-29: An empty date field is blank until it's used
+
+**An empty `date` or `datetime-local` field in the studio (the Schedule dialog's times, and the date and date-time widgets) is drawn blank until it's clicked or a key is pressed in it, and blank again when it's left with nothing in it. `useBlankWhenEmpty` (`widgets/blank-date.ts`) sets `data-blank`, and `studio.css` hides `::-webkit-datetime-edit` under it. Tab, Shift, Escape, Enter and the modifier keys pass through without showing it, and a date typed partway (`validity.badInput`) stays in sight.**
+
+Why: Jeremy saw a default time in Schedule's "Comes down" and asked for it to be blank. Nothing sets one: Safari on macOS draws today's date and time, greyed, in an empty date field, and it reads as a time already chosen (WebKit bug 233215). The dialog focuses that field as it opens, so focus alone mustn't show it. Chrome and Edge lose their "mm/dd/yyyy" with it; the label says what goes there, and the parts appear as soon as someone types. Firefox draws neither and is unchanged. Checked in Chromium, and by unit tests; not yet in Safari itself.
+
+Rejected: React Aria's own date field (a larger change that replaces the phone's native picker), and hiding the ghost in Safari only by its user agent.
+
 ---
 
 ## Vesper's own site
