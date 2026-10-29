@@ -250,6 +250,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
               label={state.link ? 'Edit link' : 'Link'}
               shortcut={shortcut('Mod', 'K')}
               isDisabled={disabled}
+              isActive={state.link}
               onPress={() => {
                 setLinkOpen(true);
               }}
