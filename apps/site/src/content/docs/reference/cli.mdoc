@@ -1,7 +1,7 @@
 ---
 title: The vesper command
 menuLabel: Command line
-summary: vesper agents writes instructions for coding agents, and vesper manifest shows what Vesper reads from your site.
+summary: vesper agents writes instructions for coding agents, vesper manifest shows what Vesper reads from your site, and vesper deploy init writes a workflow that deploys it.
 ---
 
 `vespercms` installs a `vesper` command. Run it with `npx` in your site's folder, or from a script in `package.json`. It reads your configs with your site's own Astro and Vite, so run it where your site's dependencies are installed.
@@ -40,3 +40,50 @@ npx vesper manifest
 Problems with your schema or config go to standard error. The command exits with an error when one of them is an error rather than a warning.
 
 `astro build` writes the same manifest to `dist/_vesper/manifest.json`. That file is how the cloud learns your site's schema without reading your repository's code.
+
+## vesper deploy init
+
+Writes a GitHub Actions workflow, `.github/workflows/vesper-deploy.yml` at your repository's root, that deploys the site. It's plain YAML that runs in your own GitHub account with your own secrets, and it's yours to read and change: Vesper never deploys a site itself.
+
+```sh
+npx vesper deploy init --target sftp
+```
+
+| Target | What the workflow does |
+|---|---|
+| `sftp` | Builds the site on every push to the default branch and copies Astro's output folder to your server by SFTP. |
+| `ftp` | The same by FTP, over TLS only, since plain FTP sends the password as text. |
+| `workers` | Builds the site on every push and deploys it to Cloudflare Workers with your site's own `wrangler`. |
+| `hook` | For a host that already builds from your repository, such as Netlify, Cloudflare Pages or Vercel: on a schedule, when a scheduled change is due, it asks the host to build the site through its build hook. |
+
+Every workflow also runs when the cloud starts it at a [scheduled time](/docs/site/scheduling/), and from the Actions tab. One deploy runs at a time, and a newer one waits for the one in progress rather than cancelling it.
+
+| Option | Default | |
+|---|---|---|
+| `--target <target>` | none | `sftp`, `ftp`, `workers` or `hook`. |
+| `--rebuild-every <minutes>` | none; 60 for `hook` | Also run on a schedule, and rebuild when a [scheduled change](/docs/site/scheduling/) is due: 5, 6, 10, 12, 15, 20, 30, 60, 120, 180, 240, 360, 480, 720 or 1440. |
+| `--url <address>` | Astro's `site` | The live site's address, where a scheduled run reads `_vesper/schedule.json`. |
+| `--branch <name>` | your repository's default branch | The branch whose pushes deploy. |
+| `--root <folder>` | the current folder | The site's folder, for a site inside a larger repository. |
+| `--force` | off | Replace a workflow that's already there. Without it, the command never does. |
+
+It finds the rest in your repository: its root, your package manager and lockfile, a `.nvmrc` or `.node-version`, and Astro's output folder. Then it lists the secrets to add, under **Settings → Secrets and variables → Actions**:
+
+| Target | Secrets |
+|---|---|
+| `sftp` | `VESPER_SFTP_HOST`, `VESPER_SFTP_USER`, `VESPER_SFTP_PATH` (the site's folder on the server), `VESPER_SFTP_KNOWN_HOSTS`, and `VESPER_SFTP_PASSWORD` or `VESPER_SFTP_KEY` (a private key); `VESPER_SFTP_PORT` when it isn't 22. |
+| `ftp` | `VESPER_FTP_HOST`, `VESPER_FTP_USER`, `VESPER_FTP_PASSWORD`, `VESPER_FTP_PATH`; `VESPER_FTP_PORT` when it isn't 21. |
+| `workers` | `CLOUDFLARE_API_TOKEN`, from the "Edit Cloudflare Workers" template; `CLOUDFLARE_ACCOUNT_ID` when your Wrangler config has no `account_id` and the token reaches more than one account. |
+| `hook` | `VESPER_BUILD_HOOK`, the host's build hook address. |
+
+A run with a secret missing fails before it uploads anything, and names the secret.
+
+**Uploads delete what the build no longer has,** so an expired page leaves the server too. The folder in `VESPER_SFTP_PATH` or `VESPER_FTP_PATH` should hold only this site. The server's own `.well-known` and `cgi-bin` folders are left alone unless the build has its own.
+
+**SFTP checks the server is the one you expect.** `VESPER_SFTP_KNOWN_HOSTS` holds the server's keys, from `ssh-keyscan` with the server's own port:
+
+```sh
+ssh-keyscan -p 22 sftp.example.com
+```
+
+The workflow refuses any other server, so a password or key never goes to anyone in between.
