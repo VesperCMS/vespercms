@@ -17,11 +17,14 @@ import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'r
 import { useStudio } from '../app/context.tsx';
 import { onEntriesChanged } from '../app/entries-changed.ts';
 import { mayCreateIn, treeCovered } from '../cloud/access.ts';
+import { useDrafts } from '../cloud/editor.tsx';
+import { siteZone } from '../schedule/times.ts';
 import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
 import { usePane } from '../app/pane-context.ts';
 import { Screen } from '../app/Screen.tsx';
+import { StateWords, entryState, isNewInDraft, kindText } from './status.tsx';
 
 /*
  * The outline of a tree collection (spec §6.15.2), in place of the flat
@@ -64,9 +67,19 @@ export function PageTree({
   /** The page open beside the outline, among panes. */
   currentId?: string | null;
 }) {
-  const { api, cloud } = useStudio();
+  const { api, cloud, manifest } = useStudio();
+  const { drafts } = useDrafts();
   const pane = usePane();
   const [load, reload] = useLoad(() => api.pageTree(collection.name), collection.name);
+  // A row knows no schedule times, so a scheduled collection's rows never claim Live.
+  const stateOf = (row: Row) =>
+    row.entryId === undefined
+      ? null
+      : entryState(
+          collection,
+          { draft: row.draft === true, times: null, newDraft: isNewInDraft(drafts, row.file) },
+          { zone: siteZone(manifest).zone, cloud: Boolean(cloud) },
+        );
   // A save beside the outline can change a title or a status.
   useEffect(() => onEntriesChanged(collection.name, reload), [collection.name, reload]);
   const [expanded, setExpanded] = useState<Set<Key>>(() => new Set());
@@ -336,28 +349,36 @@ export function PageTree({
             {...(editable && covered('') ? { dragAndDropHooks } : {})}
             emptyState={rows.length === 0 ? 'No pages yet.' : 'No pages match.'}
             currentKey={currentKey}
-            renderRow={(row) => (
-              <>
-                <span className="min-w-0 flex-1 px-1">
-                  <span className="block truncate font-semibold text-content">{row.title}</span>
-                  <span className="block truncate font-mono text-caption text-content-muted">
-                    {row.url ?? `${row.path}/`}
+            renderRow={(row) => {
+              const state = stateOf(row);
+              const words = statusOf(row);
+              return (
+                <>
+                  <span className="min-w-0 flex-1 px-1">
+                    <span className="block truncate font-semibold text-content">{row.title}</span>
+                    <span className="block truncate font-mono text-caption text-content-muted">
+                      {row.url ?? `${row.path}/`}
+                    </span>
                   </span>
-                </span>
-                <span className="shrink-0 text-small text-content-muted">{statusOf(row)}</span>
-                <Menu
-                  label={`More actions for ${row.title}`}
-                  items={menuItems(byKey.get(row.id) ?? row, rows, byPath, {
-                    editable,
-                    maxDepth,
-                    covered,
-                  })}
-                  onAction={(action) => {
-                    onMenu(row, action);
-                  }}
-                />
-              </>
-            )}
+                  <span className="shrink-0 text-small text-content-muted">
+                    <StateWords state={state} />
+                    {state && words ? ' · ' : ''}
+                    {words}
+                  </span>
+                  <Menu
+                    label={`More actions for ${row.title}`}
+                    items={menuItems(byKey.get(row.id) ?? row, rows, byPath, {
+                      editable,
+                      maxDepth,
+                      covered,
+                    })}
+                    onAction={(action) => {
+                      onMenu(row, action);
+                    }}
+                  />
+                </>
+              );
+            }}
           />
         </div>
       )}
@@ -641,11 +662,10 @@ function menuItems(
   return items;
 }
 
+/** What the row is besides its state: a folder with no page, or what can be done with it. */
 function statusOf(row: Row): string {
   if (row.entryId === undefined) return 'No section page';
-  if (row.status === 'read-only') return 'Read only';
-  if (row.status === 'source-only') return 'Edit as YAML';
-  return row.draft ? 'Draft' : '';
+  return kindText(row.status);
 }
 
 function toRows(nodes: PageTreeNode[]): Row[] {

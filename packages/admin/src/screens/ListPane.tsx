@@ -26,15 +26,17 @@ import { hasUnsavedChanges, hrefFor, navigate } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
 import { PaneFrame, useLeadHeading } from '../app/Screen.tsx';
 import { entryShownTo, mayCreateIn } from '../cloud/access.ts';
-import { hasUpcoming, rowData, scheduleWords, siteZone } from '../schedule/times.ts';
+import { useDrafts } from '../cloud/editor.tsx';
+import { hasUpcoming, rowData, siteZone } from '../schedule/times.ts';
+import { compareBy, defaultSort, formatListValue, labelFor, TITLE_KEYS } from './EntryList.tsx';
 import {
-  compareBy,
-  defaultSort,
-  formatListValue,
-  labelFor,
-  statusText,
-  TITLE_KEYS,
-} from './EntryList.tsx';
+  StateWords,
+  entryState,
+  isNewInDraft,
+  kindText,
+  stateText,
+  type EntryState,
+} from './status.tsx';
 
 /*
  * A flat collection's list as a pane (DECISIONS.md, "The studio is panes,
@@ -90,7 +92,12 @@ function cacheOf(api: StudioApi): Map<string, EntrySummary[]> {
 type Row = TreeNode & {
   title: string;
   entryId: string;
+  /** The line under the title, in words: list fields, state, when it was edited. */
   meta: string;
+  /** The same line in parts, so the state's word can take its colour. */
+  fields: string[];
+  state: EntryState | null;
+  after: string[];
   /** The entry open beside the list. */
   current: boolean;
   children: Row[];
@@ -130,6 +137,7 @@ export function ListPane({
 }) {
   const { api, cloud, manifest } = useStudio();
   const { zone } = siteZone(manifest);
+  const { drafts } = useDrafts();
   const memory = memoryOf(api, collection.name);
   const heading = useRef<HTMLHeadingElement>(null);
   useLeadHeading(collection.label, heading);
@@ -193,28 +201,34 @@ export function ListPane({
             (filter === 'scheduled' && hasUpcoming(entry.schedule))),
       )
       .sort(compareBy(descriptorOf(collection, sort)))
-      .map((entry) => ({
-        id: entry.id,
-        title: entry.title,
-        entryId: entry.id,
-        meta: [
-          ...listKeys.map((key) => formatListValue(entry.fields[key])),
-          statusText(
-            entry,
-            scheduleWords(
-              collection.presentation.schedule,
-              rowData(collection.presentation.schedule, entry.schedule),
-              zone,
-            ),
-          ),
+      .map((entry) => {
+        const fields = listKeys.map((key) => formatListValue(entry.fields[key])).filter(Boolean);
+        const state = entryState(
+          collection,
+          {
+            draft: entry.draft === true,
+            times: rowData(collection.presentation.schedule, entry.schedule),
+            newDraft: isNewInDraft(drafts, entry.path),
+          },
+          { zone, cloud: Boolean(cloud) },
+        );
+        const after = [
+          kindText(entry.status),
           entry.updatedAt ? `edited ${formatRelative(entry.updatedAt)}` : '',
-        ]
-          .filter(Boolean)
-          .join(' · '),
-        current: entry.id === currentId,
-        children: [],
-      }));
-  }, [visible, query, filter, sort, collection, currentId, zone]);
+        ].filter(Boolean);
+        return {
+          id: entry.id,
+          title: entry.title,
+          entryId: entry.id,
+          meta: [...fields, stateText(state), ...after].filter(Boolean).join(' · '),
+          fields,
+          state,
+          after,
+          current: entry.id === currentId,
+          children: [],
+        };
+      });
+  }, [visible, query, filter, sort, collection, currentId, zone, drafts, cloud]);
 
   // In order, whole and editable: then rows move. Searching, filtering or another sort
   // would leave neighbours out of sight, and a member who can't see every entry can't
@@ -421,7 +435,11 @@ export function ListPane({
                   </span>
                   {row.meta && (
                     <span className="block truncate text-caption text-content-muted">
-                      {row.meta}
+                      {row.fields.join(' · ')}
+                      {row.fields.length > 0 && row.state ? ' · ' : ''}
+                      <StateWords state={row.state} />
+                      {(row.fields.length > 0 || row.state) && row.after.length > 0 ? ' · ' : ''}
+                      {row.after.join(' · ')}
                     </span>
                   )}
                 </span>

@@ -128,6 +128,17 @@ describe('the schedule in words', () => {
     await screen.findByRole('textbox', { name: 'Title' });
     expect(screen.getAllByRole('status')[0]).toHaveTextContent('Scheduled · Sat, Oct 31, 8:00 AM');
   });
+
+  it('colours each entry’s state word: scheduled violet, live green', async () => {
+    setup('#/c/events');
+    const table = await screen.findByRole('grid', { name: 'Events' });
+    const word = async (title: RegExp, text: string) =>
+      within(await within(table).findByRole('row', { name: title })).getByText(text);
+    expect((await word(/^Harvest concert/, 'Scheduled')).className).toMatch(/\btext-scheduled\b/);
+    expect((await word(/^Nursing information session/, 'Live')).className).toMatch(/\btext-live\b/);
+    // No times at all: live, in a collection where it could have been otherwise.
+    expect((await word(/^Spring commencement/, 'Live')).className).toMatch(/\btext-live\b/);
+  });
 });
 
 describe('the Scheduled view', () => {

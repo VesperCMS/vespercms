@@ -89,7 +89,7 @@ describe('the studio as panes', () => {
       'page',
     );
     expect(
-      await within(list).findByRole('row', { name: 'Harbor at dawn, open now' }),
+      await within(list).findByRole('row', { name: 'Harbor at dawn, Live, open now' }),
     ).toBeVisible();
     expect(structure.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(list.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
