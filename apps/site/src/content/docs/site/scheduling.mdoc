@@ -1,0 +1,162 @@
+---
+title: Scheduled publishing
+menuLabel: Scheduling
+summary: Editors choose when an entry goes live and when it comes down, and every build shows the site as it is at that moment.
+---
+
+A static site changes only when it's built. Scheduling in Vesper has two halves:
+
+- **Each build leaves out what isn't due.** An entry whose time to go live hasn't come, or whose time to come down has passed, isn't built. This is free, and works on every host.
+- **Something builds the site at the time.** That's your host's next build, a scheduled rebuild you add to your repository (free), or the cloud, which builds the site at the exact time (paid).
+
+## Turn it on for a collection
+
+Set `schedule` on the collection in `vesper.config.ts`:
+
+```ts
+// vesper.config.ts
+import { defineConfig } from 'vespercms/config';
+
+export default defineConfig({
+  timeZone: 'America/New_York',
+  collections: {
+    events: { url: '/events/:id', schedule: true },
+  },
+});
+```
+
+Then add the times to the collection's schema. Astro drops any value the schema doesn't list, so the build can't read a time the schema leaves out:
+
+```ts
+// src/content.config.ts
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
+import { fields } from 'vespercms/fields';
+
+const events = defineCollection({
+  // loader: …
+  schema: z.object({
+    title: z.string(),
+    publishAt: fields.datetime().optional(),
+    unpublishAt: fields.datetime().optional(),
+    unpublishRedirect: z.string().optional(),
+  }),
+});
+```
+
+- `publishAt` is when the entry goes live. Without one, it's live as soon as it's published.
+- `unpublishAt` is when it comes down.
+- `unpublishRedirect`, optional, is where visitors go once it has come down: a page's address on your site.
+
+A scheduled collection whose schema is missing one of the times gets a warning in `astro dev` and at build, with the line to add.
+
+`timeZone` sets the zone the studio shows and takes times in, for everyone who edits the site. Without it, each editor sees times in their own zone. Times are saved with their offset, such as `2026-10-31T08:00:00-04:00`, so the build reads the same moment wherever it runs.
+
+To use other field names, or to leave out coming down, give `schedule` an object:
+
+```ts
+events: { schedule: { publishAt: 'goesLive', unpublishAt: 'expires', unpublishRedirect: 'thenGoTo' } },
+news: { schedule: { unpublish: false } },
+```
+
+## What a build leaves out
+
+A build leaves out every entry of a scheduled collection whose `publishAt` is still to come or whose `unpublishAt` has passed. Its page isn't built, and the lists and trees your pages read from `vesper:content` don't show it:
+
+- `getCollection` leaves it out, after your own filter;
+- `getEntry` returns `undefined`, as it does for an entry that doesn't exist;
+- `getEntries` leaves it out;
+- `getTree`, `getChildren` and `getBreadcrumbs` follow, since they read through `getCollection`.
+
+A reference to an entry that isn't live resolves to nothing, as a reference to a missing entry does. Site search leaves it out too. Other collections are untouched.
+
+Read scheduled collections through `vesper:content`, not `astro:content`, which Vesper doesn't filter. When a page that reads `astro:content` builds an entry that isn't due, the build warns and names it:
+
+```text
+/events/harvest-concert/ was built, but it's scheduled for Sat, Oct 31, 8:00 AM. The page reads astro:content, which isn't filtered; import from vesper:content instead.
+```
+
+**One moment per build.** Every check in a build uses the time the build started, so one page can't show an entry another leaves out. Set `VESPER_BUILD_TIME` to an ISO time to build the site as it will be then:
+
+```sh
+VESPER_BUILD_TIME=2026-10-31T08:00:00-04:00 npx astro build
+```
+
+The build's log then says "Building the site as of …".
+
+**In `astro dev`,** every entry stays, so editors can work on it. A page whose own entry isn't live carries a note at the top, such as "Scheduled · Sat, Oct 31, 8:00 AM. Visitors won't see this page until then.", and Vesper's toolbar app lists each entry's schedule.
+
+## When an entry comes down
+
+Once its `unpublishAt` passes, the next build leaves the entry out, and its address answers 404. With `unpublishRedirect` set, the address redirects there instead, temporarily, through the same pages and host rules as your other [redirects](/docs/site/hosting/). Vesper never writes it into `vesper.redirects.yaml`, so there's nothing to undo if the entry comes back. A redirect in that file for the same address wins.
+
+Netlify, Cloudflare and Vercel replace the whole site with each deploy, so a page that's no longer built is gone. A host you upload to needs the old page deleted: the SFTP and FTP workflows from [`vesper deploy init`](/docs/reference/cli/) delete what the build no longer has.
+
+## In the studio
+
+In a scheduled collection, the editor's Publish button (Save, in local mode) gets a menu, **More ways to publish**, beside it:
+
+- **Schedule…** sets when the entry goes live, when it comes down, and where visitors go then.
+- **Publish now** (**Make it live now**, in local mode) puts an entry that's waiting to go live on the site at once.
+- **Cancel schedule** takes away a live entry's time to come down. In the cloud, it also turns an entry that's waiting to go live back into a draft; elsewhere there's no draft to go back to, so reschedule it instead.
+
+The Schedule dialog shows times in the site's time zone and says so: "Times are in Eastern Time, the site's time zone." Under the times, one line says how exact the time is:
+
+| The line | When |
+|---|---|
+| "Goes live at Sat, Oct 31, 8:00 AM." | The cloud builds the site at the time. |
+| "Goes live at the first rebuild after Sat, Oct 31, 8:00 AM. This site rebuilds every hour." | The site has a scheduled rebuild, and `rebuildEvery` says how often. |
+| "Goes live the next time the site is built after Sat, Oct 31, 8:00 AM." | Anything else. |
+
+The dialog refuses a time that has passed, and a time to come down before the time to go live. Around a clock change it says what a time means: "2:30 AM doesn't happen on Sun, Mar 14; this is 3:30 AM.", or, on the night the clocks go back, "1:30 AM happens twice that night; this is the first, EDT."
+
+Elsewhere in the studio:
+
+- **Details** shows the schedule in words, "Goes live Sat, Oct 31, 8:00 AM · Comes down Sun, Nov 8, 12:00 AM", with **Change schedule…**.
+- **The entry lists** say each entry's schedule in its Status: "Scheduled · Sat, Oct 31, 8:00 AM", "Live until Fri, Nov 13, 12:00 AM" or "Unpublished · Sun, Oct 25". Their filter has a **Scheduled** choice when a collection has scheduled entries.
+- **The Scheduled view** lists every change still to come across the site, soonest first: the time, the entry, whether it goes live or comes down, and its collection. A link such as "3 scheduled changes" on Home and above the collections opens it. Each row's menu has **Reschedule…**, and **Cancel** where Cancel schedule would apply.
+
+In GitHub mode, scheduling publishes the entry with its times, so in a public repository anyone can read it there before it goes live. The dialog says so.
+
+## Build the site at the time
+
+The studio's line tells editors which of these your site has.
+
+### Your host's next build
+
+With nothing else set up, a scheduled change goes live the next time the site is built, by a publish or anything else. On a busy site that may be soon enough.
+
+### A scheduled rebuild (free)
+
+[`vesper deploy init`](/docs/reference/cli/) writes a GitHub Actions workflow into your repository. With `--rebuild-every`, it also runs on a schedule:
+
+```sh
+npx vesper deploy init --target hook --rebuild-every 15
+```
+
+Each scheduled run reads the live site's `_vesper/schedule.json`. That file says when the site next changes, never what: `{ "version": 1, "builtAt": "…", "next": "…" }`, with `next` null when nothing is scheduled. The run builds only once `next` has passed, so the site rebuilds once per scheduled change, not every 15 minutes. When the file can't be read, the run fails without building, and names the address it tried.
+
+- `--rebuild-every` takes 5, 6, 10, 12, 15, 20, 30, 60, 120, 180, 240, 360, 480, 720 or 1440 minutes: the intervals a schedule keeps exactly. The `hook` target checks every hour unless you say otherwise.
+- The run needs the live site's address: Astro's `site`, or `--url`.
+- GitHub can start a scheduled run late, especially at the top of the hour, so the workflow's runs start a few minutes past it.
+
+`deploy init` prints a line for `vesper.config.ts`. Add it, so the studio can say how often the site rebuilds:
+
+```ts
+// vesper.config.ts
+export default defineConfig({
+  rebuildEvery: 15,
+});
+```
+
+### The cloud, at the exact time (paid)
+
+A site [connected to the cloud](/docs/getting-started/publishing/) can be built at each scheduled time. In the dashboard, open the site's **Scheduled publishing** page and choose what happens at a scheduled time:
+
+- **Wait for the site's next build**, as without the cloud.
+- **Ask the host to build the site, through its deploy hook**, for Netlify, Cloudflare Pages, Vercel and other hosts that build from your repository. Paste the hook's address from the host. Vesper keeps it sealed and never shows it again.
+- **Start the site's GitHub workflow**, the one `vesper deploy init` added, which builds the site and uploads it. The cloud asks GitHub to run it through its GitHub App.
+
+The cloud reads every scheduled time from the site's files, so a time set in local mode or by a developer's commit gets its exact rebuild too. It reads the live site's `schedule.json` to tell when a change went live, and the site's page in the dashboard lists recent results: live, or failed when the host reports a failure or no new build shows up within 30 minutes. The studio's Scheduled view says where each change stands, such as "Rebuild at 8:00 AM".
+
+On a public repository, choose **Keep scheduled drafts in Vesper until their time**. Scheduling then keeps the change as a draft in the cloud, where no one can read it early, and Vesper publishes it at the time, as Publish would, crediting everyone who worked on it. The Scheduled view says "Waiting in Vesper until 8:00 AM". Nothing is published if the file changed in your repository since, or if the person who scheduled it can no longer publish there. The Scheduled view then says why, and that person gets an email. Only going live waits like this: a time to come down is a field in the file, as before.
