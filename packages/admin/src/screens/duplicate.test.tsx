@@ -81,13 +81,15 @@ function withSite(urls: Partial<NonNullable<Manifest['site']['urls']>>): Manifes
 }
 
 describe('the editor’s copy items and Duplicate', () => {
-  it('lists View on site, the two copy items and Duplicate before Delete', async () => {
+  it('lists View on site, the two copy items, Duplicate and Unpublish before Delete', async () => {
     const { user } = setup('#/c/blog/e/harbor-at-dawn');
     expect(names(await openMenu(user))).toEqual([
       'View on site',
       'Copy page address',
       'Copy editing link',
       'Duplicate',
+      // The blog has a `draft` field.
+      'Unpublish…',
       'Delete…',
     ]);
     await expectNoViolations();

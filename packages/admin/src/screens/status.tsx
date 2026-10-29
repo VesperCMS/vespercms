@@ -1,4 +1,5 @@
 import {
+  hasDraftField,
   scheduleState,
   type CollectionManifest,
   type DataValue,
@@ -65,9 +66,7 @@ export function entryState(
   }
   if (entry.newDraft) return { tone: 'neutral', word: 'Draft', rest: '' };
   const couldBeOther =
-    options.cloud ||
-    collection.presentation.schedule !== undefined ||
-    (collection.fields ?? []).some((field) => field.path.length === 1 && field.path[0] === 'draft');
+    options.cloud || collection.presentation.schedule !== undefined || hasDraftField(collection);
   if (entry.times === null && collection.presentation.schedule !== undefined) return null;
   return couldBeOther ? { tone: 'live', word: 'Live', rest: '' } : null;
 }
