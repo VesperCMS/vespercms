@@ -137,6 +137,8 @@ describe('vesper:content’s loaders in a build', () => {
       data: { unpublishAt: new Date('2026-11-13T05:00:00Z') },
     },
     { collection: 'blog', id: 'welcome', data: { publishAt: new Date('2099-01-01') } },
+    { collection: 'blog', id: 'notes', data: { draft: true } },
+    { collection: 'docs', id: 'intro', data: { draft: true } },
   ];
   const content = {
     getCollection: (name: string) =>
@@ -153,14 +155,18 @@ describe('vesper:content’s loaders in a build', () => {
   const loaders = scheduledLoaders(content, {
     instant: NOW.toISOString(),
     schedules: { events: schedule },
+    // Blog posts have a `draft` field; docs don't.
+    drafts: ['blog'],
   });
 
   it('leave out scheduled entries outside their window, and nothing else', async () => {
     expect((await loaders.getCollection('events')).map((e) => (e as { id: string }).id)).toEqual([
       'lecture',
     ]);
-    // An unscheduled collection passes through, whatever its fields say.
-    expect(await loaders.getCollection('blog')).toHaveLength(1);
+    // An unscheduled collection passes through, whatever its schedule fields say.
+    expect((await loaders.getCollection('blog')).map((e) => (e as { id: string }).id)).toEqual([
+      'welcome',
+    ]);
     expect(await loaders.getEntry(...(['events', 'concert'] as never[]))).toBeUndefined();
     expect(await loaders.getEntry(...(['events', 'lecture'] as never[]))).toMatchObject({
       id: 'lecture',
@@ -171,5 +177,17 @@ describe('vesper:content’s loaders in a build', () => {
         { collection: 'events', id: 'lecture' },
       ] as never[]),
     ).toHaveLength(1);
+  });
+
+  it('leave out drafts where the collection has a `draft` field, and only there', async () => {
+    expect(await loaders.getEntry(...(['blog', 'notes'] as never[]))).toBeUndefined();
+    expect(
+      await loaders.getEntries([
+        { collection: 'blog', id: 'notes' },
+        { collection: 'blog', id: 'welcome' },
+      ] as never[]),
+    ).toHaveLength(1);
+    // `draft` means nothing to Vesper in a collection without the field.
+    expect(await loaders.getCollection('docs')).toHaveLength(1);
   });
 });
