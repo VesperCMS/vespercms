@@ -51,6 +51,12 @@ const PLACES: [string, RegExp, string[]][] = [
     /\b(glass-raised|shadow-glass-overlay|scrim)\b/,
     ['packages/ui/src/components/overlays.tsx'],
   ],
+  [
+    // DECISIONS.md, "Status words have colour".
+    'status hues and the status dot’s pulse: StatusPill and InlineStatus',
+    /\b((bg|text|border|outline|fill|stroke)-(live|scheduled)(-subtle)?|animate-status-pulse)\b/,
+    ['packages/ui/src/components/data.tsx'],
+  ],
 ];
 
 const RULES: [string, RegExp][] = [

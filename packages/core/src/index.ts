@@ -305,7 +305,13 @@ export {
   wallTime,
   zoneName,
 } from './schedule/time.ts';
-export { scheduleDay, scheduleStatus, scheduleTime } from './schedule/words.ts';
+export {
+  scheduleDay,
+  scheduleState,
+  scheduleStatus,
+  scheduleTime,
+  type ScheduleState,
+} from './schedule/words.ts';
 
 // Site search (spec §6.19): what the build tells Pagefind about each entry's page.
 export {

@@ -14,4 +14,10 @@ export {
   wallTime,
   zoneName,
 } from './time.ts';
-export { scheduleDay, scheduleStatus, scheduleTime } from './words.ts';
+export {
+  scheduleDay,
+  scheduleState,
+  scheduleStatus,
+  scheduleTime,
+  type ScheduleState,
+} from './words.ts';

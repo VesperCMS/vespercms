@@ -10,9 +10,11 @@
  *   are reset to `initial`, so `bg-red-500`, `text-xl`, `font-black` or
  *   `shadow-lg` simply don't exist. A screen can only use what is declared
  *   below.
- * - Beyond neutrals there are exactly five colour roles: accent and
- *   accent-subtle (each with its hover state), danger, focus and warning. No
- *   status hues: status is text.
+ * - Beyond neutrals there are five colour roles: accent and accent-subtle
+ *   (each with its hover state), danger, focus and warning. Two status hues
+ *   join them only in a `StatusPill`'s word, live and scheduled, each with its
+ *   subtle fill; the word still says it (DECISIONS.md, "Status words have
+ *   colour", 2026-10-29).
  * - scripts/a11y-contrast.mjs parses this file and fails CI if a colour is
  *   added outside the allowlist, or if any pair it lists misses its WCAG
  *   threshold in either theme, on solid surfaces or on glass.
@@ -53,6 +55,16 @@
   --color-danger: light-dark(oklch(51% 0.18 27), oklch(72% 0.15 27));
   --color-focus: light-dark(oklch(52% 0.14 250), oklch(75% 0.12 250));
   --color-warning: light-dark(oklch(62% 0.13 70), oklch(80% 0.13 78));
+
+  /*
+   * Status hues, only in a status pill: its word in the hue on the subtle
+   * fill. Green for live, a violet across the wheel from Pine for scheduled;
+   * drafts are neutral.
+   */
+  --color-live: light-dark(oklch(43% 0.1 150), oklch(84% 0.13 150));
+  --color-live-subtle: light-dark(oklch(94.5% 0.045 150), oklch(30% 0.05 150));
+  --color-scheduled: light-dark(oklch(47% 0.15 300), oklch(84% 0.09 300));
+  --color-scheduled-subtle: light-dark(oklch(94.5% 0.03 300), oklch(30% 0.06 300));
 
   /* Figtree is self-hosted by @vespercms/admin; the system stack is the fallback. */
   --font-sans: Figtree, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -141,6 +153,8 @@
 
   /* The primary button's one pulse after a successful save; never on a loop. */
   --animate-glow-pulse: glow-pulse 1.2s var(--ease-out) 1;
+  /* The status dot while a save runs, and only then: slower than once a second, never a flash. */
+  --animate-status-pulse: status-pulse 1.6s ease-in-out infinite;
 }
 
 /* Outside @theme, so scripts/a11y-contrast.mjs can read the block above. */
@@ -153,6 +167,18 @@
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.75);
   }
 }
 

@@ -240,10 +240,10 @@ test('on a phone, the editor’s bar keeps one row and one height as its status 
   await title.focus();
   await page.keyboard.press(keys.lineEnd);
   await page.keyboard.type(', again');
-  await expect(bar.getByRole('status')).toHaveText('Unsaved changes');
+  await expect(bar.getByRole('status')).toHaveText('Live · Unsaved changes');
   expect(await shape()).toEqual(before);
   await page.keyboard.press(keys.save);
-  await expect(bar.getByRole('status')).toHaveText(/^Saved/);
+  await expect(bar.getByRole('status')).toHaveText(/^Live · Saved/);
   expect(await shape()).toEqual(before);
   // Nothing runs past the window's edge.
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
@@ -389,7 +389,9 @@ test('by keyboard: open an entry from the list, edit, save with Ctrl+S; only tha
   await title.focus();
   await page.keyboard.press(keys.lineEnd);
   await page.keyboard.type(', again');
-  await expect(page.getByRole('main').getByRole('status').first()).toHaveText('Unsaved changes');
+  await expect(page.getByRole('main').getByRole('status').first()).toHaveText(
+    'Live · Unsaved changes',
+  );
   await page.keyboard.press(keys.save);
   await expect(page.getByText('Saved just now')).toBeVisible();
 

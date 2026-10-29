@@ -14,6 +14,7 @@ import { useEditor } from '../editor/context.tsx';
 import { ChoosePageButton } from '../editor/PagePicker.tsx';
 import type { WidgetProps } from '../types.ts';
 import { inputClass } from './basic.tsx';
+import { useBlankWhenEmpty } from './blank-date.ts';
 
 /*
  * The built-in widgets with behaviour of their own (spec §6.3.2). Every one
@@ -253,12 +254,15 @@ export function DateTimeWidget({
     value instanceof Date ? value : typeof value === 'string' && value ? new Date(value) : null;
   const valid = instant !== null && !Number.isNaN(instant.getTime());
   const name = zoneName(zone, valid ? instant : new Date());
+  const wall = valid ? wallTime(instant, zone) : '';
+  const blank = useBlankWhenEmpty(wall);
   return (
     <>
       <input
         id={id}
         type="datetime-local"
-        value={valid ? wallTime(instant, zone) : ''}
+        value={wall}
+        {...blank}
         onChange={(event) => {
           if (event.target.value === '') {
             onChange(undefined);

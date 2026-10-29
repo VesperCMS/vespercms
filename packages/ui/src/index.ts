@@ -60,10 +60,13 @@ export {
 export {
   Table,
   InlineStatus,
+  StatusPill,
   ErrorSummary,
   type TableProps,
   type TableColumn,
   type InlineStatusProps,
+  type StatusPillProps,
+  type StatusTone,
   type ErrorSummaryProps,
   type ErrorSummaryItem,
 } from './components/data.tsx';

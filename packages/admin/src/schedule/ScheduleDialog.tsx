@@ -13,6 +13,7 @@ import { useStudio } from '../app/context.tsx';
 import { useDrafts } from '../cloud/editor.tsx';
 import { ChoosePageButton } from '../editor/PagePicker.tsx';
 import { inputClass } from '../widgets/basic.tsx';
+import { useBlankWhenEmpty } from '../widgets/blank-date.ts';
 import { cloudKeepsTime } from './cloud.ts';
 import { useNow } from './now.ts';
 import { everyText, redirectField, siteZone, type ScheduleTimes } from './times.ts';
@@ -234,6 +235,7 @@ function TimeField({
   action?: ReactNode;
 }) {
   const note = value ? dstNote(value, zone, now) : null;
+  const blank = useBlankWhenEmpty(value);
   const described = [describedBy, note ? `${id}-note` : '', problem ? `${id}-problem` : '']
     .filter(Boolean)
     .join(' ');
@@ -249,6 +251,7 @@ function TimeField({
         onChange={(event) => {
           onChange(event.target.value);
         }}
+        {...blank}
         aria-describedby={described}
         aria-invalid={problem ? true : undefined}
         className={cx(inputClass, 'max-w-64')}

@@ -116,8 +116,10 @@ export function Table<T extends { id: string }>({
 
 export type InlineStatusProps = {
   children: ReactNode;
-  /** One small neutral dot before the text, never a coloured badge (spec §10.4). */
+  /** One small dot before the text. */
   dot?: boolean;
+  /** Something is under way (a save): the dot takes the accent and pulses; under reduced motion it holds still. */
+  busy?: boolean;
   /** Announce changes politely to screen readers (autosave status, spec §10.2 principle 6). */
   live?: boolean;
   /** `error` turns the words and the dot `danger`; the words still say what happened. */
@@ -129,6 +131,7 @@ export type InlineStatusProps = {
 export function InlineStatus({
   children,
   dot = false,
+  busy = false,
   live = true,
   tone = 'neutral',
   className,
@@ -145,14 +148,55 @@ export function InlineStatus({
       {dot && (
         <span
           aria-hidden="true"
+          data-busy={busy || undefined}
           className={cx(
             'size-2 shrink-0 rounded-full',
-            tone === 'error' ? 'bg-danger' : 'bg-content-muted',
+            tone === 'error'
+              ? 'bg-danger'
+              : busy
+                ? 'animate-status-pulse bg-accent'
+                : 'bg-content-muted',
           )}
         />
       )}
       {children}
     </p>
+  );
+}
+
+export type StatusTone = 'live' | 'scheduled' | 'neutral';
+
+export type StatusPillProps = {
+  /** The status word: "Live", "Scheduled", "Draft". */
+  children: ReactNode;
+  /** Green for live, violet for scheduled, neutral for drafts and anything not on the site. */
+  tone: StatusTone;
+  className?: string;
+};
+
+/**
+ * A status word on a fill of its colour (DECISIONS.md, "Status words have
+ * colour"). The word says it, so the colour is never all there is to go on
+ * (SC 1.4.1); the words after it stay plain text beside it. Its edge is an
+ * outline, so the pill is one caption line tall and a line of text keeps its
+ * height; the transparent one is drawn when forced colours drop the fill.
+ */
+export function StatusPill({ children, tone, className }: StatusPillProps) {
+  return (
+    <span
+      className={cx(
+        'inline-flex shrink-0 items-center rounded-full px-2 align-top text-caption font-semibold',
+        'outline -outline-offset-1',
+        tone === 'live'
+          ? 'bg-live-subtle text-live outline-transparent'
+          : tone === 'scheduled'
+            ? 'bg-scheduled-subtle text-scheduled outline-transparent'
+            : 'bg-surface-sunken text-content-muted outline-border',
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }
 

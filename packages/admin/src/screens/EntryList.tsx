@@ -9,7 +9,9 @@ import { useLoad } from '../app/load.ts';
 import { hrefFor, navigate } from '../app/router.ts';
 import { collectionIcon } from '../app/collection-icon.ts';
 import { Screen } from '../app/Screen.tsx';
-import { hasUpcoming, rowData, scheduleWords, siteZone } from '../schedule/times.ts';
+import { useDrafts } from '../cloud/editor.tsx';
+import { hasUpcoming, rowData, siteZone } from '../schedule/times.ts';
+import { StateWords, entryState, isNewInDraft, kindText, type EntryState } from './status.tsx';
 
 type Filter = 'all' | 'drafts' | 'attention' | 'scheduled';
 
@@ -21,6 +23,7 @@ type Filter = 'all' | 'drafts' | 'attention' | 'scheduled';
 export function EntryList({ collection }: { collection: CollectionManifest }) {
   const { api, cloud, manifest } = useStudio();
   const { zone } = siteZone(manifest);
+  const { drafts } = useDrafts();
   const [load] = useLoad(() => api.listEntries(collection.name), collection.name);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -71,11 +74,15 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
     );
     return [...shown].sort(compareBy(sort));
   }, [entries, query, filter, sort]);
-  const words = (entry: EntrySummary) =>
-    scheduleWords(
-      collection.presentation.schedule,
-      rowData(collection.presentation.schedule, entry.schedule),
-      zone,
+  const stateOf = (entry: EntrySummary) =>
+    entryState(
+      collection,
+      {
+        draft: entry.draft === true,
+        times: rowData(collection.presentation.schedule, entry.schedule),
+        newDraft: isNewInDraft(drafts, entry.path),
+      },
+      { zone, cloud: Boolean(cloud) },
     );
 
   return (
@@ -150,7 +157,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
           }
           emptyState={entries.length === 0 ? 'No entries yet.' : 'No entries match.'}
           renderCell={(entry, column) => (
-            <Cell entry={entry} column={column} schedule={words(entry)} />
+            <Cell entry={entry} column={column} state={stateOf(entry)} />
           )}
         />
       )}
@@ -168,11 +175,11 @@ export const TITLE_KEYS = new Set(['title', 'name', 'heading', 'label']);
 function Cell({
   entry,
   column,
-  schedule,
+  state,
 }: {
   entry: EntrySummary;
   column: string;
-  schedule: string | null;
+  state: EntryState | null;
 }) {
   if (column === 'title') {
     return (
@@ -194,25 +201,16 @@ function Cell({
     );
   }
   if (column === 'status') {
-    return <span className="text-content-muted">{statusText(entry, schedule)}</span>;
+    const kind = kindText(entry.status);
+    return (
+      <span className="text-content-muted">
+        <StateWords state={state} />
+        {state && kind ? ' · ' : ''}
+        {kind}
+      </span>
+    );
   }
   return <span>{formatListValue(entry.fields[column.slice('field:'.length)])}</span>;
-}
-
-/** An entry's status in words: what it is, then its schedule ("Draft · Scheduled · Sat, Oct 31, 8:00 AM"). */
-export function statusText(
-  entry: Pick<EntrySummary, 'status' | 'draft'>,
-  schedule: string | null = null,
-): string {
-  const kind =
-    entry.status === 'read-only'
-      ? 'Read only'
-      : entry.status === 'source-only'
-        ? 'Edit as YAML'
-        : entry.draft
-          ? 'Draft'
-          : '';
-  return [kind, schedule ?? ''].filter(Boolean).join(' · ');
 }
 
 /** A list field's value as short text. Dates at midnight UTC are calendar dates. */

@@ -8,6 +8,7 @@ import {
 import { MultiCombobox, RadioGroup, Select, Switch, cx } from '@vespercms/ui';
 import { useState } from 'react';
 import type { WidgetProps } from '../types.ts';
+import { useBlankWhenEmpty } from './blank-date.ts';
 
 /*
  * The simple built-in widgets (spec §6.3.2). Each follows the custom widget
@@ -148,11 +149,14 @@ export function DateWidget({
   invalid,
   disabled,
 }: WidgetProps<Date | string>) {
+  const text = dateText(value);
+  const blank = useBlankWhenEmpty(text);
   return (
     <input
       id={id}
       type="date"
-      value={dateText(value)}
+      value={text}
+      {...blank}
       onChange={(event) => {
         const text = event.target.value;
         if (text === '')
