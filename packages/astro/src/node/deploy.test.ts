@@ -396,7 +396,7 @@ describe.skipIf(process.platform === 'win32')('the upload and hook steps', () =>
   const upload = (target: 'sftp' | 'ftp') =>
     step(read({ ...base, target }), 'deploy', `Upload by ${target.toUpperCase()}`);
 
-  it('mirrors the build by SFTP, checking the server’s key', () => {
+  it('mirrors the build by SFTP, checking the server’s plain key', () => {
     const sftp = upload('sftp');
     expect(spawnSync('bash', ['-n', '-c', sftp.run ?? '']).status).toBe(0);
     const env = {
@@ -412,16 +412,28 @@ describe.skipIf(process.platform === 'win32')('the upload and hook steps', () =>
     const result = run(sftp.run ?? '', env);
     expect(result.status).toBe(0);
     expect(readFileSync(join(home, '.ssh', 'known_hosts'), 'utf8')).toBe(`${env.KNOWN_HOSTS}\n`);
+    // Certificates are refused: Hostinger offers one first, and nothing names
+    // an authority for it, so ssh reported the key ssh-keyscan listed as changed.
     expect(result.called).toBe(
-      "lftp -c set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=yes'; set net:max-retries 2; set net:timeout 30; open --env-password -u 'deployer' 'sftp://ssh.example.com:2222'; mirror --reverse --delete --parallel=4 --exclude-glob .well-known/ --exclude-glob cgi-bin/ 'dist/' 'public_html'\n",
+      "lftp -c set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=-*-cert-v01@openssh.com'; set net:max-retries 2; set net:timeout 30; open --env-password -u 'deployer' 'sftp://ssh.example.com:2222'; mirror --reverse --delete --parallel=4 --exclude-glob .well-known/ --exclude-glob cgi-bin/ 'dist/' 'public_html'\n",
     );
 
     // A key instead of a password; a build with its own .well-known uploads it.
+    // Both secrets as Windows writes them, CR LF, are written with LF alone.
     mkdirSync(join(site, 'dist', '.well-known'));
-    const keyed = run(sftp.run ?? '', { ...env, PORT: '', LFTP_PASSWORD: '', KEY: 'PRIVATE KEY' });
+    const keyed = run(sftp.run ?? '', {
+      ...env,
+      PORT: '',
+      LFTP_PASSWORD: '',
+      KEY: 'PRIVATE\r\nKEY\r\n',
+      KNOWN_HOSTS: '[ssh.example.com]:2222 ssh-rsa BBBB\r\n[ssh.example.com]:2222 ssh-ed25519 AAAA',
+    });
     rmSync(join(site, 'dist', '.well-known'), { recursive: true });
     expect(keyed.status).toBe(0);
-    expect(readFileSync(join(home, '.ssh', 'vesper_deploy'), 'utf8')).toBe('PRIVATE KEY\n');
+    expect(readFileSync(join(home, '.ssh', 'known_hosts'), 'utf8')).toBe(
+      '[ssh.example.com]:2222 ssh-rsa BBBB\n[ssh.example.com]:2222 ssh-ed25519 AAAA\n',
+    );
+    expect(readFileSync(join(home, '.ssh', 'vesper_deploy'), 'utf8')).toBe('PRIVATE\nKEY\n\n');
     expect(keyed.called).toContain(`-i ${home}/.ssh/vesper_deploy'`);
     expect(keyed.called).toContain("'sftp://ssh.example.com:22'");
     expect(keyed.called).toContain('--parallel=4 --exclude-glob cgi-bin/ ');
