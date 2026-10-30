@@ -349,15 +349,21 @@ test('the site helpers return the same in astro dev as in the static build', asy
     'Thanks for getting in touch',
   ]);
   // Events are scheduled: the build, as of 26 October 2026, leaves out the
-  // ones that aren't live, and dev keeps them all to be edited.
+  // ones that aren't live, and dev keeps them all to be edited. A draft
+  // (`draft: true` in the blog) is left out of the build and kept in dev too.
+  const drafts = ['blog/notes-from-the-field'];
   const split = (urls: Record<string, string>) => [
-    Object.fromEntries(Object.entries(urls).filter(([key]) => !key.startsWith('events/'))),
+    Object.fromEntries(
+      Object.entries(urls).filter(([key]) => !key.startsWith('events/') && !drafts.includes(key)),
+    ),
     Object.fromEntries(Object.entries(urls).filter(([key]) => key.startsWith('events/'))),
   ];
   const fromDev = (await dev.json()) as SiteTree;
   const [devUrls, devEvents] = split(fromDev.urls);
   const [builtUrls, builtEvents] = split(tree.urls);
   expect({ ...fromDev, urls: devUrls }).toEqual({ ...tree, urls: builtUrls });
+  expect(drafts.filter((key) => key in fromDev.urls)).toEqual(drafts);
+  expect(drafts.filter((key) => key in tree.urls)).toEqual([]);
   expect(Object.keys(builtEvents ?? {}).sort()).toEqual([
     'events/nursing-info-session',
     'events/spring-commencement',
