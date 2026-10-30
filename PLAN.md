@@ -9,7 +9,7 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 **Land what's open**
 - [ ] Merge #6, the Scheduled publishing docs page and this list. Only the Pages check runs on it, since CI skips prose, and it's green.
 - [ ] Merge #8: gaps 15, 16 and 18 (Discard changes…, the lit Link tool, rows that point). Every check is green.
-- [ ] Fix #9's e2e failure, then merge it: gap 17, unpublishing through `draft: true`, built on #8. `e2e/studio/pages.spec.ts:360`, the site helpers' parity test (`astro dev` against the static build), fails because the build now leaves drafts out and dev keeps them. Compare all but the drafts, as the test already does for scheduled events, and check the build has only the live ones.
+- [ ] Fix #9's e2e failure, then merge it: gap 17, unpublishing through `draft: true`, built on #8. `e2e/studio/pages.spec.ts:360`, the site helpers' parity test (`astro dev` against the static build), fails because the build now leaves drafts out and dev keeps them. Compare all but the drafts, as the test already does for scheduled events, and check the build has only the live ones. Once #6 is on `main`, #9 conflicts with it in `getting-started/first-edit.mdoc`, where both rewrote "In a build, `vesper:content` is Astro's own module, unchanged": keep #9's sentence, which covers both schedules and drafts, with #6's link on "schedule" (`/docs/site/scheduling/`).
 - [ ] A `next` prerelease once #8 and #9 are on `main` (`npm run changeset -- version`, then the Release workflow), and thosegeeks.com moved to it, so the port gets gaps 15 to 18. It runs `0.1.0-next.1`.
 
 **Finish Phase 4.5**
