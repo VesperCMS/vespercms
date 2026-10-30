@@ -9,6 +9,8 @@ import {
   type UrlSettings,
 } from '@vespercms/core';
 import {
+  hasDraftField,
+  isDraft,
   isPublished,
   publishWindow,
   resolveTimeZone,
@@ -97,10 +99,11 @@ export async function writeSchedule(options: {
 }
 
 /**
- * Built pages that belong to an entry outside its window: the page read
- * `astro:content` directly, which isn't filtered. Found through the
+ * Built pages that belong to an entry outside its window, or to a draft: the
+ * page read `astro:content` directly, which isn't filtered. Found through the
  * collections' `url`, as the accessibility check traces pages, and said
- * plainly, since the page is live before its time or after it came down.
+ * plainly, since the page is live before its time, after it came down, or
+ * while it's unpublished.
  */
 export async function unfilteredPages(options: {
   root: string;
@@ -120,9 +123,9 @@ export async function unfilteredPages(options: {
   const outside = new Map<string, DataValue>();
   for (const collection of model.manifest.collections) {
     const schedule = collection.presentation.schedule;
-    if (!schedule) continue;
+    if (!schedule && !hasDraftField(collection)) continue;
     for (const entry of await content.entriesOf(collection.name)) {
-      if (!isPublished(schedule, entry.data, at))
+      if (isDraft(collection, entry.data) || !isPublished(schedule, entry.data, at))
         outside.set(`${collection.name}/${entry.id}`, entry.data);
     }
   }
@@ -140,15 +143,16 @@ export async function unfilteredPages(options: {
     if (!found) continue;
     // An unpublished page with a redirect is Astro's redirect page, as it should be.
     if (skipReason(page.file, readFileSync(join(options.dist, page.file), 'utf8'))) continue;
-    const schedule = model.manifest.collections.find((c) => c.name === found.collection)
-      ?.presentation.schedule;
-    const { publishAt, unpublishAt } = publishWindow(schedule, found.data);
+    const collection = model.manifest.collections.find((c) => c.name === found.collection);
+    const { publishAt, unpublishAt } = publishWindow(collection?.presentation.schedule, found.data);
     const when =
-      publishAt && publishAt.getTime() > at.getTime()
-        ? `it's scheduled for ${scheduleTime(publishAt, zone, at)}`
-        : unpublishAt
-          ? `it was unpublished on ${scheduleDay(unpublishAt, zone, at)}`
-          : 'it’s outside its publish window';
+      collection && isDraft(collection, found.data)
+        ? 'it’s a draft (draft: true)'
+        : publishAt && publishAt.getTime() > at.getTime()
+          ? `it's scheduled for ${scheduleTime(publishAt, zone, at)}`
+          : unpublishAt
+            ? `it was unpublished on ${scheduleDay(unpublishAt, zone, at)}`
+            : 'it’s outside its publish window';
     warnings.push(
       `${page.url} was built, but ${when}. The page reads astro:content, which isn't filtered; import from vesper:content instead.`,
     );

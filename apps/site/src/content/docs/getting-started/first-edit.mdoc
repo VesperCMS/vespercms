@@ -28,6 +28,8 @@ The top bar also has the entry's status ("No changes", "Unsaved changes", "Saved
 - **View on site** and **Copy page address**, for a collection with a `url`. The address is the page's full address, on Astro's `site` when your config sets one, so one copied while working locally is the live page's.
 - **Copy editing link**, the studio's address for this entry, to send to a colleague. It opens the entry after a reload, and after signing in.
 - **Duplicate**, which opens a new entry with everything copied, " (copy)" after its title and a new address. Nothing is saved until you save it; the new file then starts as the original's own text, comments and all, with your changes. In a collection of pages, the copy goes right after the original, without its subpages.
+- **Unpublish…**, in a collection with a `draft` field, for whoever may publish. After asking, it sets `draft: true` and saves (or publishes), and the site leaves the entry out the next time it's built. A draft has **Make it live** instead, which sets `draft: false`.
+- **Discard changes…**, while there are unsaved changes. After asking, it puts the entry back as it was last saved, without leaving it.
 - **Delete**.
 
 After a copy, the status says "Link copied" for a few seconds. Where the browser doesn't allow copying (a site on plain `http`), the link is shown selected, ready for Ctrl+C (⌘C on a Mac).
@@ -96,7 +98,7 @@ import { getCollection, getEntry, render } from 'vesper:content';
 ---
 ```
 
-In a build, `vesper:content` is Astro's own module, except that a [scheduled](/docs/site/scheduling/) collection leaves out entries that aren't due.
+In a build, `vesper:content` is Astro's own module, except that it leaves out the entries that aren't on the site: one a collection's [`schedule`](/docs/site/scheduling/) keeps off it at the build's time, and a draft (`draft: true`) in a collection whose schema has a true-or-false `draft` field. A page that reads `astro:content` directly gets no filtering, and the build warns when it builds a page for one of those entries.
 
 ## Next steps
 

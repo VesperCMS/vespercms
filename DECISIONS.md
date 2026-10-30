@@ -1349,6 +1349,14 @@ Rejected: rebuilding while the file can't be read (the first design); rebuilding
 - A missing Wrangler config, or wrangler missing from the site's dependencies, gets a printed note with the command to fix it, not a refusal. It also prints the `redirects.native` line, since a build on GitHub can't be detected, and warns that a site Workers Builds already builds should use `--target hook` (Workers Builds' deploy hooks), or every push deploys twice. Rejected: parsing the Wrangler config's JSONC or TOML to check `assets.directory`, which would need a dependency.
 - Not yet run for real: no Workers Builds build, Actions run with a real token or deploy hook call. Phase 4.5's docs page (step 7) covers the target.
 
+### 2026-10-29: Unpublishing is `draft: true`
+
+**In a collection whose schema has a top-level true-or-false `draft` field, an entry with `draft: true` is a draft: production `vesper:content` leaves it out of the build (`getCollection`, `getEntry`, `getEntries`), as it leaves out a scheduled entry outside its window, and the search index leaves it out. In dev it stays, and the toolbar's marker says "Draft" and that visitors wouldn't see it. The studio's "…" menu has Unpublish… (after asking, it sets `draft: true` and saves or publishes) and, on a draft, Make it live (`draft: false`), for whoever may publish. In a collection without the field, `draft` means nothing to Vesper. Core's `hasDraftField` and `isDraft` decide, for the build, search, the warning for a page built anyway, and the studio.** A page built for a draft from `astro:content` gets the same warning as one outside its schedule.
+
+Why: Jeremy found no way to take an entry off the site by hand (gap 17). Of three ways put to him on 2026-10-29 he chose this one: `draft` is a field many sites already have, and Astro's own content guides use it. Rejected: "Unpublish now" setting a scheduled collection's `unpublishAt` (only collections with a schedule could unpublish), and a `published: false` key of Vesper's own in every collection (every site's schemas would have to allow it, and the build would filter everything).
+
+What changes for a site: a draft that a site's own templates showed with a marker (the playground's blog said "· Draft") is no longer built, once its pages read `vesper:content`. Such a site wanting drafts on its live pages would read `astro:content` there, and the build would warn. No redirect is written for an unpublished draft: its address is simply gone.
+
 ## GitHub mode
 
 ### 2026-10-19: GitHub mode runs core's services in the browser

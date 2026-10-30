@@ -626,7 +626,7 @@ The studio is the same `/admin` bundle everywhere (D14). Cloud mode is a connect
 import { getCollection, getEntry, render } from 'vesper:content';
 ```
 
-- **Production builds:** these re-export `astro:content` unchanged. Zero runtime cost.
+- **Production builds:** these re-export `astro:content` unchanged. Zero runtime cost. (D18 has them leave out scheduled entries outside their window, and since October 29, 2026 drafts too, `draft: true` where the schema has the field: `DECISIONS.md`, "Unpublishing is `draft: true`".)
 - **Preview deployments:** when `VESPER_PREVIEW=1` is set and the site has an adapter, the same calls switch to Live Content Collections. They read the editor's current draft from the cloud at request time, so edits appear in seconds with no rebuild. Live collections are stable since Astro 6.
 
 **Preview tiers.** Every site gets a useful preview on any host. Better tiers appear when they're available.

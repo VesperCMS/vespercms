@@ -7,6 +7,7 @@ import {
   entryPath as treePathOf,
   entryUrlKey,
   formatUrl,
+  hasDraftField,
   lineEndings,
   scheduleTime,
   type BodyFormat,
@@ -256,6 +257,7 @@ function EntryForm({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [confirmDiscardChanges, setConfirmDiscardChanges] = useState(false);
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   /** Bumped by Discard changes, so the fields and body are drawn again from the saved values. */
   const [drawn, setDrawn] = useState(0);
   /** The last draft save was refused by the entry's own checks: the status says so, quietly. */
@@ -872,6 +874,16 @@ function EntryForm({
     access?.publish === true &&
     collection.presentation.schedule !== undefined &&
     (timesOf(collection, saved.values).publishAt?.getTime() ?? 0) > now.getTime();
+  /**
+   * Unpublishing is `draft: true` (DECISIONS.md, "Unpublishing is `draft: true`"):
+   * offered where the collection has the field, to whoever may publish.
+   */
+  const unpublishable =
+    !isNew &&
+    editable &&
+    status === 'editable' &&
+    hasDraftField(collection) &&
+    (!cloud || access?.publish === true);
   const menuItems: MenuItem[] = [
     ...(publishPending
       ? [{ id: 'cancel-publish', label: 'Cancel schedule', icon: 'unschedule' as const }]
@@ -887,6 +899,13 @@ function EntryForm({
       : []),
     ...(!isNew && entryId && editable && status === 'editable' && !collection.presentation.singleton
       ? [{ id: 'duplicate', label: 'Duplicate', icon: 'duplicate' as const }]
+      : []),
+    ...(unpublishable
+      ? [
+          saved.values.draft === true
+            ? { id: 'make-live', label: 'Make it live', icon: 'publish-now' as const }
+            : { id: 'unpublish', label: 'Unpublish…', icon: 'unpublish' as const },
+        ]
       : []),
     ...(dirty && editable
       ? [
@@ -1177,6 +1196,8 @@ function EntryForm({
               if (action === 'delete') setConfirmDelete(true);
               if (action === 'discard') setConfirmDiscard(true);
               if (action === 'discard-changes') setConfirmDiscardChanges(true);
+              if (action === 'unpublish') setConfirmUnpublish(true);
+              if (action === 'make-live') void saveWith(setIn(values, ['draft'], false));
               if (action === 'cancel-publish') void cancelPublish();
             }}
           />
@@ -1435,6 +1456,34 @@ function EntryForm({
           </Button>
           <Button variant="danger" onPress={() => void deleteEntry()}>
             Delete
+          </Button>
+        </div>
+      </Dialog>
+      <Dialog
+        title={`Unpublish “${titleText}”?`}
+        role="alertdialog"
+        isOpen={confirmUnpublish}
+        onOpenChange={setConfirmUnpublish}
+      >
+        <p className="mb-6">
+          {`It’s marked as a draft and ${cloud || publishes ? 'published' : 'saved'}, and the site leaves it out the next time it’s built: its address is gone until it’s live again. Make it live from this menu.`}
+        </p>
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button
+            onPress={() => {
+              setConfirmUnpublish(false);
+            }}
+          >
+            Keep it live
+          </Button>
+          <Button
+            variant="danger"
+            onPress={() => {
+              setConfirmUnpublish(false);
+              void saveWith(setIn(values, ['draft'], true));
+            }}
+          >
+            Unpublish
           </Button>
         </div>
       </Dialog>

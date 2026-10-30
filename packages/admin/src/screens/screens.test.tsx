@@ -226,6 +226,42 @@ describe('the entry editor', () => {
     });
   });
 
+  it('unpublishes an entry as a draft, after asking, and makes it live again', async () => {
+    const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
+    await screen.findByRole('textbox', { name: 'Title' });
+    const more = () => screen.getByRole('button', { name: /^More actions for/ });
+    await user.click(more());
+    expect(screen.queryByRole('menuitem', { name: 'Make it live' })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('menuitem', { name: 'Unpublish…' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Unpublish “Harbor at dawn”?' });
+    expect(dialog).toHaveTextContent('the site leaves it out the next time it’s built');
+    await user.click(within(dialog).getByRole('button', { name: 'Keep it live' }));
+    expect(api.saveEntry).not.toHaveBeenCalled();
+
+    await user.click(more());
+    await user.click(await screen.findByRole('menuitem', { name: 'Unpublish…' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Unpublish' }),
+    );
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalledTimes(1);
+    });
+    expect((api.saveEntry.mock.calls[0]?.[0] as SaveRequest).data).toMatchObject({ draft: true });
+    await waitFor(() => {
+      expect(screen.getAllByRole('status')[0]).toHaveTextContent(/^Draft · Saved/);
+    });
+
+    // A draft offers the way back.
+    await user.click(more());
+    await user.click(await screen.findByRole('menuitem', { name: 'Make it live' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalledTimes(2);
+    });
+    expect((api.saveEntry.mock.calls[1]?.[0] as SaveRequest).data).toMatchObject({
+      draft: false,
+    });
+  });
+
   it('saves edited values, leaves an untouched body out, and says so', async () => {
     const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
     const title = await screen.findByRole('textbox', { name: 'Title' });

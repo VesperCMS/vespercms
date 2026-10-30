@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import {
   DEFAULT_URL_SETTINGS,
   folderKey,
+  hasDraftField,
   readDataFile,
   resolveTimeZone,
   siteRatios,
@@ -140,15 +141,17 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             c.presentation.schedule ? [[c.name, c.presentation.schedule]] : [],
           ),
         );
+        // Drafts are left out of the build as entries outside their window are.
+        const drafts = model.manifest.collections.filter(hasDraftField).map((c) => c.name);
         return contentModule({
           dev: options.command === 'dev',
           helpers: toPosix(options.helpersEntry),
           data: helperData(model, options.root),
           schedule:
-            Object.keys(schedules).length > 0
+            Object.keys(schedules).length > 0 || drafts.length > 0
               ? {
                   entry: toPosix(options.scheduleEntry),
-                  data: { instant: options.instant.toISOString(), schedules },
+                  data: { instant: options.instant.toISOString(), schedules, drafts },
                   zone: resolveTimeZone(model.manifest.site.timeZone).zone,
                 }
               : undefined,
@@ -343,11 +346,11 @@ function contentModule(options: {
       ...helpers,
     ].join('\n');
   }
-  // Scheduled entries stay in dev, marked with what their schedule says now (spec §6.17).
+  // Scheduled entries and drafts stay in dev, marked with what their schedule says now (spec §6.17).
   const schedule = options.schedule
     ? [
         `import { scheduleNote } from ${JSON.stringify(options.schedule.entry)};`,
-        `const schedules = ${JSON.stringify({ schedules: options.schedule.data.schedules, zone: options.schedule.zone })};`,
+        `const schedules = ${JSON.stringify({ schedules: options.schedule.data.schedules, drafts: options.schedule.data.drafts, zone: options.schedule.zone })};`,
       ]
     : ['const scheduleNote = () => ({});', 'const schedules = null;'];
   return [

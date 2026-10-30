@@ -5,6 +5,7 @@
  * them without pulling in the rest of the core.
  */
 export { dateOf, isPublished, publishWindow } from './window.ts';
+export { hasDraftField, isDraft } from './draft.ts';
 export { scheduledEvents, type ScheduledEntry, type ScheduledEvent } from './events.ts';
 export {
   fromWallTime,

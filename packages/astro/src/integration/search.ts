@@ -17,6 +17,7 @@ import {
   formatUrl,
   globMatcher,
   imageValueOf,
+  isDraft,
   isHiddenFromSearch,
   isPublished,
   pixelRect,
@@ -169,6 +170,7 @@ export async function indexSearch(options: {
       if (collection.presentation.search === false) continue;
       if (isHiddenFromSearch(collection, data)) continue;
       if (!isPublished(collection.presentation.schedule, data, now)) continue;
+      if (isDraft(collection, data)) continue;
     }
     if (siteBody && !HAS_BODY.test(page.html)) {
       withoutBody.push(page.url);
