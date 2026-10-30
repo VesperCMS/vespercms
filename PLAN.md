@@ -2,6 +2,35 @@
 
 The working plan: where each phase stands, the design of the next phase, and the roadmap. Scope and decisions come from `vesper-spec.md`. This file records how we intend to build them, and it changes as phases land. Reasons for choices live in `DECISIONS.md`.
 
+## To do (2026-10-30)
+
+The short list, in order. Tick or remove an item as it lands; the history stays in the sections below. On 2026-10-30 every branch with work of its own was on GitHub: this repository's open PRs, and the two real-world copies' branches in `jeremybise/vesper-netlify-test` and `jeremybise/vesper-sftp-test`.
+
+**Land what's open**
+- [ ] Merge #6, the Scheduled publishing docs page and this list. Only the Pages check runs on it, since CI skips prose, and it's green.
+- [ ] Merge #8: gaps 15, 16 and 18 (Discard changes…, the lit Link tool, rows that point). Every check is green.
+- [ ] Fix #9's e2e failure, then merge it: gap 17, unpublishing through `draft: true`, built on #8. `e2e/studio/pages.spec.ts:360`, the site helpers' parity test (`astro dev` against the static build), fails because the build now leaves drafts out and dev keeps them. Compare all but the drafts, as the test already does for scheduled events, and check the build has only the live ones. Once #6 is on `main`, #9 conflicts with it in `getting-started/first-edit.mdoc`, where both rewrote "In a build, `vesper:content` is Astro's own module, unchanged": keep #9's sentence, which covers both schedules and drafts, with #6's link on "schedule" (`/docs/site/scheduling/`).
+- [ ] A `next` prerelease once #8 and #9 are on `main` (`npm run changeset -- version`, then the Release workflow), and thosegeeks.com moved to it, so the port gets gaps 15 to 18. It runs `0.1.0-next.1`.
+
+**Finish Phase 4.5**
+- [ ] The free tier's real-world check ("Tests, mapped to Done when", 2). `jeremybise/vesper-github-test` is the playground on Cloudflare Pages from Phase 3, older than scheduling, with GitHub Actions off. Bring it up to `main` without the playground's `VESPER_BUILD_TIME` line, sign in in GitHub mode rather than the cloud (whose trigger would fire at the exact time instead), turn Actions on, and run `vesper deploy init --target hook --rebuild-every 15 --url https://vesper-github-test.pages.dev` (the playground has no `site`, and a scheduled run reads the live `schedule.json`). Jeremy adds a Pages deploy hook as the `VESPER_BUILD_HOOK` secret. A post scheduled in the studio must be live after the first run past its time.
+- [ ] Then mark Phase 4.5 done here and in `CLAUDE.md`.
+
+**Dogfooding thosegeeks.com**
+- [ ] Gap 14 (in #8's "Dogfooding thosegeeks.com"): the Hostinger copy's studio, "Playground on SFTP", often says "Vesper couldn't reach GitHub" while its Netlify twin doesn't. The API logs GitHub's answer as `site.github` since its redeploy on 2026-10-29 (`vesper-cloud` at `77cf8f9`): bring the error up a few times, then read Workers Logs for GitHub's status.
+- [ ] Gap 12 in Safari on a Mac: the Schedule dialog's empty "Comes down" should stay blank until it's used. Checked only in Chromium.
+- [ ] Before choosing more studio or cloud work, bring any new items from thosegeeks-vesper's `docs/vesper-gaps.md` across and put them to Jeremy.
+
+**Loose ends**
+- [ ] In the cloud, Publish (or Schedule…) pressed while a draft is saving does nothing, with no word ("Phase 4.5: progress", step 5). Have Publish wait for the save in flight, then save what's left.
+- [ ] Workers, never run for real (gap 6): a Workers Builds build, `vesper deploy init --target workers` with a real token, a Workers Builds deploy hook.
+- [ ] GitHub mode on real GitHub (gap 10): Try again after installing the app, without a new sign-in; and what a public repository without the app shows.
+- [ ] `vesper-cloud` still imports `@vesper/core` and `@vesper/admin`; rename them to `@vespercms/*` when it next moves its submodule.
+- [ ] Screen reader passes, from 2.6 on, before launch (Jeremy's call).
+
+**Next phase**
+- [ ] Phase 5, Billing and ops. Before it starts, Jeremy decides spec §13.4: the final prices, from the cloud's measured cost (the addendum's numbers are placeholders). Bring him options; never pick.
+
 ## Phase status
 
 | Phase | Status |
@@ -23,7 +52,7 @@ The working plan: where each phase stands, the design of the next phase, and the
 
 ## To do next
 
-Phase 4.5's docs page, its last step. Step 7's real-world check passed 2026-10-29: a scheduled event went live 30 seconds after its time on Netlify and 55 seconds after it on an SFTP host (Hostinger), against the bar of 2 minutes, and an event that came down left the SFTP server. It found one bug, fixed the same day: the `sftp` template refused a server that offers a host certificate. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, on production since 2026-10-27) were built 2026-10-26, and its one open call (what an unreadable `schedule.json` does) was decided and built 2026-10-27: the scheduled run fails without building. See "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
+Phase 4.5's last check: the free tier's real-world check (design, "Tests, mapped to Done when", 2), `vesper-github-test` with the `hook` template every 15 minutes, where a post scheduled in GitHub mode should appear at the first run after its time. The docs page was written 2026-10-29: "Scheduled publishing" in the docs' "On your site" section, with `vesper deploy init` in the command reference. Step 7's real-world check passed 2026-10-29: a scheduled event went live 30 seconds after its time on Netlify and 55 seconds after it on an SFTP host (Hostinger), against the bar of 2 minutes, and an event that came down left the SFTP server. It found one bug, fixed the same day: the `sftp` template refused a server that offers a host certificate. Steps 4 (`vesper deploy init`), 5 (the schedule in the protocol, the fake and the studio) and 6 (the cloud's half, in `vesper-cloud`, on production since 2026-10-27) were built 2026-10-26, and its one open call (what an unreadable `schedule.json` does) was decided and built 2026-10-27: the scheduled run fails without building. See "Phase 4.5: progress", below. Duplicate and copy links (dogfooding step 2) were built 2026-10-26, before it, and tables (step 3) the same day beside it, in their own worktree: see "Step 3: outcome".
 
 Before that, nothing was queued. The last item, the pane beside the collections when nothing is chosen (queued by Jeremy on 2026-10-26), was built that day: see "Studio panes and tabs (outcome)", below. Jeremy's round of editor changes (queued 2026-10-27) was built that day: see "Editor round, 2026-10-27 (outcome)", below.
 
@@ -1689,6 +1718,8 @@ Started 2026-10-26, when Jeremy asked for Duplicate first and then this phase. T
 The six new contract cases pass against the real API in workerd, and both of its e2e projects pass, the studio's included. On 2026-10-27, with Jeremy's OK, migration 0004 was applied, `SECRETS_KEY` and `GITHUB_WEBHOOK_SECRET` set, and both Workers deployed at `vesper-cloud`'s `8470c8d`. Jeremy turned on VesperCMS's push webhook, and a commit from the studio was answered 204.
 
 **Next: step 7,** the real-world check: a Netlify site with a build hook and an SFTP host with the `sftp` template, a post scheduled 5 minutes ahead on each, against §11's 2 minutes. Then the docs page. Each site is a private copy of this repository at `main`, connected to the cloud, with two changes: the playground's `VESPER_BUILD_TIME` line removed, or every build stays at noon on 26 October and the post never appears, and vesper's own CI workflow deleted, so a publish doesn't run it.
+
+**The docs page (2026-10-29):** "Scheduled publishing" (`apps/site/src/content/docs/site/scheduling.mdoc`), between Accessibility checks and Hosting: turning it on, what a build leaves out, coming down, the studio, and the three ways a site is built at the time. `vesper deploy init` joined the command reference, the hosting page links both, and "Your first edit" no longer says a build's `vesper:content` is unchanged.
 
 **Step 7, the real-world check (2026-10-29): passed on both hosts.** Two private copies of this repository at `46d348e`, each with all three of its workflows deleted, the playground's `VESPER_BUILD_TIME` line removed and its own cloud project in the playground's `astro.config.mjs`. Each event's page was timed from here every 3 seconds, from its `publishAt` until it answered 200, with the live `schedule.json`'s `builtAt` to show when the rebuild began.
 - **Netlify: passed, live 30 seconds after its time.**

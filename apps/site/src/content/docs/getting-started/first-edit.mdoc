@@ -98,7 +98,7 @@ import { getCollection, getEntry, render } from 'vesper:content';
 ---
 ```
 
-In a build, `vesper:content` is Astro's own module, except that it leaves out the entries that aren't on the site: one a collection's `schedule` keeps off it at the build's time, and a draft (`draft: true`) in a collection whose schema has a true-or-false `draft` field. A page that reads `astro:content` directly gets no filtering, and the build warns when it builds a page for one of those entries.
+In a build, `vesper:content` is Astro's own module, except that it leaves out the entries that aren't on the site: one a collection's [`schedule`](/docs/site/scheduling/) keeps off it at the build's time, and a draft (`draft: true`) in a collection whose schema has a true-or-false `draft` field. A page that reads `astro:content` directly gets no filtering, and the build warns when it builds a page for one of those entries.
 
 ## Next steps
 
