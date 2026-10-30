@@ -117,7 +117,16 @@ export function ToggleButton({
 }
 
 export type ToolButtonProps = Omit<RACButtonProps, 'className' | 'children'> &
-  ToolContent & { className?: string };
+  ToolContent & {
+    className?: string;
+    /**
+     * The caret is inside what the action edits (a link): drawn as a chosen
+     * toggle is, so it lights up as Bullets does in a list. It stays an
+     * action, not a toggle, so nothing says "pressed"; the label says it
+     * ("Edit link").
+     */
+    isActive?: boolean;
+  };
 
 /** A plain action inside a toolbar ("Image", "Link"). */
 export function ToolButton({
@@ -126,6 +135,7 @@ export function ToolButton({
   label,
   shortcut,
   className,
+  isActive = false,
   ...props
 }: ToolButtonProps) {
   const { inside, named, tooltip } = toolParts({ children, icon, label, shortcut } as ToolContent);
@@ -135,7 +145,12 @@ export function ToolButton({
       {...props}
       {...named}
       ref={ref}
-      className={cx(toolClass, tooltip !== null && iconTool, className)}
+      className={cx(
+        toolClass,
+        tooltip !== null && iconTool,
+        isActive && 'bg-accent-subtle text-accent',
+        className,
+      )}
     >
       {inside}
     </RACButton>

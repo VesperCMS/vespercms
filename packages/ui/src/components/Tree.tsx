@@ -99,6 +99,9 @@ export function Tree<T extends TreeNode>({
       className={cx(
         // Square and flat, with no halo: a selected row is a fill, not a raised pill (Jeremy, 2026-10-26).
         'group text-body outline-none',
+        // A row that opens something points like a link, over its words too, where the browser
+        // would show a text cursor; one that doesn't is an arrow.
+        onAction ? 'cursor-pointer' : 'cursor-default',
         'data-[focus-visible]:outline-2 data-[focus-visible]:outline-solid data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-focus',
         // Where a dragged page would land is filled as the current item is.
         'data-[drop-target]:bg-accent-subtle data-[dragging]:opacity-50',

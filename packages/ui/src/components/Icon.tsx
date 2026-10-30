@@ -51,6 +51,7 @@ import {
   SquarePen,
   Trash,
   TriangleAlert,
+  Undo2,
   Upload,
   X,
 } from 'lucide';
@@ -97,6 +98,7 @@ export const ICONS = {
   edit: Pencil,
   'add-child': FilePlus,
   delete: Trash,
+  'discard-changes': Undo2,
   warning: TriangleAlert,
   accessibility: Accessibility,
   error: CircleAlert,

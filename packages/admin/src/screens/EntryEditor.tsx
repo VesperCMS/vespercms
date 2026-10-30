@@ -37,6 +37,7 @@ import {
   type MenuItem,
 } from '@vespercms/ui';
 import {
+  Fragment,
   Suspense,
   lazy,
   useCallback,
@@ -254,6 +255,9 @@ function EntryForm({
   const [publishing, setPublishing] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmDiscardChanges, setConfirmDiscardChanges] = useState(false);
+  /** Bumped by Discard changes, so the fields and body are drawn again from the saved values. */
+  const [drawn, setDrawn] = useState(0);
   /** The last draft save was refused by the entry's own checks: the status says so, quietly. */
   const [draftBlocked, setDraftBlocked] = useState(false);
   /** The cloud couldn't be reached: changes are kept on this device, and saving tries again. */
@@ -696,6 +700,23 @@ function EntryForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keptAt]);
 
+  /**
+   * Puts the entry back as it was last saved, without leaving it. The fields
+   * and body are drawn again: the body and Markdown editors read their text
+   * only when they're made. A copy kept on this device goes too.
+   */
+  const discardChanges = () => {
+    setConfirmDiscardChanges(false);
+    setValues(saved.values);
+    setBody(saved.body);
+    setRaw(saved.raw);
+    setIssues([]);
+    setNotice(null);
+    setGateRefused(false);
+    setDrawn((n) => n + 1);
+    if (keptAt) void keptChanges().delete(keptAt);
+  };
+
   /** Publishes the entry's draft, saving it first (spec §7.4). The publish gate applies here. */
   const publishDraft = async (override?: DataObject) => {
     if (!cloud || publishing) return;
@@ -866,6 +887,16 @@ function EntryForm({
       : []),
     ...(!isNew && entryId && editable && status === 'editable' && !collection.presentation.singleton
       ? [{ id: 'duplicate', label: 'Duplicate', icon: 'duplicate' as const }]
+      : []),
+    ...(dirty && editable
+      ? [
+          {
+            id: 'discard-changes',
+            label: 'Discard changes…',
+            isDanger: true,
+            icon: 'discard-changes' as const,
+          },
+        ]
       : []),
     ...(cloud && entryDraft && editable
       ? [{ id: 'discard', label: 'Discard draft…', isDanger: true, icon: 'delete' as const }]
@@ -1145,6 +1176,7 @@ function EntryForm({
               }
               if (action === 'delete') setConfirmDelete(true);
               if (action === 'discard') setConfirmDiscard(true);
+              if (action === 'discard-changes') setConfirmDiscardChanges(true);
               if (action === 'cancel-publish') void cancelPublish();
             }}
           />
@@ -1292,45 +1324,48 @@ function EntryForm({
           )}
           {isNew && parent !== undefined && <ParentNote collection={collection} parent={parent} />}
 
-          {sourceOnly ? (
-            <TextArea
-              label="Frontmatter (YAML)"
-              description="Vesper can’t show this frontmatter as fields, so it’s edited as text. It’s checked against the site’s schema when you save."
-              value={raw}
-              onChange={setRaw}
-              rows={Math.min(24, raw.split('\n').length + 2)}
-              isDisabled={!editable}
-              className="font-mono"
-            />
-          ) : (
-            arranged.title && <TitleField field={arranged.title} />
-          )}
-
-          {tabbed ? (
-            // Going to a field on another tab (the error summary, Go to field) chooses that tab first.
-            <TabsRevealing onReveal={setTab}>
-              <Tabs
-                label={titleText}
-                selected={shownTab}
-                onSelectedChange={setTab}
-                tabs={panels.map((panel) => ({
-                  id: panel.id,
-                  label: tabLabel(panel),
-                  children: (
-                    <>
-                      {fieldsOf(panel.fields)}
-                      {panel.id === 'main' && bodyEditor}
-                    </>
-                  ),
-                }))}
+          {/* Drawn again from the saved values by Discard changes. */}
+          <Fragment key={drawn}>
+            {sourceOnly ? (
+              <TextArea
+                label="Frontmatter (YAML)"
+                description="Vesper can’t show this frontmatter as fields, so it’s edited as text. It’s checked against the site’s schema when you save."
+                value={raw}
+                onChange={setRaw}
+                rows={Math.min(24, raw.split('\n').length + 2)}
+                isDisabled={!editable}
+                className="font-mono"
               />
-            </TabsRevealing>
-          ) : (
-            <>
-              {!sourceOnly && fieldsOf(arranged.main)}
-              {bodyEditor}
-            </>
-          )}
+            ) : (
+              arranged.title && <TitleField field={arranged.title} />
+            )}
+
+            {tabbed ? (
+              // Going to a field on another tab (the error summary, Go to field) chooses that tab first.
+              <TabsRevealing onReveal={setTab}>
+                <Tabs
+                  label={titleText}
+                  selected={shownTab}
+                  onSelectedChange={setTab}
+                  tabs={panels.map((panel) => ({
+                    id: panel.id,
+                    label: tabLabel(panel),
+                    children: (
+                      <>
+                        {fieldsOf(panel.fields)}
+                        {panel.id === 'main' && bodyEditor}
+                      </>
+                    ),
+                  }))}
+                />
+              </TabsRevealing>
+            ) : (
+              <>
+                {!sourceOnly && fieldsOf(arranged.main)}
+                {bodyEditor}
+              </>
+            )}
+          </Fragment>
         </div>
       </EditorContext.Provider>
 
@@ -1400,6 +1435,34 @@ function EntryForm({
           </Button>
           <Button variant="danger" onPress={() => void deleteEntry()}>
             Delete
+          </Button>
+        </div>
+      </Dialog>
+      <Dialog
+        title="Discard your changes?"
+        role="alertdialog"
+        isOpen={confirmDiscardChanges}
+        onOpenChange={setConfirmDiscardChanges}
+      >
+        <p className="mb-6">
+          {isNew
+            ? 'The new entry goes back to how it started, and nothing is saved.'
+            : cloud
+              ? 'The changes since its draft was last saved are thrown away, and the entry goes back to that draft.'
+              : publishes
+                ? 'The changes since it was last published are thrown away, and the entry goes back to that version.'
+                : 'The changes since it was last saved are thrown away, and the entry goes back to that version.'}
+        </p>
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button
+            onPress={() => {
+              setConfirmDiscardChanges(false);
+            }}
+          >
+            Keep editing
+          </Button>
+          <Button variant="danger" onPress={discardChanges}>
+            Discard changes
           </Button>
         </div>
       </Dialog>

@@ -182,6 +182,50 @@ describe('the entry editor', () => {
     expect(screen.getAllByRole('status')[0]).toHaveTextContent('Read only');
   });
 
+  it('discards changes from the “…” menu, without leaving the entry', async () => {
+    const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
+    const title = await screen.findByRole('textbox', { name: 'Title' });
+    const more = () => screen.getByRole('button', { name: /^More actions for/ });
+    // Nothing to discard yet.
+    await user.click(more());
+    expect(screen.queryByRole('menuitem', { name: 'Discard changes…' })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.clear(title);
+    await user.type(title, 'Harbor at first light');
+    await screen.findByRole('textbox', { name: 'Body' });
+    // ProseMirror can't be typed into in jsdom; the source view is a textarea.
+    await user.click(screen.getByRole('button', { name: 'Edit as Markdown' }));
+    await user.type(screen.getByRole('textbox', { name: 'Body' }), 'Gulls follow them out.');
+    expect(screen.getByRole('textbox', { name: 'Body' })).toHaveValue(
+      'The first boats go out around five.\nGulls follow them out.',
+    );
+    await user.click(more());
+    await user.click(await screen.findByRole('menuitem', { name: 'Discard changes…' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Discard your changes?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Harbor at first light');
+
+    await user.click(more());
+    await user.click(await screen.findByRole('menuitem', { name: 'Discard changes…' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Discard changes',
+      }),
+    );
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Harbor at dawn');
+    expect(screen.getAllByRole('status')[0]).toHaveTextContent('No changes');
+    // The body editor is drawn again from the saved text.
+    const after = await screen.findByRole('textbox', { name: 'Body' });
+    expect(after).toHaveTextContent('The first boats go out around five.');
+    expect(after).not.toHaveTextContent('Gulls follow');
+    expect(api.saveEntry).not.toHaveBeenCalled();
+    // Focus goes back to the menu's button, which stayed put.
+    await waitFor(() => {
+      expect(more()).toHaveFocus();
+    });
+  });
+
   it('saves edited values, leaves an untouched body out, and says so', async () => {
     const { api, user } = setup('#/c/blog/e/harbor-at-dawn');
     const title = await screen.findByRole('textbox', { name: 'Title' });

@@ -1691,6 +1691,14 @@ How it's held to the rest of the budget:
 
 Rejected: colouring the whole status line (the save's words would change colour as they change, and the muted text is what passes on glass); a coloured dot alone (too small to tell a hue apart, and colour would be the only signal); Live on every row of every collection; a pill for "Read only" and "Edit as YAML", which say what can be done, not where the entry stands.
 
+### 2026-10-29: Discard changes is in the entry's "…" menu
+
+**While an entry has unsaved changes, its "…" menu has "Discard changes…" (the undo icon, in the danger colour like Delete), which asks first ("Keep editing" or "Discard changes"). It puts the saved values back and draws the fields and the body again, since the body and Markdown editors read their text only when they're made; in the cloud, a copy kept on the device goes too. Focus returns to "…", which stays where it was. With nothing unsaved, the item isn't there.** Jeremy asked for a way to throw changes away without leaving the entry (gap 18). The "…" menu already holds Delete and, in the cloud, Discard draft…, so it adds no button to the bar. Re-creating the whole form was rejected: reading the entry again shows the version it opened with until the new copy arrives, which after a save is the wrong one for a moment.
+
+### 2026-10-29: The Link tool lights up inside a link, and rows point
+
+**With the caret in a link, the Link tool is drawn as a chosen toggle is (`ToolButton`'s `isActive`), as Bullets is in a list; it isn't announced as pressed, since pressing it opens the link dialog, and its name already says "Edit link".** A tree's row that opens something shows the pointer over its words as well as between them, where the browser showed a text cursor; one that doesn't is the arrow (gaps 15 and 16).
+
 ### 2026-10-29: An empty date field is blank until it's used
 
 **An empty `date` or `datetime-local` field in the studio (the Schedule dialog's times, and the date and date-time widgets) is drawn blank until it's clicked or a key is pressed in it, and blank again when it's left with nothing in it. `useBlankWhenEmpty` (`widgets/blank-date.ts`) sets `data-blank`, and `studio.css` hides `::-webkit-datetime-edit` under it. Tab, Shift, Escape, Enter and the modifier keys pass through without showing it, and a date typed partway (`validity.badInput`) stays in sight.**

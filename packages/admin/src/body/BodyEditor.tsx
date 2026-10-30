@@ -915,6 +915,7 @@ function FormatToolbar({
         label={state.link ? 'Edit link' : 'Link'}
         shortcut={shortcut('Mod', 'K')}
         isDisabled={disabled}
+        isActive={state.link}
         onPress={onLink}
       />
       <ToolButton icon="image" label="Image" isDisabled={disabled} onPress={onImage} />

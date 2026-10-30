@@ -270,6 +270,19 @@ describe('Icon and the icon-only tools', () => {
     });
     await expectNoViolations();
   });
+
+  it('lights up an action whose thing the caret is in, without calling it pressed', () => {
+    render(
+      <Toolbar label="Formatting">
+        <ToggleButton icon="bullets" label="Bullets" isSelected />
+        <ToolButton icon="link" label="Edit link" isActive />
+      </Toolbar>,
+    );
+    const link = screen.getByRole('button', { name: 'Edit link' });
+    expect(link.className).toMatch(/\bbg-accent-subtle\b/);
+    expect(link).not.toHaveAttribute('aria-pressed');
+    expect(screen.getByRole('button', { name: 'Bullets' })).toHaveAttribute('aria-pressed', 'true');
+  });
 });
 
 describe('Dialog, Menu and Disclosure', () => {
