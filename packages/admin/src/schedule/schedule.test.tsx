@@ -128,6 +128,51 @@ describe('the schedule in words', () => {
     await screen.findByRole('textbox', { name: 'Title' });
     expect(screen.getAllByRole('status')[0]).toHaveTextContent('Scheduled · Sat, Oct 31, 8:00 AM');
   });
+
+  it('colours each entry’s state word: scheduled violet, live green', async () => {
+    setup('#/c/events');
+    const table = await screen.findByRole('grid', { name: 'Events' });
+    const word = async (title: RegExp, text: string) =>
+      within(await within(table).findByRole('row', { name: title })).getByText(text);
+    expect((await word(/^Harvest concert/, 'Scheduled')).className).toMatch(/\btext-scheduled\b/);
+    expect((await word(/^Nursing information session/, 'Live')).className).toMatch(/\btext-live\b/);
+    // No times at all: live, in a collection where it could have been otherwise.
+    expect((await word(/^Spring commencement/, 'Live')).className).toMatch(/\btext-live\b/);
+  });
+});
+
+describe('an empty time', () => {
+  it('is blank until it’s used, so Safari’s grey “today” doesn’t read as a time', async () => {
+    const { user } = setup('#/c/events/e/spring-commencement');
+    await screen.findByRole('textbox', { name: 'Title' });
+    await user.click(screen.getByRole('button', { name: 'More ways to publish' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Schedule…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Schedule' });
+    const down = within(dialog).getByLabelText('Comes down (optional)');
+    expect(down).toHaveValue('');
+    expect(down).toHaveAttribute('data-blank');
+    // Focus alone, as the dialog opens, keeps it blank; typing shows the parts.
+    fireEvent.keyDown(down, { key: 'Tab' });
+    expect(down).toHaveAttribute('data-blank');
+    fireEvent.keyDown(down, { key: '1' });
+    expect(down).not.toHaveAttribute('data-blank');
+    // Left empty, it's blank again; with a time, it never is.
+    fireEvent.blur(down);
+    expect(down).toHaveAttribute('data-blank');
+    setTime(down, '2026-11-20T17:00');
+    expect(down).not.toHaveAttribute('data-blank');
+  });
+
+  it('shows a time the entry already has', async () => {
+    const { user } = setup('#/c/events/e/nursing-info-session');
+    await screen.findByRole('textbox', { name: 'Title' });
+    await user.click(screen.getByRole('button', { name: 'More ways to publish' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Schedule…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Schedule' });
+    const down = within(dialog).getByLabelText('Comes down (optional)');
+    expect(down).toHaveValue('2026-11-13T00:00');
+    expect(down).not.toHaveAttribute('data-blank');
+  });
 });
 
 describe('the Scheduled view', () => {

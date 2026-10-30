@@ -3,7 +3,6 @@ import {
   offsetOf,
   publishWindow,
   resolveTimeZone,
-  scheduleStatus,
   type CollectionManifest,
   type DataObject,
   type DataValue,
@@ -89,16 +88,6 @@ export function withTimes(
   }
   for (const [key, value] of changes) if (value !== undefined && !(key in next)) next[key] = value;
   return next;
-}
-
-/** The entry's schedule as status words, or null when there's nothing to say. */
-export function scheduleWords(
-  schedule: SchedulePresentation | undefined,
-  data: DataValue,
-  zone: string,
-  now: Date = new Date(),
-): string | null {
-  return scheduleStatus(schedule, data, now, zone);
 }
 
 /** An entry row's schedule (ISO times) as values under the schedule's field names. */

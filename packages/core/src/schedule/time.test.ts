@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isoWithOffset, offsetOf } from '../files/date-offset.ts';
 import { scheduledEvents } from './events.ts';
 import { fromWallTime, isRepeatedTime, offsetMinutes, wallTime } from './time.ts';
-import { scheduleStatus, scheduleTime } from './words.ts';
+import { scheduleState, scheduleStatus, scheduleTime } from './words.ts';
 import type { CollectionManifest } from '../manifest/types.ts';
 
 /*
@@ -80,6 +80,18 @@ describe('the schedule in words', () => {
       scheduleStatus(schedule, { publishAt: new Date('2026-10-01T12:00:00Z') }, now, NY),
     ).toBeNull();
     expect(scheduleStatus(undefined, { publishAt: new Date('2027-01-04') }, now, NY)).toBeNull();
+  });
+
+  it('splits the words into the status word, coloured by its phase, and the rest', () => {
+    expect(
+      scheduleState(schedule, { publishAt: new Date('2026-10-31T12:00:00Z') }, now, NY),
+    ).toEqual({ phase: 'scheduled', word: 'Scheduled', rest: ' · Sat, Oct 31, 8:00 AM' });
+    expect(
+      scheduleState(schedule, { unpublishAt: new Date('2026-11-13T05:00:00Z') }, now, NY),
+    ).toEqual({ phase: 'live', word: 'Live', rest: ' until Fri, Nov 13, 12:00 AM' });
+    expect(
+      scheduleState(schedule, { unpublishAt: new Date('2026-10-25T16:00:00Z') }, now, NY),
+    ).toEqual({ phase: 'unpublished', word: 'Unpublished', rest: ' · Sun, Oct 25' });
   });
 });
 

@@ -67,6 +67,11 @@
     outline: 3px solid var(--color-focus);
     outline-offset: 3px;
   }
+
+  /* An empty date field shows no date until it's used: Safari's is today's (widgets/blank-date.ts). */
+  input[data-blank]::-webkit-datetime-edit {
+    opacity: 0;
+  }
 }
 
 @layer components {

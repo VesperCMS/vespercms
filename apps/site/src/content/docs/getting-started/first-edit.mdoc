@@ -15,7 +15,7 @@ The first screen, headed Content, lists your collections, with how many entries 
 
 ## A collection's list
 
-A collection opens as a table of its entries: title, any columns you name in `listFields`, when each was edited, and status in words, such as Draft (`draft: true`) or Read only. Search filters by title, and the column headings sort.
+A collection opens as a table of its entries: title, any columns you name in `listFields`, when each was edited, and its status. Where an entry could be something other than live (in a collection with a `draft` field or a `schedule`, and in every collection in the cloud, where a new entry starts as a draft), the status starts with a word on its colour: Live in green, Scheduled in violet, Draft (`draft: true`) and Unpublished in grey. Words such as Read only follow it. Search filters by title, and the column headings sort.
 
 New entry starts one. Its file is named after its title the first time you save it. A singleton skips the list and opens its one entry.
 
@@ -23,7 +23,7 @@ New entry starts one. Its file is named after its title the first time you save 
 
 The title field is the page's heading. Below it are tabs: **Content** holds the main fields, in your schema's order, then the body, and **Details** the secondary fields: slugs, dates, tags, `draft`, ordering and SEO. The arrow keys move between tabs. A field's `.meta({ placement: 'details' })` or `'main'` overrides the rule, and a collection can add tabs of its own, such as SEO (see [Fields](/docs/content/fields/)).
 
-The top bar also has the entry's status ("No changes", "Unsaved changes", "Saved just now", or "Read only" for an entry you can't edit), Save, and a "…" menu. The status has a line of its own, under the entry's title, or on a narrow screen under the way back to the list, so the bar keeps its size as the status changes. The menu has:
+The top bar also has the entry's status ("No changes", "Unsaved changes", "Saved just now", or "Read only" for an entry you can't edit), after its coloured word as in the list ("Live · Saved just now"), Save, and a "…" menu. The dot before the status pulses while a save runs. The status has a line of its own, under the entry's title, or on a narrow screen under the way back to the list, so the bar keeps its size as the status changes. The menu has:
 
 - **View on site** and **Copy page address**, for a collection with a `url`. The address is the page's full address, on Astro's `site` when your config sets one, so one copied while working locally is the live page's.
 - **Copy editing link**, the studio's address for this entry, to send to a colleague. It opens the entry after a reload, and after signing in.

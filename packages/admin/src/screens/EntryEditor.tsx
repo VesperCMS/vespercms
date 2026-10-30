@@ -77,7 +77,8 @@ import { useNow } from '../schedule/now.ts';
 import { ScheduleDialog } from '../schedule/ScheduleDialog.tsx';
 import { ScheduleSummary } from '../schedule/ScheduleSummary.tsx';
 import { holdUntil } from '../schedule/cloud.ts';
-import { scheduleKeys, scheduleWords, siteZone, timesOf, withTimes } from '../schedule/times.ts';
+import { scheduleKeys, siteZone, timesOf, withTimes } from '../schedule/times.ts';
+import { StateWords, entryState, isNewInDraft } from './status.tsx';
 import { useEntryNotes } from '../a11y/useNotes.ts';
 import {
   ConflictCompare,
@@ -909,7 +910,6 @@ function EntryForm({
   const later = (date: Date | undefined) => date !== undefined && date.getTime() > now.getTime();
   /** Live already, so Schedule… sets only when it comes down (call 8). */
   const live = !isNew && !later(savedTimes.publishAt);
-  const scheduleText = schedule && !isNew ? scheduleWords(schedule, saved.values, zone, now) : null;
   const nowLabel = publishes ? 'Publish now' : 'Make it live now';
   /** Sets the values and saves them, or publishes them where saves are drafts. */
   const saveWith = async (next: DataObject) => {
@@ -1008,12 +1008,22 @@ function EntryForm({
     });
   };
 
-  // Never empty, so the way back (or the title) above it always sits in the same place.
+  // What the entry is, its word coloured, then how its changes stand: never
+  // empty, so the way back (or the title) above it always sits in the same place.
+  const state =
+    linkCopied > 0 || (isNew && !draft)
+      ? null
+      : entryState(
+          collection,
+          {
+            draft,
+            times: isNew ? null : saved.values,
+            newDraft: isNewInDraft(entryDraft ? [entryDraft] : [], filePath),
+          },
+          { zone, cloud: Boolean(cloud), now },
+        );
   const statusLine =
-    linkCopied > 0
-      ? 'Link copied'
-      : [draft ? 'Draft' : '', scheduleText ?? '', statusText].filter(Boolean).join(' · ') ||
-        (editable ? 'No changes' : 'Read only');
+    linkCopied > 0 ? 'Link copied' : statusText || (editable ? 'No changes' : 'Read only');
   // Content, the collection's own tabs, then Details; no tab list when Content is all there is.
   const panels = sourceOnly
     ? []
@@ -1066,8 +1076,12 @@ function EntryForm({
         {pane && Boolean(arranged.title) && !sourceOnly && (
           <span className="truncate font-semibold text-content">{titleText}</span>
         )}
-        <InlineStatus dot className="h-5 min-w-0">
-          <span className="min-w-0 truncate">{statusLine}</span>
+        <InlineStatus dot busy={saving || publishing} className="h-5 min-w-0">
+          <span className="min-w-0 truncate">
+            <StateWords state={state} />
+            {state ? ' · ' : ''}
+            <span>{statusLine}</span>
+          </span>
         </InlineStatus>
       </div>
       {notes.length > 0 && !notesInMenu && (
