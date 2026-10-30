@@ -2,6 +2,35 @@
 
 The working plan: where each phase stands, the design of the next phase, and the roadmap. Scope and decisions come from `vesper-spec.md`. This file records how we intend to build them, and it changes as phases land. Reasons for choices live in `DECISIONS.md`.
 
+## To do (2026-10-30)
+
+The short list, in order. Tick or remove an item as it lands; the history stays in the sections below. On 2026-10-30 every branch with work of its own was on GitHub: this repository's open PRs, and the two real-world copies' branches in `jeremybise/vesper-netlify-test` and `jeremybise/vesper-sftp-test`.
+
+**Land what's open**
+- [ ] Merge #6, the Scheduled publishing docs page and this list. Only the Pages check runs on it, since CI skips prose, and it's green.
+- [ ] Merge #8: gaps 15, 16 and 18 (Discard changes…, the lit Link tool, rows that point). Every check is green.
+- [ ] Fix #9's e2e failure, then merge it: gap 17, unpublishing through `draft: true`, built on #8. `e2e/studio/pages.spec.ts:360`, the site helpers' parity test (`astro dev` against the static build), fails because the build now leaves drafts out and dev keeps them. Compare all but the drafts, as the test already does for scheduled events, and check the build has only the live ones.
+- [ ] A `next` prerelease once #8 and #9 are on `main` (`npm run changeset -- version`, then the Release workflow), and thosegeeks.com moved to it, so the port gets gaps 15 to 18. It runs `0.1.0-next.1`.
+
+**Finish Phase 4.5**
+- [ ] The free tier's real-world check ("Tests, mapped to Done when", 2). `jeremybise/vesper-github-test` is the playground on Cloudflare Pages from Phase 3, older than scheduling, with GitHub Actions off. Bring it up to `main` without the playground's `VESPER_BUILD_TIME` line, sign in in GitHub mode rather than the cloud (whose trigger would fire at the exact time instead), turn Actions on, and run `vesper deploy init --target hook --rebuild-every 15 --url https://vesper-github-test.pages.dev` (the playground has no `site`, and a scheduled run reads the live `schedule.json`). Jeremy adds a Pages deploy hook as the `VESPER_BUILD_HOOK` secret. A post scheduled in the studio must be live after the first run past its time.
+- [ ] Then mark Phase 4.5 done here and in `CLAUDE.md`.
+
+**Dogfooding thosegeeks.com**
+- [ ] Gap 14 (in #8's "Dogfooding thosegeeks.com"): the Hostinger copy's studio, "Playground on SFTP", often says "Vesper couldn't reach GitHub" while its Netlify twin doesn't. The API logs GitHub's answer as `site.github` since its redeploy on 2026-10-29 (`vesper-cloud` at `77cf8f9`): bring the error up a few times, then read Workers Logs for GitHub's status.
+- [ ] Gap 12 in Safari on a Mac: the Schedule dialog's empty "Comes down" should stay blank until it's used. Checked only in Chromium.
+- [ ] Before choosing more studio or cloud work, bring any new items from thosegeeks-vesper's `docs/vesper-gaps.md` across and put them to Jeremy.
+
+**Loose ends**
+- [ ] In the cloud, Publish (or Schedule…) pressed while a draft is saving does nothing, with no word ("Phase 4.5: progress", step 5). Have Publish wait for the save in flight, then save what's left.
+- [ ] Workers, never run for real (gap 6): a Workers Builds build, `vesper deploy init --target workers` with a real token, a Workers Builds deploy hook.
+- [ ] GitHub mode on real GitHub (gap 10): Try again after installing the app, without a new sign-in; and what a public repository without the app shows.
+- [ ] `vesper-cloud` still imports `@vesper/core` and `@vesper/admin`; rename them to `@vespercms/*` when it next moves its submodule.
+- [ ] Screen reader passes, from 2.6 on, before launch (Jeremy's call).
+
+**Next phase**
+- [ ] Phase 5, Billing and ops. Before it starts, Jeremy decides spec §13.4: the final prices, from the cloud's measured cost (the addendum's numbers are placeholders). Bring him options; never pick.
+
 ## Phase status
 
 | Phase | Status |
