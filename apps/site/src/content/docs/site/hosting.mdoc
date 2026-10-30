@@ -96,7 +96,7 @@ The studio is files in `dist/` like the rest of the site, so `/admin` needs noth
 
 ## How a publish goes live
 
-In GitHub mode and the cloud, a publish is a commit to your repository. A host connected to the repository, such as Netlify, Cloudflare Pages, Cloudflare Workers Builds or Vercel, or a GitHub Actions workflow, builds on every commit, so there's nothing to set up. On a host you upload to yourself, the change goes live after your next build and upload, and the studio says so: "Published. It will be live after the site is next built."
+In GitHub mode and the cloud, a publish is a commit to your repository. A host connected to the repository, such as Netlify, Cloudflare Pages, Cloudflare Workers Builds or Vercel, or a GitHub Actions workflow, builds on every commit, so there's nothing to set up. On a host you upload to yourself, the change goes live after your next build and upload, and the studio says so: "Published. It will be live after the site is next built." [`vesper deploy init`](/docs/reference/cli/) writes a GitHub Actions workflow that does both on every commit, by SFTP or FTP, and can rebuild the site when a [scheduled change](/docs/site/scheduling/) is due.
 
 ## Notes for GitHub mode
 
