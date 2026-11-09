@@ -180,7 +180,7 @@ describe('line breaks', () => {
     const body = 'Kids 5 and under FREE\\\n\\\nTickets don’t include rides.\n';
     for (const format of ['md', 'mdoc'] as const) {
       const { save, editor: e } = open(body, format);
-      expect(e.getJSON().content?.[0]?.type).toBe('paragraph');
+      expect(e.getJSON().content[0]?.type).toBe('paragraph');
       expect(save()).toBe(body);
       e.chain().setTextSelection(endOf(e, 'rides')).insertContent(' Or food.').run();
       expect(save()).toBe(body.replace('rides.', 'rides. Or food.'));
