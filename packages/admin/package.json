@@ -6,7 +6,7 @@
   "homepage": "https://vespercms.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vespercms/vespercms.git",
+    "url": "git+https://github.com/VesperCMS/vespercms.git",
     "directory": "packages/admin"
   },
   "type": "module",

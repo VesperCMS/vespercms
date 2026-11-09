@@ -38,4 +38,4 @@ Set this up just before the next release, not straight after the first: npm says
 
 Then delete the secret (`gh secret delete NPM_TOKEN -R vespercms/vespercms`) and revoke the token on npmjs.com. The workflow's `NODE_AUTH_TOKEN` is then empty, and npm uses the workflow's OIDC token instead. That needs npm 11.5.1 or later, which recent Node 24 releases ship.
 
-npm makes no provenance attestations while this repository is private, even with trusted publishing.
+Since the repository went public, trusted publishing also signs a provenance statement saying which repository and workflow built each version. npm refuses the publish unless each package's `repository.url` names the repository exactly as GitHub spells it, case included: `git+https://github.com/VesperCMS/vespercms.git`. (Found on 2026-11-09, when `vespercms/vespercms` stopped `0.1.0-next.2`.)
