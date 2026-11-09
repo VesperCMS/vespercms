@@ -15,6 +15,22 @@ describe('defineConfig', () => {
     const url = config.collections?.people?.url;
     expect(entryUrlKey(url, { id: 'ada', collection: 'people', data: {} })).toBe('/people/ada');
   });
+
+  it('lets a url function give an entry no page', () => {
+    const config = defineConfig({
+      collections: {
+        events: {
+          url: (entry) => {
+            const data = entry.data as { noPage?: boolean };
+            return data.noPage ? undefined : `/events/${entry.id}`;
+          },
+        },
+      },
+    });
+    const url = config.collections?.events?.url;
+    expect(entryUrlKey(url, { id: 'gates', collection: 'events', data: { noPage: true } })).toBeNull();
+    expect(entryUrlKey(url, { id: 'fair', collection: 'events', data: {} })).toBe('/events/fair');
+  });
 });
 
 describe('checkConfig', () => {

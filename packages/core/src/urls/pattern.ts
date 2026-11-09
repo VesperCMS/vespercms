@@ -255,7 +255,8 @@ export type UrlPattern = string | ((entry: UrlEntry) => unknown);
 /**
  * An entry's key from its collection's pattern, or null when the collection
  * has none (data-only) or a token has no value. A function pattern returns a
- * site path; one that throws or returns something else gives null.
+ * site path, or `undefined` or `null` for an entry with no page; one that
+ * throws or returns anything else gives null too.
  */
 export function entryUrlKey(
   pattern: UrlPattern | undefined,

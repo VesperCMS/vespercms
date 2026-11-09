@@ -70,6 +70,9 @@ describe('entryUrlKey', () => {
     const pattern = (entry: { id: string }) => `/people/${entry.id}/`;
     expect(entryUrlKey(pattern, { id: 'ada' })).toBe('/people/ada');
     expect(entryUrlKey(() => 42, { id: 'ada' })).toBeNull();
+    // An entry with no page of its own.
+    expect(entryUrlKey(() => undefined, { id: 'ada' })).toBeNull();
+    expect(entryUrlKey(() => null, { id: 'ada' })).toBeNull();
     expect(
       entryUrlKey(
         () => {

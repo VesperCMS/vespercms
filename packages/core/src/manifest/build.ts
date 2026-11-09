@@ -66,8 +66,11 @@ export type CollectionConfig = {
   label?: string;
   singleton?: boolean;
   tree?: boolean;
-  /** A pattern, or a function of the entry that returns its site path. */
-  url?: string | ((entry: UrlEntry) => string);
+  /**
+   * A pattern, or a function of the entry that returns its site path, or
+   * nothing (`undefined` or `null`) for an entry with no page.
+   */
+  url?: string | ((entry: UrlEntry) => string | null | undefined);
   listFields?: string[];
   newEntryPath?: string;
   schedule?: boolean | ScheduleConfig;
