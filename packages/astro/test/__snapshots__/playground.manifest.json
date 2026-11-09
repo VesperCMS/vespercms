@@ -1595,7 +1595,8 @@
           "widget": "url",
           "showWhen": {
             "field": "format",
-            "equals": "online"
+            "equals": "online",
+            "absent": "inPerson"
           },
           "format": "url",
           "inferredWidget": "url"
@@ -2581,5 +2582,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "24ce61ebf21b5ed395e3375fe9a518761de84d00ac1405219abd1dd24aaf1eb6"
+  "hash": "8a278a39b1b93a2bb45931cb71c444cd15d10731d7439967ed0d9360f155b19c"
 }

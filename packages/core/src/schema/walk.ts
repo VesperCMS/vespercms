@@ -643,7 +643,12 @@ function checkConditions(children: FieldModel[], context: WalkContext): void {
       drop(`"${shaped.field}" isn't a field beside it in the same object.`);
       continue;
     }
-    child.showWhen = { field: shaped.field, equals: shaped.equals };
+    const sibling = children.find((c) => c.path.at(-1) === shaped.field);
+    child.showWhen = {
+      field: shaped.field,
+      equals: shaped.equals,
+      ...(sibling && isScalar(sibling.default) ? { absent: sibling.default } : {}),
+    };
     if (child.required && child.default === undefined) {
       context.diagnostics.push({
         level: 'warning',

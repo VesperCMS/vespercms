@@ -31,12 +31,24 @@ export type FieldOption = { value: string; label: string };
 /** A value a condition compares a field with. */
 export type ConditionValue = string | number | boolean | null;
 
-export type FieldCondition = { field: string; equals: ConditionValue | ConditionValue[] };
+export type FieldCondition = {
+  field: string;
+  equals: ConditionValue | ConditionValue[];
+  /**
+   * The sibling's schema default, which the site reads when the file leaves
+   * the sibling out: `noPage: z.boolean().default(false)` missing is `false`.
+   */
+  absent?: ConditionValue;
+};
 
-/** Whether a sibling's value meets a condition. A Date or an object never does. */
+/**
+ * Whether a sibling's value meets a condition. A missing value counts as the
+ * sibling's default, as Astro reads it, else as null. A Date or an object
+ * never meets one.
+ */
 export function conditionMet(condition: FieldCondition, sibling: unknown): boolean {
   const wanted = Array.isArray(condition.equals) ? condition.equals : [condition.equals];
-  const value = sibling === undefined ? null : sibling;
+  const value = sibling === undefined ? (condition.absent ?? null) : sibling;
   return wanted.some((w) => w === value);
 }
 

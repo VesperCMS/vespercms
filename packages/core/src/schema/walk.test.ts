@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import type { FieldModel } from '../field-model.ts';
+import { conditionMet, type FieldModel } from '../field-model.ts';
 import { childrenFor, fieldChildren, variantFor } from './variants.ts';
 import { IMAGE_MARKER, VESPER_META_KEY, walkSchema } from './walk.ts';
 
@@ -473,12 +473,31 @@ describe('walkSchema: showWhen', () => {
     ]);
   });
 
+  it('records the sibling’s default, which a file that leaves it out means', () => {
+    const { fields } = walk({
+      noPage: z.boolean().default(false),
+      image: z
+        .string()
+        .optional()
+        .meta({ showWhen: { field: 'noPage', equals: false } }),
+    });
+    const condition = fieldAt(fields, 'image')?.showWhen;
+    expect(condition).toEqual({ field: 'noPage', equals: false, absent: false });
+    if (!condition) throw new Error('No condition.');
+    expect(conditionMet(condition, undefined)).toBe(true);
+    expect(conditionMet(condition, true)).toBe(false);
+  });
+
   it('warns about a required field a condition can hide', () => {
     const { fields, diagnostics } = walk({
       online: z.boolean().default(false),
       streamUrl: z.string().meta({ showWhen: { field: 'online', equals: true } }),
     });
-    expect(fieldAt(fields, 'streamUrl')?.showWhen).toEqual({ field: 'online', equals: true });
+    expect(fieldAt(fields, 'streamUrl')?.showWhen).toEqual({
+      field: 'online',
+      equals: true,
+      absent: false,
+    });
     expect(diagnostics.map((d) => d.message)).toEqual([
       'streamUrl is required, but meta.showWhen can hide it, and a hidden required field stops every save. Make it .optional().',
     ]);
