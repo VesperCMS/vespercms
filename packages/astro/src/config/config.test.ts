@@ -208,7 +208,7 @@ describe('accessibility', () => {
     expect(
       checkConfig({
         a11y: {
-          blockPublishOn: ['missing-alt', 'pdf-untagged'],
+          blockPublishOn: ['missing-alt', 'alt-file-name'],
           backgrounds: { Page: '#ffffff', Footer: '#1d2433' },
         },
         collections: { docs: { headingStart: 1 } },

@@ -6,7 +6,6 @@ import type { Manifest } from '../manifest/types.ts';
 import { MemoryStorage } from '../storage/memory.ts';
 import { ContentService } from '../studio/service.ts';
 import { entryChecker } from './entry.ts';
-import { pdfNotes } from './fields.ts';
 import { A11Y_RULE_IDS } from './rules.ts';
 import type { A11yNote } from './types.ts';
 
@@ -51,9 +50,6 @@ const place = (note: A11yNote) =>
     ? note.target.path.join('.')
     : `body line ${String(note.target.line)}`;
 
-/** What the studio reads from public/files/untagged-brochure.pdf with PDF.js (admin pdf.test.ts reads the file). */
-const UNTAGGED = { tagged: false, title: null, language: null };
-
 describe('the playground', () => {
   it('fires every layer-1 rule on the accessibility fixture, each beside its field', async () => {
     const service = await content();
@@ -63,7 +59,7 @@ describe('the playground', () => {
     // The studio edits the body without the line breaks after the frontmatter.
     const body = (entry.body ?? '').replace(/^(?:\r?\n)+/, '');
     const found = entryChecker(manifest)(collection, { values: entry.data, body, format: 'mdoc' });
-    const notes = [...found.notes, ...found.pdfs.flatMap((pdf) => pdfNotes(pdf, UNTAGGED))];
+    const notes = found.notes;
 
     expect(new Set(notes.map((n) => n.rule))).toEqual(new Set(A11Y_RULE_IDS));
     expect(notes.map((n) => [n.rule, place(n), n.subject ?? ''])).toEqual([
@@ -84,12 +80,6 @@ describe('the playground', () => {
       ['tag-name-empty', 'body line 47', ''],
       ['video-captions', 'body line 47', 'YouTube video'],
       ['video-captions', 'body line 49', 'YouTube video “A campus walking tour”'],
-      ['pdf-untagged', 'brochure', 'PDF “untagged-brochure.pdf”'],
-      ['pdf-no-title', 'brochure', 'PDF “untagged-brochure.pdf”'],
-      ['pdf-no-language', 'brochure', 'PDF “untagged-brochure.pdf”'],
-      ['pdf-untagged', 'body line 29', 'PDF “course brochure”'],
-      ['pdf-no-title', 'body line 29', 'PDF “course brochure”'],
-      ['pdf-no-language', 'body line 29', 'PDF “course brochure”'],
     ]);
     // The lines are the body's own, as the source view shows them.
     const lines = body.split('\n');

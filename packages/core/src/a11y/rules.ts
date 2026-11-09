@@ -19,9 +19,6 @@ export const A11Y_RULE_IDS = [
   'color-contrast',
   'tag-name-empty',
   'fake-list',
-  'pdf-untagged',
-  'pdf-no-title',
-  'pdf-no-language',
   'video-captions',
 ] as const;
 
@@ -109,21 +106,6 @@ export const A11Y_RULES: Readonly<Record<A11yRuleId, A11yRule>> = {
     'fake-list',
     'Lines typed to look like a list',
     'Screen readers announce a real list and how many items it has; typed dashes are read as one paragraph.',
-  ),
-  'pdf-untagged': rule(
-    'pdf-untagged',
-    'PDFs without tags',
-    'Without tags, screen readers can’t tell headings, lists and tables apart, and may read the text out of order.',
-  ),
-  'pdf-no-title': rule(
-    'pdf-no-title',
-    'PDFs without a document title',
-    'Screen readers and browser tabs show the title, and without one people hear a file name.',
-  ),
-  'pdf-no-language': rule(
-    'pdf-no-language',
-    'PDFs without a language',
-    'Screen readers choose their voice and pronunciation from the document’s language.',
   ),
   'video-captions': rule(
     'video-captions',

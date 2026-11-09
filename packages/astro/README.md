@@ -215,7 +215,7 @@ collections: {
 },
 ```
 
-The studio checks each entry as it's edited (layer 1): alt text, heading order and empty headings, vague and new-tab links, tables without a header row, typed lists, empty names on embeds, video captions, text colours against the declared backgrounds, and PDFs (tagged, title, language). Notes appear beside the field they concern, and every note only warns unless its rule is in `blockPublishOn`. Rule IDs: `missing-alt`, `alt-file-name`, `alt-redundant`, `alt-too-long`, `heading-skip`, `heading-extra-top`, `heading-empty`, `link-vague`, `link-new-window`, `table-header`, `color-contrast`, `tag-name-empty`, `fake-list`, `pdf-untagged`, `pdf-no-title`, `pdf-no-language`, `video-captions`.
+The studio checks each entry as it's edited (layer 1): alt text, heading order and empty headings, vague and new-tab links, tables without a header row, typed lists, empty names on embeds, video captions, and text colours against the declared backgrounds. Notes appear beside the field they concern, and every note only warns unless its rule is in `blockPublishOn`. Rule IDs: `missing-alt`, `alt-file-name`, `alt-redundant`, `alt-too-long`, `heading-skip`, `heading-extra-top`, `heading-empty`, `link-vague`, `link-new-window`, `table-header`, `color-contrast`, `tag-name-empty`, `fake-list`, `video-captions`.
 
 A Markdoc tag or declared MDX component gets the embed checks from its own schema: a required `title`, `alt`, `label` or `aria-label` attribute left empty is a note, and a tag with a `captions` attribute asks to confirm captions when it's absent or off.
 

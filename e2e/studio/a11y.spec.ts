@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 /*
  * Accessibility notes in the studio (spec §6.18, §11 Phase 2.8):
  * - every layer-1 rule fires on the playground's fixture, with its message
- *   beside the right field, PDF checks included (PDF.js in Chromium);
+ *   beside the right field, and its PDF gets none (Vesper doesn't open files);
  * - the notes drawer can be operated fully by keyboard.
  * Nothing here saves, so the site copy is never changed.
  */
@@ -31,20 +31,17 @@ test.beforeEach(async ({ context, baseURL }) => {
 
 test('every layer-1 rule fires on the fixture, beside the right field', async ({ page }) => {
   await page.goto(FIXTURE);
-  // All 23 notes, PDFs included, once PDF.js has read the brochure.
-  const count = page.getByRole('button', { name: '23 accessibility notes' });
+  // All 17 notes. The brochure and the body's link to it are PDFs, which get none.
+  const count = page.getByRole('button', { name: '17 accessibility notes' });
   await expect(count).toBeVisible({ timeout: 20_000 });
 
   // Beside the colour field, in its description.
   await expect(page.getByRole('textbox', { name: /Text color/ })).toHaveAccessibleDescription(
     /Contrast 2\.3:1 against Page, light is below 4\.5:1\./,
   );
-  // Beside the file field: what PDF.js read in the untagged brochure.
-  const brochure = page.getByRole('button', { name: 'Replace file' });
-  await expect(brochure).toHaveAccessibleDescription(/This PDF isn’t tagged/);
-  await expect(brochure).toHaveAccessibleDescription(/This PDF has no document title\./);
-  await expect(brochure).toHaveAccessibleDescription(
-    /This PDF doesn’t say what language it’s in\./,
+  // The file field: its file's name, and no notes.
+  await expect(page.getByRole('button', { name: 'Replace file' })).toHaveAccessibleDescription(
+    'untagged-brochure.pdf (PDF)',
   );
 
   // Under the body, each naming what it's about.
@@ -67,9 +64,6 @@ test('every layer-1 rule fires on the fixture, beside the right field', async ({
     'YouTube video needs a title.',
     'YouTube video: Confirm this video has captions.',
     'YouTube video “A campus walking tour”: Confirm this video has captions.',
-    'PDF “course brochure”: This PDF isn’t tagged',
-    'PDF “course brochure”: This PDF has no document title.',
-    'PDF “course brochure”: This PDF doesn’t say what language it’s in.',
   ];
   expect(notes).toHaveLength(expected.length);
   expected.forEach((text, index) => {
@@ -92,7 +86,7 @@ test('Show puts the cursor on the note’s block', async ({ page }) => {
 
 test('the notes drawer, by keyboard alone', async ({ page }) => {
   await page.goto(FIXTURE);
-  const count = page.getByRole('button', { name: '23 accessibility notes' });
+  const count = page.getByRole('button', { name: '17 accessibility notes' });
   await expect(count).toBeVisible({ timeout: 20_000 });
 
   // Enter opens it, with focus inside.
@@ -106,7 +100,6 @@ test('the notes drawer, by keyboard alone', async ({ page }) => {
     .toBe(true);
   await expect(drawer.getByRole('heading', { level: 3 })).toHaveText([
     'Text color',
-    'Brochure',
     'Body',
   ]);
   await expectAccessible(page);
@@ -127,10 +120,10 @@ test('the notes drawer, by keyboard alone', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(drawer).toBeVisible();
   const buttons = drawer.getByRole('button', { name: 'Go to field' });
-  await expect(buttons).toHaveCount(23);
+  await expect(buttons).toHaveCount(17);
   await page.keyboard.press('Tab');
-  for (let i = 0; i < 9; i++) await page.keyboard.press('Tab');
-  // The ninth Go to field: the skipped heading (after the colour, three PDF and four image notes).
+  for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
+  // The sixth Go to field: the skipped heading (after the colour and four image notes).
   await expect(page.locator(':focus')).toHaveAccessibleDescription(
     /Heading jumps from level 2 to level 4/,
   );

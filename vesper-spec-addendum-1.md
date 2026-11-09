@@ -118,8 +118,9 @@ Three layers, from free to paid. All share one rule set and message style: plain
 | Text color from a `fields.color()` field that fails contrast against the site's declared background tokens | "Contrast 3.1:1 is below 4.5:1." |
 | Markdoc/MDX tags with a required accessible name left empty (for example an iframe or video `title`) | "This video needs a title." |
 | Fake lists (lines starting with "-" or "1." inside a paragraph) | "This looks like a list. Format it as one." |
-| Uploaded PDFs: untagged, no document title, or no language set (checked in the browser with PDF.js) | "This PDF isn't tagged, so screen readers can't read its structure. Consider an HTML page instead, or tag the PDF." |
 | Video embeds with no captions attribute, where the tag schema has one | "Confirm this video has captions." |
+
+PDFs aren't checked: a PDF's accessibility is its author's, and Vesper only stores the file (removed 2026-11-09 at Jeremy's request; DECISIONS.md, "Vesper doesn't check PDFs").
 
 **Layer 1 UI (§10.4 rule)**
 - Each note appears inline beside the field it concerns.

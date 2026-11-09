@@ -36,21 +36,3 @@ export type A11ySettings = {
   backgrounds?: A11yBackground[];
 };
 
-/** What the studio reads from a PDF (with PDF.js) for the PDF rules. */
-export type PdfFacts = {
-  /** Marked as tagged, with a structure tree. */
-  tagged: boolean;
-  /** The document title from its info or XMP metadata, if any. */
-  title: string | null;
-  /** The document language (the catalog's `/Lang`), if any. */
-  language: string | null;
-};
-
-/** A PDF an entry points at, for the studio to read and check. */
-export type PdfTarget = {
-  /** The reference as written: `/files/brochure.pdf`, `./brochure.pdf`. */
-  href: string;
-  target: A11yTarget;
-  /** The link text, for a PDF linked from the body. */
-  subject?: string;
-};

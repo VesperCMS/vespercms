@@ -29,14 +29,11 @@ The studio checks each entry as it's edited, in every mode: local, GitHub and th
 | `tag-name-empty` | Embeds and components whose accessible name is empty |
 | `video-captions` | Videos that may not have captions |
 | `color-contrast` | Text colours with too little contrast against your backgrounds |
-| `pdf-untagged` | PDFs without tags |
-| `pdf-no-title` | PDFs without a document title |
-| `pdf-no-language` | PDFs without a language |
 
 - **Images** are checked in `fields.image()` fields and in the body. An image marked decorative needs no alt text.
 - **Headings** in the body should start at level 2, because the page's title is its h1. If a collection's bodies hold their own h1, set `headingStart: 1` for it in `vesper.config.ts`.
 - **Markdoc tags and MDX components** are checked from their own schemas. A required `title`, `alt`, `label` or `aria-label` attribute left empty is a note, and a tag with a `captions` attribute asks the editor to confirm captions when it's missing or off.
-- **PDFs** in file fields, and the site's own PDFs linked from the body, are read in the browser the first time an entry has one.
+- **PDFs** and other files aren't checked. Vesper stores a file as it's uploaded; whether a PDF is tagged, titled and in the right language is up to whoever made it.
 - **Markdown fields** from `fields.markdown()` get the body's checks, except headings.
 
 ### Text colours against your backgrounds

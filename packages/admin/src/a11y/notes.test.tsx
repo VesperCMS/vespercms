@@ -12,11 +12,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// PDF.js itself is tested in pdf.test.ts (Node) and e2e (Chromium); here it reports an untagged PDF.
-vi.mock('./pdf.ts', () => ({
-  readPdfFacts: vi.fn(() => Promise.resolve({ tagged: false, title: null, language: 'en' })),
-}));
-
 // jsdom has no layout; ProseMirror asks for rectangles when it scrolls to the selection.
 Object.assign(Range.prototype, {
   getClientRects: () => [],
@@ -171,40 +166,22 @@ describe('accessibility notes in the body', () => {
   });
 });
 
-describe('PDF notes', () => {
-  it('reads the PDF in a file field and notes what it lacks, beside the field', async () => {
-    const fetched: string[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string) => {
-        fetched.push(url);
-        return Promise.resolve(new Response(new Uint8Array([37, 80, 68, 70])));
-      }),
-    );
+describe('PDFs', () => {
+  it('opens no PDF and notes nothing about one, in a file field or the body', async () => {
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response(new Uint8Array([37, 80, 68, 70]))));
+    vi.stubGlobal('fetch', fetchSpy);
     open('#/c/fixtures/e/accessibility-mistakes', {
       ...fixture,
       data: { ...fixtureData, brochure: '/files/untagged-brochure.pdf' },
       body: '\nDownload the [course brochure](/files/untagged-brochure.pdf).\n',
     });
     const button = await screen.findByRole('button', { name: 'Replace file' });
-    await waitFor(() => {
-      expect(button).toHaveAccessibleDescription(expect.stringContaining('isn’t tagged') as string);
-    });
-    expect(button).toHaveAccessibleDescription(
-      expect.stringContaining('no document title') as string,
-    );
-    expect(button).not.toHaveAccessibleDescription(expect.stringContaining('language') as string);
-    const list = screen.getByRole('list', { name: 'Accessibility notes in the body' });
-    expect(
-      within(list)
-        .getAllByRole('listitem')
-        .map((li) => li.querySelector('p')?.textContent),
-    ).toEqual([
-      expect.stringContaining('PDF “course brochure”: This PDF isn’t tagged'),
-      expect.stringContaining('PDF “course brochure”: This PDF has no document title.'),
-    ]);
-    // Read once, though two places point at it.
-    expect(fetched).toEqual(['/_vesper/api/file?path=public%2Ffiles%2Funtagged-brochure.pdf']);
+    // Past the notes' pause, so a check would have run.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    // Its description is the file alone, with no notes after it.
+    expect(button).toHaveAccessibleDescription('untagged-brochure.pdf (PDF)');
+    expect(screen.queryByRole('list', { name: 'Accessibility notes in the body' })).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

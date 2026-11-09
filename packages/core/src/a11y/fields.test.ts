@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FieldModel } from '../field-model.ts';
-import { checkFields, pdfNotes } from './fields.ts';
+import { checkFields } from './fields.ts';
 
 const field = (
   path: string[],
@@ -37,7 +37,7 @@ const backgrounds = [light, { name: 'Page, dark', color: '#12151f' }];
 
 describe('checkFields', () => {
   it('finds each problem under its field, in form order', () => {
-    const { notes, pdfs } = checkFields(
+    const { notes } = checkFields(
       fields,
       {
         hero: { src: './a.jpg', alt: 'IMG_2041.jpg' },
@@ -69,9 +69,6 @@ describe('checkFields', () => {
         { kind: 'field', path: ['sections', 1, 'body'] },
         'Alt text looks like a file name.',
       ],
-    ]);
-    expect(pdfs).toEqual([
-      { href: '/files/brochure.pdf', target: { kind: 'field', path: ['brochure'] } },
     ]);
   });
 
@@ -141,36 +138,9 @@ describe('checkFields', () => {
     expect(checkFields(large, { heading: '#949494' }, { backgrounds }).notes).toEqual([]);
   });
 
-  it('ignores remote PDFs and values that aren’t PDFs', () => {
-    expect(checkFields(fields, { brochure: 'https://example.com/a.pdf' }).pdfs).toEqual([]);
-    expect(checkFields(fields, { brochure: '/files/a.docx' }).pdfs).toEqual([]);
-  });
-});
-
-describe('pdfNotes', () => {
-  const pdf = {
-    href: '/files/untagged-brochure.pdf',
-    target: { kind: 'field' as const, path: ['brochure'] },
-  };
-
-  it('notes each missing fact, naming the file', () => {
-    const notes = pdfNotes(pdf, { tagged: false, title: null, language: null });
-    expect(notes.map((n) => [n.rule, n.subject])).toEqual([
-      ['pdf-untagged', 'PDF “untagged-brochure.pdf”'],
-      ['pdf-no-title', 'PDF “untagged-brochure.pdf”'],
-      ['pdf-no-language', 'PDF “untagged-brochure.pdf”'],
-    ]);
-    expect(notes[0]?.message).toBe(
-      'This PDF isn’t tagged, so screen readers can’t read its structure. Consider an HTML page instead, or tag the PDF.',
-    );
+  it('says nothing about a PDF in a file field', () => {
+    // A file's contents are its author's: Vesper doesn't open them.
+    expect(checkFields(fields, { brochure: '/files/brochure.pdf' })).toEqual({ notes: [] });
   });
 
-  it('says nothing about a tagged PDF with a title and a language', () => {
-    expect(pdfNotes(pdf, { tagged: true, title: 'Course brochure', language: 'en-US' })).toEqual(
-      [],
-    );
-    expect(pdfNotes(pdf, { tagged: true, title: '  ', language: 'en' }).map((n) => n.rule)).toEqual(
-      ['pdf-no-title'],
-    );
-  });
 });

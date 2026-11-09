@@ -325,14 +325,14 @@ describe('buildManifest: accessibility (spec §6.18)', () => {
       collections: [fixtures('text')] as ManifestInput['collections'],
       config: {
         a11y: {
-          blockPublishOn: ['missing-alt', 'missing-alt', 'pdf-untagged'],
+          blockPublishOn: ['missing-alt', 'missing-alt', 'alt-file-name'],
           backgrounds: { 'Page, light': '#ffffff', 'Page, dark': '#12151f' },
         },
         collections: { fixtures: { headingStart: 1 } },
       },
     });
     expect(manifest.site.a11y).toEqual({
-      blockPublishOn: ['missing-alt', 'pdf-untagged'],
+      blockPublishOn: ['missing-alt', 'alt-file-name'],
       backgrounds: [
         { name: 'Page, light', color: '#ffffff' },
         { name: 'Page, dark', color: '#12151f' },

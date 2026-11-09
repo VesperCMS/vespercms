@@ -110,7 +110,7 @@ Keys in the writing view: arrow onto a block to select it, Enter opens its setti
 ## Accessibility notes (spec §6.18, layer 1)
 
 - `a11y/useNotes.ts` runs `entryChecker` from `@vespercms/core` a moment after typing stops (the same 300 ms as body validation). The checks read bodies with micromark and Markdoc, so `a11y/run.ts` loads on first use, like the body checks.
-- PDFs (file fields, and site PDFs linked from the body) are read once per session with PDF.js (`a11y/pdf.ts`, `pdfjs-dist`'s legacy build, its worker through a Vite `?url` import). It stays external in `dist/` and loads only when a PDF is checked.
+- Files, PDFs among them, aren't opened or checked (DECISIONS.md, "Vesper doesn't check PDFs").
 - Notes render under their field (`a11y/FieldNotes.tsx`) and join the control's description; an image's alt-text notes sit beside the alt text box. The body's notes are listed under the body editor, each with Show (`body/reveal.ts` finds the block by parsing the current text again).
 - The count in the top bar opens `a11y/NotesDrawer.tsx`: every note grouped by field in form order, with Go to field. With `a11y.blockPublishOn`, a listed rule's note refuses the save the way a body the build would fail on is refused, and the error summary links to the field.
 - Text only: the one colour is a hairline warning border, and the words say "Accessibility note". Vesper reports problems; it never claims compliance (D19).
