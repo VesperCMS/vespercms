@@ -51,6 +51,11 @@
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
     },
+    "./markdoc": {
+      "@vesper/source": "./src/markdoc/index.ts",
+      "types": "./dist/markdoc/index.d.ts",
+      "default": "./dist/markdoc/index.js"
+    },
     "./image-service": {
       "@vesper/source": "./src/images/service.ts",
       "types": "./dist/images/service.d.ts",
@@ -72,6 +77,7 @@
   },
   "//dependencies": "axe-core runs the build's accessibility checks (spec §6.18, layer 2), the same engine as the e2e suite; jsdom is the DOM it runs in without a browser, matched against Chromium (DECISIONS.md). pagefind indexes the site for search (spec §6.19, D23): a regular dependency because search is on by default, with a 58 MB binary for the build machine's platform, as Starlight ships it. All three load only in astro:build:done.",
   "dependencies": {
+    "@markdoc/markdoc": "^0.5.10",
     "@vespercms/admin": "0.1.0-next.1",
     "@vespercms/core": "0.1.0-next.1",
     "axe-core": "^4.14.0",

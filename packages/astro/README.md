@@ -57,6 +57,15 @@ const settings = await getSingleton('settings'); // a singleton's one entry, wha
 
 A folder with no section page is still a node, with no entry and `url: null`. The module embeds each collection's `_order.yaml` files; in `astro dev` a change to one reloads the site's pages.
 
+### `vespercms/markdoc`
+
+```js
+import { links } from 'vespercms/markdoc';
+export default defineMarkdocConfig({ nodes: { link: links({ site: 'https://example.com' }) } });
+```
+
+`links()` is Markdoc's link node with links to other sites opening in a new tab (`target="_blank"`, `rel="noopener noreferrer"`) and a visually hidden "(opens in a new tab)" after the words. Markdoc can't carry an attribute on one link, so it's a rule for the site. `site` keeps full links to the site's own host in the tab; `newTabLabel` changes the words.
+
 ### Custom widgets
 
 Register them in `vesper.config.ts` (spec §6.3.3):

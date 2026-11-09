@@ -1,9 +1,12 @@
 import { component, defineMarkdocConfig } from '@astrojs/markdoc/config';
+import { links } from 'vespercms/markdoc';
 
 // The studio reads this file to build each tag's editing interface, the same
 // way it reads content.config.ts (spec §6.5.1). Nothing Vesper-specific goes
 // here; UI hints live in vesper.config.ts.
 export default defineMarkdocConfig({
+  // Links to other sites open in a new tab, and say so to screen readers.
+  nodes: { link: links() },
   variables: {
     product: { name: 'Vesper', beta: true, tier: 'free' },
   },
