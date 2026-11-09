@@ -3,6 +3,7 @@ import { Editor } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
+import { LineBreak } from './hard-break.ts';
 import { assembleBody, type BodyFormat } from '@vespercms/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { playgroundManifest } from '../test/helpers.tsx';
@@ -40,7 +41,8 @@ export function open(body: string, format: BodyFormat = 'md') {
   const containers = containerTypes(catalog);
   editor = new Editor({
     extensions: [
-      StarterKit.configure({ underline: false, trailingNode: false }),
+      StarterKit.configure({ underline: false, trailingNode: false, hardBreak: false }),
+      LineBreak,
       Image.configure({ inline: true }),
       Markdown,
       BlockIndex,
@@ -161,6 +163,38 @@ const DOC =
     '{% partial file="_support-hours.mdoc" /%}',
     '{% gallery /%}',
   ].join('\n\n') + '\n';
+
+describe('line breaks', () => {
+  /** The end of the paragraph whose text contains `words`. */
+  const endOf = (e: Editor, words: string) => {
+    let end = -1;
+    e.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'paragraph' && node.textContent.includes(words))
+        end = pos + node.nodeSize - 1;
+    });
+    return end;
+  };
+
+  it('edits a paragraph with two breaks in a row, and writes each as a backslash', () => {
+    // A blank line inside a paragraph, as Sanity's text had: two breaks.
+    const body = 'Kids 5 and under FREE\\\n\\\nTickets don’t include rides.\n';
+    for (const format of ['md', 'mdoc'] as const) {
+      const { save, editor: e } = open(body, format);
+      expect(e.getJSON().content[0]?.type).toBe('paragraph');
+      expect(save()).toBe(body);
+      e.chain().setTextSelection(endOf(e, 'rides')).insertContent(' Or food.').run();
+      expect(save()).toBe(body.replace('rides.', 'rides. Or food.'));
+    }
+  });
+
+  it('writes a new break as a backslash, and drops one at the very end', () => {
+    const { save, editor: e } = open('Address\n', 'md');
+    e.chain().setTextSelection(endOf(e, 'Address')).setHardBreak().insertContent('Abingdon').run();
+    expect(save()).toBe('Address\\\nAbingdon\n');
+    e.chain().setTextSelection(endOf(e, 'Abingdon')).setHardBreak().run();
+    expect(save()).toBe('Address\\\nAbingdon\n');
+  });
+});
 
 describe('Markdoc blocks', () => {
   it('shows tags as containers, cards and chips, and unknown tags as protected blocks', () => {

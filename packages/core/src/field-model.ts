@@ -28,6 +28,30 @@ export type FieldOption = { value: string; label: string };
  * since the kind itself is that value (DECISIONS.md, "Blocks are a
  * discriminated union of objects").
  */
+/** A value a condition compares a field with. */
+export type ConditionValue = string | number | boolean | null;
+
+export type FieldCondition = {
+  field: string;
+  equals: ConditionValue | ConditionValue[];
+  /**
+   * The sibling's schema default, which the site reads when the file leaves
+   * the sibling out: `noPage: z.boolean().default(false)` missing is `false`.
+   */
+  absent?: ConditionValue;
+};
+
+/**
+ * Whether a sibling's value meets a condition. A missing value counts as the
+ * sibling's default, as Astro reads it, else as null. A Date or an object
+ * never meets one.
+ */
+export function conditionMet(condition: FieldCondition, sibling: unknown): boolean {
+  const wanted = Array.isArray(condition.equals) ? condition.equals : [condition.equals];
+  const value = sibling === undefined ? (condition.absent ?? null) : sibling;
+  return wanted.some((w) => w === value);
+}
+
 export type FieldVariant = {
   value: string;
   /** `meta.label` on the kind's object, or its value in sentence case. */
@@ -100,8 +124,19 @@ export type FieldModel = {
   safeToEcho?: boolean;
   /** `hide`: the boolean from `fields.hideFromSearch()`, which keeps the entry out of site search (spec §6.19). */
   search?: 'hide';
-  /** Lists of objects: the item field that names each item's row in the editor ("question"). */
-  summary?: string;
+  /**
+   * Lists of objects: the item field that names each item's row in the
+   * editor ("question"), or several, joined with " · " (`['date', 'start']`).
+   * On the list or on its item object.
+   */
+  summary?: string | string[];
+  /**
+   * Shown only while a sibling in the same object holds this value, or one
+   * of these: `{ field: 'location', equals: 'Other' }`. Hidden, the field
+   * keeps its value (DECISIONS.md, "Fields can show only when a sibling has
+   * a value").
+   */
+  showWhen?: FieldCondition;
   /** Unions: the key whose value says which kind an object is (`type`). */
   discriminator?: string;
   /** Unions: each kind, in schema order. A union has no `children`; see `childrenFor`. */

@@ -4,6 +4,7 @@ import type { ValuePath } from '../editor/values.ts';
 import type { WidgetProps } from '../types.ts';
 import {
   DateWidget,
+  TimeWidget,
   EmailWidget,
   NumberWidget,
   RadioWidget,
@@ -59,6 +60,7 @@ const BUILTIN: Record<string, BuiltinWidget> = {
   switch: { component: SwitchWidget },
   date: { component: DateWidget },
   datetime: { component: DateTimeWidget },
+  time: { component: TimeWidget },
   select: { component: SelectWidget },
   radio: { component: RadioWidget, group: true },
   icon: { component: IconWidget },

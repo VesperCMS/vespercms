@@ -1,12 +1,15 @@
 export type {
+  ConditionValue,
   Diagnostic,
   DiagnosticLevel,
+  FieldCondition,
   FieldConstraints,
   FieldKind,
   FieldModel,
   FieldOption,
   FieldVariant,
 } from './field-model.ts';
+export { conditionMet } from './field-model.ts';
 
 // Schema introspection: Zod 4 schemas into field models (spec §6.2, §6.3.1).
 export {
@@ -255,6 +258,7 @@ export {
   dirOf,
   resolveMediaPath,
   mediaReference,
+  rootReference,
   type MediaServiceOptions,
 } from './studio/media.ts';
 export type { WidgetProps } from './studio/widget.ts';

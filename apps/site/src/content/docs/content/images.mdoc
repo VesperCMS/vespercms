@@ -120,6 +120,12 @@ A picture can be content on its own page and only repeat the words beside it som
 
 `<Img>` and `getImg()` don't take `alt`: the build stops with a message saying to pass `decorative` instead, so the editor's words are never overridden by a template's.
 
+## Images in Markdoc tags
+
+An image chosen in a Markdoc tag's settings, from a `fields.image()` with no helper in a tag's `schema` (see [Markdoc and MDX](/docs/content/markdoc-and-mdx/)), is stored as a path from your site's root, such as `/src/assets/gallery/barn.jpg`. A tag's component doesn't know which entry it's in, so a path relative to the entry couldn't be found, and a page that moves keeps its pictures.
+
+`<Img>` and `getImg()` resolve such a path at build and treat the image like any other, with its crops and focal point. Only images under `src/` are found this way; an image in `public/` keeps its address and is used as it is.
+
 ## Social images
 
 For places an `<img>` can't go, such as `og:image`, `getImg()` returns Astro's `getImage()` result for the same crop:

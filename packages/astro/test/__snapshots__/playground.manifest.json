@@ -1533,6 +1533,18 @@
         },
         {
           "path": [
+            "doorsOpen"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Doors open",
+          "description": "When doors open, if it isn’t when the event starts.",
+          "widget": "time",
+          "format": "time",
+          "inferredWidget": "time"
+        },
+        {
+          "path": [
             "location"
           ],
           "kind": "reference",
@@ -1543,6 +1555,121 @@
           },
           "inferredWidget": "reference",
           "widget": "reference"
+        },
+        {
+          "path": [
+            "format"
+          ],
+          "kind": "enum",
+          "required": false,
+          "label": "Format",
+          "default": "inPerson",
+          "widgetOptions": {
+            "labels": {
+              "inPerson": "In person",
+              "online": "Online"
+            }
+          },
+          "constraints": {
+            "options": [
+              {
+                "value": "inPerson",
+                "label": "In person"
+              },
+              {
+                "value": "online",
+                "label": "Online"
+              }
+            ]
+          },
+          "inferredWidget": "radio",
+          "widget": "radio"
+        },
+        {
+          "path": [
+            "streamUrl"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Stream address",
+          "widget": "url",
+          "showWhen": {
+            "field": "format",
+            "equals": "online",
+            "absent": "inPerson"
+          },
+          "format": "url",
+          "inferredWidget": "url"
+        },
+        {
+          "path": [
+            "sessions"
+          ],
+          "kind": "array",
+          "required": false,
+          "label": "Sessions",
+          "default": [],
+          "summary": [
+            "date",
+            "starts",
+            "title"
+          ],
+          "children": [
+            {
+              "path": [
+                "sessions",
+                "[]"
+              ],
+              "kind": "object",
+              "required": true,
+              "label": "Item",
+              "children": [
+                {
+                  "path": [
+                    "sessions",
+                    "[]",
+                    "date"
+                  ],
+                  "kind": "date",
+                  "required": true,
+                  "label": "Date",
+                  "coerce": true,
+                  "inferredWidget": "date",
+                  "widget": "date"
+                },
+                {
+                  "path": [
+                    "sessions",
+                    "[]",
+                    "starts"
+                  ],
+                  "kind": "string",
+                  "required": true,
+                  "label": "Starts",
+                  "widget": "time",
+                  "format": "time",
+                  "inferredWidget": "time"
+                },
+                {
+                  "path": [
+                    "sessions",
+                    "[]",
+                    "title"
+                  ],
+                  "kind": "string",
+                  "required": false,
+                  "label": "Title",
+                  "inferredWidget": "text",
+                  "widget": "text"
+                }
+              ],
+              "extraKeys": "strip",
+              "inferredWidget": "group",
+              "widget": "group"
+            }
+          ],
+          "inferredWidget": "repeater",
+          "widget": "repeater"
         },
         {
           "path": [
@@ -2110,6 +2237,25 @@
             "default": 1
           }
         ]
+      },
+      {
+        "name": "link",
+        "attributes": [
+          {
+            "name": "href",
+            "types": [
+              "String"
+            ],
+            "required": true
+          },
+          {
+            "name": "title",
+            "types": [
+              "String"
+            ],
+            "required": false
+          }
+        ]
       }
     ],
     "variables": {
@@ -2436,5 +2582,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "6d5f9ef84c5fc6c87e1be771e791abe3afed05d957254f4d54c5547d4e4a8182"
+  "hash": "8a278a39b1b93a2bb45931cb71c444cd15d10731d7439967ed0d9360f155b19c"
 }

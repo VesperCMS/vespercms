@@ -47,14 +47,24 @@ A drop-in for `astro:content` (spec §6.11). In builds it re-exports Astro's mod
 It adds the site helpers (spec §6.15.7), which use the same URL and tree code as the studio:
 
 ```ts
-import { getBreadcrumbs, getChildren, getTree, getUrl } from 'vesper:content';
+import { getBreadcrumbs, getChildren, getSingleton, getTree, getUrl } from 'vesper:content';
 const tree = await getTree('pages'); // nested by folder, ordered by _order.yaml, the home page first
 const kids = await getChildren('pages', entry); // [{ title, url, entry, children, … }]
 const crumbs = await getBreadcrumbs('pages', entry); // [{ title, url }], from Home to the entry
 const href = getUrl(entry); // from the collection's url pattern, with base and trailing slash
+const settings = await getSingleton('settings'); // a singleton's one entry, whatever its file is called
 ```
 
 A folder with no section page is still a node, with no entry and `url: null`. The module embeds each collection's `_order.yaml` files; in `astro dev` a change to one reloads the site's pages.
+
+### `vespercms/markdoc`
+
+```js
+import { links } from 'vespercms/markdoc';
+export default defineMarkdocConfig({ nodes: { link: links({ site: 'https://example.com' }) } });
+```
+
+`links()` is Markdoc's link node with links to other sites opening in a new tab (`target="_blank"`, `rel="noopener noreferrer"`) and a visually hidden "(opens in a new tab)" after the words. Markdoc can't carry an attribute on one link, so it's a rule for the site. `site` keeps full links to the site's own host in the tab; `newTabLabel` changes the words.
 
 ### Custom widgets
 
@@ -84,6 +94,8 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 | `fields.url()` | `z.url().meta({ widget: 'url' })` | `"https://…"` |
 | `fields.email()` | `z.email().meta({ widget: 'email', autocomplete: 'email' })` | `"a@b.com"` |
 | `fields.datetime()` | `z.coerce.date().meta({ widget: 'datetime' })` | ISO 8601 |
+| `fields.time()` | `z.iso.time({ precision: -1 }).meta({ widget: 'time' })` | `"18:00"` (24-hour) |
+| `fields.reference(collection)` | `z.string().meta({ vesper: { kind: 'reference', collection } })` | An entry's ID (for tag and component schemas) |
 | `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
 | `fields.icon(names)` | `z.enum([...]).meta({ widget: 'icon' })` | `"calendar-days"` |
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | Markdown string |
@@ -156,7 +168,7 @@ collections: {
 redirects: { native: ['apache'] },
 ```
 
-- **`url`** is the one source of truth for where an entry lives: "View on site", the link picker, redirects, breadcrumbs and the helpers all use it. Tokens: `:id`, `:path` (the ID without a trailing `/index`; a top-level `index` is the root), `:slug`, `:<field>`, and `:<dateField>|yyyy`, `|mm`, `|dd` (calendar dates keep their day; times are read in the site's `timeZone`). Generated URLs follow Astro's `base`, `trailingSlash` and `build.format`. A function gets the entry's `id`, `collection` and `data` (its frontmatter, typed `unknown`, so narrow it before reading a field) and returns the entry's path on the site.
+- **`url`** is the one source of truth for where an entry lives: "View on site", the link picker, redirects, breadcrumbs and the helpers all use it. Tokens: `:id`, `:path` (the ID without a trailing `/index`; a top-level `index` is the root), `:slug`, `:<field>`, and `:<dateField>|yyyy`, `|mm`, `|dd` (calendar dates keep their day; times are read in the site's `timeZone`). Generated URLs follow Astro's `base`, `trailingSlash` and `build.format`. A function gets the entry's `id`, `collection` and `data` (its frontmatter, typed `unknown`, so narrow it before reading a field) and returns the entry's path on the site, or `undefined` for an entry with no page.
 - **`tree: true`** shows the collection as an outline: the folder is the hierarchy, `folder/index.md` is the folder's section page, and an optional `_order.yaml` in each folder lists its children by slug (unlisted ones follow by title). Keep `_` files out of the glob, as in `'**/[^_]*.md'`; the manifest warns when a pattern would pick up `_order.yaml`.
 - **`maxDepth`** limits how deep pages may go. There's no default (DECISIONS.md).
 
@@ -215,7 +227,7 @@ collections: {
 },
 ```
 
-The studio checks each entry as it's edited (layer 1): alt text, heading order and empty headings, vague and new-tab links, tables without a header row, typed lists, empty names on embeds, video captions, text colours against the declared backgrounds, and PDFs (tagged, title, language). Notes appear beside the field they concern, and every note only warns unless its rule is in `blockPublishOn`. Rule IDs: `missing-alt`, `alt-file-name`, `alt-redundant`, `alt-too-long`, `heading-skip`, `heading-extra-top`, `heading-empty`, `link-vague`, `link-new-window`, `table-header`, `color-contrast`, `tag-name-empty`, `fake-list`, `pdf-untagged`, `pdf-no-title`, `pdf-no-language`, `video-captions`.
+The studio checks each entry as it's edited (layer 1): alt text, heading order and empty headings, vague and new-tab links, tables without a header row, typed lists, empty names on embeds, video captions, and text colours against the declared backgrounds. Notes appear beside the field they concern, and every note only warns unless its rule is in `blockPublishOn`. Rule IDs: `missing-alt`, `alt-file-name`, `alt-redundant`, `alt-too-long`, `heading-skip`, `heading-extra-top`, `heading-empty`, `link-vague`, `link-new-window`, `table-header`, `color-contrast`, `tag-name-empty`, `fake-list`, `video-captions`.
 
 A Markdoc tag or declared MDX component gets the embed checks from its own schema: a required `title`, `alt`, `label` or `aria-label` attribute left empty is a note, and a tag with a `captions` attribute asks to confirm captions when it's absent or off.
 

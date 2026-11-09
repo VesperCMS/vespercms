@@ -5,7 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { dragFrom, layOutLists, rowTop } from '../test/drag.ts';
 import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
-import { itemNames, itemSummary } from './group.tsx';
+import { itemNames, itemSummary, rowText } from './group.tsx';
 
 afterEach(() => {
   cleanup();
@@ -381,4 +381,69 @@ describe('item names', () => {
       'Code and more',
     );
   });
+
+  // A fair's schedule: a calendar date, a time, and a title that's often empty.
+  const schedule = (summary?: string | string[], onItem = false) => ({
+    path: ['schedule'],
+    kind: 'array' as const,
+    label: 'Schedule',
+    required: false,
+    ...(summary && !onItem ? { summary } : {}),
+    children: [
+      {
+        path: ['schedule', '[]'],
+        kind: 'object' as const,
+        label: 'Item',
+        required: true,
+        ...(summary && onItem ? { summary } : {}),
+        children: [
+          {
+            path: ['schedule', '[]', 'date'],
+            kind: 'date' as const,
+            label: 'Date',
+            required: true,
+          },
+          {
+            path: ['schedule', '[]', 'start'],
+            kind: 'string' as const,
+            label: 'Start',
+            required: true,
+            widget: 'time',
+            format: 'time',
+          },
+          {
+            path: ['schedule', '[]', 'title'],
+            kind: 'string' as const,
+            label: 'Title',
+            required: false,
+          },
+        ],
+      },
+    ],
+  });
+  const row = { date: new Date('2026-09-14T00:00:00.000Z'), start: '16:00' };
+
+  it('join a summary of several fields, dates and times in words, leaving out empty ones', () => {
+    const named = itemSummary(row, 0, schedule(['date', 'start', 'title']));
+    expect(named.name).toBe(`${rowText(undefined, row.date)} · ${rowText(timeField, '16:00')}`);
+    expect(named.name).toMatch(/^Mon, Sep 14 · 4:00\sPM$/);
+    // The hint works on the item object too.
+    expect(itemSummary(row, 0, schedule(['date', 'start'], true)).name).toBe(named.name);
+    expect(
+      itemSummary({ ...row, title: 'Rabbit Show' }, 0, schedule(['date', 'start', 'title'])).name,
+    ).toMatch(/· Rabbit Show$/);
+  });
+
+  it('name a row without a hint by its first field that says something', () => {
+    expect(itemSummary(row, 0, schedule()).name).toMatch(/^Mon, Sep 14$/);
+  });
 });
+
+const timeField = {
+  path: ['t'],
+  kind: 'string' as const,
+  label: 'T',
+  required: true,
+  widget: 'time',
+  format: 'time',
+};

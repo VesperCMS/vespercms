@@ -2,12 +2,12 @@ import type { BodyFormat } from '../body/types.ts';
 import type { CollectionManifest, Manifest } from '../manifest/types.ts';
 import { checkBody, tagDefinitions, type TagDefinitions } from './body.ts';
 import { checkFields } from './fields.ts';
-import type { A11yNote, PdfTarget } from './types.ts';
+import type { A11yNote } from './types.ts';
 
 /*
  * Every layer-1 check for one entry (spec §6.18), with the site's settings
  * from the manifest: field notes in form order, then the body's in document
- * order, and the PDFs the studio still has to read.
+ * order.
  */
 
 export type EntryCheckInput = {
@@ -17,7 +17,7 @@ export type EntryCheckInput = {
   format?: BodyFormat;
 };
 
-export type EntryCheck = { notes: A11yNote[]; pdfs: PdfTarget[] };
+export type EntryCheck = { notes: A11yNote[] };
 
 /** Accessibility checks bound to a site, so the tag definitions are worked out once. */
 export function entryChecker(
@@ -33,7 +33,7 @@ export function entryChecker(
       tags,
       ...(manifest.markdoc ? { markdoc: manifest.markdoc.options } : {}),
     });
-    return { notes: [...fields.notes, ...body.notes], pdfs: [...fields.pdfs, ...body.pdfs] };
+    return { notes: [...fields.notes, ...body.notes] };
   };
 }
 

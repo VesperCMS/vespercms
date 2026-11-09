@@ -41,6 +41,8 @@ export const BUILTIN_WIDGETS: Record<string, WidgetCheck> = {
   switch: (f) => f.kind === 'boolean',
   date: (f) => f.kind === 'date' || isString(f),
   datetime: (f) => f.kind === 'date' || isString(f),
+  // A time of day, stored as 24-hour "18:00" (`fields.time()`).
+  time: isString,
   select: (f) => f.kind === 'enum',
   radio: (f) => f.kind === 'enum',
   // An enum of Lucide names (`fields.icon`), each drawn beside its name.
@@ -76,6 +78,7 @@ export function inferWidget(field: FieldModel): string {
     case 'string':
       if (field.format === 'email') return 'email';
       if (field.format === 'url') return 'url';
+      if (field.format === 'time') return 'time';
       return 'text';
     case 'number':
       return 'number';

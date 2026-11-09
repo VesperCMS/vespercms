@@ -15,6 +15,24 @@ describe('defineConfig', () => {
     const url = config.collections?.people?.url;
     expect(entryUrlKey(url, { id: 'ada', collection: 'people', data: {} })).toBe('/people/ada');
   });
+
+  it('lets a url function give an entry no page', () => {
+    const config = defineConfig({
+      collections: {
+        events: {
+          url: (entry) => {
+            const data = entry.data as { noPage?: boolean };
+            return data.noPage ? undefined : `/events/${entry.id}`;
+          },
+        },
+      },
+    });
+    const url = config.collections?.events?.url;
+    expect(
+      entryUrlKey(url, { id: 'gates', collection: 'events', data: { noPage: true } }),
+    ).toBeNull();
+    expect(entryUrlKey(url, { id: 'fair', collection: 'events', data: {} })).toBe('/events/fair');
+  });
 });
 
 describe('checkConfig', () => {
@@ -203,12 +221,27 @@ describe('images', () => {
   });
 });
 
+describe('listSort', () => {
+  it('accepts a field and a direction, and explains a wrong shape', () => {
+    expect(
+      checkConfig({
+        collections: { events: { listSort: { field: 'startsAt', direction: 'ascending' } } },
+      }),
+    ).toEqual([]);
+    expect(
+      checkConfig({ collections: { events: { listSort: 'startsAt' } } }).map((p) => p.message),
+    ).toEqual([
+      'collections.events.listSort must name a field and, if you like, a direction: { field: "startsAt", direction: "ascending" }.',
+    ]);
+  });
+});
+
 describe('accessibility', () => {
   it('accepts the publish gate, backgrounds and a heading start', () => {
     expect(
       checkConfig({
         a11y: {
-          blockPublishOn: ['missing-alt', 'pdf-untagged'],
+          blockPublishOn: ['missing-alt', 'alt-file-name'],
           backgrounds: { Page: '#ffffff', Footer: '#1d2433' },
         },
         collections: { docs: { headingStart: 1 } },

@@ -8,5 +8,3 @@ import { entryChecker, type Manifest } from '@vespercms/core';
 export function a11yChecker(manifest: Manifest): ReturnType<typeof entryChecker> {
   return entryChecker(manifest);
 }
-
-export { pdfNotes } from '@vespercms/core';

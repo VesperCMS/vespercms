@@ -13,7 +13,7 @@ import { useState, type FocusEvent, type KeyboardEvent } from 'react';
 /** Keys that pass through or leave a field without starting to fill it in. */
 const PASSING = new Set(['Tab', 'Shift', 'Escape', 'Enter', 'Meta', 'Control', 'Alt']);
 
-/** Props for a `date` or `datetime-local` input whose value is `value`. */
+/** Props for a `date`, `datetime-local` or `time` input whose value is `value`. */
 export function useBlankWhenEmpty(value: string) {
   const [engaged, setEngaged] = useState(false);
   return {

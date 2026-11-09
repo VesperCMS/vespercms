@@ -5,6 +5,7 @@ import {
   isPlainObject,
   mediaReference,
   resolveMediaPath,
+  rootReference,
   siteRatios,
   type DataValue,
   type FieldModel,
@@ -112,7 +113,11 @@ export function ImageWidget({
   const setSrc = (path: string) => {
     // The same image again changes nothing, not even how its path is written.
     if (path === sitePath) return;
-    const reference = mediaReference(path, editor.entryPath);
+    // In a Markdoc tag's settings, a path from the site's root (fields.image() with no helper).
+    const reference =
+      field.widgetOptions?.path === 'root'
+        ? rootReference(path)
+        : mediaReference(path, editor.entryPath);
     if (!objectShape) {
       onChange(reference);
       return;

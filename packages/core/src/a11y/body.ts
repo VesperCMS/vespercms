@@ -16,7 +16,7 @@ import {
   saysNewWindow,
   vagueLinkText,
 } from './text.ts';
-import type { A11yNote, A11yTarget, PdfTarget } from './types.ts';
+import type { A11yNote, A11yTarget } from './types.ts';
 
 /*
  * Layer-1 checks over a body (spec §6.18). Each format is read with the
@@ -109,7 +109,7 @@ export type BodyCheckOptions = {
   tags?: TagDefinitions;
 };
 
-export type BodyCheck = { notes: A11yNote[]; pdfs: PdfTarget[] };
+export type BodyCheck = { notes: A11yNote[] };
 
 /** Accessibility notes for a body, in document order, and the PDFs it links to. */
 export function checkBody(
@@ -126,7 +126,6 @@ export function checkBody(
     line: lineOf(starts, span.start) + 1,
   });
   const notes: A11yNote[] = [];
-  const pdfs: PdfTarget[] = [];
   const headingStart = options.headingStart ?? 2;
   let previous = headingStart - 1;
   let topSeen = false;
@@ -159,14 +158,6 @@ export function checkBody(
           !saysNewWindow(fact.text, fact.label, fact.title)
         )
           note('link-new-window', 'Tell readers this opens in a new tab.', subject);
-        if (isSitePdf(fact.href))
-          pdfs.push({
-            href: fact.href,
-            target: at(fact),
-            subject: fact.text.trim()
-              ? `PDF ${quoted(fact.text)}`
-              : `PDF ${quoted(fileNameOf(fact.href))}`,
-          });
         break;
       }
       case 'heading': {
@@ -241,7 +232,7 @@ export function checkBody(
       }
     }
   }
-  return { notes, pdfs };
+  return { notes };
 }
 
 /** The alt-text problems of one image: missing (`null`: no alt at all), a file name, redundant, too long. */
@@ -276,12 +267,6 @@ function skipMessage(previous: number, level: number, start: number): string {
   if (previous === 0) return `The first heading should be level 1, not ${String(level)}.`;
   const from = previous === start - 1 && start === 2 ? '1 (the title)' : String(previous);
   return `Heading jumps from level ${from} to level ${String(level)}.`;
-}
-
-/** A link to a PDF on this site (an address with no scheme or host). */
-export function isSitePdf(href: string): boolean {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//')) return false;
-  return /\.pdf$/i.test(href.split(/[?#]/)[0] ?? '');
 }
 
 // Facts

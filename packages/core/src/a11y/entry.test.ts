@@ -43,7 +43,6 @@ describe('entryChecker', () => {
       format: 'md',
     });
     expect(result.notes.map((n) => n.rule)).toEqual(['heading-skip', 'link-vague']);
-    expect(result.pdfs.map((p) => p.href)).toEqual(['/files/about.pdf']);
   });
 
   it('checks only fields for data entries', async () => {

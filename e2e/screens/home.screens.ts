@@ -164,8 +164,7 @@ const shots: Shot[] = [
     folded: ['structure', 'list'],
     url: '/admin/#/c/fixtures/e/accessibility-mistakes',
     prepare: async (page, frame) => {
-      // PDF.js reads the brochure before its notes join the others.
-      await expect(page.getByRole('button', { name: '23 accessibility notes' })).toBeVisible({
+      await expect(page.getByRole('button', { name: '17 accessibility notes' })).toBeVisible({
         timeout: 30_000,
       });
       const body = page.getByRole('textbox', { name: 'Body' });

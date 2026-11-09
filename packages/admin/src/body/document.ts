@@ -1,4 +1,5 @@
 import type { JSONContent } from '@tiptap/core';
+import { dropEndBreaks } from './hard-break.ts';
 import type { MarkdownManager } from '@tiptap/markdown';
 import {
   editTable,
@@ -365,7 +366,10 @@ export function nodeText(node: JSONContent, markdown: MarkdownManager): string {
   if (node.type === 'vesperCard') return String(node.attrs?.source ?? '');
   const { vesperBlock: _vesperBlock, ...attrs } = node.attrs ?? {};
   return restoreChips(
-    markdown.serialize({ type: 'doc', content: [{ ...node, attrs }] }).replace(/\s+$/, ''),
+    dropEndBreaks(markdown.serialize({ type: 'doc', content: [{ ...node, attrs }] })).replace(
+      /\s+$/,
+      '',
+    ),
   );
 }
 

@@ -189,16 +189,8 @@ describe('links', () => {
     ]);
   });
 
-  it('lists links to the site’s PDFs, not other sites’', () => {
-    const { pdfs } = check(
-      'Get the [course brochure](/files/brochure.pdf), the [map](./map.PDF?v=2) or [theirs](https://example.com/a.pdf).\n',
-      'md',
-    );
-    expect(pdfs.map((p) => [p.href, p.subject])).toEqual([
-      ['/files/brochure.pdf', 'PDF “course brochure”'],
-      ['./map.PDF?v=2', 'PDF “map”'],
-    ]);
-    expect(pdfs[0]?.target).toMatchObject({ kind: 'body', line: 1 });
+  it('says nothing about a link to a PDF', () => {
+    expect(check('Get the [course brochure](/files/brochure.pdf).\n', 'md')).toEqual({ notes: [] });
   });
 });
 

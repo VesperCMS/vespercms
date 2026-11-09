@@ -321,11 +321,12 @@ function contentModule(options: {
           "const urlFunctions = Object.fromEntries(Object.entries(vesperConfig?.collections ?? {}).flatMap(([name, c]) => typeof c?.url === 'function' ? [[name, c.url]] : []));",
         ]
       : ['const urlFunctions = {};']),
-    `const helpers = createHelpers(${JSON.stringify(options.data)}, (name) => getCollection(name), urlFunctions);`,
+    `const helpers = createHelpers(${JSON.stringify(options.data)}, (name) => getCollection(name), urlFunctions, (name, id) => getEntry(name, id));`,
     'export const getTree = helpers.getTree;',
     'export const getChildren = helpers.getChildren;',
     'export const getBreadcrumbs = helpers.getBreadcrumbs;',
     'export const getUrl = helpers.getUrl;',
+    'export const getSingleton = helpers.getSingleton;',
   ];
   if (!options.dev && options.schedule) {
     return [
@@ -341,7 +342,7 @@ function contentModule(options: {
   }
   if (!options.dev) {
     return [
-      "import { getCollection } from 'astro:content';",
+      "import { getCollection, getEntry } from 'astro:content';",
       "export * from 'astro:content';",
       ...helpers,
     ].join('\n');
@@ -409,6 +410,7 @@ export function helperData(model: SiteModel, root: string): HelperData {
       titleKeys,
       orders:
         collection.source.loader === 'glob' ? orderFiles(join(root, collection.source.base)) : {},
+      ...(collection.presentation.singleton ? { singleton: true } : {}),
     };
   }
   return { settings, collections };

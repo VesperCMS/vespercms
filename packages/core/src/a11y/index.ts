@@ -11,19 +11,11 @@ export {
   type A11yRule,
   type A11yRuleId,
 } from './rules.ts';
-export type {
-  A11yBackground,
-  A11yNote,
-  A11ySettings,
-  A11yTarget,
-  PdfFacts,
-  PdfTarget,
-} from './types.ts';
+export type { A11yBackground, A11yNote, A11ySettings, A11yTarget } from './types.ts';
 export {
   altProblems,
   bodyFacts,
   checkBody,
-  isSitePdf,
   tagDefinitions,
   type BodyCheck,
   type BodyCheckOptions,
@@ -31,7 +23,7 @@ export {
   type TagDefinition,
   type TagDefinitions,
 } from './body.ts';
-export { checkFields, pdfNotes, type FieldCheck, type FieldCheckOptions } from './fields.ts';
+export { checkFields, type FieldCheck, type FieldCheckOptions } from './fields.ts';
 export {
   CONTRAST_MINIMUM,
   contrastRatio,

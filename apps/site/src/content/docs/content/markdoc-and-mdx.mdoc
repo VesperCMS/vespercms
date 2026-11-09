@@ -101,7 +101,46 @@ markdoc: {
 - `summary` names the attribute whose value shows in the block's header, as in "Callout · Warning".
 - Each attribute can have a `label`, a `description`, `labels` for its `matches` values, and a `widget` to choose its control by name. A widget applies as it would to a schema field of the attribute's type: a `String` attribute can take `textarea`, `url`, `color` or a custom widget. `Object` and `Array` attributes are edited as YAML, so a widget such as `geo` doesn't apply to them; naming one warns in the terminal and keeps the YAML field.
 - An `Array` or `Object` attribute can also have a `schema`: a Zod schema for what's inside, written as for a content field, such as `z.array(z.object({ question: z.string(), answer: z.string() }))`. Markdoc can't describe what's inside a list, so this gives it real controls: each item a row, as lists of objects are in the form. Markdoc's own rules still decide what saves.
+- A picture or another entry can go in a tag's settings too. In `vesper.config.ts` there's no `image` helper and no `reference()`, so use `fields.image()` with no helper and `fields.reference('collection')`. The studio offers the image picker, with uploads, and a list of the collection's entries. An image is stored as a path from your site's root, `/src/assets/barn.jpg`, and an entry as its ID:
+
+```ts
+// vesper.config.ts
+markdoc: {
+  tags: {
+    gallery: {
+      attributes: {
+        items: {
+          schema: z.array(
+            z.object({ photo: fields.image(), sponsor: fields.reference('sponsors').optional() }),
+          ),
+        },
+      },
+    },
+  },
+},
+```
+
+  Astro doesn't resolve a path inside a tag's attributes, so the tag's component hands the image to `<Img>`, which does: `<Img image={item.photo} ratio="square" />`. Read an entry with `getEntry('sponsors', item.sponsor)`.
 - A list attribute written one item per line, or one key per line, keeps that layout: changing one item rewrites only its lines, and new items follow the same layout. A list written on one line is written whole, as before. The same holds for an MDX component's array props.
+
+## Links to other sites
+
+Markdoc can't give one link its own settings, so whether a link opens in a new tab is a rule for the whole site. `links()` from `vespercms/markdoc` replaces Markdoc's link node: a link to another site opens in a new tab, and screen readers hear "(opens in a new tab)" after its words, which aren't shown. Links within the site stay in the tab, as do email and phone links.
+
+```js
+// markdoc.config.mjs
+import { defineMarkdocConfig } from '@astrojs/markdoc/config';
+import { links } from 'vespercms/markdoc';
+
+export default defineMarkdocConfig({
+  nodes: { link: links({ site: 'https://www.example.edu' }) },
+});
+```
+
+- `site` is your site's address, so a full link to one of your own pages stays in the tab. Without it, every full web address counts as another site.
+- `newTabLabel` changes the words screen readers hear, for a site in another language.
+
+Editors write links as before, in the link dialog. The page changes only how they open.
 
 ## Partials and conditionals
 

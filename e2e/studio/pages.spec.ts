@@ -338,8 +338,10 @@ test('the site helpers return the same in astro dev as in the static build', asy
   expect(built.status()).toBe(200);
   const dev = await request.get('/site-tree.json');
   expect(dev.status()).toBe(200);
-  type SiteTree = { tree: { title: string }[]; urls: Record<string, string> };
+  type SiteTree = { tree: { title: string }[]; urls: Record<string, string>; settings?: string };
   const tree = (await built.json()) as SiteTree;
+  // getSingleton finds settings/site.yaml without being told its name.
+  expect(tree.settings).toBe('site');
   expect(tree.tree.map((n) => n.title)).toEqual([
     'Vesper playground',
     'About the college',

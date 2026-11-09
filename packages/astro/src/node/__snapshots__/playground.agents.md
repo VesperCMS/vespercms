@@ -165,7 +165,14 @@ Markdown (`.md`) files in `src/content/events/`, matching `**/[^_]*.md`. Fields 
 - `icon`: the name of a Lucide icon (lucide.dev/icons), one of `calendar`, `graduation-cap`, `heart-handshake`, `mic`, `music`, `palette`, `presentation`, `tent`, `trophy`, `utensils`. Optional.
 - `startsAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Required.
 - `endsAt`: a date and time, ISO 8601 with an offset, such as `2026-01-31T09:30:00-05:00`. Optional.
+- `doorsOpen`: a time of day, 24-hour `HH:MM`, such as `18:00`. Optional. When doors open, if it isn’t when the event starts.
 - `location`: the ID of an entry in `locations`. Optional.
+- `format`: one of `inPerson`, `online`. Default `"inPerson"`.
+- `streamUrl` (Stream address): a full URL. Optional. The studio shows it only when `format` is `"online"`.
+- `sessions`: a list of objects with the fields below. Default `[]`.
+  - `date`: a date, such as `2026-01-31`. Required.
+  - `starts`: a time of day, 24-hour `HH:MM`, such as `18:00`. Required.
+  - `title`: text. Optional.
 - `ticket`: an object of one of the kinds below, named by its `kind`. Optional.
   - `kind: free`: No other fields.
   - `kind: paid`: Bought ahead, at the address below.

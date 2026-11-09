@@ -172,6 +172,42 @@ export function DateWidget({
   );
 }
 
+/**
+ * A time of day (`fields.time()`): the browser's time picker, which shows
+ * the editor's own clock (6:00 PM in the US), over a value stored as 24-hour
+ * "18:00". Seconds are never asked for.
+ */
+export function TimeWidget({
+  value,
+  onChange,
+  field,
+  id,
+  describedBy,
+  invalid,
+  disabled,
+}: WidgetProps<string>) {
+  const text = typeof value === 'string' ? value : '';
+  const blank = useBlankWhenEmpty(text);
+  return (
+    <input
+      id={id}
+      type="time"
+      step={60}
+      value={text}
+      {...blank}
+      onChange={(event) => {
+        const next = event.target.value;
+        onChange(next === '' ? emptyAs(field) : next.slice(0, 5));
+      }}
+      aria-describedby={describedBy}
+      aria-invalid={invalid || undefined}
+      aria-required={field.required || undefined}
+      disabled={disabled}
+      className={cx(inputClass, 'max-w-40')}
+    />
+  );
+}
+
 function optionsOf(field: FieldModel): FieldOption[] {
   return field.constraints?.options ?? field.children?.[0]?.constraints?.options ?? [];
 }

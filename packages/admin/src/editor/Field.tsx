@@ -1,6 +1,6 @@
-import type { FieldModel } from '@vespercms/core';
+import { conditionMet, type FieldModel } from '@vespercms/core';
 import { cx, OptionalMark } from '@vespercms/ui';
-import { Component, Suspense, type ReactNode } from 'react';
+import { Component, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStudio } from '../app/context.tsx';
 import type { WidgetProps } from '../types.ts';
 import { builtinWidget } from '../widgets/registry.ts';
@@ -30,7 +30,41 @@ export type FieldProps = {
  * Group widgets (objects, lists, choices) render as a fieldset whose legend
  * is the label. Errors are linked to the control with aria-describedby.
  */
-export function Field({ field, path, label, item, asSection = true }: FieldProps) {
+export function Field(props: FieldProps) {
+  return props.field.showWhen ? <ConditionalField {...props} /> : <FieldBody {...props} />;
+}
+
+/**
+ * A field with `showWhen`: drawn only while its sibling holds the value, and
+ * kept in the entry while it isn't (hiding never deletes). A status beside
+ * it, always in the page, tells screen reader users when it comes and goes,
+ * since it changes below the control they're using (DECISIONS.md, "Fields
+ * can show only when a sibling has a value").
+ */
+function ConditionalField(props: FieldProps) {
+  const editor = useEditor();
+  const { field, path } = props;
+  const condition = field.showWhen;
+  const sibling = condition ? getIn(editor.values, [...path.slice(0, -1), condition.field]) : null;
+  const shown = condition ? conditionMet(condition, sibling) : true;
+  const was = useRef(shown);
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    if (was.current === shown) return;
+    was.current = shown;
+    setMessage(shown ? `${field.label} is shown.` : `${field.label} is hidden.`);
+  }, [shown, field.label]);
+  return (
+    <>
+      <p role="status" className="sr-only">
+        {message}
+      </p>
+      {shown && <FieldBody {...props} />}
+    </>
+  );
+}
+
+function FieldBody({ field, path, label, item, asSection = true }: FieldProps) {
   const editor = useEditor();
   const { widgets } = useStudio();
   const id = fieldId(path, editor.idPrefix);

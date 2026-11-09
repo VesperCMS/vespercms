@@ -5,6 +5,7 @@ import { Editor } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
+import { LineBreak } from './hard-break.ts';
 import {
   assembleBody,
   splitFrontmatter,
@@ -74,7 +75,8 @@ function open(body: string, manifest: Manifest) {
   editor?.destroy();
   editor = new Editor({
     extensions: [
-      StarterKit.configure({ underline: false, trailingNode: false }),
+      StarterKit.configure({ underline: false, trailingNode: false, hardBreak: false }),
+      LineBreak,
       Image.configure({ inline: true }),
       Markdown,
       BlockIndex,

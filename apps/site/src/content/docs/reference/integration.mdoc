@@ -139,7 +139,8 @@ Keyed by the collection's name in `src/content.config.ts`. A name that isn't a c
 | `tree` | `false` | Shows the collection as an outline: folders are sections, and an optional `_order.yaml` in each folder sets its order. Collections loaded with `glob()` only. |
 | `maxDepth` | No limit | For a tree: how many levels deep a page may be, 1 or more. |
 | `singleton` | `false` | The collection holds one entry, and the studio opens it directly. |
-| `listFields` | None | Top-level fields shown as columns in the entry list. The first date field among them sorts the list, newest first. |
+| `listFields` | None | Top-level fields shown as columns in the entry list, a select by its label. The first date field among them sorts the list, newest first, unless `listSort` says otherwise. |
+| `listSort` | None | How the entry list is first sorted: `{ field, direction }`, where `field` is `'title'` or one of `listFields`, and `direction` is `'ascending'` (the default: A to Z, earliest first) or `'descending'`. Upcoming events read best as `{ field: 'startsAt', direction: 'ascending' }`. `orderBy` wins over it. |
 | `orderBy` | None | For a collection that isn't a tree: a top-level number field that puts its entries in order, lowest first, then by title, with entries that have no number last. The list sorts that way, and editors drag an entry to a new place, which writes the number: usually only that entry's, halfway between its new neighbours'. Sort your pages by the same field so the site agrees. |
 | `newEntryPath` | `:slug` | Where new entries are saved, inside the collection's folder, with `:slug`, `:year`, `:month` and `:day`. Trees place new pages under their parent instead. |
 | `placement` | Each field's own `.meta({ placement })` | Per top-level field, the editor tab it's on: `'main'` for Content, `'details'` for Details, or a tab from `tabs`. |
@@ -156,12 +157,15 @@ A `url` pattern is built from tokens:
 - `:title`, or any other field's name, is that field's value.
 - `:publishedAt|yyyy`, `|mm` and `|dd` are parts of a date field. A date with a time is read in the site's `timeZone`.
 
-Addresses follow Astro's `base`, `trailingSlash` and `build.format`. The studio, links, redirects, breadcrumbs, search and the build's accessibility report all use the same `url`. For anything a pattern can't say, give a function. It gets the entry's `id`, `collection` and `data` (the frontmatter, typed `unknown`, so check a field before using it) and returns its path on the site. Keep it pure, with no server-only imports, because the studio runs it in the browser too:
+Addresses follow Astro's `base`, `trailingSlash` and `build.format`. The studio, links, redirects, breadcrumbs, search and the build's accessibility report all use the same `url`. For anything a pattern can't say, give a function. It gets the entry's `id`, `collection` and `data` (the frontmatter, typed `unknown`, so check a field before using it) and returns its path on the site, or `undefined` when the entry has no page. Keep it pure, with no server-only imports, because the studio runs it in the browser too:
 
 ```ts
 collections: {
   news: { url: '/news/:publishedAt|yyyy/:slug' },
   people: { url: (entry) => `/people/${entry.id}` },
+  events: {
+    url: (entry) => ((entry.data as { noPage?: boolean }).noPage ? undefined : `/events/${entry.id}`),
+  },
 },
 ```
 

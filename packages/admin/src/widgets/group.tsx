@@ -70,10 +70,50 @@ function imageSource(value: DataValue): string {
 /** Markdown's marks would read as noise in a one-line name. */
 const plain = (text: string) => text.replace(/[*_`]/g, '').trim();
 
+/** The keys a `summary` hint names, from the list or its item object. */
+function summaryKeys(list: FieldModel): string[] {
+  const hint = list.summary ?? list.children?.[0]?.summary;
+  if (typeof hint === 'string') return [hint];
+  return Array.isArray(hint) ? hint.filter((key): key is string => typeof key === 'string') : [];
+}
+
+/**
+ * A value as a row shows it: a calendar date as "Mon, Sep 14", a time of day
+ * as the editor's clock reads it ("4:00 PM"), a select by its label, and
+ * text without Markdown's marks. Nothing for what a row can't say in words.
+ */
+export function rowText(field: FieldModel | undefined, value: DataValue): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const calendar = value.getUTCHours() === 0 && value.getUTCMinutes() === 0;
+    return calendar
+      ? value.toLocaleDateString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        })
+      : value.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+  if (typeof value === 'number') return String(value);
+  if (typeof value !== 'string' || !value.trim()) return '';
+  const time = /^(\d{2}):(\d{2})$/.exec(value);
+  if (time && (field?.widget === 'time' || field?.format === 'time')) {
+    return new Date(Date.UTC(2000, 0, 1, Number(time[1]), Number(time[2]))).toLocaleTimeString(
+      undefined,
+      { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' },
+    );
+  }
+  const option = field?.constraints?.options?.find((o) => o.value === value);
+  return option ? option.label : plain(value);
+}
+
+const childOf = (item: FieldModel | undefined, key: string) =>
+  item?.children?.find((child) => keyOf(child) === key);
+
 /**
  * A list item's name, from its own content: an image's alt text or file
- * name; otherwise the `summary` hint's field, a title-like field, or its
- * first text, in that order; else "Point 3".
+ * name; otherwise the `summary` hint's fields (several are joined with " · "),
+ * a title-like field, or its first text, in that order; else "Point 3".
  */
 export function itemSummary(
   value: DataValue,
@@ -90,19 +130,34 @@ export function itemSummary(
     return src ? { name: fileName(src), key: 'src' } : fallback;
   }
   if (!isPlainObject(value)) return fallback;
-  // The hint, then a title-like field, then the item's first text field, in schema order.
-  const order = (list.children?.[0]?.children ?? []).filter((c) => !c.hidden).map(keyOf);
-  for (const key of [list.summary, ...NAME_KEYS, ...order]) {
-    if (!key) continue;
+  const item = list.children?.[0];
+  // The hint first: its fields' words, in order, leaving out the empty ones.
+  const hinted = summaryKeys(list);
+  const parts = hinted
+    .map((key) => rowText(childOf(item, key), value[key] ?? null))
+    .filter((text) => text !== '');
+  if (parts.length > 0)
+    return { name: parts.join(' · '), key: hinted.length === 1 ? hinted[0] : '' };
+  // Then a title-like field, then the item's first field that says something, in schema order.
+  for (const key of NAME_KEYS) {
     const text = value[key];
     if (typeof text === 'string' && text.trim()) return { name: plain(text), key };
+  }
+  for (const child of (item?.children ?? []).filter((c) => !c.hidden)) {
+    const key = keyOf(child);
+    const text = rowText(child, value[key] ?? null);
+    if (text) return { name: text, key };
   }
   return fallback;
 }
 
-/** The muted words after an item's name: how many of its first list it holds, else its next text. */
+/**
+ * The muted words after an item's name: how many of its first list it holds,
+ * else its next field that says something (a date reads "Mon, Sep 14"). A
+ * name built from several fields already says what they would.
+ */
 function itemDetail(value: DataValue, item: FieldModel, nameKey: string | undefined): string {
-  if (!isPlainObject(value)) return '';
+  if (!isPlainObject(value) || nameKey === '') return '';
   const children = item.children ?? [];
   const list = children.find((child) => child.kind === 'array' && !child.hidden);
   if (list) {
@@ -112,10 +167,9 @@ function itemDetail(value: DataValue, item: FieldModel, nameKey: string | undefi
   }
   for (const child of children) {
     const key = keyOf(child);
-    const text = value[key];
-    if (key !== nameKey && !child.hidden && typeof text === 'string' && text.trim()) {
-      return plain(text);
-    }
+    if (key === nameKey || child.hidden || child.kind === 'boolean') continue;
+    const text = rowText(child, value[key] ?? null);
+    if (text) return text;
   }
   return '';
 }

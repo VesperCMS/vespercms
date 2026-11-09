@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import type { FieldModel } from '../field-model.ts';
+import { conditionMet, type FieldModel } from '../field-model.ts';
 import { childrenFor, fieldChildren, variantFor } from './variants.ts';
 import { IMAGE_MARKER, VESPER_META_KEY, walkSchema } from './walk.ts';
 
@@ -402,5 +402,104 @@ describe('walkSchema: a discriminated union of objects is kinds', () => {
     const object = field(z.object({ a: z.string() }));
     expect(childrenFor(object, {})).toBe(object.children);
     expect(fieldChildren(object)).toBe(object.children);
+  });
+});
+
+describe('walkSchema: showWhen', () => {
+  const walk = (shape: Record<string, z.ZodType>) =>
+    walkSchema(z.object(shape), { collection: 'events' });
+  const fieldAt = (fields: FieldModel[] | null, key: string) =>
+    fields?.find((f) => f.path.at(-1) === key);
+
+  it('keeps a condition on a sibling, with one value or several', () => {
+    const { fields, diagnostics } = walk({
+      location: z.enum(['Main Stage', 'Other']).optional(),
+      customLocation: z
+        .string()
+        .optional()
+        .meta({ showWhen: { field: 'location', equals: 'Other' } }),
+      note: z
+        .string()
+        .optional()
+        .meta({ showWhen: { field: 'location', equals: ['Main Stage', 'Other'] } }),
+    });
+    expect(fieldAt(fields, 'customLocation')?.showWhen).toEqual({
+      field: 'location',
+      equals: 'Other',
+    });
+    expect(fieldAt(fields, 'note')?.showWhen?.equals).toEqual(['Main Stage', 'Other']);
+    expect(diagnostics).toEqual([]);
+  });
+
+  it('works inside an object in a list, against the item’s own fields', () => {
+    const { fields } = walk({
+      rows: z.array(
+        z.object({
+          kind: z.enum(['a', 'b']),
+          extra: z
+            .string()
+            .optional()
+            .meta({ showWhen: { field: 'kind', equals: 'b' } }),
+        }),
+      ),
+    });
+    const item = fieldAt(fields, 'rows')?.children?.[0];
+    expect(fieldAt(item?.children ?? null, 'extra')?.showWhen).toEqual({
+      field: 'kind',
+      equals: 'b',
+    });
+  });
+
+  it('drops a condition it can’t follow, and says why', () => {
+    const { fields, diagnostics } = walk({
+      location: z.string().optional(),
+      a: z
+        .string()
+        .optional()
+        .meta({ showWhen: { field: 'nowhere', equals: 'x' } }),
+      b: z.string().optional().meta({ showWhen: 'location' }),
+    });
+    expect(fieldAt(fields, 'a')?.showWhen).toBeUndefined();
+    expect(fieldAt(fields, 'b')?.showWhen).toBeUndefined();
+    expect(diagnostics.map((d) => [d.code, d.message])).toEqual([
+      [
+        'show-when',
+        'meta.showWhen on a is ignored: "nowhere" isn\'t a field beside it in the same object.',
+      ],
+      [
+        'show-when',
+        "meta.showWhen on b is ignored: it should name a field beside it and the value that shows it, such as { field: 'location', equals: 'Other' }.",
+      ],
+    ]);
+  });
+
+  it('records the sibling’s default, which a file that leaves it out means', () => {
+    const { fields } = walk({
+      noPage: z.boolean().default(false),
+      image: z
+        .string()
+        .optional()
+        .meta({ showWhen: { field: 'noPage', equals: false } }),
+    });
+    const condition = fieldAt(fields, 'image')?.showWhen;
+    expect(condition).toEqual({ field: 'noPage', equals: false, absent: false });
+    if (!condition) throw new Error('No condition.');
+    expect(conditionMet(condition, undefined)).toBe(true);
+    expect(conditionMet(condition, true)).toBe(false);
+  });
+
+  it('warns about a required field a condition can hide', () => {
+    const { fields, diagnostics } = walk({
+      online: z.boolean().default(false),
+      streamUrl: z.string().meta({ showWhen: { field: 'online', equals: true } }),
+    });
+    expect(fieldAt(fields, 'streamUrl')?.showWhen).toEqual({
+      field: 'online',
+      equals: true,
+      absent: false,
+    });
+    expect(diagnostics.map((d) => d.message)).toEqual([
+      'streamUrl is required, but meta.showWhen can hide it, and a hidden required field stops every save. Make it .optional().',
+    ]);
   });
 });

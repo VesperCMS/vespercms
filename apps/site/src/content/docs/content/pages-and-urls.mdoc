@@ -29,7 +29,7 @@ The tokens:
 - `:category`, or any other field's name, is that field's value.
 - `:publishedAt|yyyy`, `|mm` and `|dd` are parts of a date field. A calendar date keeps its day, and a date with a time is read in the site's `timeZone`.
 
-An entry that lacks a token's value has no URL. URLs follow Astro's `base`, `trailingSlash` and `build.format`. For addresses a pattern can't express, `url` can be a function that takes the entry and returns a path. Keep it pure, with no server-only imports, because the studio runs it in the browser too.
+An entry that lacks a token's value has no URL. URLs follow Astro's `base`, `trailingSlash` and `build.format`. For addresses a pattern can't express, `url` can be a function that takes the entry and returns a path, or `undefined` for an entry with no page of its own. Keep it pure, with no server-only imports, because the studio runs it in the browser too.
 
 ## Page trees
 
@@ -134,7 +134,7 @@ The body editor's link dialog suggests pages by title as you type, and URL field
 
 ## Site helpers
 
-`vesper:content` is a drop-in for `astro:content`, plus four helpers that use the same URL and tree code as the studio:
+`vesper:content` is a drop-in for `astro:content`, plus helpers that use the same URL and tree code as the studio:
 
 ```astro
 ---
@@ -163,6 +163,7 @@ const children = await getChildren('pages', page);
 - `getTree(collection)` returns the whole tree, nested by folder and ordered by `_order.yaml`, with the home page first. Each node has `title`, `url`, `entry` and `children`.
 - `getChildren(collection, entry)` returns a page's children, in order.
 - `getBreadcrumbs(collection, entry)` returns `{ title, url }` for each step from the home page to the entry.
-- `getUrl(entry)` returns the entry's URL from its pattern, with base and trailing slash, or `undefined` for a data-only collection.
+- `getUrl(entry)` returns the entry's URL from its pattern, with base and trailing slash, or `undefined` for a data-only collection or an entry whose `url` function returned nothing.
+- `getSingleton(collection)` returns a singleton's one entry, whatever its file is called, as `getEntry` would: `const settings = await getSingleton('settings')`. It throws for a collection without `singleton: true`.
 
 A folder with no section page is a node with `url: null`. In `astro dev`, a change to an `_order.yaml` reloads the site's pages.

@@ -8,7 +8,7 @@ Sample files for the studio's browser-side upload hygiene (spec §6.6.6). They l
 | `portrait-exif-6.jpg` | Applying EXIF orientation before stripping metadata; GPS stripping | An upright **portrait** JPEG (1200×1600, arrow pointing up, "TOP" at the top), with Orientation removed or set to 1, and no GPS. If orientation is lost before the pixels are rotated, the photo ends up sideways. |
 | `script.svg` | SVG sanitizing | The same picture with no `<script>` elements, no `on*` handler attributes, no `javascript:` URLs (`href` or `xlink:href`), no `<foreignObject>`, and no `<set>` / `<animate>` that targets handlers or links. |
 
-The untagged-PDF fixture for the accessibility checks is `public/files/untagged-brochure.pdf`, a generated one-page PDF with no tags, title or language.
+`public/files/untagged-brochure.pdf` is a generated one-page PDF with no tags, title or language. It was the fixture for the PDF checks, which were removed (DECISIONS.md, "Vesper doesn't check PDFs"); it stays as the file fields' and body link's PDF, which now get no notes.
 
 ## Provenance and licenses
 

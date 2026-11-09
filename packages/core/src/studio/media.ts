@@ -72,6 +72,8 @@ export function dirOf(path: string): string {
 export function resolveMediaPath(value: string, entryPath: string): string | null {
   if (/^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith('//')) return null;
   try {
+    // A path from the site's root, as a Markdoc tag's image stores it (rootReference).
+    if (value.startsWith('/src/')) return normalizePath(value.slice(1));
     if (value.startsWith('/')) return normalizePath(`public${value}`);
     if (value.startsWith('./') || value.startsWith('../')) {
       const parts = dirOf(entryPath).split('/').filter(Boolean);
@@ -91,6 +93,17 @@ export function resolveMediaPath(value: string, entryPath: string): string | nul
 export function mediaReference(mediaPath: string, entryPath: string): string {
   if (mediaPath.startsWith('public/')) return mediaPath.slice('public'.length);
   return relativePath(dirOf(entryPath), mediaPath);
+}
+
+/**
+ * A file as a path from the site's root, `/src/assets/barn.jpg`: how an
+ * image in a Markdoc tag's settings is stored, since a tag's component
+ * doesn't know which entry it's in, and a page move needn't rewrite it.
+ * `<Img>` resolves it at build. Public files keep their address, `/x`.
+ */
+export function rootReference(mediaPath: string): string {
+  if (mediaPath.startsWith('public/')) return mediaPath.slice('public'.length);
+  return `/${mediaPath}`;
 }
 
 export type MediaServiceOptions = {

@@ -38,6 +38,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { NoteText } from '../a11y/FieldNotes.tsx';
 import { useStudio } from '../app/context.tsx';
 import { pageSuggestions, usePages } from '../editor/PagePicker.tsx';
+import { LineBreak } from './hard-break.ts';
 import { MediaPicker } from '../media/MediaPicker.tsx';
 import { inputClass } from '../widgets/basic.tsx';
 import { catalogOf, fallbackLabel } from './catalog.ts';
@@ -505,8 +506,11 @@ function WritingView({
         // Underline has no Markdown; a trailing empty line would add text nobody typed.
         underline: false,
         trailingNode: false,
+        // Breaks are written as a backslash (hard-break.ts).
+        hardBreak: false,
         link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
       }),
+      LineBreak,
       Image.configure({ inline: true }),
       Markdown,
       BlockIndex,

@@ -84,6 +84,17 @@ export function datetime() {
   return z.coerce.date().meta({ widget: 'datetime' });
 }
 
+/**
+ * A time of day, with no date: a schedule row's start, opening hours. The
+ * studio shows the browser's time picker (6:00 PM in the US); the file
+ * stores 24-hour `"18:00"`, which sorts as text and means the same anywhere.
+ *
+ * Raw equivalent: `z.iso.time({ precision: -1 }).meta({ widget: 'time' })`.
+ */
+export function time() {
+  return z.iso.time({ precision: -1 }).meta({ widget: 'time' });
+}
+
 type SelectOptions =
   | readonly [string, ...string[]]
   | Readonly<Record<string, string>>
@@ -219,11 +230,34 @@ const cropRect = () =>
  */
 export function image<Src extends z.ZodType>(
   image: () => Src,
-  options: { ratios?: string[] } = {},
+  options?: { ratios?: string[] },
+): ReturnType<typeof imageObject<Src>>;
+/**
+ * The same image, for a Markdoc tag's or MDX component's `schema` hint in
+ * vesper.config.ts, where there's no `image` helper. The studio stores a
+ * path from the site's root, `/src/assets/barn.jpg`, and `<Img>` resolves
+ * it at build (DECISIONS.md, "A tag's image is a path from the site's root").
+ *
+ * Raw equivalent: as above, with `src: z.string().meta({ vesper: { kind: 'image' } })`
+ * and `widgetOptions: { path: 'root' }`.
+ */
+export function image(options?: { ratios?: string[] }): ReturnType<typeof imageObject<z.ZodString>>;
+export function image<Src extends z.ZodType>(
+  first?: (() => Src) | { ratios?: string[] },
+  second?: { ratios?: string[] },
+) {
+  if (typeof first === 'function') return imageObject(first(), second ?? {}, false);
+  return imageObject(z.string().meta({ vesper: { kind: 'image' } }), first ?? {}, true);
+}
+
+function imageObject<Src extends z.ZodType>(
+  src: Src,
+  options: { ratios?: string[] },
+  fromRoot: boolean,
 ) {
   return z
     .object({
-      src: image(),
+      src,
       alt: z.string(),
       decorative: z.boolean().optional(),
       focus: z.object({ x: fraction(), y: fraction() }).meta({ label: 'Focal point' }).optional(),
@@ -233,7 +267,25 @@ export function image<Src extends z.ZodType>(
       message: 'Describe this image, or mark it decorative.',
       path: ['alt'],
     })
-    .meta(withOptions('image', { ratios: options.ratios ? [...options.ratios] : undefined }));
+    .meta(
+      withOptions('image', {
+        ratios: options.ratios ? [...options.ratios] : undefined,
+        path: fromRoot ? 'root' : undefined,
+      }),
+    );
+}
+
+/**
+ * An entry of another collection, by its ID, for a Markdoc tag's or MDX
+ * component's `schema` hint in vesper.config.ts, which can't import
+ * `astro:content`. The studio offers the collection's entries; the
+ * component reads the one chosen with `getEntry(collection, id)`. In
+ * content.config.ts, use Astro's own `reference()`, which Astro checks.
+ *
+ * Raw equivalent: `z.string().meta({ vesper: { kind: 'reference', collection } })`.
+ */
+export function reference(collection: string) {
+  return z.string().meta({ vesper: { kind: 'reference', collection } });
 }
 
 /**
@@ -268,10 +320,12 @@ export const fields = {
   url,
   email,
   datetime,
+  time,
   select,
   icon,
   markdown,
   file,
   image,
+  reference,
   hideFromSearch,
 };

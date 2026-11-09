@@ -2,6 +2,7 @@ import { Extension, type JSONContent, type MarkdownToken } from '@tiptap/core';
 import { Markdown, type MarkdownManager } from '@tiptap/markdown';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { dropEndBreaks, LineBreak } from '../body/hard-break.ts';
 import { ToggleButton, ToolButton, Toolbar, cx } from '@vespercms/ui';
 import { useEffect, useRef, useState } from 'react';
 import { LinkDialog } from '../body/BodyEditor.tsx';
@@ -84,7 +85,7 @@ function fits(markdown: MarkdownManager, value: string, inline: boolean): boolea
     const allowed = inline ? INLINE_ALLOWED : ALLOWED;
     if (![...nodeTypes(doc)].every((type) => allowed.has(type))) return false;
     if (inline && (doc.content?.length ?? 0) > 1) return false;
-    const again = markdown.parse(markdown.serialize(doc));
+    const again = markdown.parse(dropEndBreaks(markdown.serialize(doc)));
     return JSON.stringify(again) === JSON.stringify(doc);
   } catch {
     return false;
@@ -134,11 +135,13 @@ export function MarkdownWidget(props: WidgetProps<string>) {
         strike: false,
         underline: false,
         trailingNode: false,
+        hardBreak: false,
         ...(inline
           ? { bulletList: false, orderedList: false, listItem: false, listKeymap: false }
           : {}),
         link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
       }),
+      LineBreak,
       Markdown,
       extras,
     ],
@@ -168,7 +171,7 @@ export function MarkdownWidget(props: WidgetProps<string>) {
       created.commands.setContent(markdown.parse(text), { emitUpdate: false });
     },
     onUpdate: ({ editor: updated }) => {
-      const text = updated.getMarkdown().trim();
+      const text = dropEndBreaks(updated.getMarkdown()).trim();
       onChangeRef.current(text === '' && !field.required ? undefined : text);
     },
   });
