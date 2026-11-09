@@ -119,6 +119,17 @@ test.describe('the crop at every declared ratio (/images/)', () => {
     expect(await img.evaluate((el) => getComputedStyle(el).objectPosition)).toBe('62% 35%');
   });
 
+  test('an image stored as a path from the site’s root is optimized like any other', async ({
+    page,
+  }) => {
+    await page.goto('/images/');
+    const img = page.locator('img[data-root-path]');
+    await expect(img).toHaveAttribute('width', '320');
+    await expect(img).toHaveAttribute('height', String(Math.round(320 / (16 / 9))));
+    // Built by Astro's pipeline, not linked to the source file.
+    expect(await img.getAttribute('src')).toMatch(/^\/_astro\/harbor-at-dawn\.[^/]+\.webp$/);
+  });
+
   test('no Vesper option reaches the page as an attribute', async ({ page }) => {
     await page.goto('/images/');
     await expect(page.locator('img[crop], source[crop], img[position]')).toHaveCount(0);

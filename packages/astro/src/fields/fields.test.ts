@@ -11,6 +11,7 @@ import {
   icon,
   image,
   markdown,
+  reference,
   select,
   slug,
   time,
@@ -121,6 +122,28 @@ describe('fields helpers: each equals its documented raw Zod', () => {
     ],
   ] as [string, z.ZodType, z.ZodType][])('%s', (_name, helper, raw) => {
     expect(model(helper)).toEqual(model(raw));
+  });
+});
+
+describe('fields helpers for tag and component schemas', () => {
+  it('image() with no helper is an image field that stores a path from the site’s root', () => {
+    const field = model(image({ ratios: ['wide'] }));
+    expect(field?.widget).toBe('image');
+    expect(field?.widgetOptions).toEqual({ ratios: ['wide'], path: 'root' });
+    expect(field?.children?.find((c) => c.path.at(-1) === 'src')?.kind).toBe('image');
+    expect(image().safeParse({ src: '/src/assets/a.jpg', alt: 'A barn' }).success).toBe(true);
+    expect(image().safeParse({ src: '/src/assets/a.jpg', alt: '' }).success).toBe(false);
+  });
+
+  it('reference() picks an entry by its ID, and equals its raw Zod', () => {
+    expect(model(reference('authors'))).toMatchObject({
+      kind: 'reference',
+      reference: { collection: 'authors' },
+    });
+    expect(model(reference('authors'))).toEqual(
+      model(z.string().meta({ vesper: { kind: 'reference', collection: 'authors' } })),
+    );
+    expect(model(z.array(reference('authors')))?.children?.[0]?.kind).toBe('reference');
   });
 });
 

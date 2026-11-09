@@ -105,6 +105,25 @@ describe('the image field', () => {
     await expectNoViolations();
   });
 
+  it('stores a path from the site’s root when the field is fields.image() with no helper', async () => {
+    const manifest = structuredClone(playgroundManifest);
+    const hero = manifest.collections
+      .find((c) => c.name === 'blog')
+      ?.fields?.find((f) => f.path[0] === 'hero');
+    if (!hero) throw new Error('The playground’s blog has no hero.');
+    hero.widgetOptions = { ...hero.widgetOptions, path: 'root' };
+    const { api, user } = setup({ manifest });
+    // The existing relative path still previews and resolves.
+    const group = await screen.findByRole('group', { name: 'Hero (optional)' });
+    await user.click(within(group).getByRole('button', { name: 'Replace image' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Choose an image' });
+    await user.click(await within(dialog).findByRole('button', { name: /winter-market\.jpg/ }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect((await lastSave(user, api)).data.hero.src).toBe('/src/assets/blog/winter-market.jpg');
+  });
+
   it('marks an image decorative, which stores an empty alt', async () => {
     const { api, user } = setup();
     const hero = await screen.findByRole('group', { name: 'Hero (optional)' });

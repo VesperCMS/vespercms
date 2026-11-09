@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Manifest } from '../manifest/types.ts';
 import { MemoryStorage } from '../storage/memory.ts';
-import { MediaService, mediaReference, relativePath, resolveMediaPath } from './media.ts';
+import {
+  MediaService,
+  mediaReference,
+  relativePath,
+  resolveMediaPath,
+  rootReference,
+} from './media.ts';
 import { ContentService } from './service.ts';
 
 const manifest: Manifest = {
@@ -81,6 +87,15 @@ describe('paths', () => {
     );
     expect(mediaReference('public/images/a.png', 'src/content/blog/post.md')).toBe('/images/a.png');
     expect(relativePath('src/content', 'src/content/a.jpg')).toBe('./a.jpg');
+  });
+
+  it('writes and reads a path from the site’s root, as a tag’s image stores it', () => {
+    expect(rootReference('src/assets/gallery/barn.jpg')).toBe('/src/assets/gallery/barn.jpg');
+    expect(rootReference('public/files/map.png')).toBe('/files/map.png');
+    // Wherever the entry is, the path finds the same file.
+    expect(resolveMediaPath('/src/assets/gallery/barn.jpg', 'src/content/pages/a/b.mdoc')).toBe(
+      'src/assets/gallery/barn.jpg',
+    );
   });
 });
 

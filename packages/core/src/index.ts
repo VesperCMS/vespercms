@@ -258,6 +258,7 @@ export {
   dirOf,
   resolveMediaPath,
   mediaReference,
+  rootReference,
   type MediaServiceOptions,
 } from './studio/media.ts';
 export type { WidgetProps } from './studio/widget.ts';

@@ -210,6 +210,72 @@ describe('Markdoc tags in the writing view', () => {
     return { api, faq };
   }
 
+  it('picks an image and an entry in a tag’s settings: a path from the site’s root, and an ID', async () => {
+    const manifest = structuredClone(playgroundManifest);
+    const photo: FieldModel = {
+      path: ['photo'],
+      kind: 'object',
+      label: 'Photo',
+      required: false,
+      widget: 'image',
+      widgetOptions: { path: 'root' },
+      children: [
+        { path: ['photo', 'src'], kind: 'image', label: 'Src', required: true },
+        { path: ['photo', 'alt'], kind: 'string', label: 'Alt', required: true },
+        { path: ['photo', 'decorative'], kind: 'boolean', label: 'Decorative', required: false },
+      ],
+    };
+    const person: FieldModel = {
+      path: ['person'],
+      kind: 'reference',
+      label: 'Person',
+      required: false,
+      inferredWidget: 'reference',
+      reference: { collection: 'authors' },
+    };
+    manifest.markdoc?.tags.push({
+      name: 'profile',
+      label: 'Profile',
+      selfClosing: true,
+      attributes: [
+        { name: 'photo', types: ['Object'], required: false },
+        { name: 'person', types: ['String'], required: false },
+      ],
+      fields: [photo, person],
+    });
+    const api = fakeApi({
+      documents: { 'docs/getting-started': { ...doc, body: '\n\n{% profile /%}\n' } },
+      entries: {
+        authors: [{ id: 'ada', path: 'x', title: 'Ada Moreno', status: 'editable', fields: {} }],
+      },
+      media: [{ path: 'src/assets/docs/barn.jpg', size: 1000, hash: 'd'.repeat(64), usedBy: [] }],
+      partials: PARTIALS,
+    });
+    renderStudio('#/c/docs/e/getting-started', { api, manifest });
+    const user = userEvent.setup();
+    const editor = await editorOf();
+    selectNode(
+      editor,
+      findNode(editor, 'vesperCard', (a) => a.name === 'profile'),
+    );
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog', { name: 'Profile settings' });
+    await user.click(within(dialog).getByRole('button', { name: 'Choose image' }));
+    const picker = await screen.findByRole('dialog', { name: 'Choose an image' });
+    await user.click(await within(picker).findByRole('button', { name: /barn\.jpg/ }));
+    await user.type(await within(dialog).findByRole('textbox', { name: /Alt/ }), 'A red barn');
+    await user.click(within(dialog).getByRole('combobox', { name: /Person/ }));
+    await user.click(await screen.findByRole('option', { name: 'Ada Moreno' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(api.saveEntry).toHaveBeenCalled();
+    });
+    expect(savedBody(api)).toBe(
+      '{% profile photo={src: "/src/assets/docs/barn.jpg", alt: "A red barn"} person="ada" /%}\n',
+    );
+  });
+
   it('edits a list attribute shaped by a schema hint as rows, and saves only the changed item’s line', async () => {
     const { api, faq } = withFaq();
     const user = userEvent.setup();

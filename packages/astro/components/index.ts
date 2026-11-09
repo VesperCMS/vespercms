@@ -8,6 +8,7 @@ import type { GetImageResult } from 'astro';
 import { getImage, imageConfig } from 'astro:assets';
 import { imageContext, planImg, type CroppedImageProps } from 'vespercms/images';
 import { ratios } from 'virtual:vesper/images';
+import { resolveRootImage } from './root-images.ts';
 
 export { default as Img } from './Img.astro';
 export { default as Search } from './Search.astro';
@@ -24,6 +25,7 @@ export type { CroppedImageProps, ImageFieldValue, ImgProps, RatioInput } from 'v
  * ```
  */
 export async function getImg(props: CroppedImageProps): Promise<GetImageResult> {
-  const options = planImg(props, imageContext(imageConfig, ratios), 'getImg()');
+  const image = await resolveRootImage(props.image);
+  const options = planImg({ ...props, image }, imageContext(imageConfig, ratios), 'getImg()');
   return getImage(options as Parameters<typeof getImage>[0]);
 }

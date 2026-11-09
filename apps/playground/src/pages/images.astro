@@ -51,6 +51,19 @@ const names = Object.keys(ratios);
       </section>
     );
   })}
+  <section aria-labelledby="root-path">
+    <h2 id="root-path">From a tag’s settings</h2>
+    <p>
+      An image chosen in a Markdoc tag’s settings is stored as a path from the site’s root, which
+      Img resolves at build.
+    </p>
+    <Img
+      image={{ src: '/src/assets/blog/harbor-at-dawn.jpg', alt: 'An orange sun over a harbor' }}
+      ratio="wide"
+      width={320}
+      data-root-path
+    />
+  </section>
 </BaseLayout>
 
 <style>

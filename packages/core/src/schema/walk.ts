@@ -274,6 +274,17 @@ function buildField(
     field.kind = 'image';
     return field;
   }
+  // `fields.reference('sponsors')`: a reference where Astro's reference() can't
+  // be imported, in a Markdoc tag's or MDX component's schema.
+  const referenced =
+    typeof marker === 'object' && marker !== null
+      ? (marker as { kind?: unknown; collection?: unknown })
+      : null;
+  if (referenced?.kind === 'reference' && typeof referenced.collection === 'string') {
+    field.kind = 'reference';
+    field.reference = { collection: referenced.collection };
+    return field;
+  }
   if (peeled.recursive) return { ...field, kind: 'unknown', unknownReason: 'recursive' };
   const childContext: WalkContext = { ...context, seen: new Set(peeled.visited).add(core) };
 

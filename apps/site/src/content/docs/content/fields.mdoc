@@ -191,6 +191,7 @@ const schema = z.object({
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | A Markdown string |
 | `fields.file({ accept })` | `z.string().meta({ widget: 'file', widgetOptions: { accept } })` | A path, such as `/files/brochure.pdf` |
 | `fields.image(image, { ratios? })` | See [Images](/docs/content/images/) | `{ src, alt, … }` |
+| `fields.reference(collection)` | `z.string().meta({ vesper: { kind: 'reference', collection } })` | An entry's ID. For Markdoc tags' and MDX components' schemas; in `content.config.ts`, use Astro's `reference()`. |
 | `fields.hideFromSearch()` | `z.boolean().default(false).meta({ label: 'Hide from site search', description, placement: 'details', search: 'hide' })` | `true` or `false` |
 
 Options you pass go into `widgetOptions`, as they would in the raw form. What they do:

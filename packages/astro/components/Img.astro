@@ -13,12 +13,15 @@ import type { GetImageResult } from 'astro';
 import { Image, Picture, getImage, imageConfig } from 'astro:assets';
 import { imageContext, mimeType, planArt, planImg, type ImgProps } from 'vespercms/images';
 import { ratios } from 'virtual:vesper/images';
+import { resolveRootImage } from './root-images.ts';
 
 type Props = ImgProps;
 type Options = Parameters<typeof getImage>[0];
 
 const ctx = imageContext(imageConfig, ratios);
-const { art, formats, fallbackFormat, pictureAttributes } = Astro.props;
+// A Markdoc tag's image is a path from the site's root (root-images.ts).
+const props = { ...Astro.props, image: await resolveRootImage(Astro.props.image) };
+const { art, formats, fallbackFormat, pictureAttributes } = props;
 
 /** `srcset` for a `<source>`: width descriptors alone, or the 1x image plus densities. */
 const srcsetOf = (image: GetImageResult) =>
@@ -56,7 +59,7 @@ async function sourceOf(
 
 let picture: { sources: Source[]; img: GetImageResult } | null = null;
 if (art) {
-  const plan = planArt(Astro.props, ctx);
+  const plan = planArt(props, ctx);
   const sources = await Promise.all([
     ...plan.sources.flatMap((source) =>
       plan.formats.map((format) => sourceOf(source.options, format, source.media)),
@@ -66,7 +69,7 @@ if (art) {
   const img = await getImage({ ...plan.base, format: plan.fallbackFormat } as Options);
   picture = { sources, img };
 }
-const single = art ? null : planImg(Astro.props, ctx);
+const single = art ? null : planImg(props, ctx);
 const { class: imgClass, ...imgAttributes } = picture?.img.attributes ?? {};
 ---
 
