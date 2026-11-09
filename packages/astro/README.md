@@ -85,6 +85,7 @@ Each helper returns **plain Zod with `.meta()` attached**, imported from `astro/
 | `fields.url()` | `z.url().meta({ widget: 'url' })` | `"https://…"` |
 | `fields.email()` | `z.email().meta({ widget: 'email', autocomplete: 'email' })` | `"a@b.com"` |
 | `fields.datetime()` | `z.coerce.date().meta({ widget: 'datetime' })` | ISO 8601 |
+| `fields.time()` | `z.iso.time({ precision: -1 }).meta({ widget: 'time' })` | `"18:00"` (24-hour) |
 | `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
 | `fields.icon(names)` | `z.enum([...]).meta({ widget: 'icon' })` | `"calendar-days"` |
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | Markdown string |

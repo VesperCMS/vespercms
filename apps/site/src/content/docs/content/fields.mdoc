@@ -134,13 +134,33 @@ summary: z.string().meta({
 | `placeholder` | Sample text in an empty field. It's never a label. |
 | `placement` | The editor tab the field is on: `'main'`, `'details'` or one you declare. See below. |
 | `hidden` | Leaves the field out of the editor. Saves don't change its value. |
+| `showWhen` | Shows the field only while a field beside it, in the same object, holds a value: `{ field: 'location', equals: 'Other' }`, or a list of values, `equals: ['Other', 'TBD']`. Hidden, it keeps its value. See [Fields that come and go](#fields-that-come-and-go). |
 | `readOnly` | Shows the value, but editors can't change it |
 | `autocomplete` | The browser's autofill hint, such as `email` |
-| `summary` | On a list of objects: the item field that names each row, such as `'question'`. Without it, the first of `title`, `name`, `label`, `heading` and `text` names it. On a kind's object, the field after the kind's name in its rows. |
+| `summary` | On a list of objects, or its item object: the item field that names each row, such as `'question'`, or several, `['date', 'start', 'title']`, joined with " · ". Dates read "Mon, Sep 14", times as the editor's clock does, and selects by their labels; empty ones are left out. Without it, the first of `title`, `name`, `label`, `heading` and `text` names it. On a kind's object, the field after the kind's name in its rows. |
 
 `.meta()` works before or after `.optional()` and `.default()`. Values must be plain data: a function in `widgetOptions` is dropped, with a warning.
 
-The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `url`, `slug`, `color`, `file`, `number`, `switch`, `date`, `datetime`, `select`, `radio`, `icon`, `tags`, `multiselect`, `group`, `union`, `repeater`, `reference`, `references`, `image`, `geo` and `raw`. A name that doesn't exist, or a widget that can't edit the field's type (`color` on a number), falls back to the control the type implies. Vesper warns in the terminal, naming the field and the widget.
+The built-in widgets you can name are `text`, `textarea`, `markdown`, `email`, `url`, `slug`, `color`, `file`, `number`, `switch`, `date`, `datetime`, `time`, `select`, `radio`, `icon`, `tags`, `multiselect`, `group`, `union`, `repeater`, `reference`, `references`, `image`, `geo` and `raw`. A name that doesn't exist, or a widget that can't edit the field's type (`color` on a number), falls back to the control the type implies. Vesper warns in the terminal, naming the field and the widget.
+
+## Fields that come and go
+
+Some fields only matter when another has a certain value: a custom location when Location is "Other", a stream address for an online event. `showWhen` hides the field until then:
+
+```ts
+location: fields.select(['Main Stage', 'Building A', 'Other']).optional(),
+customLocation: z
+  .string()
+  .optional()
+  .meta({ showWhen: { field: 'location', equals: 'Other' } }),
+```
+
+- The condition names a field beside it, in the same object. In a list of objects, that's the same item's field.
+- `equals` is a value, or a list of values any of which shows it: text, a number, `true` or `false`.
+- Hiding never deletes. A value the field held stays in the file while it's hidden, and comes back when it shows again. Your pages decide whether to read it.
+- Make such a field optional. A required field that's hidden would stop every save with nothing on screen to fix, so Vesper warns about one.
+- When the field comes or goes, screen readers hear "Custom location is shown" or "… is hidden".
+- A condition Vesper can't follow, such as one naming a field that isn't beside it, is ignored with a warning, and the field always shows.
 
 ## Field helpers
 
@@ -165,6 +185,7 @@ const schema = z.object({
 | `fields.url()` | `z.url().meta({ widget: 'url' })` | `"https://…"` |
 | `fields.email()` | `z.email().meta({ widget: 'email', autocomplete: 'email' })` | `"a@b.com"` |
 | `fields.datetime()` | `z.coerce.date().meta({ widget: 'datetime' })` | ISO 8601, with an offset |
+| `fields.time()` | `z.iso.time({ precision: -1 }).meta({ widget: 'time' })` | `"18:00"` |
 | `fields.select(options)` | `z.enum([...]).meta({ widgetOptions: { labels } })` | `"value"` |
 | `fields.icon(names)` | `z.enum([...]).meta({ widget: 'icon' })` | An icon's name, such as `"calendar-days"` |
 | `fields.markdown({ inline? })` | `z.string().meta({ widget: 'markdown' })` | A Markdown string |
@@ -178,6 +199,7 @@ Options you pass go into `widgetOptions`, as they would in the raw form. What th
 - `slug({ from: 'title' })` follows that field on a new entry until someone edits the slug.
 - `geo()` shows latitude and longitude fields. A map loads only when an editor asks for it with "Show on a map", and `defaultCenter` and `zoom` set where it starts.
 - `datetime()` is entered in the site's time zone (`timeZone` in `vesper.config.ts`, otherwise each editor's own) and stored with that day's offset.
+- `time()` is a time of day with no date, such as when doors open or a row of a schedule starts. The studio shows the browser's time picker, which reads the editor's own clock (6:00 PM in the US), and the file stores 24-hour `"18:00"`, which sorts as text. Format it for visitors on your pages.
 - `markdown()` is a small editor for bold, italic, code, links, paragraphs and lists. With `inline: true` it leaves out paragraphs and lists.
 - `select()` takes a list of values, an object of values and labels (`{ news: 'News' }`), or `[{ value, label }]`. The file stores the value.
 - `icon()` offers [Lucide](https://lucide.dev/icons) icons by their names on that page, such as `icon(['leaf', 'calendar-days'])`. The studio shows a list you can search, with each icon beside its name, and the chosen icon in the field. The file stores the name, and your site draws the icon. Like `select()`, it also takes names with labels, `{ 'code-xml': 'Code' }`, and the list then shows the labels. Install the `lucide` package: Vesper takes the pictures of the icons you offer from it when it reads your schema, and only those reach the studio. A name Lucide doesn't have is still offered, by name alone, and Vesper warns in the terminal.
