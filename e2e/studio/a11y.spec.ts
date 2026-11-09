@@ -46,7 +46,6 @@ test('every layer-1 rule fires on the fixture, beside the right field', async ({
 
   // Under the body, each naming what it's about.
   const body = page.getByRole('list', { name: 'Accessibility notes in the body' });
-  const notes = await body.getByRole('listitem').allTextContents();
   const expected = [
     'Image “IMG_2041.jpg”: Alt text looks like a file name.',
     'Image “Image of the library steps”: Alt text doesn’t need to start with “Image of”.',
@@ -65,7 +64,9 @@ test('every layer-1 rule fires on the fixture, beside the right field', async ({
     'YouTube video: Confirm this video has captions.',
     'YouTube video “A campus walking tour”: Confirm this video has captions.',
   ];
-  expect(notes).toHaveLength(expected.length);
+  // Wait for the list itself: the count can show a moment before the list under the body.
+  await expect(body.getByRole('listitem')).toHaveCount(expected.length);
+  const notes = await body.getByRole('listitem').allTextContents();
   expected.forEach((text, index) => {
     expect(notes[index]).toContain(text);
   });
