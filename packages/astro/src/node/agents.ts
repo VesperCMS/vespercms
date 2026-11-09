@@ -282,6 +282,14 @@ function fieldLines(field: FieldModel, indent: string): string[] {
   if (presence) parts.push(presence);
   if (field.readOnly) parts.push('Read only in the studio: leave it as it is.');
   else if (field.hidden) parts.push('Hidden in the studio.');
+  else if (field.showWhen) {
+    const values = Array.isArray(field.showWhen.equals)
+      ? field.showWhen.equals
+      : [field.showWhen.equals];
+    parts.push(
+      `The studio shows it only when ${code(field.showWhen.field)} is ${values.map((v) => code(JSON.stringify(v))).join(' or ')}.`,
+    );
+  }
   const description = clean(field.description);
   if (description) parts.push(description.endsWith('.') ? description : `${description}.`);
   else if (field.search === 'hide') parts.push('`true` keeps the entry out of site search.');
@@ -350,6 +358,8 @@ function describe(field: FieldModel): string {
       if (field.widget === 'file') return 'a path to a file';
       if (field.format === 'email') return 'an email address';
       if (field.format === 'url') return 'a full URL';
+      if (field.widget === 'time' || field.format === 'time')
+        return 'a time of day, 24-hour `HH:MM`, such as `18:00`';
       let text = 'text';
       if (c.min === 1 && c.max === undefined) text += ', not empty';
       else text += range(c.min, c.max, 'characters');

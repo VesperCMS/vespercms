@@ -202,7 +202,29 @@ const events = defineCollection({
       .optional(),
     startsAt: fields.datetime(),
     endsAt: fields.datetime().optional(),
+    // A time of day with no date (fields.time()): stored as 24-hour "18:30".
+    doorsOpen: fields
+      .time()
+      .optional()
+      .meta({ description: 'When doors open, if it isn’t when the event starts.' }),
     location: reference('locations').optional(),
+    // A field that shows only while its sibling has a value (showWhen).
+    format: fields.select({ inPerson: 'In person', online: 'Online' }).default('inPerson'),
+    streamUrl: fields
+      .url()
+      .optional()
+      .meta({ label: 'Stream address', showWhen: { field: 'format', equals: 'online' } }),
+    // Rows named by several fields, a date and a time among them.
+    sessions: z
+      .array(
+        z.object({
+          date: z.coerce.date(),
+          starts: fields.time(),
+          title: z.string().optional(),
+        }),
+      )
+      .default([])
+      .meta({ summary: ['date', 'starts', 'title'] }),
     // One of two kinds, chosen in the studio before its own fields (a single union).
     ticket: z
       .discriminatedUnion('kind', [

@@ -124,6 +124,62 @@ describe('date and time', () => {
   });
 });
 
+describe('time of day', () => {
+  it('shows the browser’s time picker and saves 24-hour HH:MM', async () => {
+    const api = fakeApi({
+      documents: {
+        'events/concert': doc('events', 'concert', {
+          title: 'Harvest concert',
+          summary: 'Music.',
+          startsAt: { $date: '2026-10-24T14:00:00.000Z' },
+          doorsOpen: '18:30',
+        }),
+      },
+    });
+    renderStudio('#/c/events/e/concert', { api });
+    const user = userEvent.setup();
+    const doors = await screen.findByLabelText(/Doors open/);
+    expect(doors).toHaveAttribute('type', 'time');
+    expect(doors).toHaveValue('18:30');
+    await user.clear(doors);
+    await user.type(doors, '19:15');
+    expect((await save(user, api)).data.doorsOpen).toBe('19:15');
+    await expectNoViolations();
+  });
+});
+
+describe('showWhen', () => {
+  it('shows a field only while its sibling has the value, says so, and keeps its value hidden', async () => {
+    const api = fakeApi({
+      documents: {
+        'events/talk': doc('events', 'talk', {
+          title: 'A talk',
+          summary: 'Words.',
+          startsAt: { $date: '2026-10-24T14:00:00.000Z' },
+          format: 'online',
+          streamUrl: 'https://example.com/live',
+        }),
+      },
+    });
+    renderStudio('#/c/events/e/talk', { api });
+    const user = userEvent.setup();
+    expect(await screen.findByLabelText(/Stream address/)).toHaveValue('https://example.com/live');
+
+    await user.click(screen.getByRole('radio', { name: 'In person' }));
+    expect(screen.queryByLabelText(/Stream address/)).toBeNull();
+    expect(screen.getByText('Stream address is hidden.')).toBeInTheDocument();
+    // Hiding never deletes: the saved entry keeps the address.
+    const saved = await save(user, api);
+    expect(saved.data.streamUrl).toBe('https://example.com/live');
+    expect(saved.data.format).toBe('inPerson');
+
+    await user.click(screen.getByRole('radio', { name: 'Online' }));
+    expect(await screen.findByLabelText(/Stream address/)).toHaveValue('https://example.com/live');
+    expect(screen.getByText('Stream address is shown.')).toBeInTheDocument();
+    await expectNoViolations();
+  });
+});
+
 describe('references', () => {
   const blogEntries = [
     {

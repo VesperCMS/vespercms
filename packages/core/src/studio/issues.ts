@@ -86,6 +86,7 @@ function messageFor(issue: ZodIssueLike): string {
       if (issue.format === 'email') return 'Enter an email address, like name@example.com.';
       if (issue.format === 'url') return 'Enter a full web address, starting with https://.';
       if (issue.format === 'datetime' || issue.format === 'date') return 'Enter a valid date.';
+      if (issue.format === 'time') return 'Enter a time, such as 18:00.';
       return 'This isn’t in the expected format.';
     case 'invalid_value':
       if (issue.values && issue.values.length > 0 && issue.values.length <= 8) {

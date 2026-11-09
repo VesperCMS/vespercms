@@ -13,6 +13,7 @@ import {
   markdown,
   select,
   slug,
+  time,
   url,
 } from './index.ts';
 
@@ -30,6 +31,7 @@ describe('fields helpers: values', () => {
     ['icon', icon(['leaf', 'calendar-days']), ['leaf', 'calendar-days'], ['Leaf', 'rocket', 1]],
     ['markdown', markdown({ inline: true }), ['*hi*'], [1]],
     ['file', file({ accept: 'application/pdf' }), ['../files/a.pdf'], [null]],
+    ['time', time(), ['18:00', '09:30', '00:00'], ['6:00 PM', '6:00', '18:00:00', '24:00']],
   ] as [string, z.ZodType, unknown[], unknown[]][])(
     '%s accepts and rejects the right values',
     (_name, schema, good, bad) => {
@@ -101,6 +103,7 @@ describe('fields helpers: each equals its documented raw Zod', () => {
       markdown({ inline: true }),
       z.string().meta({ widget: 'markdown', widgetOptions: { inline: true } }),
     ],
+    ['time', time(), z.iso.time({ precision: -1 }).meta({ widget: 'time' })],
     [
       'file',
       file({ accept: 'application/pdf' }),

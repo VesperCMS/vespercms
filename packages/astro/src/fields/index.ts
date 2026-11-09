@@ -84,6 +84,17 @@ export function datetime() {
   return z.coerce.date().meta({ widget: 'datetime' });
 }
 
+/**
+ * A time of day, with no date: a schedule row's start, opening hours. The
+ * studio shows the browser's time picker (6:00 PM in the US); the file
+ * stores 24-hour `"18:00"`, which sorts as text and means the same anywhere.
+ *
+ * Raw equivalent: `z.iso.time({ precision: -1 }).meta({ widget: 'time' })`.
+ */
+export function time() {
+  return z.iso.time({ precision: -1 }).meta({ widget: 'time' });
+}
+
 type SelectOptions =
   | readonly [string, ...string[]]
   | Readonly<Record<string, string>>
@@ -268,6 +279,7 @@ export const fields = {
   url,
   email,
   datetime,
+  time,
   select,
   icon,
   markdown,

@@ -45,6 +45,7 @@ const META_KEYS = [
   'safeToEcho',
   'search',
   'summary',
+  'showWhen',
 ] as const;
 
 /** Marker meta Vesper puts on the `image()` it hands to schema functions. Never copied out. */
@@ -574,6 +575,7 @@ function objectField(
     unknown
   >;
   field.children = Object.keys(shape).map((key) => walkField(shape[key], [...path, key], context));
+  checkConditions(field.children, context);
   const catchall = isZodLike(def.catchall) ? def.catchall._zod.def.type : undefined;
   field.extraKeys =
     catchall === 'never'
@@ -582,6 +584,65 @@ function objectField(
         ? 'passthrough'
         : 'strip';
   return field;
+}
+
+type Scalar = string | number | boolean | null;
+const isScalar = (value: unknown): value is Scalar =>
+  value === null || ['string', 'number', 'boolean'].includes(typeof value);
+
+/**
+ * `.meta({ showWhen: { field, equals } })`: the field shows only while a
+ * sibling in the same object holds that value (or one of a list). A
+ * condition the studio couldn't follow is dropped with a warning that says
+ * why, so the field simply always shows. A required field that a condition
+ * hides would refuse every save with no control in sight, so it's warned
+ * about too (DECISIONS.md, "Fields can show only when a sibling has a value").
+ */
+function checkConditions(children: FieldModel[], context: WalkContext): void {
+  for (const child of children) {
+    const condition = child.showWhen as unknown;
+    if (condition === undefined) continue;
+    const name = child.path.join('.');
+    const drop = (why: string) => {
+      delete child.showWhen;
+      context.diagnostics.push({
+        level: 'warning',
+        code: 'show-when',
+        message: `meta.showWhen on ${name} is ignored: ${why}`,
+        path: child.path,
+        ...(context.collection ? { collection: context.collection } : {}),
+      });
+    };
+    const shaped = condition as { field?: unknown; equals?: unknown };
+    if (
+      typeof condition !== 'object' ||
+      condition === null ||
+      typeof shaped.field !== 'string' ||
+      !(isScalar(shaped.equals) || (Array.isArray(shaped.equals) && shaped.equals.every(isScalar)))
+    ) {
+      drop(
+        `it should name a field beside it and the value that shows it, such as { field: 'location', equals: 'Other' }.`,
+      );
+      continue;
+    }
+    if (
+      shaped.field === child.path.at(-1) ||
+      !children.some((c) => c.path.at(-1) === shaped.field)
+    ) {
+      drop(`"${shaped.field}" isn't a field beside it in the same object.`);
+      continue;
+    }
+    child.showWhen = { field: shaped.field, equals: shaped.equals };
+    if (child.required && child.default === undefined) {
+      context.diagnostics.push({
+        level: 'warning',
+        code: 'show-when',
+        message: `${name} is required, but meta.showWhen can hide it, and a hidden required field stops every save. Make it .optional().`,
+        path: child.path,
+        ...(context.collection ? { collection: context.collection } : {}),
+      });
+    }
+  }
 }
 
 function isJsonSafe(value: unknown): boolean {
