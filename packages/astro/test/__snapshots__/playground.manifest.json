@@ -2236,6 +2236,25 @@
             "default": 1
           }
         ]
+      },
+      {
+        "name": "link",
+        "attributes": [
+          {
+            "name": "href",
+            "types": [
+              "String"
+            ],
+            "required": true
+          },
+          {
+            "name": "title",
+            "types": [
+              "String"
+            ],
+            "required": false
+          }
+        ]
       }
     ],
     "variables": {
@@ -2562,5 +2581,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "ab8f8b3ab017501c513de60631181662912c4e554bab8f77f2b0c6addca31de1"
+  "hash": "24ce61ebf21b5ed395e3375fe9a518761de84d00ac1405219abd1dd24aaf1eb6"
 }

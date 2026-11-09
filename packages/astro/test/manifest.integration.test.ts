@@ -177,8 +177,9 @@ describe('playground manifest (Phase 1: every collection produces a correct mani
       ['captions', 'The video has captions', 'switch', false],
     ]);
     expect(markdoc?.tags[2]).toMatchObject({ inline: true });
-    // Astro's own heading node (with ids) comes from its setupConfig, merged in.
-    expect(markdoc?.nodes.map((n) => n.name)).toEqual(['heading']);
+    // Astro's own heading node (with ids) comes from its setupConfig, merged in, and
+    // the playground's link node from vespercms/markdoc's links(), with Markdoc's attributes.
+    expect(markdoc?.nodes.map((n) => n.name)).toEqual(['heading', 'link']);
     // Variables by key only: the values in markdoc.config.mjs never reach the manifest.
     expect(markdoc?.variables).toEqual({ product: { name: {}, beta: {}, tier: {} } });
   });
