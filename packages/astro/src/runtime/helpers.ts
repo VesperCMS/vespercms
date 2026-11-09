@@ -13,7 +13,7 @@ import {
 
 /*
  * The site helpers in `vesper:content` (spec §6.15.7): `getTree`,
- * `getChildren`, `getBreadcrumbs` and `getUrl`. They run in the site's own
+ * `getChildren`, `getBreadcrumbs` and `getUrl`, plus `getSingleton`. They run in the site's own
  * pages, in dev and at build, over Astro's entries and the same URL and
  * tree code the studio uses, so the site and the studio always agree.
  *
@@ -31,6 +31,8 @@ export type HelperData = {
       titleKeys: string[];
       /** `_order.yaml` files by folder path in the tree. */
       orders: FolderOrders;
+      /** `singleton: true` in vesper.config.ts. */
+      singleton?: boolean;
     }
   >;
 };
@@ -41,6 +43,8 @@ export function createHelpers<E extends Entry>(
   data: HelperData,
   getCollection: (collection: string) => Promise<E[]>,
   functions: Readonly<Record<string, UrlPattern | undefined>> = {},
+  getEntry: (collection: string, id: string) => Promise<E | undefined> = async (collection, id) =>
+    (await getCollection(collection)).find((entry) => entry.id === id),
 ) {
   const patternOf = (collection: string): UrlPattern | undefined =>
     functions[collection] ?? data.collections[collection]?.url;
@@ -84,5 +88,20 @@ export function createHelpers<E extends Entry>(
     return breadcrumbsOf(await getTree(collection), typeof entry === 'string' ? entry : entry.id);
   }
 
-  return { getTree, getChildren, getBreadcrumbs, getUrl };
+  /**
+   * A singleton's one entry, whatever its file is called, or undefined when
+   * it has none (or it's a draft, in a build). Read through `getEntry`, so in
+   * dev the page counts as showing it. A collection that isn't a singleton
+   * is a mistake in the page, so it throws.
+   */
+  async function getSingleton(collection: string): Promise<E | undefined> {
+    if (!data.collections[collection]?.singleton)
+      throw new Error(
+        `getSingleton('${collection}'): ${collection} isn't a singleton. Set singleton: true for it in vesper.config.ts, or read it with getCollection.`,
+      );
+    const [first] = (await getCollection(collection)).sort((a, b) => (a.id < b.id ? -1 : 1));
+    return first ? getEntry(collection, first.id) : undefined;
+  }
+
+  return { getTree, getChildren, getBreadcrumbs, getUrl, getSingleton };
 }

@@ -456,6 +456,8 @@ const VESPER_CONTENT_TYPES = `declare module 'vesper:content' {
   ): Promise<Crumb[]>;
   /** The entry's URL from its collection's url pattern, or undefined for a collection without one. */
   export function getUrl(entry: { collection: string; id: string; data?: unknown }): string | undefined;
+  /** A singleton collection's one entry, whatever its file is called. Throws for a collection that isn't one. */
+  export function getSingleton<C extends CollectionKey>(collection: C): Promise<CollectionEntry<C> | undefined>;
 }
 /** Internal: the site's aspect ratios, for <Img> in vespercms/components. */
 declare module 'virtual:vesper/images' {

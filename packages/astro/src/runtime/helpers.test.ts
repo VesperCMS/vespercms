@@ -19,6 +19,7 @@ const entries: Record<string, Entry[]> = {
     },
   ],
   authors: [{ id: 'ada', collection: 'authors', data: { name: 'Ada' } }],
+  settings: [{ id: 'site', collection: 'settings', data: { siteName: 'Riverside' } }],
 };
 
 const data: HelperData = {
@@ -27,6 +28,8 @@ const data: HelperData = {
     pages: { url: '/:path', titleKeys: ['title'], orders: { academics: ['nursing', 'business'] } },
     blog: { url: '/blog/:publishedAt|yyyy/:slug', titleKeys: ['title'], orders: {} },
     authors: { titleKeys: ['name'], orders: {} },
+    settings: { titleKeys: ['title'], orders: {}, singleton: true },
+    empty: { titleKeys: ['title'], orders: {}, singleton: true },
   },
 };
 
@@ -64,5 +67,27 @@ describe('vesper:content site helpers', () => {
       authors: (entry) => `/people/${entry.id}`,
     });
     expect(custom.getUrl(entries.authors?.[0] as Entry)).toBe('/college/people/ada/');
+  });
+
+  it('getUrl gives no URL when a function pattern returns nothing', () => {
+    const custom = createHelpers(data, () => Promise.resolve([]), { authors: () => undefined });
+    expect(custom.getUrl(entries.authors?.[0] as Entry)).toBeUndefined();
+  });
+
+  it('getSingleton reads a singleton’s one entry through getEntry, whatever its file is called', async () => {
+    const read: string[] = [];
+    const custom = createHelpers(
+      data,
+      (name) => Promise.resolve(entries[name] ?? []),
+      {},
+      (name, id) => {
+        read.push(`${name}/${id}`);
+        return Promise.resolve(entries[name]?.find((e) => e.id === id));
+      },
+    );
+    expect(await custom.getSingleton('settings')).toBe(entries.settings?.[0]);
+    expect(read).toEqual(['settings/site']);
+    expect(await custom.getSingleton('empty')).toBeUndefined();
+    await expect(custom.getSingleton('blog')).rejects.toThrow("blog isn't a singleton");
   });
 });

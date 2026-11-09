@@ -3,6 +3,7 @@ import {
   getBreadcrumbs,
   getChildren,
   getCollection,
+  getSingleton,
   getTree,
   getUrl,
   type PageNode,
@@ -37,7 +38,8 @@ export const GET: APIRoute = async () => {
     children[page.id] = outline(await getChildren('pages', page));
     breadcrumbs[page.id] = await getBreadcrumbs('pages', page);
   }
-  const body = { tree: outline(await getTree('pages')), children, breadcrumbs, urls };
+  const settings = (await getSingleton('settings'))?.id;
+  const body = { tree: outline(await getTree('pages')), children, breadcrumbs, urls, settings };
   return new Response(`${JSON.stringify(body, null, 2)}\n`, {
     headers: { 'Content-Type': 'application/json' },
   });

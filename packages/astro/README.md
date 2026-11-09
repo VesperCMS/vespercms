@@ -47,11 +47,12 @@ A drop-in for `astro:content` (spec §6.11). In builds it re-exports Astro's mod
 It adds the site helpers (spec §6.15.7), which use the same URL and tree code as the studio:
 
 ```ts
-import { getBreadcrumbs, getChildren, getTree, getUrl } from 'vesper:content';
+import { getBreadcrumbs, getChildren, getSingleton, getTree, getUrl } from 'vesper:content';
 const tree = await getTree('pages'); // nested by folder, ordered by _order.yaml, the home page first
 const kids = await getChildren('pages', entry); // [{ title, url, entry, children, … }]
 const crumbs = await getBreadcrumbs('pages', entry); // [{ title, url }], from Home to the entry
 const href = getUrl(entry); // from the collection's url pattern, with base and trailing slash
+const settings = await getSingleton('settings'); // a singleton's one entry, whatever its file is called
 ```
 
 A folder with no section page is still a node, with no entry and `url: null`. The module embeds each collection's `_order.yaml` files; in `astro dev` a change to one reloads the site's pages.
@@ -156,7 +157,7 @@ collections: {
 redirects: { native: ['apache'] },
 ```
 
-- **`url`** is the one source of truth for where an entry lives: "View on site", the link picker, redirects, breadcrumbs and the helpers all use it. Tokens: `:id`, `:path` (the ID without a trailing `/index`; a top-level `index` is the root), `:slug`, `:<field>`, and `:<dateField>|yyyy`, `|mm`, `|dd` (calendar dates keep their day; times are read in the site's `timeZone`). Generated URLs follow Astro's `base`, `trailingSlash` and `build.format`. A function gets the entry's `id`, `collection` and `data` (its frontmatter, typed `unknown`, so narrow it before reading a field) and returns the entry's path on the site.
+- **`url`** is the one source of truth for where an entry lives: "View on site", the link picker, redirects, breadcrumbs and the helpers all use it. Tokens: `:id`, `:path` (the ID without a trailing `/index`; a top-level `index` is the root), `:slug`, `:<field>`, and `:<dateField>|yyyy`, `|mm`, `|dd` (calendar dates keep their day; times are read in the site's `timeZone`). Generated URLs follow Astro's `base`, `trailingSlash` and `build.format`. A function gets the entry's `id`, `collection` and `data` (its frontmatter, typed `unknown`, so narrow it before reading a field) and returns the entry's path on the site, or `undefined` for an entry with no page.
 - **`tree: true`** shows the collection as an outline: the folder is the hierarchy, `folder/index.md` is the folder's section page, and an optional `_order.yaml` in each folder lists its children by slug (unlisted ones follow by title). Keep `_` files out of the glob, as in `'**/[^_]*.md'`; the manifest warns when a pattern would pick up `_order.yaml`.
 - **`maxDepth`** limits how deep pages may go. There's no default (DECISIONS.md).
 

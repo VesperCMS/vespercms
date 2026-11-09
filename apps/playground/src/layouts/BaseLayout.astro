@@ -1,6 +1,6 @@
 ---
 import { Search, SearchHead } from 'vespercms/components';
-import { getEntry } from 'vesper:content';
+import { getSingleton } from 'vesper:content';
 import '../styles/site.css';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 }
 
 const { title, description, image } = Astro.props;
-const settings = await getEntry('settings', 'site');
+const settings = await getSingleton('settings');
 if (!settings) throw new Error('src/content/settings/site.yaml is missing');
 const { siteName, tagline } = settings.data;
 const nav = [
