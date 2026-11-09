@@ -219,6 +219,19 @@ describe('images', () => {
   });
 });
 
+describe('listSort', () => {
+  it('accepts a field and a direction, and explains a wrong shape', () => {
+    expect(
+      checkConfig({ collections: { events: { listSort: { field: 'startsAt', direction: 'ascending' } } } }),
+    ).toEqual([]);
+    expect(
+      checkConfig({ collections: { events: { listSort: 'startsAt' } } }).map((p) => p.message),
+    ).toEqual([
+      'collections.events.listSort must name a field and, if you like, a direction: { field: "startsAt", direction: "ascending" }.',
+    ]);
+  });
+});
+
 describe('accessibility', () => {
   it('accepts the publish gate, backgrounds and a heading start', () => {
     expect(

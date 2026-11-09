@@ -1,4 +1,10 @@
-import { decodeValue, humanize, type CollectionManifest, type EntrySummary } from '@vespercms/core';
+import {
+  decodeValue,
+  humanize,
+  type CollectionManifest,
+  type EntrySummary,
+  type FieldModel,
+} from '@vespercms/core';
 import { ButtonLink, Link, Select, Table, TextField, type TableColumn } from '@vespercms/ui';
 import { useEffect, useMemo, useState } from 'react';
 import type { SortDescriptor } from 'react-aria-components';
@@ -72,8 +78,8 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
           (filter === 'attention' && entry.status !== 'editable') ||
           (filter === 'scheduled' && hasUpcoming(entry.schedule))),
     );
-    return [...shown].sort(compareBy(sort));
-  }, [entries, query, filter, sort]);
+    return [...shown].sort(compareBy(sort, collection));
+  }, [entries, query, filter, sort, collection]);
   const stateOf = (entry: EntrySummary) =>
     entryState(
       collection,
@@ -157,7 +163,7 @@ export function EntryList({ collection }: { collection: CollectionManifest }) {
           }
           emptyState={entries.length === 0 ? 'No entries yet.' : 'No entries match.'}
           renderCell={(entry, column) => (
-            <Cell entry={entry} column={column} state={stateOf(entry)} />
+            <Cell entry={entry} column={column} state={stateOf(entry)} collection={collection} />
           )}
         />
       )}
@@ -176,10 +182,12 @@ function Cell({
   entry,
   column,
   state,
+  collection,
 }: {
   entry: EntrySummary;
   column: string;
   state: EntryState | null;
+  collection: CollectionManifest;
 }) {
   if (column === 'title') {
     return (
@@ -210,11 +218,20 @@ function Cell({
       </span>
     );
   }
-  return <span>{formatListValue(entry.fields[column.slice('field:'.length)])}</span>;
+  const key = column.slice('field:'.length);
+  return <span>{formatListValue(entry.fields[key], listField(collection, key))}</span>;
 }
 
-/** A list field's value as short text. Dates at midnight UTC are calendar dates. */
-export function formatListValue(encoded: unknown): string {
+/** A top-level field by its key, for a list column. */
+export function listField(collection: CollectionManifest, key: string): FieldModel | undefined {
+  return collection.fields?.find((f) => f.path.length === 1 && f.path[0] === key);
+}
+
+/**
+ * A list field's value as short text. Dates at midnight UTC are calendar
+ * dates. A select's value is shown by its label, given the field.
+ */
+export function formatListValue(encoded: unknown, field?: FieldModel): string {
   const value = decodeValue(encoded);
   if (value instanceof Date) {
     const dateOnly = value.getUTCHours() === 0 && value.getUTCMinutes() === 0;
@@ -223,23 +240,31 @@ export function formatListValue(encoded: unknown): string {
       ...(dateOnly ? { timeZone: 'UTC' } : {}),
     } as Intl.DateTimeFormatOptions);
   }
-  if (Array.isArray(value)) return value.map((v) => formatListValue(v)).join(', ');
+  if (Array.isArray(value)) {
+    const item = field?.kind === 'array' ? field.children?.[0] : undefined;
+    return value.map((v) => formatListValue(v, item)).join(', ');
+  }
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (value === null || value === undefined) return '';
   if (typeof value === 'object') return '…';
-  return String(value);
+  const option = field?.constraints?.options?.find((o) => o.value === value);
+  return option ? option.label : String(value);
 }
 
 export function labelFor(collection: CollectionManifest, key: string): string {
-  return (
-    collection.fields?.find((f) => f.path.length === 1 && f.path[0] === key)?.label ?? humanize(key)
-  );
+  return listField(collection, key)?.label ?? humanize(key);
 }
 
 export function defaultSort(collection: CollectionManifest): SortDescriptor {
   // A collection in a set order is listed in that order.
-  const { orderBy } = collection.presentation;
+  const { orderBy, listSort } = collection.presentation;
   if (orderBy) return { column: `field:${orderBy}`, direction: 'ascending' };
+  // The site's own choice, from vesper.config.ts's listSort.
+  if (listSort)
+    return {
+      column: listSort.field === 'title' ? 'title' : `field:${listSort.field}`,
+      direction: listSort.direction,
+    };
   const dateKey = (collection.presentation.listFields ?? []).find((key) =>
     collection.fields?.some((f) => f.path[0] === key && f.path.length === 1 && f.kind === 'date'),
   );
@@ -248,21 +273,28 @@ export function defaultSort(collection: CollectionManifest): SortDescriptor {
     : { column: 'title', direction: 'ascending' };
 }
 
-function sortValue(entry: EntrySummary, column: string): string | number {
+function sortValue(
+  entry: EntrySummary,
+  column: string,
+  collection?: CollectionManifest,
+): string | number {
   if (column === 'title') return entry.title.toLowerCase();
   if (column === 'updatedAt') return entry.updatedAt ?? '';
-  const value = decodeValue(entry.fields[column.slice('field:'.length)]);
+  const key = column.slice('field:'.length);
+  const value = decodeValue(entry.fields[key]);
   if (value instanceof Date) return value.getTime();
   if (typeof value === 'number') return value;
-  return formatListValue(entry.fields[column.slice('field:'.length)]).toLowerCase();
+  // Selects sort by the label the column shows.
+  const field = collection ? listField(collection, key) : undefined;
+  return formatListValue(entry.fields[key], field).toLowerCase();
 }
 
-export function compareBy(sort: SortDescriptor) {
+export function compareBy(sort: SortDescriptor, collection?: CollectionManifest) {
   const column = String(sort.column);
   const direction = sort.direction === 'descending' ? -1 : 1;
   return (a: EntrySummary, b: EntrySummary) => {
-    const x = sortValue(a, column);
-    const y = sortValue(b, column);
+    const x = sortValue(a, column, collection);
+    const y = sortValue(b, column, collection);
     if (x === y) return a.title.localeCompare(b.title);
     // Entries without the value come last either way, as an ordered collection's do.
     if (x === '') return 1;

@@ -140,6 +140,8 @@ export type CollectionPresentation = {
    * it when an entry is dragged to a new place.
    */
   orderBy?: string;
+  /** The entry list's first sort, from vesper.config.ts's `listSort`: `title` or a list field. */
+  listSort?: { field: string; direction: 'ascending' | 'descending' };
 };
 
 export type CollectionManifest = {

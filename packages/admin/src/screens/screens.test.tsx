@@ -4,7 +4,12 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import { Icon } from '@vespercms/ui';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expectNoViolations, fakeApi, renderStudio } from '../test/helpers.tsx';
+import {
+  expectNoViolations,
+  fakeApi,
+  playgroundManifest,
+  renderStudio,
+} from '../test/helpers.tsx';
 
 afterEach(() => {
   cleanup();
@@ -116,6 +121,30 @@ describe('the entry list', () => {
     expect(rows[0]).toHaveTextContent('Draft');
     expect(rows[1]).toHaveTextContent('Sep 14, 2026');
     await expectNoViolations();
+  });
+
+  it('shows a select by its label, and sorts as vesper.config.ts’s listSort says', async () => {
+    const manifest = structuredClone(playgroundManifest);
+    const blog = manifest.collections.find((c) => c.name === 'blog');
+    if (!blog) throw new Error('The playground has no blog.');
+    blog.presentation.listFields = ['title', 'category', 'publishedAt'];
+    blog.presentation.listSort = { field: 'publishedAt', direction: 'ascending' };
+    const api = fakeApi({
+      entries: {
+        blog: blogEntries.map((entry, index) => ({
+          ...entry,
+          fields: { ...entry.fields, category: index === 0 ? 'stories' : 'news' },
+        })),
+      },
+    });
+    renderStudio('#/c/blog', { api, manifest });
+    const table = await screen.findByRole('grid', { name: 'Blog posts' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    // Oldest first, as configured, and "Stories", not "stories".
+    expect(rows[0]).toHaveTextContent('Harbor at dawn');
+    expect(rows[0]).toHaveTextContent('Stories');
+    expect(rows[0]).not.toHaveTextContent('stories');
+    expect(rows[1]).toHaveTextContent('News');
   });
 
   it('filters by search and by status', async () => {

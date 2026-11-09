@@ -677,3 +677,45 @@ describe('buildManifest: Markdoc attribute hints (spec §6.5.1)', () => {
     ]);
   });
 });
+
+describe('listSort', () => {
+  const events = {
+    name: 'events',
+    loader: { kind: 'glob', base: './src/content/events', pattern: '**/*.md', customId: false },
+    schema: z.object({ title: z.string(), summary: z.string(), startsAt: z.coerce.date() }),
+  };
+  const sorted = async (config: ManifestInput['config']) =>
+    buildManifest({
+      site: { srcDir: 'src' },
+      collections: [events] as ManifestInput['collections'],
+      config,
+    });
+
+  it('keeps a sort by title or a list field, ascending unless it says otherwise', async () => {
+    const byTitle = await sorted({ collections: { events: { listSort: { field: 'title' } } } });
+    expect(byTitle.collections[0]?.presentation.listSort).toEqual({
+      field: 'title',
+      direction: 'ascending',
+    });
+    expect(byTitle.diagnostics.filter((d) => d.code === 'list-sort')).toEqual([]);
+    const byDate = await sorted({
+      collections: {
+        events: { listFields: ['startsAt'], listSort: { field: 'startsAt', direction: 'descending' } },
+      },
+    });
+    expect(byDate.collections[0]?.presentation.listSort).toEqual({
+      field: 'startsAt',
+      direction: 'descending',
+    });
+  });
+
+  it('warns and ignores a field that isn’t listed', async () => {
+    const manifest = await sorted({
+      collections: { events: { listSort: { field: 'summary', direction: 'descending' } } },
+    });
+    expect(manifest.collections[0]?.presentation.listSort).toBeUndefined();
+    expect(manifest.diagnostics.find((d) => d.code === 'list-sort')?.message).toContain(
+      "isn't one of this collection's listFields",
+    );
+  });
+});

@@ -119,6 +119,7 @@ const KNOWN_COLLECTION = new Set([
   'tree',
   'url',
   'listFields',
+  'listSort',
   'newEntryPath',
   'schedule',
   'search',
@@ -182,13 +183,31 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
             });
           }
         }
-        const { url, maxDepth, headingStart, icon, orderBy } = value as {
+        const { url, maxDepth, headingStart, icon, orderBy, listSort } = value as {
           url?: unknown;
           maxDepth?: unknown;
           headingStart?: unknown;
           icon?: unknown;
           orderBy?: unknown;
+          listSort?: unknown;
         };
+        if (listSort !== undefined) {
+          const sort = listSort as { field?: unknown; direction?: unknown } | null;
+          if (
+            typeof sort !== 'object' ||
+            sort === null ||
+            typeof sort.field !== 'string' ||
+            sort.field === '' ||
+            (sort.direction !== undefined &&
+              sort.direction !== 'ascending' &&
+              sort.direction !== 'descending')
+          ) {
+            problems.push({
+              level: 'error',
+              message: `collections.${name}.listSort must name a field and, if you like, a direction: { field: "startsAt", direction: "ascending" }.`,
+            });
+          }
+        }
         if (orderBy !== undefined && !(typeof orderBy === 'string' && orderBy !== '')) {
           problems.push({
             level: 'error',

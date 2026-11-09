@@ -72,6 +72,12 @@ export type CollectionConfig = {
    */
   url?: string | ((entry: UrlEntry) => string | null | undefined);
   listFields?: string[];
+  /**
+   * How the studio first sorts the entry list: by `title` or one of
+   * `listFields`, ascending (A to Z, oldest or soonest first) or descending.
+   * Without it, the first date among `listFields` sorts newest first.
+   */
+  listSort?: { field: string; direction?: 'ascending' | 'descending' };
   newEntryPath?: string;
   schedule?: boolean | ScheduleConfig;
   search?: boolean;
@@ -507,6 +513,9 @@ function buildCollection(
   const order = orderOf(input.name, config, presentation, fields);
   diagnostics.push(...order.diagnostics);
   if (order.field) presentation.orderBy = order.field;
+  const sort = listSortOf(input.name, config, presentation, fields);
+  diagnostics.push(...sort.diagnostics);
+  if (sort.listSort) presentation.listSort = sort.listSort;
   // A page that isn't searched, or an entry with no page, has nothing to hide.
   const searchHidden =
     presentation.url !== undefined && presentation.search !== false
@@ -735,6 +744,41 @@ function orderOf(
     );
   }
   return { field: key, diagnostics: [] };
+}
+
+/**
+ * The list's first sort, if the studio can show it: `title`, or a top-level
+ * field among `listFields`, so the column it sorts by is on screen. A set
+ * order (`orderBy`) wins, since the list must show the order the site uses.
+ */
+function listSortOf(
+  collection: string,
+  config: CollectionConfig,
+  presentation: CollectionPresentation,
+  fields: FieldModel[] | null,
+): { listSort?: NonNullable<CollectionPresentation['listSort']>; diagnostics: Diagnostic[] } {
+  const sort = config.listSort;
+  if (sort === undefined) return { diagnostics: [] };
+  const warn = (message: string) => ({
+    diagnostics: [{ level: 'warning' as const, code: 'list-sort', message, collection }],
+  });
+  const field = typeof sort === 'object' && sort !== null ? sort.field : undefined;
+  if (typeof field !== 'string' || field === '')
+    return warn('listSort needs a field: { field: "date", direction: "ascending" }.');
+  const direction = sort.direction === 'descending' ? 'descending' : 'ascending';
+  if (presentation.orderBy)
+    return warn(
+      `listSort is ignored: entries are in the set order orderBy gives ("${presentation.orderBy}").`,
+    );
+  if (presentation.tree) return warn('listSort is ignored: a tree is shown as an outline.');
+  if (field === 'title') return { listSort: { field, direction }, diagnostics: [] };
+  const listed = presentation.listFields?.includes(field) === true;
+  const exists = fields === null || fields.some((f) => f.path.length === 1 && f.path[0] === field);
+  if (!listed || !exists)
+    return warn(
+      `listSort names "${field}", which isn't one of this collection's listFields, so the list keeps its usual order. Add it to listFields, or sort by "title".`,
+    );
+  return { listSort: { field, direction }, diagnostics: [] };
 }
 
 const toPosix = (path: string) => path.replaceAll('\\', '/').replace(/^\.\//, '');

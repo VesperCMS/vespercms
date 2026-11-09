@@ -28,7 +28,14 @@ import { PaneFrame, useLeadHeading } from '../app/Screen.tsx';
 import { entryShownTo, mayCreateIn } from '../cloud/access.ts';
 import { useDrafts } from '../cloud/editor.tsx';
 import { hasUpcoming, rowData, siteZone } from '../schedule/times.ts';
-import { compareBy, defaultSort, formatListValue, labelFor, TITLE_KEYS } from './EntryList.tsx';
+import {
+  compareBy,
+  defaultSort,
+  formatListValue,
+  labelFor,
+  listField,
+  TITLE_KEYS,
+} from './EntryList.tsx';
 import {
   StateWords,
   entryState,
@@ -117,8 +124,10 @@ function sortOptions(collection: CollectionManifest): { id: string; label: strin
   ];
 }
 
-/** Dates and edits newest first; everything else A to Z. */
+/** The site's listSort as configured; otherwise dates and edits newest first, everything else A to Z. */
 function descriptorOf(collection: CollectionManifest, column: string): SortDescriptor {
+  const configured = defaultSort(collection);
+  if (collection.presentation.listSort && configured.column === column) return configured;
   const dated =
     column === 'updatedAt' ||
     collection.fields?.some(
@@ -200,9 +209,11 @@ export function ListPane({
             (filter === 'attention' && entry.status !== 'editable') ||
             (filter === 'scheduled' && hasUpcoming(entry.schedule))),
       )
-      .sort(compareBy(descriptorOf(collection, sort)))
+      .sort(compareBy(descriptorOf(collection, sort), collection))
       .map((entry) => {
-        const fields = listKeys.map((key) => formatListValue(entry.fields[key])).filter(Boolean);
+        const fields = listKeys
+          .map((key) => formatListValue(entry.fields[key], listField(collection, key)))
+          .filter(Boolean);
         const state = entryState(
           collection,
           {
