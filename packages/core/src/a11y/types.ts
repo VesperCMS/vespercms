@@ -35,4 +35,3 @@ export type A11ySettings = {
   blockPublishOn?: A11yRuleId[];
   backgrounds?: A11yBackground[];
 };
-

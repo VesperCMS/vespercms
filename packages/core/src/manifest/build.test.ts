@@ -700,7 +700,10 @@ describe('listSort', () => {
     expect(byTitle.diagnostics.filter((d) => d.code === 'list-sort')).toEqual([]);
     const byDate = await sorted({
       collections: {
-        events: { listFields: ['startsAt'], listSort: { field: 'startsAt', direction: 'descending' } },
+        events: {
+          listFields: ['startsAt'],
+          listSort: { field: 'startsAt', direction: 'descending' },
+        },
       },
     });
     expect(byDate.collections[0]?.presentation.listSort).toEqual({

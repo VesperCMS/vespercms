@@ -4,12 +4,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import { Icon } from '@vespercms/ui';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  expectNoViolations,
-  fakeApi,
-  playgroundManifest,
-  renderStudio,
-} from '../test/helpers.tsx';
+import { expectNoViolations, fakeApi, playgroundManifest, renderStudio } from '../test/helpers.tsx';
 
 afterEach(() => {
   cleanup();

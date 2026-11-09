@@ -28,7 +28,9 @@ describe('defineConfig', () => {
       },
     });
     const url = config.collections?.events?.url;
-    expect(entryUrlKey(url, { id: 'gates', collection: 'events', data: { noPage: true } })).toBeNull();
+    expect(
+      entryUrlKey(url, { id: 'gates', collection: 'events', data: { noPage: true } }),
+    ).toBeNull();
     expect(entryUrlKey(url, { id: 'fair', collection: 'events', data: {} })).toBe('/events/fair');
   });
 });
@@ -222,7 +224,9 @@ describe('images', () => {
 describe('listSort', () => {
   it('accepts a field and a direction, and explains a wrong shape', () => {
     expect(
-      checkConfig({ collections: { events: { listSort: { field: 'startsAt', direction: 'ascending' } } } }),
+      checkConfig({
+        collections: { events: { listSort: { field: 'startsAt', direction: 'ascending' } } },
+      }),
     ).toEqual([]);
     expect(
       checkConfig({ collections: { events: { listSort: 'startsAt' } } }).map((p) => p.message),

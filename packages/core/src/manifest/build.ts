@@ -762,7 +762,8 @@ function listSortOf(
   const warn = (message: string) => ({
     diagnostics: [{ level: 'warning' as const, code: 'list-sort', message, collection }],
   });
-  const field = typeof sort === 'object' && sort !== null ? sort.field : undefined;
+  // vesper.config.ts isn't type-checked at run time, so the shape may be anything.
+  const field = (sort as { field?: unknown } | null)?.field;
   if (typeof field !== 'string' || field === '')
     return warn('listSort needs a field: { field: "date", direction: "ascending" }.');
   const direction = sort.direction === 'descending' ? 'descending' : 'ascending';

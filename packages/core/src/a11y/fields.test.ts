@@ -142,5 +142,4 @@ describe('checkFields', () => {
     // A file's contents are its author's: Vesper doesn't open them.
     expect(checkFields(fields, { brochure: '/files/brochure.pdf' })).toEqual({ notes: [] });
   });
-
 });

@@ -192,9 +192,11 @@ export function checkConfig(config: unknown): { level: 'warning' | 'error'; mess
           listSort?: unknown;
         };
         if (listSort !== undefined) {
-          const sort = listSort as { field?: unknown; direction?: unknown } | null;
+          const sort =
+            typeof listSort === 'object' && listSort !== null
+              ? (listSort as { field?: unknown; direction?: unknown })
+              : null;
           if (
-            typeof sort !== 'object' ||
             sort === null ||
             typeof sort.field !== 'string' ||
             sort.field === '' ||

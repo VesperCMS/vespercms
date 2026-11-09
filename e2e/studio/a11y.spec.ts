@@ -98,10 +98,7 @@ test('the notes drawer, by keyboard alone', async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => Boolean(document.activeElement?.closest('[role=dialog]'))))
     .toBe(true);
-  await expect(drawer.getByRole('heading', { level: 3 })).toHaveText([
-    'Text color',
-    'Body',
-  ]);
+  await expect(drawer.getByRole('heading', { level: 3 })).toHaveText(['Text color', 'Body']);
   await expectAccessible(page);
 
   // Tab: the close button, then the first note's Go to field; Enter goes there.

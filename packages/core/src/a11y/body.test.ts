@@ -192,7 +192,6 @@ describe('links', () => {
   it('says nothing about a link to a PDF', () => {
     expect(check('Get the [course brochure](/files/brochure.pdf).\n', 'md')).toEqual({ notes: [] });
   });
-
 });
 
 describe('tables', () => {

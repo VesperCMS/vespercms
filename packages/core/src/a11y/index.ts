@@ -11,12 +11,7 @@ export {
   type A11yRule,
   type A11yRuleId,
 } from './rules.ts';
-export type {
-  A11yBackground,
-  A11yNote,
-  A11ySettings,
-  A11yTarget,
-} from './types.ts';
+export type { A11yBackground, A11yNote, A11ySettings, A11yTarget } from './types.ts';
 export {
   altProblems,
   bodyFacts,
