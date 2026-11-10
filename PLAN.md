@@ -13,7 +13,8 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [x] Merge #9: gap 17, unpublishing through `draft: true` (merged as `e893ab3`).
 - [x] Merge the washcofair.com round (#10, 2026-11-09).
 - [x] A `next` prerelease with #8, #9 and the washcofair round: `0.1.0-next.2`, published 2026-11-10 (Release run 42817286392, its second attempt). The runs of 2026-11-09 failed at npm's provenance check, which compares `repository.url` with the repository, case included, now that it's public; #12 spells it `VesperCMS/vespercms`. The first attempt on 2026-11-10 failed a unit test that didn't wait for the page tree's rows, fixed in #13.
-- [ ] Move thosegeeks.com and washcofair.com to `0.1.0-next.2`. Both run `0.1.0-next.1`, which has no drafts (washcofair gap 14).
+- [x] Move thosegeeks.com and washcofair.com to `0.1.0-next.2`, using its features (2026-11-10, both pushed to their `main`). What each took, and Jeremy's calls on setting them up, are under "Dogfooding thosegeeks.com" and "Dogfooding washcofair.com", below.
+- [ ] Ship `CHANGELOG.md` in the packages (thosegeeks gap 19): in #13, out with the next prerelease.
 
 **Finish Phase 4.5**
 - [ ] The free tier's real-world check ("Tests, mapped to Done when", 2). `jeremybise/vesper-github-test` is the playground on Cloudflare Pages from Phase 3, older than scheduling, with GitHub Actions off. Bring it up to `main` without the playground's `VESPER_BUILD_TIME` line, sign in in GitHub mode rather than the cloud (whose trigger would fire at the exact time instead), turn Actions on, and run `vesper deploy init --target hook --rebuild-every 15 --url https://vesper-github-test.pages.dev` (the playground has no `site`, and a scheduled run reads the live `schedule.json`). Jeremy adds a Pages deploy hook as the `VESPER_BUILD_HOOK` secret. A post scheduled in the studio must be live after the first run past its time.
@@ -110,6 +111,12 @@ The site keeps its own list, `docs/vesper-gaps.md`, for gaps found as it's edite
 17. **There's no way to unpublish an entry by hand: built 2026-10-29, through `draft: true`** ("Unpublishing is `draft: true`"). Today only a scheduled collection's `unpublishAt` takes an entry off the site; `draft: true` is the site's own convention, which `vesper:content` doesn't filter, and every other collection's entries are live until deleted. Jeremy also asked for Live and Unpublished throughout the entries interface. **Jeremy chose (2026-10-29), of three ways, unpublishing through `draft: true`:** "Unpublish" sets it, and `vesper:content` leaves drafts out of the build in collections that have a `draft` field. The others were "Unpublish now" setting a scheduled collection's `unpublishAt`, and a `published: false` key of Vesper's own in every collection.
 18. **Changes couldn't be discarded without leaving the entry: built 2026-10-29.** "Discard changes…" is in the "…" menu while there are unsaved changes, with a confirmation. It puts the saved values back and draws the fields and body again (the body and Markdown editors read their text only when they're made), and clears a copy kept on the device in the cloud. Focus goes back to "…".
 
+**The nineteenth (2026-11-10), found moving to `0.1.0-next.2`:**
+
+19. **The package ships no changelog** (open). The site's CLAUDE.md says to read `node_modules/vespercms/CHANGELOG.md` before updating, but the packages' `files` leave it out. #13 adds it to all three; it arrives with the next prerelease.
+
+**On `0.1.0-next.2` (2026-11-10).** Posts and projects have a `draft` field (Jeremy's call), the settings are read with `getSingleton`, and FAQ items and project screens are named by their question and caption. Jeremy also chose to mark a client quote's highlight with \*asterisks\* in the quote, as headings do, instead of a separate list of phrases; the 7 quotes were spliced, and every public page built identical. Links to other sites stay in the same tab (his call, against `links()`).
+
 ## Dogfooding washcofair.com
 
 Started 2026-11-09, at Jeremy's request: the Washington County Fair's site (washcofair.com) ported from Sanity to Vesper, in its own private repository, `jeremybise/washcofair-vesper` (locally `~/code/washcofair-vesper`), installing `vespercms@next` from npm. Its gaps are listed in its `docs/cms-gaps.md`, numbered as below. Jeremy chose which to build the same day (all but 5, 6, 10 and 16), and the design calls on 1, 2, 3–4 and 13, each taking the recommendation. Built on `claude/washcofair-gaps`; decisions in DECISIONS.md under each heading named.
@@ -131,6 +138,18 @@ The port: a merged fair-event model (a page and every time it's on the schedule,
 17. **PDF checks removed**, with `pdfjs-dist`: 68 MB off every install ("Vesper doesn't check PDFs").
 
 **Not built, by Jeremy's choice:** 5 (server-side actions, such as Sanity's "Fetch Spotify data"), 6 (scheduling a singleton's field, such as turning fair season on at a time), 10 (a singleton's heading is its file name) and 16 (a static site knows "now" only at build; `rebuildEvery` covers it).
+
+**On `0.1.0-next.2` (2026-11-10).** The site uses every answer above (its `docs/cms-gaps.md`, "Where they stand"):
+- Times are `fields.time()`: 191 values spliced from "6:00 PM" to `18:00`, and the templates get "6:00 PM" back from one function at the read boundary.
+- Custom location shows only for Other, a Schedule only event hides its picture, and schedule rows read "Mon, Sep 14 · 5:00 PM · Hog Show".
+- Entertainment and Fairgrounds events list soonest first, the Sponsor logos tag has an entry picker, and `links()` opens outside links in a new tab.
+
+Jeremy's calls on setting it up, the same day:
+- Drafts on Fair events, Entertainment, Fairgrounds events and Pages.
+- Gallery pictures as the gallery tag's `items`, each with a picture picker (gallery-item is gone).
+- Entertainment and schedule rows pick from the same Location list as events, with Other for the four places not on it.
+
+With asset hashes set aside, every built page matched the build before, except the three galleries and the four pages with outside links. The Sanity import script writes the same shapes, should it run again before cutover.
 
 **Install weight (17), measured in washcofair.com's `node_modules` (661 MB, 349 packages, before PDF.js went):** `pdfjs-dist` with `@napi-rs/canvas` 68 MB (removed), `maplibre-gl` 42 MB (only `fields.geo()`'s map), the React Aria kit 39 MB, `lucide` 24 MB (a peer, needed only for icons), `jsdom` 21 MB (the build's accessibility check), the Tiptap editor 17 MB and Pagefind 12 MB. The studio's chunks import these at the site's build, so every site installs them. Options put to Jeremy, not built: make `maplibre-gl` and `lucide` optional peers, loaded only when a site uses a map or icons; bundle Tiptap, React Aria and DOMPurify into `@vespercms/admin`'s published chunks (React stays shared), which removes them from installs at the cost of a release for their fixes.
 
