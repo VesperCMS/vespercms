@@ -438,7 +438,10 @@ describe('the studio and the cloud', () => {
     render(gate());
     const user = userEvent.setup();
     const tree = await screen.findByRole('treegrid', undefined, { timeout: 10_000 });
-    expect(within(tree).getByRole('row', { name: 'Academics' })).toBeInTheDocument();
+    // The tree is drawn empty for a moment before its rows arrive, slower on a loaded runner.
+    expect(
+      await within(tree).findByRole('row', { name: 'Academics' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
     expect(within(tree).queryByRole('row', { name: 'About the college' })).not.toBeInTheDocument();
     expect(within(tree).queryByRole('row', { name: 'How to apply' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'New page' })).not.toBeInTheDocument();
