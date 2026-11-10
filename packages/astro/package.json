@@ -64,6 +64,7 @@
   },
   "//files": "pages/ holds the injected /admin page and components/ the <Img> component; src/ and dist/ both resolve pages at ../../pages.",
   "files": [
+    "CHANGELOG.md",
     "dist",
     "src",
     "pages",
