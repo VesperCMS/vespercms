@@ -11,8 +11,9 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [x] Merge #8: gaps 15, 16 and 18 (Discard changes…, the lit Link tool, rows that point) (2026-10-30).
 - [x] Fix #9's e2e failure and its conflict with #6 (2026-10-30). The site helpers' parity test (`e2e/studio/pages.spec.ts`, `astro dev` against the static build) failed because the build now leaves the playground's one draft, `blog/notes-from-the-field`, out and dev keeps it; it now sets drafts aside as it does scheduled events, and checks dev has them and the build doesn't. In `getting-started/first-edit.mdoc`, #9's sentence on what a build's `vesper:content` leaves out stays, with #6's link to the scheduling page.
 - [x] Merge #9: gap 17, unpublishing through `draft: true` (merged as `e893ab3`).
-- [ ] Merge the washcofair.com round (`claude/washcofair-gaps`, "Dogfooding washcofair.com", below).
-- [ ] A `next` prerelease once it's on `main` (`npm run changeset -- version`, then the Release workflow), with #8, #9 and the washcofair round, and thosegeeks.com and washcofair.com moved to it. Both run `0.1.0-next.1`, which has no drafts (washcofair gap 14).
+- [x] Merge the washcofair.com round (#10, 2026-11-09).
+- [x] A `next` prerelease with #8, #9 and the washcofair round: `0.1.0-next.2`, published 2026-11-10 (Release run 42817286392, its second attempt). The runs of 2026-11-09 failed at npm's provenance check, which compares `repository.url` with the repository, case included, now that it's public; #12 spells it `VesperCMS/vespercms`. The first attempt on 2026-11-10 failed a unit test that didn't wait for the page tree's rows, fixed in #13.
+- [ ] Move thosegeeks.com and washcofair.com to `0.1.0-next.2`. Both run `0.1.0-next.1`, which has no drafts (washcofair gap 14).
 
 **Finish Phase 4.5**
 - [ ] The free tier's real-world check ("Tests, mapped to Done when", 2). `jeremybise/vesper-github-test` is the playground on Cloudflare Pages from Phase 3, older than scheduling, with GitHub Actions off. Bring it up to `main` without the playground's `VESPER_BUILD_TIME` line, sign in in GitHub mode rather than the cloud (whose trigger would fire at the exact time instead), turn Actions on, and run `vesper deploy init --target hook --rebuild-every 15 --url https://vesper-github-test.pages.dev` (the playground has no `site`, and a scheduled run reads the live `schedule.json`). Jeremy adds a Pages deploy hook as the `VESPER_BUILD_HOOK` secret. A post scheduled in the studio must be live after the first run past its time.
@@ -126,7 +127,7 @@ The port: a merged fair-event model (a page and every time it's on the schedule,
 9. **Select labels in list columns**, and 12. **`listSort`** ("Lists show a select's label, and `listSort`…").
 11. **A `url` function may return `undefined`**, and 15. **`getSingleton()`** ("A `url` function may return nothing, and `getSingleton`…").
 13. **Links to other sites open in a new tab**, site-wide, through `links()` from `vespercms/markdoc` ("Links to other sites open in a new tab, site-wide").
-14. **Drafts on npm**: waits for the next prerelease (To do, above).
+14. **Drafts on npm**: in `0.1.0-next.2` (2026-11-10); the site moves to it next (To do, above).
 17. **PDF checks removed**, with `pdfjs-dist`: 68 MB off every install ("Vesper doesn't check PDFs").
 
 **Not built, by Jeremy's choice:** 5 (server-side actions, such as Sanity's "Fetch Spotify data"), 6 (scheduling a singleton's field, such as turning fair season on at a time), 10 (a singleton's heading is its file name) and 16 (a static site knows "now" only at build; `rebuildEvery` covers it).
