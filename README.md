@@ -2,13 +2,13 @@
 
 A git-based CMS for Astro sites.
 
-- Installs with one command (`npx astro add vespercms`).
+- Installs with one command (`npx astro add vespercms@next` until the first release).
 - Builds its editor from the site's existing content collections, so there is no second schema to write.
 - Keeps content as files in the repo, and keeps the built site plain static output that runs on any host.
 
 The open-source studio works locally during `astro dev`, and against GitHub when every editor has a GitHub account. A paid cloud adds editor accounts without GitHub, drafts and review, and roles scoped to folders; previews, forms, comments, media storage and an agency dashboard come later.
 
-> **Status:** Phases 0 to 3 are done, and Phase 4 (the cloud) is in its real-world check. Nothing is on npm yet. The docs are at [vespercms.com/docs](https://vespercms.com/docs/).
+> **Status:** Phases 0 to 4 are done, and Phase 4.5 (scheduled publishing) has one real-world check left. The packages are on npm as prereleases, under the `next` tag. The docs are at [vespercms.com/docs](https://vespercms.com/docs/).
 
 ## Repository
 
