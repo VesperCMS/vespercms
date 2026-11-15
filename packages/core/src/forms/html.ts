@@ -293,3 +293,61 @@ function pattern(field: FieldModel): string {
 function hiddenInput(name: string, value: string): string {
   return `<input type="hidden" name="${name}" value="${escapeHtml(value)}">`;
 }
+
+/** The few rules the cloud's own page needs: readable, at any zoom, in light and dark. */
+const PAGE_CSS = [
+  ':root{color-scheme:light dark;font:1rem/1.5 system-ui,sans-serif}',
+  'body{margin:0;padding:1rem}main{max-width:40rem;margin:0 auto}',
+  'label,legend{display:block;font-weight:600}',
+  '.vesper-form-field,.vesper-form-group{margin:0 0 1.25rem;border:0;padding:0}',
+  '.vesper-form-choice,.vesper-form-check{display:flex;gap:.5rem;align-items:baseline}',
+  '.vesper-form-check label,.vesper-form-choice label{font-weight:400}',
+  'input:not([type=checkbox]):not([type=radio]),select,textarea{box-sizing:border-box;width:100%;font:inherit;padding:.5rem;border:1px solid currentColor;border-radius:.25rem}',
+  '.vesper-form-help{margin:.25rem 0}.vesper-form-error{margin:.25rem 0;font-weight:600;color:light-dark(#b3261e,#ffb4ab)}',
+  '.vesper-form-summary{border:2px solid light-dark(#b3261e,#ffb4ab);padding:1rem;margin:0 0 1.5rem}',
+  '.vesper-form-summary h2{margin:0 0 .5rem;font-size:1.25rem}',
+  '.vesper-form-hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}',
+  'button{font:inherit;padding:.5rem 1.25rem}',
+  ':focus-visible{outline:3px solid light-dark(#0b57d0,#a8c7fa);outline-offset:2px}',
+].join('');
+
+/**
+ * The page the cloud answers a failed post with when JavaScript is off
+ * (DECISIONS.md, "Phase 6a's calls", call 1): the error summary, then the
+ * form drawn again with the person's answers, posting back to the same
+ * place, and a way back to the site's page.
+ */
+export function formPage(
+  form: FormManifest,
+  options: {
+    action: string;
+    /** The site's page, absolute, for the link back. */
+    back: string;
+    page?: string;
+    manifest?: string;
+    values: DataObject;
+    issues: FormIssue[];
+    strings?: Partial<FormStrings>;
+  },
+): string {
+  const title = typeof form.options.title === 'string' ? form.options.title : form.name;
+  const strings = { ...FORM_STRINGS, ...options.strings };
+  return [
+    '<!doctype html><html lang="en"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<meta name="robots" content="noindex">',
+    `<title>${escapeHtml(`${strings.summaryTitle}: ${title}`)}</title>`,
+    `<style>${PAGE_CSS}</style></head><body><main>`,
+    `<h1>${escapeHtml(title)}</h1>`,
+    `<p><a href="${escapeHtml(options.back)}">Back to the page</a></p>`,
+    formHtml(form, {
+      action: options.action,
+      ...(options.page === undefined ? {} : { page: options.page }),
+      ...(options.manifest === undefined ? {} : { manifest: options.manifest }),
+      values: options.values,
+      issues: options.issues,
+      ...(options.strings ? { strings: options.strings } : {}),
+    }),
+    '</main></body></html>',
+  ].join('');
+}

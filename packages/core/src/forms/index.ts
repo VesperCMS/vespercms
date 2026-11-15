@@ -32,8 +32,10 @@ export {
   escapeHtml,
   fieldId,
   formHtml,
+  formPage,
   formId,
   targetId,
   type FormHtmlOptions,
   type FormStrings,
 } from './html.ts';
+export { FORM_STATUS, MAX_FORM_BODY, backAddress, sentAddress, wantsJson } from './answer.ts';

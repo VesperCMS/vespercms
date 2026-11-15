@@ -297,3 +297,26 @@ describe('confirmations (D20)', () => {
     expect(templateIssues({ subject: 'Hi {name}', body: 'Thanks' }, form)).toEqual([]);
   });
 });
+
+describe('answers', () => {
+  it('goes back only to the post’s own origin, at the sent message', async () => {
+    const { sentAddress, backAddress, wantsJson } = await import('./answer.ts');
+    const origin = 'https://site.example';
+    expect(sentAddress('/contact/?x=1', origin, 'contact')).toBe(
+      'https://site.example/contact/#vesper-form-contact-sent',
+    );
+    expect(sentAddress('https://evil.example/', origin, 'contact')).toBe(
+      'https://site.example/#vesper-form-contact-sent',
+    );
+    expect(sentAddress('//evil.example/x', origin, 'contact')).toBe(
+      'https://site.example/#vesper-form-contact-sent',
+    );
+    expect(sentAddress(null, origin, 'contact')).toBe(
+      'https://site.example/#vesper-form-contact-sent',
+    );
+    expect(backAddress('/contact/', origin)).toBe('https://site.example/contact/');
+    expect(wantsJson('application/json')).toBe(true);
+    expect(wantsJson('text/html,application/xhtml+xml')).toBe(false);
+    expect(wantsJson(null)).toBe(false);
+  });
+});

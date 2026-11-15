@@ -25,6 +25,13 @@ export function formDiagnostics(form: FormManifest, schema: unknown): Diagnostic
       `Form "${form.name}" needs a name of letters, digits, - and _, starting with a letter: it's part of the form's address.`,
     );
   }
+  if (form.name === 'config') {
+    say(
+      'error',
+      'form-name',
+      'A form can’t be named "config": the cloud answers that address with the forms’ settings.',
+    );
+  }
   if (form.fields === null) {
     say('error', 'form-schema', `Form "${form.name}" needs a z.object() schema.`);
     return diagnostics;
