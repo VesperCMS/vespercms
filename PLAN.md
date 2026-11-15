@@ -39,9 +39,9 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [x] Jeremy confirmed the other nine calls as recommended (2026-11-15).
 - [x] Build this repository's half on `claude/forms-6a` (2026-11-15), then the cloud's (2026-11-15, in `vesper-cloud`). See "Phase 6a: progress".
 - [x] Jeremy's OK (2026-11-15) for the cloud's new bindings, pushing both branches, and the staging deploy: done that day. Staging is migrated and deployed; `SECRETS_KEY` isn't set there yet.
-- [ ] Open the PRs, so CI runs (it runs only on pull requests in both repositories).
-- [ ] The end-to-end check on staging: `SECRETS_KEY` on both staging Workers (Jeremy's), and a site with forms that the staging cloud can read.
-- [ ] Release `0.1.0-next.3`. wcpl.net launches on it.
+- [x] The PRs: #14 here, merged 2026-11-15 after #13, and VesperCMS/vespercms-cloud#3.
+- [x] Staging's check dropped (Jeremy, 2026-11-15: "just go live", as no site runs on the cloud yet). He saw the form, the API, routing, a confirmation and the inbox work by hand against the real API and app locally first. The cloud went to production that day, at `3ad9a2d`.
+- [ ] Release `0.1.0-next.3`: versioned here; the Release workflow publishes it from `main`. wcpl.net launches on it.
 
 **Next phase**
 - [ ] Phase 5, Billing and ops. Before it starts, Jeremy decides spec §13.4: the final prices, from the cloud's measured cost (the addendum's numbers are placeholders). Bring him options; never pick.
@@ -80,7 +80,7 @@ Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kin
 
 ## Phase 6a: progress
 
-Started 2026-11-15, the day its calls were confirmed. The steps are the design's order of work, below. Built on `claude/forms-6a` (branched from #13's head, which should merge first), not yet pushed.
+Started 2026-11-15, the day its calls were confirmed. The steps are the design's order of work, below. Built on `claude/forms-6a` (branched from #13's head) and merged in #14 on 2026-11-15, after #13.
 
 | Step | What | Status |
 |---|---|---|
@@ -89,7 +89,7 @@ Started 2026-11-15, the day its calls were confirmed. The steps are the design's
 | 3 | `vespercms/forms`, `virtual:vesper/forms`, `<Form>` and its script, the dev capture | Built. The script is 5 KB gzipped (the test holds it to 8). A build with forms and no cloud project warns |
 | 4 | The contract's `forms` section, the fake's endpoints, the playground's form, e2e, docs | Built: eight contract cases, passing against the fake and the real cloud; `e2e/cloud/forms.spec.ts` (eight tests, JavaScript on and off); `site/forms.mdoc`, the README and the reference; `vesper agents` says how a site's forms work |
 | 5–8 | The cloud's half | In `vesper-cloud`: see its PLAN.md |
-| 9 | The changeset and `0.1.0-next.3` | Waits for the cloud's staging check |
+| 9 | The changeset and `0.1.0-next.3` | Versioned 2026-11-15, after the cloud went to production (`3ad9a2d`); the Release workflow publishes it |
 
 **Found while building:**
 - **A redraw on blur moved Send under a click.** Clearing an error or the summary as a field was left shifted the page between the button's mousedown and mouseup, so the click missed and nothing was sent. The script now adds errors and changes the summary only on submit; an error goes as its answer is fixed (DECISIONS.md, "<Form>'s script redraws nothing as a field is left").
