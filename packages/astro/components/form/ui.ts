@@ -41,7 +41,6 @@ function mount(wrapper: HTMLElement): void {
   const status = form.querySelector<HTMLElement>('[data-vesper-form-status]');
   const button = form.querySelector<HTMLButtonElement>('.vesper-form-submit');
   const shown = new Map<string, string>();
-  let submitted = false;
   let busy = false;
   form.noValidate = true;
 
@@ -52,17 +51,22 @@ function mount(wrapper: HTMLElement): void {
     },
     { once: true },
   );
-  form.addEventListener('focusout', (event) => {
+  // A field's error goes as soon as its answer is fixed, while it's typed or
+  // chosen. Errors are added, and the summary changes, only when the form is
+  // sent: anything redrawn as a field is left would move the page under a
+  // click on Send, and the click would miss.
+  const fixed = (event: Event) => {
     const name = (event.target as HTMLElement | null)
       ?.closest<HTMLElement>('[data-vesper-field]')
       ?.getAttribute('data-vesper-field');
-    if (!name || (!submitted && !shown.has(name))) return;
-    // Checked as it's left, once the form has been sent or the field shows an error.
+    if (!name || !shown.has(name)) return;
     const issue = readSubmission(definition, bodyOf(form)).issues.find((one) => one.field === name);
-    if (issue) shown.set(name, issue.message);
-    else shown.delete(name);
-    draw(false);
-  });
+    if (issue) return;
+    shown.delete(name);
+    draw(false, false);
+  };
+  form.addEventListener('input', fixed);
+  form.addEventListener('change', fixed);
   summary?.addEventListener('click', (event) => {
     const link = (event.target as HTMLElement | null)?.closest('a');
     const target = link ? document.getElementById(link.hash.slice(1)) : null;
@@ -91,7 +95,6 @@ function mount(wrapper: HTMLElement): void {
   }
 
   async function send(): Promise<void> {
-    submitted = true;
     const body = bodyOf(form);
     const read = readSubmission(definition, body);
     if (read.issues.length > 0) {
@@ -134,7 +137,7 @@ function mount(wrapper: HTMLElement): void {
   }
 
   /** Each field's error beside it, and the summary of all of them; focus goes to the summary when asked. */
-  function draw(focus: boolean): void {
+  function draw(focus: boolean, summarize = true): void {
     for (const field of form.querySelectorAll<HTMLElement>('[data-vesper-field]')) {
       const name = field.getAttribute('data-vesper-field') ?? '';
       const id = fieldId(prefix, name);
@@ -164,7 +167,7 @@ function mount(wrapper: HTMLElement): void {
         else described?.removeAttribute('aria-invalid');
       }
     }
-    if (!summary) return;
+    if (!summary || !summarize) return;
     const list = document.createElement('ul');
     for (const [name, message] of shown) {
       const field = formField(definition, name);
