@@ -35,8 +35,11 @@ export const BUILTIN_WIDGETS: Record<string, WidgetCheck> = {
   slug: isString,
   color: isString,
   file: isString,
-  // A form's file field (spec §6.13): see FORM_WIDGETS.
+  // A form's own fields (spec §6.13): see FORM_WIDGETS.
   upload: (f) => f.kind === 'string' || f.kind === 'array',
+  tel: isString,
+  checkbox: (f) => f.kind === 'boolean',
+  checkboxes: (f) => f.kind === 'array' && childKinds(f)[0] === 'enum',
   number: (f) => f.kind === 'number',
   switch: (f) => f.kind === 'boolean',
   date: (f) => f.kind === 'date' || isString(f),
@@ -70,7 +73,13 @@ export const BUILTIN_WIDGETS: Record<string, WidgetCheck> = {
  * a Markdoc attribute or an MDX prop that names one gets the inferred widget,
  * with a warning, rather than a silent text field.
  */
-const FORM_WIDGETS: ReadonlySet<string> = new Set(['upload']);
+const FORM_WIDGETS: ReadonlySet<string> = new Set(['upload', 'tel', 'checkbox', 'checkboxes']);
+
+/** In a form, a yes-or-no is a checkbox and a list of choices is checkboxes: `<Form>` draws no switch or multiselect. */
+const FORM_INFERENCE: Readonly<Record<string, string>> = {
+  switch: 'checkbox',
+  multiselect: 'checkboxes',
+};
 
 /** Spec §6.3 step 3: the control a field's type implies, with no hints. */
 export function inferWidget(field: FieldModel): string {
@@ -151,7 +160,8 @@ function resolveField(
     ...(children ? { children } : {}),
     ...(variants ? { variants } : {}),
   };
-  const inferred = inferWidget(resolved);
+  const plain = inferWidget(resolved);
+  const inferred = (options.form === true ? FORM_INFERENCE[plain] : undefined) ?? plain;
   resolved.inferredWidget = inferred;
   const custom = options.custom ?? {};
   const warn = (code: string, message: string) => {

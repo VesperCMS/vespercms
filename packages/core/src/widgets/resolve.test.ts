@@ -136,6 +136,22 @@ describe('resolveWidgets (spec §6.3 order)', () => {
     expect(only(attachment, { upload: {} }).field.widget).toBe('upload');
   });
 
+  it('draws a form’s yes-or-no as a checkbox and its lists of choices as checkboxes, and allows tel', () => {
+    const shape = {
+      subscribe: z.boolean(),
+      topics: z.array(z.enum(['a', 'b'])),
+      phone: z.string().meta({ widget: 'tel' }),
+    };
+    const form: Diagnostic[] = [];
+    const fields = resolveWidgets(walkSchema(z.object(shape)).fields ?? [], form, { form: true });
+    expect(fields.map((f) => f.widget)).toEqual(['checkbox', 'checkboxes', 'tel']);
+    expect(form).toEqual([]);
+    // Elsewhere they keep the studio's own controls, and tel warns.
+    const { fields: studio, diagnostics } = resolve(shape);
+    expect(studio.map((f) => f.widget)).toEqual(['switch', 'multiselect', 'text']);
+    expect(diagnostics).toMatchObject([{ code: 'form-widget', path: ['phone'] }]);
+  });
+
   it('resolves nested fields too', () => {
     const { field } = only({ nav: z.object({ blurb: z.string().meta({ widget: 'markdown' }) }) });
     expect(field.children?.[0]?.widget).toBe('markdown');
