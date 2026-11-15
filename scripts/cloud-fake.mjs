@@ -38,6 +38,24 @@ import {
   toBase64,
   verifyDpopProof,
 } from '@vespercms/core';
+import {
+  CONFIRMATIONS_PER_ADDRESS,
+  DEFAULT_FORM_SETTINGS,
+  FORM_REFUSALS,
+  FORM_STATUS,
+  MAX_FORM_BODY,
+  answersText,
+  backAddress,
+  confirmationField,
+  formPage,
+  formTitle,
+  mergeConfirmation,
+  readSubmission,
+  routeSubmission,
+  sentAddress,
+  submitterAddress,
+  wantsJson,
+} from '@vespercms/core/forms';
 
 const ACCESS_TTL = 600;
 const REFRESH_IDLE = 12 * 3600;
@@ -89,6 +107,20 @@ export function createCloudFake(options) {
       results: new Map(),
       /** Rebuilds asked of the host or the workflow, with the time each was for. */
       rebuilds: [],
+    },
+    /** Forms (spec §6.13, §7.6): settings by form, the site's own keys, and what was kept and sent. */
+    forms: {
+      settings: {},
+      keys: { resend: false, akismet: false },
+      killed: false,
+      /** Newest first. */
+      submissions: [],
+      /** Emails sent with the site's own Resend key, oldest first. */
+      sent: [],
+      /** Each client address's posts in the last minute. */
+      posts: new Map(),
+      /** Confirmations to each address. The fake's day never ends. */
+      confirmations: new Map(),
     },
   };
   const now = () => Date.now() + state.skew * 1000;
@@ -745,6 +777,112 @@ export function createCloudFake(options) {
     });
   }
 
+  /**
+   * `POST /forms/{project}/{form}` and `GET /forms/{project}/config`
+   * (spec §7.6), in the real cloud's order: the site, the origin, the body's
+   * size, the kill switch and the pause, the client's address, then the
+   * honeypot, the answers, Akismet (a stand-in that calls
+   * `akismet-guaranteed-spam` spam, as Akismet does), routing and emails.
+   */
+  async function formRequest(request, project, name) {
+    const forms = state.forms;
+    const refuse = (error) =>
+      json(request, FORM_STATUS[error], { ok: false, error, message: FORM_REFUSALS[error] });
+    if (project !== site.id) return refuse('not-found');
+    const paused = () =>
+      (manifest.forms ?? [])
+        .map((form) => form.name)
+        .filter((form) => forms.killed || forms.settings[form]?.paused === true);
+    if (name === 'config' && request.method === 'GET')
+      return json(request, 200, { paused: paused() });
+    const form = (manifest.forms ?? []).find((one) => one.name === name);
+    if (!form || request.method !== 'POST') return refuse('not-found');
+    const origin = request.headers.get('origin');
+    if (!origin || !site.origins.includes(origin)) return refuse('refused');
+    const body = new Uint8Array(await request.arrayBuffer());
+    if (body.byteLength > MAX_FORM_BODY) return refuse('too-large');
+    if (paused().includes(name)) return refuse('paused');
+    const address = request.headers.get('cf-connecting-ip') ?? 'unknown';
+    const recent = (forms.posts.get(address) ?? []).filter((at) => at > Date.now() - 60_000);
+    if (recent.length >= 10) return refuse('limited');
+    forms.posts.set(address, [...recent, Date.now()]);
+
+    const read = readSubmission(form, new URLSearchParams(new TextDecoder().decode(body)));
+    const asJson = wantsJson(request.headers.get('accept'));
+    const done = () =>
+      asJson
+        ? json(request, 200, { ok: true })
+        : new Response(null, {
+            status: 303,
+            headers: { Location: sentAddress(read.page, origin, name), ...cors(request) },
+          });
+    if (read.honeypot) return done();
+    if (read.issues.length > 0) {
+      if (asJson) {
+        return json(request, FORM_STATUS.invalid, {
+          ok: false,
+          error: 'invalid',
+          message: FORM_REFUSALS.invalid,
+          issues: read.issues,
+        });
+      }
+      return new Response(
+        formPage(form, {
+          action: new URL(request.url).href,
+          back: backAddress(read.page, origin),
+          ...(read.page === null ? {} : { page: read.page }),
+          ...(read.manifest === null ? {} : { manifest: read.manifest }),
+          values: read.values,
+          issues: read.issues,
+        }),
+        { status: FORM_STATUS.invalid, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+      );
+    }
+    const settings = forms.settings[name] ?? DEFAULT_FORM_SETTINGS;
+    const spam =
+      forms.keys.akismet && settings.akismet !== false
+        ? JSON.stringify(read.values).includes('akismet-guaranteed-spam')
+          ? 'spam'
+          : 'ham'
+        : 'off';
+    const route = routeSubmission(settings, read.values);
+    const status = spam === 'spam' || route.spam ? 'spam' : 'new';
+    forms.submissions.unshift({
+      id: `sub_${token()}`,
+      form: name,
+      values: read.values,
+      status,
+      spam,
+      fired: route.fired,
+      createdAt: new Date(now()).toISOString(),
+    });
+    if (status === 'spam' || !forms.keys.resend) return done();
+    const submitter = submitterAddress(form, read.values);
+    for (const to of route.notify) {
+      forms.sent.push({
+        kind: 'notification',
+        to,
+        ...(submitter ? { replyTo: submitter } : {}),
+        subject: `New “${formTitle(form)}” submission`,
+        text: answersText(form, read.values),
+      });
+    }
+    // D20, amended: only through the site's own key, never for spam or what
+    // Akismet couldn't check, and 3 a day to one address.
+    const to = confirmationField(form) ? submitter : null;
+    const sentTo = to ? (forms.confirmations.get(to.toLowerCase()) ?? 0) : 0;
+    if (to && route.confirmation && spam !== 'unchecked' && sentTo < CONFIRMATIONS_PER_ADDRESS) {
+      forms.confirmations.set(to.toLowerCase(), sentTo + 1);
+      forms.sent.push({
+        kind: 'confirmation',
+        to,
+        ...(settings.replyTo ? { replyTo: settings.replyTo } : {}),
+        ...mergeConfirmation(route.confirmation, form, read.values),
+      });
+    }
+    return done();
+  }
+
   async function handle(request) {
     const url = new URL(request.url);
     state.log.push(`${request.method} ${url.pathname}${url.search}`);
@@ -755,6 +893,8 @@ export function createCloudFake(options) {
       return new Response(null, { status: 204, headers: cors(request) });
     }
     const rest = path.slice('/api'.length);
+    const form = /^\/forms\/([\w-]+)\/([\w-]+)$/.exec(rest);
+    if (form) return formRequest(request, form[1], form[2]);
     if (rest === '/token' && request.method === 'POST') return exchange(request);
     if (rest === '/sign-out' && request.method === 'POST') return signOutOf(request);
     const avatar = /^\/avatars\/([\w-]+)\.svg$/.exec(rest);
@@ -788,6 +928,20 @@ export function createCloudFake(options) {
     },
     /** The `repository_dispatch` events the fake GitHub received. */
     dispatches: () => github.state.dispatches,
+    /** The site's forms, as a site admin and the operator set them (`runCloudContract`'s `FormsFixture`). */
+    forms: {
+      configure: async (form, settings) => {
+        state.forms.settings[form] = settings;
+      },
+      keys: async (keys) => {
+        state.forms.keys = { ...keys };
+      },
+      kill: async (on) => {
+        state.forms.killed = on;
+      },
+      submissions: async (form) => state.forms.submissions.filter((one) => one.form === form),
+      sent: async () => [...state.forms.sent],
+    },
     /** Moves scheduling's clock on by `ms` and runs what fell due, as the alarm would. */
     advance: async (ms) => {
       state.schedule.ahead += ms;
@@ -805,7 +959,11 @@ export function createCloudFake(options) {
  * - `POST /__test/deploy` `{ commit, state, url? }`: what the host reports;
  * - `POST /__test/schedule` `{ trigger?, holdScheduledDrafts?, publicRepository? }`;
  * - `POST /__test/advance` `{ ms }`: scheduling's clock moves on, and what fell due runs;
- * - `GET /__test/state`: drafts, reviews, emails, held changes and rebuilds.
+ * - `POST /__test/forms` `{ form?, settings?, keys?, kill? }`: a form's settings, the site's keys, the kill switch;
+ * - `GET /__test/state`: drafts, reviews, emails, held changes, rebuilds, and forms' submissions and sent emails.
+ *
+ * Every request carries the client's address as `cf-connecting-ip`, set
+ * here as Cloudflare sets it, so a post's own header can't claim another.
  */
 export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
   const server = createServer(async (req, res) => {
@@ -841,6 +999,12 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
         await fake.advance(Number(input.ms) || 0);
         return answer({ ok: true });
       }
+      if (req.url === '/__test/forms') {
+        if (input.form && input.settings) await fake.forms.configure(input.form, input.settings);
+        if (input.keys) await fake.forms.keys(input.keys);
+        if (typeof input.kill === 'boolean') await fake.forms.kill(input.kill);
+        return answer({ ok: true });
+      }
       if (req.url === '/__test/state') {
         return answer({
           drafts: fake.state.drafts.drafts.map((d) => ({
@@ -854,6 +1018,7 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
           holds: fake.state.schedule.holds,
           rebuilds: fake.state.schedule.rebuilds,
           dispatches: fake.dispatches(),
+          forms: { submissions: fake.state.forms.submissions, sent: fake.state.forms.sent },
         });
       }
       res.statusCode = 404;
@@ -865,13 +1030,18 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
     }
     const request = new Request(`http://${req.headers.host}${req.url}`, {
       method: req.method,
-      headers: Object.entries(req.headers).flatMap(([key, value]) =>
-        Array.isArray(value)
-          ? value.map((v) => [key, v])
-          : value === undefined
+      headers: [
+        ...Object.entries(req.headers).flatMap(([key, value]) =>
+          key === 'cf-connecting-ip'
             ? []
-            : [[key, value]],
-      ),
+            : Array.isArray(value)
+              ? value.map((v) => [key, v])
+              : value === undefined
+                ? []
+                : [[key, value]],
+        ),
+        ['cf-connecting-ip', req.socket.remoteAddress ?? 'unknown'],
+      ],
       ...(body && req.method !== 'GET' && req.method !== 'HEAD' ? { body } : {}),
     });
     try {
