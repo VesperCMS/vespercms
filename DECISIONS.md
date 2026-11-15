@@ -71,6 +71,14 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 - **What stays:** layers 1 and 2, free and unchanged, and D19: Vesper reports problems and never claims compliance. Contrast and the other visual rules stay unchecked at build, since only a rendered page can answer them (2026-10-18, "The build checks with axe-core in jsdom").
 - **The order after Phase 4.5:** 5 Billing and the operator console, 6 Forms, 7 Instant previews and click-to-edit, 7.5 Integrations, 8 Comments, 9 Polish. Comments already came after previews and stay there. Integrations take 7.5 rather than a renumbering, so the numbers still read in build order and the other phases keep theirs.
 
+### 2026-11-15: Phase 6a is pulled ahead of Phase 5, for wcpl.net
+
+**Jeremy's call on November 15, 2026: forms are built now, as Phase 6a, ahead of Phase 5 (billing) and while Phase 4.5's last item, the free tier's real-world check, is still open.** wcpl.net (Washington County Public Library) is moving from WordPress to Vesper, and its six Gravity Forms are the one thing it can't launch without. Jeremy chose to build Vesper's own forms rather than a form Worker of the site's own, so the work lands in the product. This breaks CLAUDE.md's phase-order rule on purpose, at his request.
+- **6a is Phase 6 without uploads:** `defineForm`, `<Form>`, the cloud endpoint, Turnstile, the inbox, notifications, routing with the test panel, confirmation emails with D20's protections, the detail view, and the pause and kill switches. **6b** is file uploads (R2 and signed links, D21). Phase 6 is marked done only once 6b lands, since two of its "Done when" criteria are about uploads. WCPL's forms have no uploads, so 6a alone gates its launch.
+- **Webhooks move to Phase 7.5,** where the delivery queue, retries and log they need are built (D22). In 6a a form's actions are emails only.
+- **A forms access level.** A site membership can carry forms access, to every form or only some, apart from its content role. A librarian can then handle the Ask a Librarian inbox without being a site admin or editing pages. Site admins have every form.
+- **Submissions live in the site's Durable Object,** where spec §7.6 and §8.2 already put them (D15). One library's patron records stay in its own store, deleting a site deletes them, retention sweeps run on that object's alarm, and no customer shares D1's one writer or its 10 GB. The dashboard reads them through a narrow `Dashboard` RPC entrypoint on the API Worker, over a service binding. That revisits the cloud's "no binding between the Workers" for this one interface, recorded in the cloud's DECISIONS.md.
+
 ## Process
 
 ### 2026-10-17: The repo starts private and goes public at launch

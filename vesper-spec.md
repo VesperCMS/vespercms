@@ -1154,6 +1154,8 @@ Site admins set grants per member in the dashboard, picking the collection and f
 
 Permission evaluation lives in `core` and is shared by the API and the UI. The UI hides what a user can't do instead of showing it disabled, except where a short explanation helps ("Publishing needs approval").
 
+**Forms access** (decided November 15, 2026): a site member can be given the site's form inboxes, every form or only some, apart from their content role. Site admins have every form.
+
 ### 7.6 Forms backend
 
 **Request path**
@@ -1565,15 +1567,18 @@ Confirm D13 and D15 before starting.
 - **Done when:** a test account can sign up, pay, hit a limit, see a warning, upgrade and cancel, with every step in the audit log.
 
 ### Phase 6: Forms
-- `defineForm`, `<Form>`, the cloud endpoint, Turnstile, the inbox, notifications, webhooks, pause and kill switches.
-- Conditional routing with the test panel, file uploads (D21), confirmation emails with the D20 protections, and the expanded inbox detail view.
+Pulled ahead of Phase 5 on November 15, 2026, at Jeremy's request, for wcpl.net, while Phase 4.5's free-tier check is still open. It's built in two parts, and it's done only once both are.
+- **6a:** `defineForm`, `<Form>`, the cloud endpoint, Turnstile, the inbox, notifications, pause and kill switches, conditional routing with the test panel, confirmation emails with the D20 protections, the expanded inbox detail view, and forms access for site members (§7.5).
+- **6b:** file uploads (D21).
+- Webhooks moved to Phase 7.5 on November 15, 2026.
+- Submissions live in the site's Durable Object (§8.2). The dashboard reads them through a narrow RPC interface on the API's Worker.
 - **Done when:**
   - The playground contact form works with JavaScript disabled.
   - It passes the §6.13 accessibility list, verified with a screen reader.
   - Spam submissions are blocked in tests.
   - A routing rule sends Admissions submissions to one address and everything else to another.
-  - A 10 MB PDF uploads with and without JavaScript, and can only be downloaded through a signed link.
-  - A disallowed file type is rejected with a clear, linked error.
+  - A 10 MB PDF uploads with and without JavaScript, and can only be downloaded through a signed link (6b).
+  - A disallowed file type is rejected with a clear, linked error (6b).
   - Automated tests confirm that confirmation emails can't echo non-safe fields and are rate-limited per recipient.
 
 ### Phase 7: Instant previews and click-to-edit
@@ -1587,6 +1592,7 @@ Confirm D13 and D15 before starting.
 ### Phase 7.5: Integrations
 Moved after instant previews on October 26, 2026 (it was Phase 6.5).
 - Event system, Queues delivery with retries and the DLQ, the delivery log, and all five v1 destinations with field mapping.
+- Webhooks for forms, moved here from Phase 6 on November 15, 2026.
 - **Done when:**
   - One playground form submission reaches a webhook (signature verified), a Google Sheet row, Slack and Mailchimp.
   - A failing webhook retries, lands in the log with a retry button, and triggers the failure email.
