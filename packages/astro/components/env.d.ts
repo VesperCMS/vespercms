@@ -28,6 +28,17 @@ declare module 'virtual:vesper/search' {
   };
 }
 
+declare module 'virtual:vesper/forms' {
+  /** What <Form> needs: the site's forms from the manifest, and where they post. */
+  export const forms: {
+    /** `<api>/forms/<project>` at build, the dev server's in `astro dev`, or null without a cloud project. */
+    endpoint: string | null;
+    /** The manifest's hash, posted so the cloud can tell its copy is older. */
+    manifest: string;
+    definitions: Record<string, import('@vespercms/core').FormManifest>;
+  };
+}
+
 // Plain tsc (this package's typecheck) doesn't read .astro files; Astro's own
 // tooling types them properly in a site.
 declare module '*.astro' {
