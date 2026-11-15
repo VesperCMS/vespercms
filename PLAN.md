@@ -37,7 +37,9 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [x] The design, "Phase 6: Forms (design)", below, and the cloud's half in `vesper-cloud`'s PLAN.md (2026-11-15).
 - [x] Calls 2, 3 and 5, Jeremy's own way: each site's own Resend and Akismet keys, and D20 amended (2026-11-15).
 - [x] Jeremy confirmed the other nine calls as recommended (2026-11-15).
-- [ ] Build this repository's half on `claude/forms-6a`, then the cloud's, then release `0.1.0-next.3`. wcpl.net launches on it.
+- [x] Build this repository's half on `claude/forms-6a` (2026-11-15), then the cloud's (2026-11-15, in `vesper-cloud`). See "Phase 6a: progress".
+- [ ] Jeremy's OK for the cloud's new bindings (the app's service binding to the API, the `ratelimits` binding), pushing both branches, and the staging deploy; then the end-to-end check on staging.
+- [ ] Release `0.1.0-next.3`. wcpl.net launches on it.
 
 **Next phase**
 - [ ] Phase 5, Billing and ops. Before it starts, Jeremy decides spec §13.4: the final prices, from the cloud's measured cost (the addendum's numbers are placeholders). Bring him options; never pick.
@@ -73,6 +75,26 @@ Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kin
 **Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9), and the packages are on npm as `vespercms@next`. The tenth (GitHub mode's message when the app isn't installed) was built 2026-10-28. The three Jeremy raised 2026-10-29 were built and deployed the same day, the studio's two in `vespercms@0.1.0-next.1` and the cloud's in the app. Of five more the same day (14 to 18), four are built and one is open: why the cloud fails so often for the Hostinger site (14), which the API now logs. Jeremy asked that new gaps come up whenever this work resumes.
 
 **Phase 6a (2026-11-15):** forms, ahead of Phase 5, for wcpl.net. The design is below, and nothing is built until Jeremy has answered its calls.
+
+## Phase 6a: progress
+
+Started 2026-11-15, the day its calls were confirmed. The steps are the design's order of work, below. Built on `claude/forms-6a` (branched from #13's head, which should merge first), not yet pushed.
+
+| Step | What | Status |
+|---|---|---|
+| 1 | The design and its decisions | Done (2026-11-15) |
+| 2 | Core's forms module, its diagnostics, the three widgets | Built: `@vespercms/core/forms` (`readSubmission`, `routeSubmission`, `mergeConfirmation`, `formHtml`, `formPage`, the answers' helpers, the protocol's types), `buildManifest`'s forms diagnostics, and `tel`, `checkbox`, `checkboxes` |
+| 3 | `vespercms/forms`, `virtual:vesper/forms`, `<Form>` and its script, the dev capture | Built. The script is 5 KB gzipped (the test holds it to 8). A build with forms and no cloud project warns |
+| 4 | The contract's `forms` section, the fake's endpoints, the playground's form, e2e, docs | Built: eight contract cases, passing against the fake and the real cloud; `e2e/cloud/forms.spec.ts` (eight tests, JavaScript on and off); `site/forms.mdoc`, the README and the reference; `vesper agents` says how a site's forms work |
+| 5–8 | The cloud's half | In `vesper-cloud`: see its PLAN.md |
+| 9 | The changeset and `0.1.0-next.3` | Waits for the cloud's staging check |
+
+**Found while building:**
+- **A redraw on blur moved Send under a click.** Clearing an error or the summary as a field was left shifted the page between the button's mousedown and mouseup, so the click missed and nothing was sent. The script now adds errors and changes the summary only on submit; an error goes as its answer is fixed (DECISIONS.md, "<Form>'s script redraws nothing as a field is left").
+- **The cloud's own page posts from the cloud's origin.** The page that draws a form again after a problem would have been refused by the origin check. It now carries the site's page whole in `_vesper_page`, and the cloud accepts its own origin only with a page on one of the site's (DECISIONS.md, "A post from the cloud's own page goes back to the site's page").
+- **Akismet's spam and not-spam reports need the submitter's IP address**, which the cloud keeps only as a salted hash. Spam and Not spam in the inbox change the status and tell Akismet nothing. **For Jeremy:** keep the IP address with a checked submission (deleted with it) so the inbox can train Akismet, or leave it as it is.
+
+**Checks:** typecheck, lint and Vitest pass (4,760 tests); the forms e2e passes against the fake cloud. Still to run before the release: `check:dist`, the whole e2e suite, and the Windows workflow (`gh workflow run windows.yml`, which needs the branch pushed). A manual keyboard pass is noted for the PR; the e2e tests check Tab's order and the honeypot. Jeremy's screen reader pass is open.
 
 ## Phase 6: Forms (design)
 
@@ -155,7 +177,7 @@ contact: defineForm({
 - `_vesper_page` is followed only to an origin the site registered. Any other address goes to the site's production address, so the endpoint can't become an open redirect.
 
 **With JavaScript** (`components/form/ui.ts`, at most 8 KB gzipped, enforced by a test, with no framework):
-- It sets `novalidate`, then checks each field as it's left and the whole form on submit, with core's own checks (the same `readSubmission` the cloud runs).
+- It sets `novalidate`, then checks the whole form on submit with core's own checks (the same `readSubmission` the cloud runs). A field's error goes as soon as its answer is fixed; nothing is redrawn as a field is left, since that moved the page under a click on Send and the click missed (found by the e2e tests, 2026-11-15).
 - On a failed submit it fills an error summary at the top, each error a link to its field, and moves focus to it.
 - It posts the same form-encoded body with `fetch` and `Accept: application/json`, a "simple" request, so there's no preflight. The answer is JSON: success, the fields that failed, or a refusal with words (paused, too many, unavailable). Success replaces the form with its message, which takes focus.
 - **A paused form says so before anyone types:** on the form's first focus, the script asks `GET /forms/{project}/config` which of the site's forms are paused. Nothing loads before that, and nothing from anyone but the cloud.
@@ -190,7 +212,7 @@ contact: defineForm({
 | `sites/[site]/forms/keys` | Email and spam: the Resend key, From address and sender name, and the Akismet key, each shown only as set, with who set it and when. |
 | `…/forms/[form]/` | The inbox: search, New, Handled and Spam, pages of 50, and Mark handled or Delete for those checked. |
 | `…/forms/[form]/export.csv` | An export of what's shown, in the audit log, with each cell that starts with `=`, `+`, `-`, `@`, a tab or a return escaped against formula injection. |
-| `…/forms/[form]/[id]` | One submission: its answers, what Akismet said, the route that fired, each delivery's status, Mark handled, Spam or Not spam (reported to Akismet), Delete. |
+| `…/forms/[form]/[id]` | One submission: its answers, what Akismet said, the route that fired, each delivery's status, Mark handled, Spam or Not spam, Delete. Not reported to Akismet: its reports need the submitter's IP address, which the cloud keeps only as a salted hash (a question for Jeremy, 2026-11-15). |
 | `…/forms/[form]/settings` | Who to notify, rules as sentences, first or every match, the confirmation template (with the fields it may use listed), reply-to, whether Akismet checks this form, Pause, and how long submissions are kept. |
 | `…/forms/[form]/test` | Sample values, then which rule fires and who'd be notified, sending nothing. |
 

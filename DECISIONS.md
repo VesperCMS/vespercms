@@ -103,6 +103,22 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 - **11. The kill switch is a D1 flag set by `forms off|on`;** the per-IP limit is the `ratelimits` binding with an hourly count in D1 beside it.
 - **12. Usage is counted, not limited, until Phase 5,** and WCPL is marked comped.
 
+### 2026-11-15: A form is drawn by core's `formHtml`, and read by core's `readSubmission`, everywhere
+
+**`<Form>` at build and the cloud's page after a failed post without JavaScript draw a form with `formHtml`; the cloud, the fake cloud, the dev API and `<Form>`'s script read a post with `readSubmission` and route it with `routeSubmission`.** A page drawn again by the cloud is then the markup the site's page had, and the browser, the dev server and the cloud refuse the same answers in the same words. The checks work from the field models alone, without Zod, since the cloud has only the manifest; refinements are warned about at build.
+
+### 2026-11-15: One body format for posts, form-encoded
+
+**`<Form>`'s script posts the same `application/x-www-form-urlencoded` body a plain form does, with `Accept: application/json`, and the cloud answers it in JSON.** It's a simple request, so there's no CORS preflight, and the endpoint has one parser. The plan's JSON submit would have needed a preflight on every post.
+
+### 2026-11-15: <Form>'s script redraws nothing as a field is left
+
+**Errors are added, and the summary changes, only when the form is sent; a field's error goes as soon as its answer is fixed, while it's typed or chosen.** The first version checked each field on blur. Fixing the last answer and clicking Send moved focus off the field on mousedown, the redraw shifted the page, and the mouseup landed beside the button: the click never happened and nothing was sent (the e2e tests found it, 2026-11-15). A screen reader user meets the same problems from the summary either way.
+
+### 2026-11-15: A post from the cloud's own page goes back to the site's page
+
+**The page the cloud draws after a problem carries the site's page as an absolute `_vesper_page`. A post comes from one of the site's registered origins, or from the cloud's own with a page on one of them (core's `pageOrigin`); anything else goes back to the site's production address.** That page posts from the cloud's origin, which the origin check would otherwise refuse, and `sentAddress` must never send a browser to another site.
+
 ## Process
 
 ### 2026-10-17: The repo starts private and goes public at launch

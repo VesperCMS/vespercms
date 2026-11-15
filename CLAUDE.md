@@ -270,6 +270,16 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 
 **A cloud draft passes the same checks as a save; the publish gate applies to Publish, never to a draft.** A draft is then always a file the site could build (DECISIONS.md, "A draft passes the same checks as a save").
 
+### Forms
+
+**Draw a form only with core's `formHtml`, and read a post only with `readSubmission` and `routeSubmission`.** `<Form>`, the cloud's page after a failed post, the fake cloud, the dev API and the script must agree on markup and on what they refuse (DECISIONS.md, "A form is drawn by core's `formHtml`…").
+
+**A confirmation repeats back only what `mergeConfirmation` fills: fields `safeToEcho` says are safe.** D20; a template can't be made to send a stranger the sender's words.
+
+**`<Form>`'s script adds errors and changes the summary only on submit.** A redraw as a field is left moved Send under a click, and the click missed (DECISIONS.md, "<Form>'s script redraws nothing as a field is left").
+
+**Send a browser back from a post only with `sentAddress`, to an origin the site registered.** The endpoint must never redirect elsewhere.
+
 ### Vesper's own site and agent instructions
 
 **The docs menu is the `docs` collection's tree: order and move docs with `_order.yaml` or the studio, never a hand-written list.** Moves then write their redirects, and `llms.txt` follows the same order (DECISIONS.md, "vespercms.com is a plain Astro site edited with Vesper").
