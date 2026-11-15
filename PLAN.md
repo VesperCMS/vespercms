@@ -36,7 +36,7 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [x] Record the reorder: CLAUDE.md, DECISIONS.md ("Phase 6a is pulled ahead of Phase 5, for wcpl.net") and spec §11 (2026-11-15).
 - [x] The design, "Phase 6: Forms (design)", below, and the cloud's half in `vesper-cloud`'s PLAN.md (2026-11-15).
 - [x] Calls 2, 3 and 5, Jeremy's own way: each site's own Resend and Akismet keys, and D20 amended (2026-11-15).
-- [ ] Jeremy confirms the other nine calls.
+- [x] Jeremy confirmed the other nine calls as recommended (2026-11-15).
 - [ ] Build this repository's half on `claude/forms-6a`, then the cloud's, then release `0.1.0-next.3`. wcpl.net launches on it.
 
 **Next phase**
@@ -59,7 +59,7 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 | 4 Cloud foundation | Done (2026-10-26). Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. A publish credits every draft's author (Jeremy's call b), both halves on production since 2026-10-22. The studio against the real API under `wrangler dev`, step 12's last piece, passed 2026-10-26 in `vesper-cloud` (CI green on GitHub, run 40358823912). Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
 | 4.5 Scheduled publish and unpublish | In progress, started 2026-10-26 at Jeremy's request, once Phase 4 met its criteria. Designed 2026-10-21, and Jeremy confirmed its calls that day. See "Phase 4.5: progress" and "Phase 4.5: Scheduled publish and unpublish (design)" below. |
-| 6a Forms, all but uploads | Designed 2026-11-15, pulled ahead of Phase 5 at Jeremy's request for wcpl.net, with Phase 4.5's free-tier check still open. Its calls wait for Jeremy. 6b (uploads) follows, and Phase 6 is done only after it. See "Phase 6: Forms (design)" below. |
+| 6a Forms, all but uploads | In progress, started 2026-11-15, pulled ahead of Phase 5 at Jeremy's request for wcpl.net, with Phase 4.5's free-tier check still open. Designed and its calls confirmed the same day. 6b (uploads) follows, and Phase 6 is done only after it. See "Phase 6: Forms (design)" below. |
 | 5 onward | Roadmap below |
 
 ## To do next
@@ -227,9 +227,9 @@ Every dashboard page passes axe and `keyboardPass` in the cloud's e2e.
 8. Cloud: staging, with the new bindings (Jeremy's OK), then the end-to-end check there.
 9. Here: a changeset, `0.1.0-next.3` through the Release workflow (Jeremy's OK). Then the cloud on production (Jeremy's OK).
 
-### Calls to confirm
+### The calls (confirmed 2026-11-15)
 
-Recommended option first. The decision is Jeremy's on each. **He decided 2, 3 and 5 on 2026-11-15**, his own way rather than as first proposed, and amended D20 with them (DECISIONS.md, "Forms send with the site's own Resend key and check spam with its own Akismet key, and D20 is amended"). The others wait for him.
+Recommended option first. The decision is Jeremy's on each. **He decided 2, 3 and 5 on 2026-11-15**, his own way rather than as first proposed, and amended D20 with them (DECISIONS.md, "Forms send with the site's own Resend key and check spam with its own Akismet key, and D20 is amended"). The same day he confirmed the other nine as recommended ("go ahead"), and DECISIONS.md records them ("Phase 6a's calls").
 
 1. **A failed post without JavaScript.**
    - (a) The cloud answers with a plain page: an error summary, then the form drawn again by `formHtml` with the person's values and each error linked, posting back to the same place, and a link back to the site's page. Recommended: nothing typed is lost, and the page is the same markup `<Form>` draws.
