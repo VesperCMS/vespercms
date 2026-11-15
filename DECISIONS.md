@@ -20,7 +20,7 @@ The spec's D1–D17 are recorded in `vesper-spec.md` §3 and aren't repeated her
 
 ### 2026-10-17: D20, confirmation emails can't become a spam cannon
 
-**A form with confirmation emails requires Turnstile, rate-limits each recipient address, uses a template fixed by the site owner, and by default never echoes the submitter's free-text fields.** Otherwise anyone could use a client's form to send arbitrary text to arbitrary addresses from our sending domain. Only fields marked `safeToEcho` (by default, name fields) can be merged into the template.
+**A form with confirmation emails requires Turnstile, rate-limits each recipient address, uses a template fixed by the site owner, and by default never echoes the submitter's free-text fields.** Otherwise anyone could use a client's form to send arbitrary text to arbitrary addresses from our sending domain. Only fields marked `safeToEcho` (by default, name fields) can be merged into the template. **Amended 2026-11-15:** confirmations go only through the site's own sending key, with a daily cap per site, instead of requiring Turnstile (below, "Forms send with the site's own Resend key and check spam with its own Akismet key").
 
 ### 2026-10-17: D21, uploaded files are private
 
@@ -70,6 +70,54 @@ Phase 1's storage design already assumes D13: a draft records the git blob SHA i
 - **What goes:** build report uploads with `VESPER_BUILD_TOKEN`, history and trends, scheduled rendered scans, CSV and summary exports, and the agency cross-site view. With them go the `a11y.report.ready` event (§7.13), the `a11yScanPages` and `a11yScanFrequency` entitlements, scanned pages as a usage limit, and §13.13's scan engine. The spec lists it under "Considered, not adopted", so it isn't built unless Jeremy asks.
 - **What stays:** layers 1 and 2, free and unchanged, and D19: Vesper reports problems and never claims compliance. Contrast and the other visual rules stay unchecked at build, since only a rendered page can answer them (2026-10-18, "The build checks with axe-core in jsdom").
 - **The order after Phase 4.5:** 5 Billing and the operator console, 6 Forms, 7 Instant previews and click-to-edit, 7.5 Integrations, 8 Comments, 9 Polish. Comments already came after previews and stay there. Integrations take 7.5 rather than a renumbering, so the numbers still read in build order and the other phases keep theirs.
+
+### 2026-11-15: Phase 6a is pulled ahead of Phase 5, for wcpl.net
+
+**Jeremy's call on November 15, 2026: forms are built now, as Phase 6a, ahead of Phase 5 (billing) and while Phase 4.5's last item, the free tier's real-world check, is still open.** wcpl.net (Washington County Public Library) is moving from WordPress to Vesper, and its six Gravity Forms are the one thing it can't launch without. Jeremy chose to build Vesper's own forms rather than a form Worker of the site's own, so the work lands in the product. This breaks CLAUDE.md's phase-order rule on purpose, at his request.
+- **6a is Phase 6 without uploads:** `defineForm`, `<Form>`, the cloud endpoint, spam checks, the inbox, notifications, routing with the test panel, confirmation emails with D20's protections, the detail view, and the pause and kill switches. **6b** is file uploads (R2 and signed links, D21). Phase 6 is marked done only once 6b lands, since two of its "Done when" criteria are about uploads. WCPL's forms have no uploads, so 6a alone gates its launch.
+- **Webhooks move to Phase 7.5,** where the delivery queue, retries and log they need are built (D22). In 6a a form's actions are emails only.
+- **A forms access level.** A site membership can carry forms access, to every form or only some, apart from its content role. A librarian can then handle the Ask a Librarian inbox without being a site admin or editing pages. Site admins have every form.
+- **Submissions live in the site's Durable Object,** where spec §7.6 and §8.2 already put them (D15). One library's patron records stay in its own store, deleting a site deletes them, retention sweeps run on that object's alarm, and no customer shares D1's one writer or its 10 GB. The dashboard reads them through a narrow `Dashboard` RPC entrypoint on the API Worker, over a service binding. That revisits the cloud's "no binding between the Workers" for this one interface, recorded in the cloud's DECISIONS.md.
+
+### 2026-11-15: Forms send with the site's own Resend key and check spam with its own Akismet key, and D20 is amended
+
+**Jeremy's call on November 15, 2026, for now: Vesper neither sends a site's form emails nor runs a challenge on its pages. Each site brings its own keys, set in the dashboard and sealed under the cloud's `SECRETS_KEY`: a Resend API key with a From address on a domain verified in that Resend account, and an Akismet API key. Keys are per site, never per account.** Jeremy didn't want to tie the cloud to extra costs of its own, or to run Turnstile on sites that aren't his, before Phase 5 prices any of it. Later the cloud may send and check spam itself, as other options beside these.
+- **Sending.** Notifications and confirmations go through the site's Resend key, from its own address and sender name, with reply-to set to the submitter on notifications. Mail then comes from the library's own domain, and the sending reputation at stake is the site's, not `mail.vespercms.com`'s. A site without a key gets no form emails: its submissions still reach the inbox, and the dashboard says why. Sign-in, invite and review emails stay on Vesper's own mailer, which also tells a site's admins, at most once a day, when their key stops working.
+- **Spam.** Akismet is a content check on the server (`comment-check`, `comment_type=contact-form`, with the honeypot's name), so a post without JavaScript is checked exactly as one with it, and nothing loads a challenge script on the site's pages. The inbox's Spam and Not spam report back to Akismet. Each form can turn it off, since it sends the submission's text, name, email address and IP to Automattic, which a site's privacy notice must say. The honeypot, the origin check and the per-IP limit apply whether or not there's a key.
+- **D20, amended.** It required Turnstile for confirmations, against a script sending harmless text with strangers' addresses from Vesper's domain. Akismet judges content and doesn't stop that, so instead: confirmations go only through the site's own key, never Vesper's domain; at most 3 a day to one address and 50 a day per site; never to a submission Akismet called spam, or couldn't check, where the site has a key; the template stays the site owner's, merging only fields safe to echo. A site whose own form is abused then harms only its own domain, and only within those caps.
+- **Tier.** Sending from the site's own domain was §13.14's custom sending domain, Agency and Institution only. For now every site has it; which tiers keep it, and whether Vesper sends for sites with no key, is Phase 5's call.
+- **The key and its plan are the site's.** Akismet's pricing puts personal sites on its Personal plan (pay what you can) and commercial ones on Pro ($9.95 a month for 500 checks on one site, billed yearly, on 2026-11-15). Each site enters its own key, so each client signs up for its own.
+- **Vesper's own mail stays on Cloudflare.** The cloud's account is on Workers Paid, and Jeremy is happy for sign-in, invite and review emails to use Email Service there (spec §7.8). What he didn't want is anything added per site in that account, such as a Turnstile widget or a site's form mail.
+- **Rejected for now:** Turnstile, one widget per site made through Cloudflare's API (20 widgets per account on the Free plan, a Cloudflare token for the cloud, and a script on every site's forms); and Email Service for every site's mail (Vesper's domain carrying every client's reputation).
+
+### 2026-11-15: Phase 6a's calls
+
+**Jeremy confirmed the design's other nine calls as recommended on November 15, 2026 (PLAN.md, "Phase 6: Forms (design)"; 2, 3 and 5 are the entry above).**
+- **1. A failed post without JavaScript** is answered with a plain page from the cloud: an error summary, then the form drawn again by core's `formHtml` with the person's values and each error linked. Nothing typed is lost, and it's the markup `<Form>` draws.
+- **4. Emails are sent in `waitUntil`** once the submission is stored, and a failure is retried on the site object's alarm (after 1, 5 and 30 minutes, then 2 and 12 hours), then marked failed. Queues wait for Phase 7.5, which needs them for every integration.
+- **6. Submissions are kept 6 months by default, spam 30 days,** changeable per form. Libraries keep as little about patrons as they can.
+- **7. A paused form refuses,** with words, rather than holding submissions nobody sees.
+- **8. Safe to echo by default:** fields whose `autocomplete` is a name; any other only with `safeToEcho: true`.
+- **9. `<Form>` on a site with no cloud project** warns at build and draws "This form isn't connected yet." in place of its fields.
+- **10. In `astro dev`, the dev API takes the post,** checks it with core's `readSubmission`, says which rule would fire and keeps it in `.vesper/forms/`; nothing is sent. Forms stay a cloud feature on a built site.
+- **11. The kill switch is a D1 flag set by `forms off|on`;** the per-IP limit is the `ratelimits` binding with an hourly count in D1 beside it.
+- **12. Usage is counted, not limited, until Phase 5,** and WCPL is marked comped.
+
+### 2026-11-15: A form is drawn by core's `formHtml`, and read by core's `readSubmission`, everywhere
+
+**`<Form>` at build and the cloud's page after a failed post without JavaScript draw a form with `formHtml`; the cloud, the fake cloud, the dev API and `<Form>`'s script read a post with `readSubmission` and route it with `routeSubmission`.** A page drawn again by the cloud is then the markup the site's page had, and the browser, the dev server and the cloud refuse the same answers in the same words. The checks work from the field models alone, without Zod, since the cloud has only the manifest; refinements are warned about at build.
+
+### 2026-11-15: One body format for posts, form-encoded
+
+**`<Form>`'s script posts the same `application/x-www-form-urlencoded` body a plain form does, with `Accept: application/json`, and the cloud answers it in JSON.** It's a simple request, so there's no CORS preflight, and the endpoint has one parser. The plan's JSON submit would have needed a preflight on every post.
+
+### 2026-11-15: <Form>'s script redraws nothing as a field is left
+
+**Errors are added, and the summary changes, only when the form is sent; a field's error goes as soon as its answer is fixed, while it's typed or chosen.** The first version checked each field on blur. Fixing the last answer and clicking Send moved focus off the field on mousedown, the redraw shifted the page, and the mouseup landed beside the button: the click never happened and nothing was sent (the e2e tests found it, 2026-11-15). A screen reader user meets the same problems from the summary either way.
+
+### 2026-11-15: A post from the cloud's own page goes back to the site's page
+
+**The page the cloud draws after a problem carries the site's page as an absolute `_vesper_page`. A post comes from one of the site's registered origins, or from the cloud's own with a page on one of them (core's `pageOrigin`); anything else goes back to the site's production address.** That page posts from the cloud's origin, which the origin check would otherwise refuse, and `sentAddress` must never send a browser to another site.
 
 ## Process
 

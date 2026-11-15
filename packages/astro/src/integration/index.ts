@@ -17,6 +17,7 @@ import {
 import { writeManifest } from '../node/manifest.ts';
 import { reactProblem, reactVersionFrom } from './react-check.ts';
 import { indexSearch, openSearchXml, type SearchOptions } from './search.ts';
+import { formsPlugin } from './forms-plugin.ts';
 import { searchPlugin } from './search-plugin.ts';
 import { buildRedirects, urlSettings, writeHostRules, type BuildRedirects } from './redirects.ts';
 import { SCHEDULE_PATH, buildInstant, unfilteredPages, writeSchedule } from './schedule.ts';
@@ -226,6 +227,13 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
             sitemap: config.integrations.some((i) => i.name === '@astrojs/sitemap'),
             dev: command === 'dev' && options.search !== false,
           }),
+          formsPlugin({
+            cache,
+            base,
+            root,
+            dev: command === 'dev',
+            cloud: () => cloud,
+          }),
           studioPlugin({
             root,
             cache,
@@ -330,6 +338,11 @@ export default function vesper(options: VesperOptions = {}): AstroIntegration {
         const model = await cache.get();
         writeManifest(model.manifest, fileURLToPath(new URL('_vesper/manifest.json', dir)));
         logger.info('Wrote _vesper/manifest.json');
+        if (model.manifest.forms.length > 0 && !cloud) {
+          logger.warn(
+            "Forms: this build has no cloud project, so each <Form> says it isn't connected yet. Set VESPER_PROJECT, or vesper({ cloud: { project: '…' } }), to the ID from the site's settings in the dashboard.",
+          );
+        }
         // When the site next changes, for the scheduled rebuild and the cloud (spec §6.17).
         const schedule = await writeSchedule({
           root,

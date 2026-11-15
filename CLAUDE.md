@@ -30,6 +30,7 @@ It is the static, git-based sibling of Taproot (`C:\code\taproot`), not a storag
 | washcofair.com port (dogfooding) | Started (2026-11-09) at Jeremy's request: the Washington County Fair's site ported from Sanity in its own private repository (`jeremybise/washcofair-vesper`, `~/code/washcofair-vesper`), installing `vespercms@next`. Twelve of its gaps were decided by Jeremy and built the same day on `claude/washcofair-gaps`: conditional fields, `fields.time()`, image and reference pickers in tag settings, rows named by several fields, backslash line breaks, select labels and `listSort` in lists, `url` functions returning `undefined`, links to other sites in a new tab, `getSingleton`, and no more PDF checks. Outcome in `PLAN.md` ("Dogfooding washcofair.com"). |
 | Studio layout, panes and tabs | Done (2026-10-25), at Jeremy's request between Phase 4's steps: fields as sections, Appearance and pictures, Markdoc settings, then the studio as full-width panes with tabs in the editor (merged from `studio-panes`). With nothing chosen, the collections are the page (2026-10-26). Outcome and open questions in `PLAN.md`, decisions in `DECISIONS.md` |
 | 4.5 Scheduled publish and unpublish | In progress (started 2026-10-26, its calls confirmed 2026-10-21). Built: core's `scheduledEvents`, the status words and times in the site's zone, with DST tests; the build's one instant, filtering in `vesper:content`, unpublish redirects, `schedule.json` and the build's warnings; and the studio's Publish ▾, Schedule dialog, schedule in Details, status words, Scheduled filter and view, and the dev marker; `vesper deploy init` with its SFTP, FTP, Workers (2026-10-28) and build-hook workflows; and the cloud's half here: the schedule in the protocol, `runCloudContract` and the fake, and the studio's held drafts, states and cancelling (2026-10-26). The cloud's own half in `vesper-cloud` (step 6), on production since 2026-10-27. The real-world check (step 7) passed 2026-10-29: live 30 seconds after the time on Netlify and 55 on an SFTP host (Hostinger), against 2 minutes. The docs page is written (2026-10-29). Next: the free tier's real-world check, a scheduled rebuild with the `hook` template on `vesper-github-test`. Progress and design in `PLAN.md`, decisions in `DECISIONS.md` ("Scheduling") |
+| 6a Forms, all but uploads | Started (2026-11-15) at Jeremy's request, ahead of Phase 5 and with Phase 4.5's free-tier check still open, for wcpl.net's six forms: `defineForm`, `<Form>`, the cloud endpoint, the inbox, routing and emails. 6b (uploads to R2, D21) follows, and Phase 6 is done only once 6b lands; webhooks move to Phase 7.5. A forms access level (a per-site grant, for every form or some) lets librarians handle submissions without being site admins. Submissions live in the site's Durable Object, which the dashboard reads through a narrow `Dashboard` RPC over a service binding. Its calls were confirmed the same day: each site sends form email with its own Resend key and checks spam with its own Akismet key, and D20 is amended. Design and calls in `PLAN.md` ("Phase 6: Forms (design)"), decisions in `DECISIONS.md` ("Phase 6a is pulled ahead of Phase 5, for wcpl.net") |
 
 `PLAN.md` holds the short to-do list at its top, then the current phase plan, the next phase's design and the roadmap.
 
@@ -268,6 +269,16 @@ Phase 9 adds `packages/create-vesper`. The docs live in `apps/site`, not a separ
 **Keep a cloud sign-in in progress in `localStorage` under its state, never `sessionStorage`.** An email sign-in link finishes it in the tab the mail client opens (DECISIONS.md, "A sign-in in progress can finish in any tab").
 
 **A cloud draft passes the same checks as a save; the publish gate applies to Publish, never to a draft.** A draft is then always a file the site could build (DECISIONS.md, "A draft passes the same checks as a save").
+
+### Forms
+
+**Draw a form only with core's `formHtml`, and read a post only with `readSubmission` and `routeSubmission`.** `<Form>`, the cloud's page after a failed post, the fake cloud, the dev API and the script must agree on markup and on what they refuse (DECISIONS.md, "A form is drawn by core's `formHtml`…").
+
+**A confirmation repeats back only what `mergeConfirmation` fills: fields `safeToEcho` says are safe.** D20; a template can't be made to send a stranger the sender's words.
+
+**`<Form>`'s script adds errors and changes the summary only on submit.** A redraw as a field is left moved Send under a click, and the click missed (DECISIONS.md, "<Form>'s script redraws nothing as a field is left").
+
+**Send a browser back from a post only with `sentAddress`, to an origin the site registered.** The endpoint must never redirect elsewhere.
 
 ### Vesper's own site and agent instructions
 

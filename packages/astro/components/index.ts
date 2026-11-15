@@ -1,7 +1,7 @@
 /*
  * `vespercms/components`: `<Img>`, and `getImg()` for the places an
  * `<img>` can't go, such as `og:image` (spec §6.6.5); `<Search>` and
- * `<SearchHead>` (spec §6.19). Shipped as source, like the `/admin` page,
+ * `<SearchHead>` (spec §6.19); `<Form>` (spec §6.13). Shipped as source, like the `/admin` page,
  * for the site's own Astro to compile.
  */
 import type { GetImageResult } from 'astro';
@@ -13,6 +13,7 @@ import { resolveRootImage } from './root-images.ts';
 export { default as Img } from './Img.astro';
 export { default as Search } from './Search.astro';
 export { default as SearchHead } from './SearchHead.astro';
+export { default as Form } from './Form.astro';
 export type { CroppedImageProps, ImageFieldValue, ImgProps, RatioInput } from 'vespercms/images';
 
 /**

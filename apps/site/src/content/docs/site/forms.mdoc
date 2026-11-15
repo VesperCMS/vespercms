@@ -1,0 +1,135 @@
+---
+title: Forms
+summary: Define a form in code, put it on a page with one component, and handle what people send in your site's dashboard. Forms are part of Vesper Cloud.
+---
+
+A form's fields live in your code, in `src/forms.config.ts`. Where its submissions go (who's notified, routing rules, the confirmation email) lives in your site's dashboard, so a site admin can change it without a deploy. Forms are part of Vesper Cloud: a built site posts each form to the cloud, which checks it, keeps it and sends its emails.
+
+## Define a form
+
+```ts
+// src/forms.config.ts
+import { z } from 'astro/zod';
+import { defineForm } from 'vespercms/forms';
+
+export const forms = {
+  contact: defineForm({
+    title: 'Contact us',
+    schema: z.object({
+      name: z.string().min(1).meta({ label: 'Your name', autocomplete: 'name' }),
+      email: z.email().meta({ label: 'Email', autocomplete: 'email' }),
+      department: z.enum(['admissions', 'financial-aid', 'other']).meta({
+        label: 'Department',
+        widgetOptions: {
+          labels: { admissions: 'Admissions', 'financial-aid': 'Financial aid', other: 'Something else' },
+        },
+      }),
+      message: z.string().min(10).max(5000).meta({ label: 'Message', widget: 'textarea' }),
+    }),
+    successMessage: 'Thanks, we’ll be in touch.',
+    confirmation: { emailField: 'email' },
+  }),
+};
+```
+
+Import Zod from `astro/zod`. Each key in `forms` is the form's name, which `<Form name>` uses and which is part of its address, so keep it to letters, digits, `-` and `_`.
+
+| Option | What it does |
+|---|---|
+| `schema` | A `z.object()` of the form's fields. |
+| `title` | The form's name in the dashboard and in emails. Its key when absent. |
+| `successMessage` | Shown once the form is sent. "Thanks. Your message was sent." when absent. |
+| `submitLabel` | The button's words. "Send" when absent. |
+| `confirmation` | `{ emailField }` turns on the confirmation email to that field's address. Its words are set in the dashboard. |
+
+### Fields
+
+| Schema | Drawn as |
+|---|---|
+| `z.string()` | A text field. `widget: 'textarea'` for several lines, `'tel'` for a phone number. |
+| `z.email()`, `z.url()` | An email or web address field. |
+| `z.number()` | A number field, with `min`, `max` and `int()` as limits. |
+| `z.boolean()` | A checkbox. |
+| `z.enum([...])` | Radio buttons; `widget: 'select'` for a list. |
+| `z.array(z.enum([...]))` | Checkboxes. `.min(1)` asks for at least one. |
+| `z.string()` with `widget: 'date'` or `'time'` | A date or time field. |
+| `z.object({ ... })` | A group of fields under a heading of its own. |
+
+Each field takes `label`, `description` (help shown under the label), `autocomplete` and `widget` through `.meta()`. A choice's words come from `widgetOptions.labels`.
+
+The build stops a form it can't draw: a field named `_vesper_page`, `_vesper_hp`, `_vesper_manifest` or `cf-turnstile-response`, which `<Form>` keeps for itself; a field that isn't one of the kinds above, such as an image or a reference; a file upload, which isn't available yet; and a `confirmation.emailField` that isn't an email field.
+
+The cloud checks each submission against the field's type, length, format and choices. It never runs a `.refine()` or a custom check, so the build warns about those: keep them for what only your own code reads. A text field the schema leaves open is held to 500 characters, or 10,000 in a textarea.
+
+## Put it on a page
+
+```astro
+---
+import { Form } from 'vespercms/components';
+---
+<h2>Send us a message</h2>
+<Form name="contact" />
+```
+
+`<Form>` takes `name`, and optionally `id` (for a second copy of one form on a page) and `strings` (Vesper's own words on the form, such as `{ submit: 'Envoyer', required: '(obligatoire)' }`, for a page in another language).
+
+It inherits your site's font and colours. Theme it with `--vesper-form-error` (error text and the summary's border), `--vesper-form-border` (the fields' borders) and `--vesper-form-radius`.
+
+## What visitors get
+
+- Every field has a real label, and a required field says "(required)" in words. Help and errors are joined to their field for screen readers, and choices are grouped under their question.
+- **Without JavaScript,** the form posts to the cloud. Once it's sent, the browser comes back to the same page, at the thanks message. If an answer needs another look, the cloud shows a plain page with a summary of what's wrong and the form again, with everything typed kept.
+- **With JavaScript,** answers are checked when the form is sent, with the same checks the cloud runs, and an error goes as soon as its answer is fixed. A problem shows beside its field and in a summary at the top that takes focus, each item a link to its field. The form posts without leaving the page, and the thanks message takes focus. The script is Vesper's own, about 5 KB.
+- A paused form says "This form isn’t taking submissions right now." as soon as someone moves into it.
+- A hidden field catches bots that fill in everything. It's hidden from both eyes and screen readers, and Tab never reaches it.
+
+Vesper checks the form's markup, but no automated check finds everything: try your form with a keyboard and a screen reader too.
+
+## Connect it to the cloud
+
+A form posts to the cloud only in a site built with its project ID:
+
+```js
+// astro.config.mjs
+vesper({ cloud: { project: 'site_…' } });
+```
+
+Without one, each `<Form>` says "This form isn’t connected yet." in place of its fields, and the build warns, so you can build and review a site before it's set up.
+
+The cloud takes a post only from one of the site's registered addresses (its production and preview addresses in the dashboard), so register every address your site's pages run on.
+
+In `astro dev`, a form posts to the dev server instead. It checks the submission as the cloud would, keeps it in `.vesper/forms/<name>.jsonl` on your machine and sends nothing, so you can try a form, with JavaScript or without, before the site is connected.
+
+## In the dashboard
+
+Each site's **Forms** page lists its forms, how many submissions are new, and whether any is paused.
+
+### Email and spam
+
+Form emails go out through **your own Resend account**, from your own domain, and spam is checked with **your own Akismet key**. Set both on the site's **Email and spam** page:
+
+- **Resend:** an API key (a sending-only key for one domain is enough), the address to send from, on a domain verified in that Resend account, and a sender name. Saving sends a test email to you.
+- **Akismet:** an API key, checked when you save it. Akismet sees each submission's text, name, email address and IP address, so say so in your site's privacy notice. A form can turn it off in its settings.
+
+Keys are stored encrypted and never shown again; the page shows who set each one and when. Without a Resend key, submissions still reach the inbox, but no email is sent. If a key stops working, each submission's page says its emails failed, and the site's admins hear about it from Vesper once a day.
+
+### Settings
+
+A form's **Settings** set:
+
+- **Who's notified.** Notifications hold every answer, and replying to one replies to the person who sent it.
+- **Routing rules**, as sentences: "When **Department** is **Admissions**, notify **admissions@college.edu**." A rule compares one field with *is*, *is not*, *contains*, *is one of*, *is empty* or *is not empty*. The first rule that matches wins, or every rule that matches, and anything no rule catches goes to who's notified. A rule can also mark what it catches as spam.
+- **The confirmation email,** when the form has `confirmation.emailField`. It can repeat back only fields that are safe to echo: by default, fields whose `autocomplete` is a name. Mark another with `.meta({ safeToEcho: true })`, or a name field with `false`. A confirmation goes to one address at most 3 times a day, a site sends at most 50 a day, and none is sent for spam.
+- **Reply-to** for confirmations, **Pause**, and **how long submissions are kept**: 6 months by default, spam 30 days.
+
+**Test a submission** shows which rule would fire for sample answers, and who'd be notified, sending nothing.
+
+### The inbox
+
+A form's inbox lists its submissions, newest first, as **New**, **Handled** or **Spam**, with search across every answer. Mark them handled or delete them a page at a time, or export what's shown as a spreadsheet (CSV). A submission's own page shows its answers, what Akismet said, the rule that fired and whether each email was sent, and moves it to **Spam** or back.
+
+A submission past its time is deleted for good. There's no bin.
+
+### Who sees submissions
+
+Site admins see every form. Anyone else can be given a site's forms, every form or only some, apart from what they edit: a librarian can answer the Ask a Librarian inbox without being able to change pages. Someone with only forms access sees those forms in the dashboard and nothing else, and can't sign in to the studio. Every read of a submission, every export and every change is in the site's audit log.

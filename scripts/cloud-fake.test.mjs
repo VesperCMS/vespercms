@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FAIR_AT, eventFile, runCloudContract } from '@vespercms/core/cloud-testing';
+import { CONTACT_FORM, FAIR_AT, eventFile, runCloudContract } from '@vespercms/core/cloud-testing';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createCloudFake } from './cloud-fake.mjs';
 import { createGitHubFake } from './github-fake.mjs';
@@ -37,6 +37,7 @@ const manifest = {
       },
     },
   ],
+  forms: [CONTACT_FORM],
 };
 
 const ORIGIN = 'https://site.example';
@@ -105,6 +106,7 @@ runCloudContract(
       },
       advance: (ms) => cloud.advance(ms),
       rebuilds: async () => cloud.state.schedule.rebuilds.map(({ at }) => ({ at })),
+      forms: cloud.forms,
     };
   },
   { describe, it, equal: (actual, expected, message) => expect(actual, message).toEqual(expected) },

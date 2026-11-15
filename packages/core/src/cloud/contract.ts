@@ -3,6 +3,7 @@ import { gitBlobSha } from '../storage/git-blob-sha.ts';
 import type { Member } from './grants.ts';
 import { CloudClient, CloudError, authorizeUrl, createPkce } from './client.ts';
 import { createDpopKey } from './dpop.ts';
+import { formsContract, type FormsFixture } from './forms-contract.ts';
 import {
   encodeChange,
   fromBase64,
@@ -72,7 +73,11 @@ export type CloudFixture = {
   advance: (ms: number) => Promise<void>;
   /** The rebuilds the cloud asked the host or the site's workflow for, oldest first, each with the time it was for. */
   rebuilds: () => Promise<{ at: string }[]>;
+  /** The site's forms (`forms-contract.ts`): its deployed manifest has `CONTACT_FORM`. */
+  forms: FormsFixture;
 };
+
+export { CONTACT_FORM, type FormsFixture, type SentFormEmail } from './forms-contract.ts';
 
 const encoder = new TextEncoder();
 const text = (value: string) => encoder.encode(value);
@@ -686,5 +691,7 @@ export function runCloudContract(
       equal(draft?.id, id, 'the draft is kept');
       equal(draft?.held, undefined, 'and waits no more');
     });
+
+    formsContract(create, t);
   });
 }

@@ -382,6 +382,42 @@ vesper({ cloud: { project: 'site_…' } })
 `astro dev` stays local mode; the cloud is on in built sites. A site can have GitHub mode too: the sign-in screen then offers both. Roles and grants are set per person in the dashboard, not in `vesper.config.ts`.
 
 
+## Forms (spec §6.13, `vespercms/forms`)
+
+A form's fields are code, in `src/forms.config.ts`; where its submissions go (who's notified, routing rules, the confirmation email) is set in the site's dashboard. Forms are part of Vesper Cloud.
+
+```ts
+// src/forms.config.ts
+import { z } from 'astro/zod';
+import { defineForm } from 'vespercms/forms';
+
+export const forms = {
+  contact: defineForm({
+    title: 'Contact us',
+    schema: z.object({
+      name: z.string().min(1).meta({ label: 'Your name', autocomplete: 'name' }),
+      email: z.email().meta({ label: 'Email', autocomplete: 'email' }),
+      message: z.string().min(10).meta({ label: 'Message', widget: 'textarea' }),
+    }),
+    successMessage: 'Thanks, we’ll be in touch.',
+    confirmation: { emailField: 'email' },
+  }),
+};
+```
+
+```astro
+---
+import { Form } from 'vespercms/components';
+---
+<Form name="contact" />
+```
+
+- **Fields:** text (`textarea`, `email`, `url`, `tel`), numbers, dates and times, a choice (radio, or `widget: 'select'`), several choices (`z.array(z.enum([...]))`, checkboxes), yes or no (a checkbox), and `z.object()` groups. The build refuses names `<Form>` keeps (`_vesper_page`, `_vesper_hp`, `_vesper_manifest`, `cf-turnstile-response`), kinds it can't draw, and uploads (Phase 6b), and warns that a `.refine()` never runs on a submission.
+- **Without JavaScript** the form posts to the cloud, which sends the browser back to the page's sent message, or shows the form again with the answers kept and each problem linked. **With JavaScript** (Vesper's own script, about 5 KB gzipped) it checks answers with the cloud's own checks, posts without leaving the page, and moves focus to the error summary or the sent message.
+- **Theme it** with `--vesper-form-error`, `--vesper-form-border` and `--vesper-form-radius`; it inherits the site's font and colours. `strings` changes Vesper's own words on it.
+- **Without a cloud project**, each `<Form>` says "This form isn’t connected yet." and the build warns. **In `astro dev`** a post goes to the dev server, which checks it, keeps it in `.vesper/forms/<name>.jsonl` and sends nothing.
+
+
 ## The `vesper` command
 
 The package installs a `vesper` command (`src/node/cli.ts`). It loads the site's configs through the site's own Vite, like the integration.

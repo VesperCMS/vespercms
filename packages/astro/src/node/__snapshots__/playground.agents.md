@@ -61,6 +61,15 @@ MDX bodies may use these components, which the studio edits as blocks and checks
   - `type`: one of `note`, `warning`, `tip`. Default `"note"`.
   - `title`: text. Optional.
 
+### Forms
+
+`src/forms.config.ts` defines this site’s forms with `defineForm` from `vespercms/forms`, and a page draws one with `<Form name="…" />` from `vespercms/components`. Submissions go to Vesper Cloud.
+
+- **The fields are code; where submissions go is not.** Who’s notified, routing rules, the confirmation email and pausing are set in the site’s dashboard. Don’t add them to the form.
+- **Renaming a field or a choice changes what the cloud receives.** Routing rules in the dashboard name fields and choices, so a rename can stop a rule from matching. Say so when you rename one.
+- **The cloud checks only a field’s type, length, format and choices.** A `.refine()` never runs on a submission. Fields named `_vesper_page`, `_vesper_hp`, `_vesper_manifest` or `cf-turnstile-response` are refused.
+- **Forms:** `contact`.
+
 ### Collections
 
 In URL patterns, `:id` is the entry’s ID (its path without the extension), `:path` is the ID without a trailing `/index`, `:slug` is its slug, and `:field` is that field’s value.

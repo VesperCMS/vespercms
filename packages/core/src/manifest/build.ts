@@ -18,6 +18,7 @@ import { humanize } from '../schema/humanize.ts';
 import { globMatcher } from '../collections/entries.ts';
 import type { NativeTarget } from '../urls/hosts.ts';
 import { DEFAULT_URL_SETTINGS, type UrlEntry, type UrlSettings } from '../urls/pattern.ts';
+import { formDiagnostics } from '../forms/diagnostics.ts';
 import { walkSchema } from '../schema/walk.ts';
 import { searchHiddenField } from '../search/fields.ts';
 import { resolveWidgets, type WidgetDefinition } from '../widgets/resolve.ts';
@@ -193,6 +194,8 @@ export async function buildManifest(input: ManifestInput): Promise<Manifest> {
       options: plainData(form.options ?? {}),
     };
   });
+  for (const [i, form] of forms.entries())
+    diagnostics.push(...formDiagnostics(form, input.forms?.[i]?.schema));
 
   const images = imagesOf(input.config?.images);
   diagnostics.push(...ratioDiagnostics(collections, images.ratios));

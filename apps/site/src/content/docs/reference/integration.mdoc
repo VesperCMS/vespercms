@@ -94,6 +94,8 @@ vesper({ cloud: { project: 'site_…' } });
 
 `cloud: true` reads the project ID from `VESPER_PROJECT`.
 
+A site built with its project ID also posts its [forms](/docs/site/forms/) to the cloud. Without one, each `<Form>` says it isn't connected yet, and the build warns.
+
 ## vesper.config.ts
 
 `vesper.config.ts` sits next to `astro.config.mjs` (`.mts`, `.js` and `.mjs` work too). It holds how the studio presents your content and where entries live on the site, never field definitions. Every key is optional. A key Vesper doesn't know is ignored with a warning, so a config written for a newer version still loads, and a value of the wrong type is reported with what it should be. A change to the file restarts the dev server.
