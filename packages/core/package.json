@@ -11,7 +11,7 @@
   },
   "type": "module",
   "sideEffects": false,
-  "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/. ./testing is the storage contract suite other adapters run; ./cloud-testing is the cloud API's contract suite, which the fake and the real cloud run. ./urls is URL patterns, page trees and redirects without the parsers, for a site's own pages. ./images is aspect ratios, focal points and crops, shared by the studio, <Img> and the build.",
+  "//exports": "@vesper/source points workspace tooling at TypeScript source (set by the repo's .npmrc and Vite config); everyone else gets dist/. ./testing is the storage contract suite other adapters run; ./cloud-testing is the cloud API's contract suite, which the fake and the real cloud run. ./urls is URL patterns, page trees and redirects without the parsers, for a site's own pages. ./images is aspect ratios, focal points and crops, shared by the studio, <Img> and the build. ./forms is what <Form>, its script, the dev API and the cloud share: reading, routing and drawing a form, small enough for the browser.",
   "exports": {
     ".": {
       "@vesper/source": "./src/index.ts",
@@ -42,6 +42,11 @@
       "@vesper/source": "./src/images/index.ts",
       "types": "./dist/images/index.d.ts",
       "default": "./dist/images/index.js"
+    },
+    "./forms": {
+      "@vesper/source": "./src/forms/index.ts",
+      "types": "./dist/forms/index.d.ts",
+      "default": "./dist/forms/index.js"
     }
   },
   "files": [

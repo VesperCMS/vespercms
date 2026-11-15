@@ -345,3 +345,7 @@ export { fieldModelIssues } from './studio/field-checks.ts';
 
 // The cloud: grants, DPoP, drafts and the API the studio speaks (spec §6.9, §7).
 export * from './cloud/index.ts';
+
+// Forms (spec §6.13, §7.6): `./forms` is the browser's subset; the build's diagnostics are here.
+export * from './forms/index.ts';
+export { formDiagnostics } from './forms/diagnostics.ts';
