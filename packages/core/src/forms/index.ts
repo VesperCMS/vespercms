@@ -22,6 +22,8 @@ export { readSubmission, type ReadSubmission, type SubmissionInput } from './rea
 export { conditionHolds, routeSubmission, valueAt } from './route.ts';
 export {
   answerText,
+  answersText,
+  submitterAddress,
   echoableFields,
   mergeConfirmation,
   safeToEcho,

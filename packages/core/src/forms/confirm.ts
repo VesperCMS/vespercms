@@ -1,7 +1,7 @@
 import type { DataObject } from '../files/equal.ts';
 import type { FieldModel } from '../field-model.ts';
 import type { FormManifest } from '../manifest/types.ts';
-import { fieldName, formLeaves, optionLabel } from './fields.ts';
+import { confirmationField, fieldName, formControl, formLeaves, optionLabel } from './fields.ts';
 import { valueAt } from './route.ts';
 import type { FormTemplate } from './types.ts';
 
@@ -87,4 +87,31 @@ export function answerText(field: FieldModel, value: unknown): string {
   if (typeof value === 'string') return field.kind === 'string' ? value : optionLabel(field, value);
   if (typeof value === 'number') return String(value);
   return '';
+}
+
+/**
+ * Every answer as "Label: answer" lines, in the form's order, for a
+ * notification and its text version. Fields left empty are left out.
+ */
+export function answersText(form: FormManifest, values: DataObject): string {
+  return formLeaves(form.fields)
+    .flatMap((field) => {
+      const answer = answerText(field, valueAt(values, fieldName(field)));
+      if (answer === '') return [];
+      return answer.includes('\n') ? [`${field.label}:\n${answer}`] : [`${field.label}: ${answer}`];
+    })
+    .join('\n\n');
+}
+
+/**
+ * The submitter's address, for a notification's reply-to and the
+ * confirmation: `confirmation.emailField`'s answer, else the first email
+ * field's. Null when there's none.
+ */
+export function submitterAddress(form: FormManifest, values: DataObject): string | null {
+  const named = confirmationField(form);
+  const fields = formLeaves(form.fields).filter((field) => formControl(field) === 'email');
+  const field = (named ? fields.find((one) => fieldName(one) === named) : undefined) ?? fields[0];
+  const value = field ? valueAt(values, fieldName(field)) : undefined;
+  return typeof value === 'string' && value !== '' ? value : null;
 }
