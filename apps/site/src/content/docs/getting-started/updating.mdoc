@@ -6,7 +6,7 @@ summary: Update one package, check the build, refresh your agent instructions an
 Vesper's packages share one version number, so there's one thing to update: `vespercms`. It brings the studio and the rest of Vesper with it, always at the same version.
 
 {% callout type="note" %}
-Vesper isn't on npm yet. This is how updating works once it is.
+Until Vesper's first release, its versions are prereleases under npm's `next` tag, and npm's `latest` tag doesn't follow them. Update with `@next`, as below.
 {% /callout %}
 
 ## Update the package
@@ -14,7 +14,7 @@ Vesper isn't on npm yet. This is how updating works once it is.
 In your site's folder:
 
 ```sh
-npm install vespercms@latest
+npm install vespercms@next
 ```
 
 Each release's changes are in the package's `CHANGELOG.md`, one plain sentence per change. Read them before you deploy, especially after a jump of more than one version.
@@ -49,4 +49,4 @@ The cloud itself is updated by Vesper, not by you. The relay you deployed for Gi
 
 - **Astro:** Vesper supports the current major version of Astro and the one before it, 7 and 6 today. Before moving your site to a new major version, check that your Vesper version supports it.
 - **React:** the studio needs React 19, the copy your site installs. With an older one, `astro dev`, and `astro build` when it builds `/admin`, stop with a message that says which version to install.
-- **Optional packages:** `lucide` is needed only when `vesper.config.ts` names collection icons, and `sharp` is the copy Astro's own image service already uses. Update them as you would any other dependency.
+- **Optional packages:** `lucide` is needed only for icons, when `vesper.config.ts` names collection icons or your schema has a `fields.icon()` field, and `sharp` is the copy Astro's own image service already uses. Update them as you would any other dependency.
