@@ -73,7 +73,7 @@ A paid cloud service adds what static sites can't do on their own:
 | D17 | No cloud-rendered previews at launch. Sites without an SSR-capable host get studio preview, local preview and branch-deploy links (§6.11). Revisit after launch based on demand. | Decided |
 | D18 | Scheduling is **time-correct at build**. Entries carry `publishAt` / `unpublishAt`, and the `vesper:content` helpers filter by them during every build. Any rebuild at or after the scheduled time therefore produces the right site, on any host, with or without the cloud. The cloud's job is only to **trigger a rebuild at the exact time**. | Decided |
 | D19 | **Vesper reports accessibility; it never claims compliance and never ships an overlay.** Checks find many problems, not all. The UI and docs say so plainly. Vesper never injects any front-end "accessibility widget" or overlay script into sites. | Decided |
-| D20 | **Confirmation emails can't be turned into a spam cannon.** Forms with confirmation emails require Turnstile. Each recipient address is rate-limited. The confirmation template is fixed by the site owner, and by default it never repeats the submitter's free-text fields back to them. | Decided |
+| D20 | **Confirmation emails can't be turned into a spam cannon.** A form sends confirmation emails only through the site's own sending key and domain, never Vesper's. Each recipient address is rate-limited, and each site has a daily cap. The confirmation template is fixed by the site owner, and by default it never repeats the submitter's free-text fields back to them. | Decided (amended November 15, 2026: it required Turnstile) |
 | D21 | **Uploaded files are private.** They are stored in R2 under per-site keys and never publicly reachable. Site members download them only through short-lived signed links from the dashboard. Retention follows the form's submission retention. | Decided |
 | D22 | Integrations are **one event-and-delivery system** shared by forms, comments and publishing. Each integration has: an event it reacts to, a destination, a field mapping, and a delivery log. Deliveries are queued, retried and visible. Nothing fails silently. | Decided |
 | D23 | **Site search is built into the open-source integration and is free.** The integration builds a Pagefind index at build time, so search is plain static files that work on any host (D16), with no service to pay for or keep running. The cloud adds nothing required for search. | Decided |
@@ -686,7 +686,7 @@ import { Form } from 'vespercms/components';
 - On a failed submit, an error summary at the top that lists each error as a link to its field, and focus moves to that summary.
 - `autocomplete` attributes taken from the field meta.
 - Groups use `fieldset` and `legend`.
-- Honeypot is hidden from both eyes and assistive tech. Turnstile uses managed mode.
+- Honeypot is hidden from both eyes and assistive tech. Spam is checked on the server (§7.6), so the form needs no challenge and works the same without JavaScript.
 - Visible focus, no placeholder-as-label, and every state works at 200% zoom and on a 320px-wide screen.
 
 **Behavior**
@@ -1159,7 +1159,7 @@ Permission evaluation lives in `core` and is shared by the API and the UI. The U
 ### 7.6 Forms backend
 
 **Request path**
-1. Turnstile check.
+1. Spam checks: the honeypot and the per-IP limit, then (after step 2) Akismet with the site's own key.
 2. Schema validation.
 3. File checks: type by content sniffing, not just extension; size; count.
 4. Write the submission to the SiteDO and the files to R2.
@@ -1177,7 +1177,7 @@ Permission evaluation lives in `core` and is shared by the API and the UI. The U
 **Confirmation emails**
 - One template per form, plus optional per-route overrides.
 - Templates use `{fieldName}` merge tokens. Only fields marked `safeToEcho` in the form schema can be merged; by default that's just name fields (D20).
-- **Sender:** "Site Name via Vesper" from the cloud's sending domain, with the site's chosen reply-to address. On higher tiers, sending from the client's own verified domain is possible (with DNS records shown in the dashboard).
+- **Sender:** the site's own Resend key, from an address on the site's own verified domain, with the site's sender name and chosen reply-to address (decided November 15, 2026, for now; see §13.14). A site without a key gets no form emails; its submissions still reach the inbox.
 - Plain, accessible HTML with a text alternative.
 
 **Uploads**
@@ -1191,7 +1191,7 @@ Permission evaluation lives in `core` and is shared by the API and the UI. The U
 - New: a submission's detail view shows which route fired and the delivery status of each action.
 
 **Spam controls**
-- Turnstile, honeypot and per-IP rate limiting.
+- Honeypot, per-IP rate limiting, and Akismet with the site's own key (decided November 15, 2026, for now). Turnstile, or the cloud's own checks, may come later as another option.
 - Per-recipient rate limits for confirmation emails (D20).
 - Per-form pause switch, plus the global kill switch.
 
@@ -1568,7 +1568,7 @@ Confirm D13 and D15 before starting.
 
 ### Phase 6: Forms
 Pulled ahead of Phase 5 on November 15, 2026, at Jeremy's request, for wcpl.net, while Phase 4.5's free-tier check is still open. It's built in two parts, and it's done only once both are.
-- **6a:** `defineForm`, `<Form>`, the cloud endpoint, Turnstile, the inbox, notifications, pause and kill switches, conditional routing with the test panel, confirmation emails with the D20 protections, the expanded inbox detail view, and forms access for site members (§7.5).
+- **6a:** `defineForm`, `<Form>`, the cloud endpoint, spam checks, the inbox, notifications, pause and kill switches, conditional routing with the test panel, confirmation emails with the D20 protections, the expanded inbox detail view, and forms access for site members (§7.5).
 - **6b:** file uploads (D21).
 - Webhooks moved to Phase 7.5 on November 15, 2026.
 - Submissions live in the site's Durable Object (§8.2). The dashboard reads them through a narrow RPC interface on the API's Worker.
@@ -1678,7 +1678,7 @@ Moved after instant previews on October 26, 2026 (it was Phase 6.5).
 11. **Cloud-rendered previews for static-only hosts**: decided October 19, 2026: **deferred until after launch (D17)**; revisit if customers ask. If built, it would be a paid add-on and the one exception to D9.
 12. **Conditional form fields**: decided October 19, 2026: **forms stay static, and routing covers the cases** (Phase 6). Show/hide fields move to "Considered, not adopted" below.
 13. **Scan engine and caps**: decided October 19, 2026, as direction: measure Cloudflare Browser Rendering first, and set each plan's page caps from measured cost in Phase 8.5. **Withdrawn October 26, 2026:** cloud scans aren't adopted (§6.18), so there's no engine to choose.
-14. **Custom sending domains** for confirmation emails: decided October 19, 2026: **Agency and Institution.** The Site plan sends from Vesper's domain with reply-to set to the site owner.
+14. **Custom sending domains** for confirmation emails: decided October 19, 2026: **Agency and Institution.** The Site plan sends from Vesper's domain with reply-to set to the site owner. **Changed for now, November 15, 2026:** every site's form emails go through its own Resend key, from its own domain, and Vesper sends none of them (D20). Which tiers keep that, and whether Vesper sends for sites without a key, is decided in Phase 5.
 
 ### Considered, not adopted (do not build)
 
