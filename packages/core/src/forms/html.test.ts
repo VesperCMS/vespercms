@@ -91,6 +91,8 @@ describe('formHtml (spec §6.13)', () => {
     );
     expect(body.querySelector('form')?.getAttribute('method')).toBe('post');
     expect(body.querySelector('#vesper-form-contact-sent')?.getAttribute('tabindex')).toBe('-1');
+    // Site search leaves the form's own words out.
+    expect(body.querySelector('.vesper-form')?.getAttribute('data-pagefind-ignore')).toBe('all');
   });
 
   it('draws a failed post back filled in, each error linked from the summary', async () => {

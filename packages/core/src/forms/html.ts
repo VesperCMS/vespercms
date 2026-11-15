@@ -29,6 +29,9 @@ import {
  * - autocomplete from the meta, and the native required, type, length and
  *   pattern, so a browser without the script still checks the easy things;
  * - a honeypot hidden from eyes and assistive technology alike.
+ *
+ * Site search leaves it out (`data-pagefind-ignore`): its labels, the honeypot's
+ * and the hidden thanks message aren't the page's content.
  */
 
 export type FormStrings = {
@@ -101,7 +104,7 @@ export function formHtml(form: FormManifest, options: FormHtmlOptions): string {
   const strings = { ...FORM_STRINGS, ...options.strings };
   const prefix = options.id ?? formId(form.name);
   const wrapper = (state: string, inner: string) =>
-    `<div class="vesper-form" id="${escapeHtml(prefix)}" data-vesper-form="${escapeHtml(form.name)}" data-vesper-form-state="${state}">${inner}</div>`;
+    `<div class="vesper-form" id="${escapeHtml(prefix)}" data-vesper-form="${escapeHtml(form.name)}" data-vesper-form-state="${state}" data-pagefind-ignore="all">${inner}</div>`;
   if (options.action === null)
     return wrapper(
       'not-connected',
