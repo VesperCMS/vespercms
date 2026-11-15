@@ -38,7 +38,9 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [x] Calls 2, 3 and 5, Jeremy's own way: each site's own Resend and Akismet keys, and D20 amended (2026-11-15).
 - [x] Jeremy confirmed the other nine calls as recommended (2026-11-15).
 - [x] Build this repository's half on `claude/forms-6a` (2026-11-15), then the cloud's (2026-11-15, in `vesper-cloud`). See "Phase 6a: progress".
-- [ ] Jeremy's OK for the cloud's new bindings (the app's service binding to the API, the `ratelimits` binding), pushing both branches, and the staging deploy; then the end-to-end check on staging.
+- [x] Jeremy's OK (2026-11-15) for the cloud's new bindings, pushing both branches, and the staging deploy: done that day. Staging is migrated and deployed; `SECRETS_KEY` isn't set there yet.
+- [ ] Open the PRs, so CI runs (it runs only on pull requests in both repositories).
+- [ ] The end-to-end check on staging: `SECRETS_KEY` on both staging Workers (Jeremy's), and a site with forms that the staging cloud can read.
 - [ ] Release `0.1.0-next.3`. wcpl.net launches on it.
 
 **Next phase**
@@ -94,7 +96,7 @@ Started 2026-11-15, the day its calls were confirmed. The steps are the design's
 - **The cloud's own page posts from the cloud's origin.** The page that draws a form again after a problem would have been refused by the origin check. It now carries the site's page whole in `_vesper_page`, and the cloud accepts its own origin only with a page on one of the site's (DECISIONS.md, "A post from the cloud's own page goes back to the site's page").
 - **Akismet's spam and not-spam reports need the submitter's IP address**, which the cloud keeps only as a salted hash. Spam and Not spam in the inbox change the status and tell Akismet nothing. **For Jeremy:** keep the IP address with a checked submission (deleted with it) so the inbox can train Akismet, or leave it as it is.
 
-**Checks:** typecheck, lint and Vitest pass (4,760 tests); the forms e2e passes against the fake cloud. Still to run before the release: `check:dist`, the whole e2e suite, and the Windows workflow (`gh workflow run windows.yml`, which needs the branch pushed). A manual keyboard pass is noted for the PR; the e2e tests check Tab's order and the honeypot. Jeremy's screen reader pass is open.
+**Checks (2026-11-15):** typecheck, lint, Vitest (4,760 tests), `check:dist`, both site builds and the whole e2e suite pass locally (one search test flaked once under the suite's load and passed 36 of 36 on its own). The Windows workflow passed on the pushed branch (run 43746532290). In `vesper-cloud`, the forms pages and the playground's form pass e2e against the real API and app. A manual keyboard pass is noted for the PR; the e2e tests check Tab's order and the honeypot. Jeremy's screen reader pass is open.
 
 ## Phase 6: Forms (design)
 
