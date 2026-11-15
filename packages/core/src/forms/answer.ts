@@ -51,3 +51,18 @@ export function backAddress(page: string | null, origin: string): string {
   address.hash = '';
   return address.href;
 }
+
+/**
+ * The site's origin for a post from the cloud's own page (the form drawn
+ * again after a problem): that page posts from the cloud's origin, and
+ * carries the site's page as an absolute `_vesper_page`. Null unless that
+ * page is on one of the site's registered origins.
+ */
+export function pageOrigin(page: string | null, origins: readonly string[]): string | null {
+  try {
+    const origin = new URL(page ?? '').origin;
+    return origins.includes(origin) ? origin : null;
+  } catch {
+    return null;
+  }
+}

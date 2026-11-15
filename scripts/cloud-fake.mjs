@@ -50,6 +50,7 @@ import {
   formPage,
   formTitle,
   mergeConfirmation,
+  pageOrigin,
   readSubmission,
   routeSubmission,
   sentAddress,
@@ -797,8 +798,12 @@ export function createCloudFake(options) {
       return json(request, 200, { paused: paused() });
     const form = (manifest.forms ?? []).find((one) => one.name === name);
     if (!form || request.method !== 'POST') return refuse('not-found');
-    const origin = request.headers.get('origin');
-    if (!origin || !site.origins.includes(origin)) return refuse('refused');
+    // A post comes from one of the site's pages, or from the cloud's own page
+    // that drew the form again, which carries the site's page whole.
+    const from = request.headers.get('origin');
+    if (!from) return refuse('refused');
+    const own = from === new URL(request.url).origin;
+    if (!own && !site.origins.includes(from)) return refuse('refused');
     const body = new Uint8Array(await request.arrayBuffer());
     if (body.byteLength > MAX_FORM_BODY) return refuse('too-large');
     if (paused().includes(name)) return refuse('paused');
@@ -808,6 +813,7 @@ export function createCloudFake(options) {
     forms.posts.set(address, [...recent, Date.now()]);
 
     const read = readSubmission(form, new URLSearchParams(new TextDecoder().decode(body)));
+    const origin = own ? (pageOrigin(read.page, site.origins) ?? site.origins[0] ?? from) : from;
     const asJson = wantsJson(request.headers.get('accept'));
     const done = () =>
       asJson
@@ -830,7 +836,7 @@ export function createCloudFake(options) {
         formPage(form, {
           action: new URL(request.url).href,
           back: backAddress(read.page, origin),
-          ...(read.page === null ? {} : { page: read.page }),
+          page: backAddress(read.page, origin),
           ...(read.manifest === null ? {} : { manifest: read.manifest }),
           values: read.values,
           issues: read.issues,
@@ -959,7 +965,7 @@ export function createCloudFake(options) {
  * - `POST /__test/deploy` `{ commit, state, url? }`: what the host reports;
  * - `POST /__test/schedule` `{ trigger?, holdScheduledDrafts?, publicRepository? }`;
  * - `POST /__test/advance` `{ ms }`: scheduling's clock moves on, and what fell due runs;
- * - `POST /__test/forms` `{ form?, settings?, keys?, kill? }`: a form's settings, the site's keys, the kill switch;
+ * - `POST /__test/forms` `{ form?, settings?, keys?, kill?, reset? }`: a form's settings, the site's keys, the kill switch, and `reset` to clear the rate limits;
  * - `GET /__test/state`: drafts, reviews, emails, held changes, rebuilds, and forms' submissions and sent emails.
  *
  * Every request carries the client's address as `cf-connecting-ip`, set
@@ -1003,6 +1009,11 @@ export function serveCloudFake(fake, port, host = '127.0.0.1', options = {}) {
         if (input.form && input.settings) await fake.forms.configure(input.form, input.settings);
         if (input.keys) await fake.forms.keys(input.keys);
         if (typeof input.kill === 'boolean') await fake.forms.kill(input.kill);
+        // Every e2e post comes from 127.0.0.1, so each test starts with a clean count.
+        if (input.reset === true) {
+          fake.state.forms.posts.clear();
+          fake.state.forms.confirmations.clear();
+        }
         return answer({ ok: true });
       }
       if (req.url === '/__test/state') {

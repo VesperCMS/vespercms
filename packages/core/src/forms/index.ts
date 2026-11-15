@@ -40,4 +40,11 @@ export {
   type FormHtmlOptions,
   type FormStrings,
 } from './html.ts';
-export { FORM_STATUS, MAX_FORM_BODY, backAddress, sentAddress, wantsJson } from './answer.ts';
+export {
+  FORM_STATUS,
+  MAX_FORM_BODY,
+  backAddress,
+  pageOrigin,
+  sentAddress,
+  wantsJson,
+} from './answer.ts';

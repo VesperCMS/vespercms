@@ -225,6 +225,27 @@ export function formsContract(create: () => Promise<Fixture>, t: ContractHarness
       ok(html.includes('value="nope"'), 'and draws the form again with the answers kept');
       equal((await fixture.forms.submissions('contact')).length, 0, 'nothing is kept');
       equal((await fixture.forms.sent()).length, 0, 'or sent');
+
+      // That page posts from the cloud's own origin, carrying the site's page whole.
+      const drawn = await post(
+        fixture,
+        { ...good, email: 'nope', _vesper_page: '/contact/' },
+        { json: false },
+      );
+      const back = /name="_vesper_page" value="([^"]+)"/.exec(await drawn.text())?.[1] ?? '';
+      equal(back, `${fixture.origin}/contact/`, 'the page carries the site’s page whole');
+      const again = await post(
+        fixture,
+        { ...good, _vesper_page: back },
+        { json: false, origin: new URL(endpoint(fixture)).origin },
+      );
+      equal(again.status, 303, 'posted again from there, fixed, it’s taken');
+      equal(
+        again.headers.get('location'),
+        `${back}#vesper-form-contact-sent`,
+        'and goes back to the site’s page',
+      );
+      equal((await fixture.forms.submissions('contact')).length, 1, 'only the fixed post is kept');
     });
 
     it('refuses posts from anywhere but the site, too big, to no form, and floods', async () => {
