@@ -1,21 +1,29 @@
 import { z } from 'astro/zod';
+import { defineForm } from 'vespercms/forms';
 
 /*
- * The contact form (spec §6.13, addendum §4). `defineForm` and <Form> arrive in
- * Phase 6. Until then this is the plain shape `defineForm` will accept, so the
- * Phase 1 manifest can already read the fields:
+ * The contact form (spec §6.13), drawn by <Form name="contact" /> on
+ * /contact/. Who's notified, the routing rules and the confirmation's words
+ * live in the dashboard, not here.
  *
  * - `department` drives conditional routing ("When Department is Admissions…").
- * - `attachment` stands in for `fields.upload()`, whose stored shape is decided in
- *   Phase 6. Its options are the addendum's example.
- * - `confirmation.emailField` turns on the auto-reply. Only `safeToEcho` fields may
- *   appear in it (D20).
+ * - `name` is safe to echo in the confirmation by its `autocomplete`; nothing
+ *   else is (D20).
+ * - `confirmation.emailField` turns on the confirmation email.
+ * - An attachment, `fields.upload()`, arrives with Phase 6b.
  */
 export const forms = {
-  contact: {
+  contact: defineForm({
+    title: 'Contact us',
     schema: z.object({
-      name: z.string().min(1).meta({ label: 'Your name', autocomplete: 'name', safeToEcho: true }),
+      name: z.string().min(1).meta({ label: 'Your name', autocomplete: 'name' }),
       email: z.email().meta({ label: 'Email', autocomplete: 'email' }),
+      phone: z.string().optional().meta({
+        label: 'Phone',
+        widget: 'tel',
+        autocomplete: 'tel',
+        description: 'If you’d rather we call.',
+      }),
       department: z.enum(['admissions', 'financial-aid', 'registrar', 'other']).meta({
         label: 'Department',
         widgetOptions: {
@@ -27,17 +35,10 @@ export const forms = {
           },
         },
       }),
-      message: z.string().min(10).meta({ label: 'Message', widget: 'textarea' }),
-      attachment: z
-        .string()
-        .optional()
-        .meta({
-          label: 'Attachment',
-          widget: 'upload',
-          widgetOptions: { accept: ['application/pdf', '.docx'], maxSizeMB: 10, maxFiles: 1 },
-        }),
+      message: z.string().min(10).max(5000).meta({ label: 'Message', widget: 'textarea' }),
+      updates: z.boolean().optional().meta({ label: 'Send me news about events' }),
     }),
     confirmation: { emailField: 'email' },
     successMessage: 'Thanks, we will be in touch.',
-  },
+  }),
 };

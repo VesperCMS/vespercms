@@ -1,8 +1,9 @@
 ---
+import { Form } from 'vespercms/components';
 import BaseLayout from '../layouts/BaseLayout.astro';
 // A static route that is not content. Phase 2.6 uses it to prove a page can't
-// be moved onto a path a real route already owns (spec §6.15.4). Phase 6 adds
-// the <Form name="contact" /> defined in src/forms.config.ts.
+// be moved onto a path a real route already owns (spec §6.15.4). Phase 6a
+// puts the contact form from src/forms.config.ts on it.
 ---
 
 <BaseLayout title="Contact us" description="How to reach the college.">
@@ -16,4 +17,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       Email: <a href="mailto:welcome@example.com">welcome@example.com</a>
     </li>
   </ul>
+  <h2>Send us a message</h2>
+  <Form name="contact" />
 </BaseLayout>
