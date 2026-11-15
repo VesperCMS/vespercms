@@ -32,6 +32,12 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [ ] `vesper-cloud` still imports `@vesper/core` and `@vesper/admin`; rename them to `@vespercms/*` when it next moves its submodule.
 - [ ] Screen reader passes, from 2.6 on, before launch (Jeremy's call).
 
+**Phase 6a, Forms without uploads (pulled ahead of Phase 5, Jeremy's call of 2026-11-15)**
+- [x] Record the reorder: CLAUDE.md, DECISIONS.md ("Phase 6a is pulled ahead of Phase 5, for wcpl.net") and spec §11 (2026-11-15).
+- [x] The design, "Phase 6: Forms (design)", below, and the cloud's half in `vesper-cloud`'s PLAN.md (2026-11-15).
+- [ ] Jeremy confirms its twelve calls.
+- [ ] Build this repository's half on `claude/forms-6a`, then the cloud's, then release `0.1.0-next.3`. wcpl.net launches on it.
+
 **Next phase**
 - [ ] Phase 5, Billing and ops. Before it starts, Jeremy decides spec §13.4: the final prices, from the cloud's measured cost (the addendum's numbers are placeholders). Bring him options; never pick.
 
@@ -52,6 +58,7 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 | 4 Cloud foundation | Done (2026-10-26). Steps 1 to 12 built 2026-10-20: this repository's half (CI green on GitHub, run 39438657706) and the cloud's in `vesper-cloud`, on production at app.vespercms.com and api.vespercms.com. The GitHub App, VesperCMS, went live 2026-10-21, and the real-world check passed that day on `vesper-github-test` and vespercms.com. A publish credits every draft's author (Jeremy's call b), both halves on production since 2026-10-22. The studio against the real API under `wrangler dev`, step 12's last piece, passed 2026-10-26 in `vesper-cloud` (CI green on GitHub, run 40358823912). Screen reader passes wait until before launch. See "Phase 4: progress" and "Phase 4: Cloud foundation (design)" below. |
 | vespercms.com and the docs | Live 2026-10-21, ahead of Phase 9 at Jeremy's request; CI green on GitHub (run 39636024765). See "vespercms.com and the docs" below. |
 | 4.5 Scheduled publish and unpublish | In progress, started 2026-10-26 at Jeremy's request, once Phase 4 met its criteria. Designed 2026-10-21, and Jeremy confirmed its calls that day. See "Phase 4.5: progress" and "Phase 4.5: Scheduled publish and unpublish (design)" below. |
+| 6a Forms, all but uploads | Designed 2026-11-15, pulled ahead of Phase 5 at Jeremy's request for wcpl.net, with Phase 4.5's free-tier check still open. Its calls wait for Jeremy. 6b (uploads) follows, and Phase 6 is done only after it. See "Phase 6: Forms (design)" below. |
 | 5 onward | Roadmap below |
 
 ## To do next
@@ -63,6 +70,221 @@ Before that, nothing was queued. The last item, the pane beside the collections 
 Blocks (proposed, decided and built 2026-10-26): "Blocks: lists of different kinds (design)", below, with its outcome. On `main`, CI green on GitHub (run 40334882211).
 
 **Before choosing the next studio or cloud work, put any open items in "Dogfooding thosegeeks.com", below, to Jeremy.** Its first nine gaps were decided and built 2026-10-28, but the importer (Phase 9), and the packages are on npm as `vespercms@next`. The tenth (GitHub mode's message when the app isn't installed) was built 2026-10-28. The three Jeremy raised 2026-10-29 were built and deployed the same day, the studio's two in `vespercms@0.1.0-next.1` and the cloud's in the app. Of five more the same day (14 to 18), four are built and one is open: why the cloud fails so often for the Hostinger site (14), which the API now logs. Jeremy asked that new gaps come up whenever this work resumes.
+
+**Phase 6a (2026-11-15):** forms, ahead of Phase 5, for wcpl.net. The design is below, and nothing is built until Jeremy has answered its calls.
+
+## Phase 6: Forms (design)
+
+Written 2026-11-15. Jeremy pulled forms ahead of Phase 5 that day, for wcpl.net, whose six Gravity Forms (3 to 25 fields each, with no uploads, conditional logic or extra pages) are the one thing it can't launch without (DECISIONS.md, "Phase 6a is pulled ahead of Phase 5, for wcpl.net"). Scope is spec §11's Phase 6 entry, §6.13 (`<Form>`), §7.5's forms access, §7.6 (the backend), D20, and the submissions table of §8.2. **6a** is everything but uploads. **6b**, uploads to R2 with signed links (D21), follows, and Phase 6 is done only once it lands. Webhooks moved to Phase 7.5. Everything the cloud does is paid (§4). `<Form>`, its script and the rules it shares with the cloud ship in the MIT packages, which are one bundle for every mode (§5).
+
+**Done when** (§11; 6a's five):
+1. The playground's contact form works with JavaScript off.
+2. It passes §6.13's accessibility list, checked with a screen reader.
+3. Spam submissions are blocked in tests.
+4. A routing rule sends Admissions submissions to one address and everything else to another.
+5. Automated tests confirm a confirmation email can't echo a field that isn't safe to echo, and is rate-limited per recipient.
+
+6b's two: a 10 MB PDF uploads with and without JavaScript, and downloads only through a signed link; a disallowed file type is refused with a clear, linked error.
+
+**What was found first.** In the code:
+- **Forms are already read.** `load-site.ts` loads `src/forms.config.ts` with the site's own Vite, and `buildManifest` writes `forms: FormManifest[]`: each form's field models (widgets resolved with `form: true`, so the form-only `upload` widget is allowed), plus its options as plain data.
+- **The cloud already has the schema.** It reads `<production address>/_vesper/manifest.json` itself, kept for five minutes, with the last good copy for when the site can't be reached (vesper-cloud's `SiteObject.manifestFor`). A form's fields come from there, never from what a browser sent.
+- **`fieldModelIssues` checks values against field models without Zod:** required values, lengths, patterns, numbers, choices and nested objects. It leaves formats (email, URL) and refinements to the site's build, which a form can't wait for, so forms need a little more.
+- **`<Search>` is the model for a public component:** an Astro component, Vesper's own script with no framework, and a size budget enforced by a test.
+- **The contract and fake pattern:** `runCloudContract` (core) and `scripts/cloud-fake.mjs`. The fake and the real cloud must answer `<Form>` alike.
+- **In the cloud:** D1 counters for throttling (`throttle.ts`); a mailer (Email Service, then Resend) with no reply-to or sender name yet; `site_origins`, the addresses a site's pages run on; secrets sealed under `SECRETS_KEY`; and the site object's one alarm, which scheduling already uses. A project's ID is its site's ID.
+- **Waiting for this phase:** the playground's `forms.config.ts`, a plain object with an `attachment` field standing in for uploads, and `contact.astro`, which says Phase 6 adds the form.
+- **Loose end:** the cloud's submodule is pinned at `4950e7c` and still imports `@vesper/*`. It's renamed to `@vespercms/*` when it moves to this phase's commit.
+
+From Cloudflare's and Resend's pages, checked 2026-11-15:
+- **Turnstile on the Free plan: 20 widgets per account, 10 hostnames per widget.** Enterprise has unlimited widgets with 200 hostnames each. Siteverify isn't capped. One widget per site therefore caps the cloud at 20 sites with forms until Enterprise (call 3).
+- **The `ratelimits` binding counts per Cloudflare location, over 10 or 60 seconds only.** It's right for stopping a flood without a database write, and wrong for anything counted over hours or days, which stays in D1.
+- **Email Service sends to any address only on Workers Paid.** Its binding takes a sender name and a `replyTo`. Resend's Free plan is 100 emails a day and 3,000 a month, shared with sign-in links; Pro is $20 a month for 50,000 with no daily limit (call 5).
+
+### What lives where
+
+| Here (MIT) | The cloud's repository (private) |
+|---|---|
+| **`@vespercms/core/forms`**, which runs in Node, Workers and the browser: `readSubmission`, `routeSubmission`, `mergeConfirmation`, `formHtml`, the reserved field names, the form protocol's types, and the forms diagnostics in `buildManifest`. The widgets `tel`, `checkbox` and `checkboxes` (`widgets/resolve.ts`). The `forms` section of `runCloudContract`. | **`apps/cloud-api`:** `POST /forms/{project}/{form}` and `GET /forms/{project}/config`, the Worker's guards, `SiteObject.submit`, the object's schema 4, deliveries and retention on the alarm, and the `Dashboard` RPC entrypoint. |
+| **`vespercms`:** `vespercms/forms` (`defineForm`), `<Form>` in `vespercms/components` with its script (`components/form/ui.ts`), `virtual:vesper/forms`, and the dev API's local capture (call 10). | **`packages/server`:** migration `0005_forms.sql`, form settings and their checks, forms access, Turnstile (siteverify and making widgets), the throttle's new keys, the two form emails, and the mailer's reply-to and sender name. |
+| **`scripts/cloud-fake.mjs`:** the form endpoints, plus `/__test/forms` to set a form's routing, pause it, and read what it stored and sent. | **`apps/cloud-app`:** the forms pages (list, inbox, CSV, one submission, settings, test panel) and forms access in People. |
+| **The playground's** contact form, through `defineForm` and `<Form name="contact" />`. | **`scripts/`:** `forms off|on`. **Tests:** the contract against the real API, `forms.test.ts`, and e2e. |
+
+The studio shows nothing of forms (§6.9's rule stands): a form's definition is code, and its delivery settings live in the dashboard.
+
+### How it works
+
+**Defining a form.** `src/forms.config.ts` exports `forms`, each made by `defineForm` from `vespercms/forms`, with Zod imported from `astro/zod`:
+
+```ts
+contact: defineForm({
+  title: 'Contact us',            // the inbox's and the emails' name; defaults to the key
+  schema: z.object({
+    name: z.string().min(1).meta({ label: 'Your name', autocomplete: 'name' }),
+    email: z.email().meta({ label: 'Email', autocomplete: 'email' }),
+    department: z.enum([...]).meta({ label: 'Department', widget: 'radio', widgetOptions: { labels } }),
+    message: z.string().min(10).max(5000).meta({ label: 'Message', widget: 'textarea' }),
+  }),
+  successMessage: 'Thanks. We’ll be in touch.',
+  confirmation: { emailField: 'email' },
+}),
+```
+
+- `defineForm` checks nothing and returns its argument typed. The manifest's diagnostics do the checking, so the build and the cloud see the same form.
+- **The fields a form can have in 6a:** text (`textarea`, `email`, `url` and the new `tel`), numbers, dates, a choice (select or radio), several choices (the new `checkboxes`, an array of an enum), a yes-or-no (the new `checkbox`), and an object, drawn as a `fieldset` with its label as the `legend`. Meta that `<Form>` reads: `label`, `help`, `autocomplete`, `safeToEcho`, `widget` and `widgetOptions.labels`.
+- **Diagnostics** (in `buildManifest`, so `astro build`, `vesper agents` and the dev server all say them): a field named with a reserved name (`_vesper_page`, `_vesper_hp`, `_vesper_manifest`, `cf-turnstile-response`) is an error. So is a field kind `<Form>` can't draw (images, references, blocks, Markdown), and an `upload` field ("arrives in Phase 6b"). `confirmation.emailField` must name an `email` field. A refinement, transform or custom message is a warning: the cloud checks only what the field model holds, so a `.refine()` never runs on a submission.
+- **A field's length is capped** even when the schema sets none: 500 characters on one line and 10,000 in a textarea. That bounds what a submission can store and mail.
+
+**Rendering, `<Form name="contact" />`.** One renderer, core's `formHtml(form, state)`, writes the markup. `<Form>` calls it at build, and the cloud calls it for the page it answers a failed post with when JavaScript is off (call 1). The markup is §6.13's list:
+- a real `<label>` on every field, with "(required)" in its text (the studio's "(optional)" convention is for editors, CLAUDE.md);
+- help and error text joined through `aria-describedby`, and `aria-invalid` on a field that failed;
+- `fieldset` and `legend` for objects, radios and checkboxes;
+- `autocomplete` from the meta;
+- a honeypot field, `_vesper_hp`, inside an `aria-hidden` box off the screen, with `tabindex="-1"` and `autocomplete="off"`;
+- hidden `_vesper_page` (the page's address, for coming back) and `_vesper_manifest` (the manifest's hash);
+- a box for Turnstile, filled only by the script;
+- the native `required`, `type`, `minlength`, `maxlength` and `pattern`, so a browser without the script still checks the easy things.
+
+`<Form>` brings a few lines of CSS for its states (the honeypot's box, the sent message, error text), set through custom properties, and takes the site's own type and colours otherwise. A form with no cloud project is call 9.
+
+**Without JavaScript.** The form posts (`application/x-www-form-urlencoded`) to `https://api.<domain>/forms/{project}/{form}`.
+- **Success** is a 303 to `_vesper_page#vesper-form-{name}-sent`. The page already holds the success message in an element with that ID, `tabindex="-1"`, which the browser scrolls to and focuses. CSS shows it through `:target` and hides the form through `:has(:target)`. Nothing about it depends on the host.
+- **A failure the person can fix** (a missing or malformed value) is call 1.
+- **No Turnstile token** is call 2.
+- `_vesper_page` is followed only to an origin the site registered. Any other address goes to the site's production address, so the endpoint can't become an open redirect.
+
+**With JavaScript** (`components/form/ui.ts`, at most 8 KB gzipped, enforced by a test, with no framework):
+- It sets `novalidate`, then checks each field as it's left and the whole form on submit, with core's own checks (the same `readSubmission` the cloud runs).
+- On a failed submit it fills an error summary at the top, each error a link to its field, and moves focus to it.
+- It posts the same form-encoded body with `fetch` and `Accept: application/json`, a "simple" request, so there's no preflight. The answer is JSON: success, the fields that failed, or a refusal with words (paused, too many, unavailable). Success replaces the form with its message, which takes focus.
+- **Turnstile** in managed mode loads on the form's first focus, never on page load, from `GET /forms/{project}/config` (the site key, and which forms are paused). A paused form says so before anyone types.
+
+**The request path in the cloud** (§7.6, in this order, so that a flood never wakes the site's object):
+1. **In the Worker:** a 64 KB cap on the body; the project must be an active site; `Origin` must be one of its registered origins; the kill switch and the form's pause (call 7, call 11); the per-IP limit (call 11); then Turnstile's siteverify with the site's secret, checking `success`, the `hostname` against the site's origins, the `action` (the form's name) and the `cdata` (the project).
+2. **A filled honeypot** is answered as a success and stored nowhere, only counted, so a bot learns nothing.
+3. **In the site's object, `submit`:**
+   - The form comes from the deployed manifest. When `_vesper_manifest` names a newer one than the object holds, it fetches once more (at most once a minute), so a form deployed a moment ago works at once.
+   - `readSubmission` turns the posted strings into values: numbers, yes-or-no, dates, lists of choices. It checks formats (email, URL), lengths and choices with `fieldModelIssues` and drops keys the form doesn't have.
+   - The submission is stored (schema 4's `submissions`: the values, `new`, whether Turnstile verified it, a salted hash of the IP, the route that fired, and its time).
+   - `routeSubmission` picks what to do from the form's rules.
+   - Each email becomes a delivery row and is sent in `waitUntil` (call 4). A failure is retried by the alarm, and each delivery's status shows on the submission's page.
+4. **The answer:** a 303 or JSON, as above.
+
+**Routing** (§7.6). A form's settings hold who to notify, an ordered list of rules, "first match" or "every match", and an otherwise route. A rule compares one field with is, is not, contains, is one of, is empty or is not empty. For several choices, "is" means "includes". Its actions are: notify these addresses, use this confirmation template, mark as spam. `routeSubmission(settings, values)` returns the rules that fired, the addresses (each once), the template and whether it's spam. It lives in core, so the dashboard's test panel, the fake and the real cloud give the same answer. In the dashboard a rule reads as a sentence: "When **Department** is **Admissions**, notify **admissions@college.edu**."
+
+**Confirmation emails** (D20). Sent only when the form has `confirmation.emailField`, the submission passed Turnstile, and the address hasn't had its share today (`confirm-to:`, per site, in D1). The template is the site admin's, and `mergeConfirmation` fills only `{tokens}` of fields that are safe to echo (call 8). An unknown token, or one for a field that isn't safe, is refused when the template is saved, and is left out if the form changes later.
+
+**Notifications** go to the route's addresses, from "Site name via Vesper", with reply-to set to the submitter's address when the form has an email field (call 5). They hold every answer, as Gravity Forms' did, and a link to the submission in the dashboard.
+
+**Forms access** (§7.5). A person is given a site's forms (every form, or some) apart from any content role, in a table of its own (`form_access`). Someone with forms access and no site role isn't a site member: the studio and `/authorize` refuse them as before, and the dashboard shows them only those forms' pages. Site admins and account admins have every form. An invite can carry forms access.
+
+**The inbox** (the dashboard, §9.1). The pages, each plain HTML with the kit's classes, axe and a keyboard pass:
+
+| Page | What it has |
+|---|---|
+| `sites/[site]/forms/` | Each form, how many submissions are new, whether it's paused. Reached from the site's page. |
+| `…/forms/[form]/` | The inbox: search, New, Handled and Spam, pages of 50, and Mark handled or Delete for those checked. |
+| `…/forms/[form]/export.csv` | An export of what's shown, in the audit log, with each cell that starts with `=`, `+`, `-`, `@`, a tab or a return escaped against formula injection. |
+| `…/forms/[form]/[id]` | One submission: its answers, the route that fired, each delivery's status, Mark handled, Spam, Delete. |
+| `…/forms/[form]/settings` | Who to notify, rules as sentences, first or every match, the confirmation template (with the fields it may use listed), reply-to, Pause, and how long submissions are kept. |
+| `…/forms/[form]/test` | Sample values, then which rule fires and who'd be notified, sending nothing. |
+
+The app reads and changes submissions only through the `Dashboard` RPC (cloud DECISIONS.md, "Submissions live in the site's object"). Every write is audited, reads of a submission and exports included, since these are patron records.
+
+**Retention** (call 6). Each form keeps submissions for its set time, spam for 30 days. The object's alarm sweeps once a day, deleting submissions past their time with their deliveries. A deleted submission is gone; there's no bin.
+
+**The alarm** is still one per object, now set for the soonest of: scheduling's times, the next delivery retry, and the next sweep. The scheduling tests keep passing, and new ones check that each of the three fires on time with the others set.
+
+### In the interface (§10.4)
+
+- **On the public site:** `<Form>` is the site's own page; Vesper adds only its form, at the size of the site's text. The success message and the error summary are the only states with words of Vesper's. A paused form says "This form isn't taking submissions right now." in place of its fields.
+- **In the dashboard:** Forms is a link on the site's page, beside People, never a new level of navigation; the breadcrumb is Sites › Site › Forms › Form. Each screen has one primary button at most (Save on settings, none on the inbox, whose bulk actions are secondary). Status is text: New, Handled, Spam.
+- **In the studio:** nothing.
+
+### Tests, mapped to "Done when"
+
+1. **JavaScript off:** `e2e/cloud/forms.spec.ts` with `javaScriptEnabled: false`, against the fake cloud: a post lands at `#vesper-form-contact-sent` with the message shown and focused, and a bad value comes back as the cloud's page with the values kept and the errors linked. The cloud's own e2e repeats it against the real API.
+2. **§6.13's list:** axe on the form in every state, at 320 pixels wide and at 200% zoom, in the static e2e tests; the error summary's focus with JavaScript on; a manual keyboard pass, noted in the PR. The screen reader pass is Jeremy's (call it done, or deferred, before 6a is called finished).
+3. **Spam:** the contract checks that a honeypot hit, a failing Turnstile token, an unregistered origin, a flood and a paused or killed form are each refused, and nothing is stored or sent.
+4. **Routing:** unit tests of `routeSubmission`; the contract sends an Admissions submission and another, and checks who was notified; on staging, two real addresses.
+5. **Confirmation:** unit tests that `mergeConfirmation` never fills a field that isn't safe to echo; the contract checks a template naming a free-text field is refused, an unverified submission gets no confirmation, and the fourth to one address in a day is held back.
+
+Every dashboard page passes axe and `keyboardPass` in the cloud's e2e.
+
+**Order of work** (small commits, each repository green):
+1. Here: this design, then the decisions once the calls are made.
+2. Here: core's forms module (`readSubmission`, `routeSubmission`, `mergeConfirmation`, `formHtml`, reserved names, the protocol's types), its diagnostics, and the three widgets, with unit tests.
+3. Here: `vespercms/forms`, `virtual:vesper/forms`, `<Form>` and its script with the size test, and the dev API's capture.
+4. Here: the contract's `forms` section and the fake's endpoints; the playground's contact form; the static and cloud e2e tests; the docs (`site/forms.mdoc`, `reference/integration.mdoc`, the README, `npm run agents -w @vespercms/site`).
+5. Cloud: the submodule moved to step 4's commit, with `@vesper/*` renamed; migration 0005; the server package's pieces.
+6. Cloud: the endpoints and guards, `SiteObject.submit`, schema 4, deliveries and retention on the alarm, the `Dashboard` RPC.
+7. Cloud: the dashboard's pages and forms access in People; the operator script; the contract, `forms.test.ts` and e2e.
+8. Cloud: staging, with the new bindings (Jeremy's OK), then the end-to-end check there.
+9. Here: a changeset, `0.1.0-next.3` through the Release workflow (Jeremy's OK). Then the cloud on production (Jeremy's OK).
+
+### Calls to confirm
+
+Recommended option first. The decision is Jeremy's on each.
+
+1. **A failed post without JavaScript.**
+   - (a) The cloud answers with a plain page: an error summary, then the form drawn again by `formHtml` with the person's values and each error linked, posting back to the same place, and a link back to the site's page. Recommended: nothing typed is lost, and the page is the same markup `<Form>` draws.
+   - (b) A plain page that lists what was wrong and says to go Back, where the browser usually keeps what was typed.
+2. **A post without JavaScript has no Turnstile token** (Turnstile needs a script).
+   - (a) Accept it, stored as unverified (shown in the inbox), and notify as usual, but send no confirmation email. Recommended: it keeps D20 (no confirmation without Turnstile) while the form still works with JavaScript off, as §6.13 requires; the honeypot, the origin check and the per-IP limit still apply.
+   - (b) Refuse it. Simpler, but the form then doesn't work without JavaScript, which is criterion 1.
+3. **Turnstile's widgets.**
+   - (a) One widget per site, made by the cloud through Cloudflare's API when the site's first form is set up, with the site's registered origins as its hostnames. Its secret is sealed under `SECRETS_KEY`; the site key reaches the browser from `GET …/config` at runtime, never the build. Recommended: each site's secret and analytics are its own, and a site's addresses change without a deploy. The Free plan's 20 widgets cap this at 20 sites with forms, and 10 hostnames each; Enterprise lifts both, a cost for Phase 5's pricing. It needs an API token with Turnstile edit rights, as a secret.
+   - (b) One shared widget for every site. No API token, but 10 hostnames in all, so a handful of sites.
+   - (c) The site's owner makes the widget in their own Cloudflare account and pastes its keys into the dashboard. No cap for Vesper, but a step agencies' clients would get wrong.
+4. **Delivering emails.**
+   - (a) Sent in `waitUntil` right after the submission is stored, with each failure retried on the object's alarm (after 1, 5 and 30 minutes, then 2 and 12 hours, then marked failed). Recommended: no new Cloudflare product now, and every delivery's status is in the inbox. Queues come with Phase 7.5's integrations, which need them anyway.
+   - (b) Cloudflare Queues now. Retries for free, but a new binding and consumer, built twice once 7.5's delivery log arrives.
+5. **Sending.**
+   - (a) From "Site name via Vesper" at `forms@mail.vespercms.com`, through **Email Service** (Workers Paid, $5 a month, 3,000 emails included, then $0.35 per 1,000), with reply-to set to the submitter on notifications and to the site's chosen address on confirmations. Resend stays sign-in's fallback, as §7.8 says. Recommended: Resend's Free plan is 100 emails a day, shared with sign-in links, which six library forms could use up. It needs Workers Paid and the `send_email` binding in all three environments. Sending from wcpl.net's own domain is §13.14's custom domain (Agency and Institution), not built.
+   - (b) Resend for everything, on its Pro plan ($20 a month, 50,000, no daily limit).
+   - (c) Resend for everything on the plan it's on now. Which plan that is is yours to say.
+6. **How long submissions are kept.**
+   - (a) 6 months by default, spam 30 days, changeable per form (1 month to 2 years, or until deleted). Recommended: libraries keep as little about patrons as they can, and an inbox is for answering, not archiving.
+   - (b) 1 year by default.
+   - (c) Until deleted, as Gravity Forms did.
+7. **A paused form.**
+   - (a) Refuses with a message ("This form isn't taking submissions right now."), and with JavaScript it says so before anyone types. Recommended: nobody believes they've sent something that waits unseen.
+   - (b) Accepts and holds submissions, delivering them once it's unpaused.
+8. **Which fields are safe to echo by default** (D20: "by default, name fields").
+   - (a) Fields whose `autocomplete` is a name (`name`, `given-name`, `family-name`, `nickname` and the like); any other field only with `safeToEcho: true`. Recommended: it follows D20 from data the form already has.
+   - (b) None, unless marked `safeToEcho: true`.
+9. **`<Form>` on a site with no cloud project.**
+   - (a) A build warning, and the page shows "This form isn't connected yet." in place of the form, so a site can be built and reviewed before it's set up. Recommended.
+   - (b) The build fails.
+10. **Forms in `astro dev`.**
+    - (a) `<Form>` posts to the dev API, which checks the submission with core's `readSubmission`, shows which rule would fire, and keeps it in `.vesper/forms/` on the machine; no email. Recommended: a developer can try a form without the cloud or a Turnstile key. Forms stay cloud-only on a built site; this is a convenience for building one.
+    - (b) It posts to the cloud, as the built site does.
+11. **The kill switch and the per-IP limit.**
+    - (a) The kill switch is a D1 flag (for all forms, a site or one form) set by the operator script, `forms off|on [--site --form]`, until Phase 5's console. The per-IP limit uses the `ratelimits` binding (say 10 a minute per IP per site), with an hourly count in D1 (`form-ip:`, say 30). Recommended: a flood is stopped without a database write, and the longer window catches a slow one.
+    - (b) Both in D1, as sign-in's throttling is. One mechanism, but every submission costs a write before the guards pass.
+12. **Entitlements before Phase 5.**
+    - (a) Count submissions and emails per site per day (`usage_daily`), and limit nothing. WCPL is marked comped with an operator script. Recommended: Phase 5 sets the limits from what's counted.
+    - (b) Enforce a placeholder limit now.
+
+**Smaller defaults, built as written unless you say otherwise:**
+- One body format, form-encoded, for posts with and without JavaScript, so the endpoint has one parser and a script's post needs no preflight. The answer is JSON when the request asks for it.
+- A filled honeypot is answered as a success, counted, and stored nowhere.
+- A submission's IP is kept only as its SHA-256 with a salt of the site's own, for spotting floods in the inbox, never as the address.
+- A confirmation goes to one address at most three times a day per site.
+- Rules are kept in D1 (`form_settings`), where the Worker reads pauses without waking the object and the dashboard saves without a deploy; submissions stay in the object.
+- Search in the inbox matches any answer's text, in the object's SQLite.
+- The CSV is the form's fields in the manifest's order, then status and time, in UTF-8 with a byte-order mark so Excel opens it right.
+- The Worker refuses a post with no `Origin`; browsers send it on every cross-site POST.
+
+**Spec changes these calls would make:** none beyond the reorder already recorded (§11, §7.5). Call 2(a) is how §6.13's "works without JavaScript" and D20 meet; it goes into §7.6 with the decision.
+
+**Accounts and resources (Jeremy's OK, each when its step arrives):**
+- A Cloudflare API token with Turnstile edit rights, as a secret on the API (call 3).
+- Workers Paid, and Email Service on `mail.vespercms.com` with the `send_email` binding (call 5).
+- The `ratelimits` binding (call 11), the app's service binding to the API, and any new secret, in all three environments.
+- The deploys: staging, then production.
+
+**Not in 6a:** uploads (6b); webhooks and every other integration (7.5); several pages per form; conditional fields (not adopted, §13.12); sending from a client's own domain (§13.14); billing's limits (Phase 5); the operator console (Phase 5).
 
 ## Dogfooding thosegeeks.com
 
