@@ -153,11 +153,14 @@ describe('playground manifest (Phase 1: every collection produces a correct mani
     expect(contact?.fields?.map((f) => [f.path[0], f.widget])).toEqual([
       ['name', 'text'],
       ['email', 'email'],
+      ['phone', 'tel'],
       ['department', 'radio'],
       ['message', 'textarea'],
-      ['attachment', 'upload'],
+      ['updates', 'checkbox'],
     ]);
-    expect(contact?.fields?.[0]).toMatchObject({ safeToEcho: true });
+    // Safe to echo by its autocomplete (core's safeToEcho), not by a flag of its own.
+    expect(contact?.fields?.[0]).toMatchObject({ autocomplete: 'name' });
+    expect(manifest.diagnostics?.filter((d) => d.collection === 'form:contact')).toEqual([]);
   });
 
   it('reads Markdoc as Astro does: allowHTML from astro.config, the merged config, the hints', () => {

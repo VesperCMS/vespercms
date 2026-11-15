@@ -1944,7 +1944,6 @@
           "required": true,
           "label": "Your name",
           "autocomplete": "name",
-          "safeToEcho": true,
           "constraints": {
             "min": 1
           },
@@ -1962,6 +1961,18 @@
           "format": "email",
           "inferredWidget": "email",
           "widget": "email"
+        },
+        {
+          "path": [
+            "phone"
+          ],
+          "kind": "string",
+          "required": false,
+          "label": "Phone",
+          "description": "If you’d rather we call.",
+          "widget": "tel",
+          "autocomplete": "tel",
+          "inferredWidget": "text"
         },
         {
           "path": [
@@ -2010,30 +2021,24 @@
           "label": "Message",
           "widget": "textarea",
           "constraints": {
-            "min": 10
+            "min": 10,
+            "max": 5000
           },
           "inferredWidget": "text"
         },
         {
           "path": [
-            "attachment"
+            "updates"
           ],
-          "kind": "string",
+          "kind": "boolean",
           "required": false,
-          "label": "Attachment",
-          "widget": "upload",
-          "widgetOptions": {
-            "accept": [
-              "application/pdf",
-              ".docx"
-            ],
-            "maxSizeMB": 10,
-            "maxFiles": 1
-          },
-          "inferredWidget": "text"
+          "label": "Send me news about events",
+          "inferredWidget": "checkbox",
+          "widget": "checkbox"
         }
       ],
       "options": {
+        "title": "Contact us",
         "confirmation": {
           "emailField": "email"
         },
@@ -2582,5 +2587,5 @@
     ]
   },
   "diagnostics": [],
-  "hash": "8a278a39b1b93a2bb45931cb71c444cd15d10731d7439967ed0d9360f155b19c"
+  "hash": "163fd49906a08e9c06a7dbda299780fed6701186efacc31058d8019650333b61"
 }
