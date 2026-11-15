@@ -35,7 +35,8 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 **Phase 6a, Forms without uploads (pulled ahead of Phase 5, Jeremy's call of 2026-11-15)**
 - [x] Record the reorder: CLAUDE.md, DECISIONS.md ("Phase 6a is pulled ahead of Phase 5, for wcpl.net") and spec §11 (2026-11-15).
 - [x] The design, "Phase 6: Forms (design)", below, and the cloud's half in `vesper-cloud`'s PLAN.md (2026-11-15).
-- [ ] Jeremy confirms its twelve calls.
+- [x] Calls 2, 3 and 5, Jeremy's own way: each site's own Resend and Akismet keys, and D20 amended (2026-11-15).
+- [ ] Jeremy confirms the other nine calls.
 - [ ] Build this repository's half on `claude/forms-6a`, then the cloud's, then release `0.1.0-next.3`. wcpl.net launches on it.
 
 **Next phase**
