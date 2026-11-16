@@ -109,7 +109,7 @@ Each site's **Forms** page lists its forms, how many submissions are new, and wh
 Form emails go out through **your own Resend account**, from your own domain, and spam is checked with **your own Akismet key**. Set both on the site's **Email and spam** page:
 
 - **Resend:** an API key (a sending-only key for one domain is enough), the address to send from, on a domain verified in that Resend account, and a sender name. Saving sends a test email to you.
-- **Akismet:** an API key, checked when you save it. Akismet sees each submission's text, name, email address and IP address, so say so in your site's privacy notice. A form can turn it off in its settings.
+- **Akismet:** an API key, checked when you save it. Akismet sees each submission's text, name, email address and IP address, so say so in your site's privacy notice. For each submission Akismet checks, Vesper keeps what Akismet was sent, the IP address included, until the submission is deleted, so that **Spam** and **Not spam** can tell Akismet when it got one wrong. The IP address is never shown in the inbox or its exports. A form can turn Akismet off in its settings.
 
 Keys are stored encrypted and never shown again; the page shows who set each one and when. Without a Resend key, submissions still reach the inbox, but no email is sent. If a key stops working, each submission's page says its emails failed, and the site's admins hear about it from Vesper once a day.
 
@@ -126,7 +126,7 @@ A form's **Settings** set:
 
 ### The inbox
 
-A form's inbox lists its submissions, newest first, as **New**, **Handled** or **Spam**, with search across every answer. Mark them handled or delete them a page at a time, or export what's shown as a spreadsheet (CSV). A submission's own page shows its answers, what Akismet said, the rule that fired and whether each email was sent, and moves it to **Spam** or back.
+A form's inbox lists its submissions, newest first, as **New**, **Handled** or **Spam**, with search across every answer. Mark them handled or delete them a page at a time, or export what's shown as a spreadsheet (CSV). A submission's own page shows its answers, what Akismet said, the rule that fired and whether each email was sent, and moves it to **Spam** or back. Where Akismet checked the submission and thought otherwise, that move is reported to Akismet, which learns from it.
 
 A submission past its time is deleted for good. There's no bin.
 

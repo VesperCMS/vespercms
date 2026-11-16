@@ -41,7 +41,7 @@ The short list, in order. Tick or remove an item as it lands; the history stays 
 - [x] Jeremy's OK (2026-11-15) for the cloud's new bindings, pushing both branches, and the staging deploy: done that day. Staging is migrated and deployed; `SECRETS_KEY` isn't set there yet.
 - [x] The PRs: #14 here, merged 2026-11-15 after #13, and VesperCMS/vespercms-cloud#3.
 - [x] Staging's check dropped (Jeremy, 2026-11-15: "just go live", as no site runs on the cloud yet). He saw the form, the API, routing, a confirmation and the inbox work by hand against the real API and app locally first. The cloud went to production that day, at `3ad9a2d`.
-- [ ] Release `0.1.0-next.3`: versioned here; the Release workflow publishes it from `main`. wcpl.net launches on it.
+- [x] Release `0.1.0-next.3`: published under `next` on 2026-11-16 from #15, by the Release workflow (run 43777676884), with provenance. wcpl.net launches on it.
 
 **Next phase**
 - [ ] Phase 5, Billing and ops. Before it starts, Jeremy decides spec §13.4: the final prices, from the cloud's measured cost (the addendum's numbers are placeholders). Bring him options; never pick.
@@ -94,7 +94,7 @@ Started 2026-11-15, the day its calls were confirmed. The steps are the design's
 **Found while building:**
 - **A redraw on blur moved Send under a click.** Clearing an error or the summary as a field was left shifted the page between the button's mousedown and mouseup, so the click missed and nothing was sent. The script now adds errors and changes the summary only on submit; an error goes as its answer is fixed (DECISIONS.md, "<Form>'s script redraws nothing as a field is left").
 - **The cloud's own page posts from the cloud's origin.** The page that draws a form again after a problem would have been refused by the origin check. It now carries the site's page whole in `_vesper_page`, and the cloud accepts its own origin only with a page on one of the site's (DECISIONS.md, "A post from the cloud's own page goes back to the site's page").
-- **Akismet's spam and not-spam reports need the submitter's IP address**, which the cloud keeps only as a salted hash. Spam and Not spam in the inbox change the status and tell Akismet nothing. **For Jeremy:** keep the IP address with a checked submission (deleted with it) so the inbox can train Akismet, or leave it as it is.
+- **Akismet's spam and not-spam reports need the submitter's IP address**, which the cloud kept only as a salted hash. **Jeremy's call, 2026-11-16:** keep it with a checked submission, deleted with it, so the inbox can train Akismet. The cloud now keeps what each check sent (its schema 5), and Spam and Not spam report it back; see vesper-cloud's PLAN.md.
 
 **Checks (2026-11-15):** typecheck, lint, Vitest (4,760 tests), `check:dist`, both site builds and the whole e2e suite pass locally (one search test flaked once under the suite's load and passed 36 of 36 on its own). The Windows workflow passed on the pushed branch (run 43746532290). In `vesper-cloud`, the forms pages and the playground's form pass e2e against the real API and app. A manual keyboard pass is noted for the PR; the e2e tests check Tab's order and the honeypot. Jeremy's screen reader pass is open.
 
@@ -191,7 +191,7 @@ contact: defineForm({
    - The form comes from the deployed manifest. When `_vesper_manifest` names a newer one than the object holds, it fetches once more (at most once a minute), so a form deployed a moment ago works at once.
    - `readSubmission` turns the posted strings into values: numbers, yes-or-no, dates, lists of choices. It checks formats (email, URL), lengths and choices with `fieldModelIssues` and drops keys the form doesn't have.
    - **Akismet,** when the site has a key and the form hasn't turned it off (call 3). `true` keeps the submission as Spam, notifies nobody and sends no confirmation; `true` with `discard` keeps nothing. An error, or no answer within 3 seconds, keeps it as New and "not checked": it's delivered, without a confirmation.
-   - The submission is stored (schema 4's `submissions`: the values, its status, what Akismet said, a salted hash of the IP, the route that fired, and its time).
+   - The submission is stored (schema 4's `submissions`: the values, its status, what Akismet said, a salted hash of the IP, the route that fired, and its time; and from schema 5, where Akismet checked it, what Akismet was sent, IP address included, for the inbox's reports).
    - `routeSubmission` picks what to do from the form's rules.
    - Each email becomes a delivery row and is sent in `waitUntil` (call 4). A failure is retried by the alarm, and each delivery's status shows on the submission's page.
 4. **The answer:** a 303 or JSON, as above.
@@ -214,7 +214,7 @@ contact: defineForm({
 | `sites/[site]/forms/keys` | Email and spam: the Resend key, From address and sender name, and the Akismet key, each shown only as set, with who set it and when. |
 | `…/forms/[form]/` | The inbox: search, New, Handled and Spam, pages of 50, and Mark handled or Delete for those checked. |
 | `…/forms/[form]/export.csv` | An export of what's shown, in the audit log, with each cell that starts with `=`, `+`, `-`, `@`, a tab or a return escaped against formula injection. |
-| `…/forms/[form]/[id]` | One submission: its answers, what Akismet said, the route that fired, each delivery's status, Mark handled, Spam or Not spam, Delete. Not reported to Akismet: its reports need the submitter's IP address, which the cloud keeps only as a salted hash (a question for Jeremy, 2026-11-15). |
+| `…/forms/[form]/[id]` | One submission: its answers, what Akismet said, the route that fired, each delivery's status, Mark handled, Spam or Not spam, Delete. Spam and Not spam tell Akismet, in the background, where it checked the submission and thought otherwise; the page says so once the report has gone (2026-11-16). |
 | `…/forms/[form]/settings` | Who to notify, rules as sentences, first or every match, the confirmation template (with the fields it may use listed), reply-to, whether Akismet checks this form, Pause, and how long submissions are kept. |
 | `…/forms/[form]/test` | Sample values, then which rule fires and who'd be notified, sending nothing. |
 
